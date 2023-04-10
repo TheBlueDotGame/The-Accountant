@@ -8,7 +8,7 @@ import (
 	"crypto/sha256"
 	"encoding/gob"
 
-	"github.com/TheBlueDotGame/The-Accountant/serializer"
+	"github.com/bartossh/The-Accountant/serializer"
 )
 
 const (
@@ -67,7 +67,7 @@ func (w *Wallet) Version() byte {
 	return version
 }
 
-// Address returns stringified address based on the public key
+// Address creates address from the public key that contains wallet version and checksum.
 func (w *Wallet) Address() string {
 	versionedHash := append([]byte{version}, w.public...)
 	checksum := checksum(versionedHash)
@@ -79,29 +79,21 @@ func (w *Wallet) Address() string {
 }
 
 // Signe signs the message with Ed25519 signature.
-func (w *Wallet) Sign(message []byte) []byte {
-	digest := sha256.Sum256(message)
-	return ed25519.Sign(w.private, digest[:])
+// Returns digest hash sha256 and signature.
+func (w *Wallet) Sign(message []byte) (digest [32]byte, signature []byte) {
+	digest = sha256.Sum256(message)
+	signature = ed25519.Sign(w.private, digest[:])
+	return digest, signature
 }
 
-// Verify verifies message ED25519 signature.
-func (w *Wallet) Verify(message, signature []byte) bool {
+// Verify verifies message ED25519 signature and hash.
+// Uses hashing sha256.
+func (w *Wallet) Verify(message, signature []byte, hash [32]byte) bool {
 	digest := sha256.Sum256(message)
-	return ed25519.Verify(w.public, digest[:], signature)
-}
-
-// ValidateAddress validates address.
-func ValidateAddress(address string) (bool, error) {
-	pubKey, err := serializer.Base58Decode([]byte(address))
-	if err != nil {
-		return false, err
+	if hash != digest {
+		return false
 	}
-	actualChecksum := pubKey[len(pubKey)-checksumLength:]
-	version := pubKey[0]
-	pubKey = pubKey[1 : len(pubKey)-checksumLength]
-	targetChecksum := checksum(append([]byte{version}, pubKey...))
-
-	return bytes.Equal(actualChecksum, targetChecksum), nil
+	return ed25519.Verify(w.public, digest[:], signature)
 }
 
 func newPair() (ed25519.PrivateKey, ed25519.PublicKey, error) {

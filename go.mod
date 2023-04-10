@@ -1,4 +1,4 @@
-module github.com/TheBlueDotGame/The-Accountant
+module github.com/bartossh/The-Accountant
 
 go 1.20
 

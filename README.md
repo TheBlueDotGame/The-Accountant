@@ -1,7 +1,8 @@
 # The-Accountant
 
 The accountant is a service that keeps track of transactions between wallets.
-Each wallet has its own independent history of transactions. There is a set of rules allowing for transactions to happen. 
+Each wallet has its own independent history of transactions. There is a set of rules allowing for transactions to happen.
+The accountant is not keeping track of all transactions in a single block-chain but rather allowing to keep transaction signed by a authority. Signed transaction is valid transaction only if issuer and receiver of the transaction are existing within the system.
 
 ## Transaction rules
 
@@ -11,10 +12,10 @@ Each wallet has its own independent history of transactions. There is a set of r
 
 ## Blocks rules
 
-0. Block are stored in the blockchain that is wallet dependent.
-1. Block may store more then one transaction. The max stored transactions limit per block is ajustable.
-2. One block per wallet owner may be cleated per 15 minutes (this value is ajustable).
-
+0. Block are stored in the block-chain that is wallet dependent.
+1. Block may store more then one transaction. The max stored transactions limit per block is adjustable.
+2. One block per wallet owner may be cleated per 15 minutes (this value is adjustable).
+3. Blocks can only be added to the block-chain, and block-chain cannot be updated.
 
 ## Wallet rules
 
@@ -27,7 +28,6 @@ Each wallet has its own independent history of transactions. There is a set of r
 
 The Accountant system consists of two separate services:
 
-- Backend REST API - keeps track of transactions, validates and stores transactions. It stores private keys per Owner and keeps Owners accounts. Backend ensures that lost wallet is not valid anymore.
-- Client Application - comunicates with the backend and signs the transactions, keeps user Wallet private, allows to regenerate the Wallet in case of losing it. 
-
+- Backend REST API - keeps track of transactions, validates and stores transactions per user block-chain, stores users addresses.  
+- Client Application - communicates with the Backend REST API, signs the transactions, keeps user Wallet private, allows to regenerate the Wallet in case of losing it.
 
