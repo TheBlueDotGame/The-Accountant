@@ -18,8 +18,8 @@ const (
 
 // Wallet holds public and private key of the wallet owner.
 type Wallet struct {
-	private ed25519.PrivateKey
-	public  ed25519.PublicKey
+	Private ed25519.PrivateKey
+	Public  ed25519.PublicKey
 }
 
 // New tries to creates a new Wallet or returns error otherwise.
@@ -28,7 +28,7 @@ func New() (Wallet, error) {
 	if err != nil {
 		return Wallet{}, err
 	}
-	return Wallet{private: private, public: public}, nil
+	return Wallet{Private: private, Public: public}, nil
 }
 
 // DecodeGOBWallet tries to decode Wallet from gob representation or returns error otherwise.
@@ -48,7 +48,6 @@ func (w *Wallet) EncodeGOB() ([]byte, error) {
 	var content bytes.Buffer
 
 	gob.Register(elliptic.P256())
-
 	encoder := gob.NewEncoder(&content)
 	err := encoder.Encode(w)
 	if err != nil {
@@ -69,7 +68,7 @@ func (w *Wallet) Version() byte {
 
 // Address creates address from the public key that contains wallet version and checksum.
 func (w *Wallet) Address() string {
-	versionedHash := append([]byte{version}, w.public...)
+	versionedHash := append([]byte{version}, w.Public...)
 	checksum := checksum(versionedHash)
 
 	fullHash := append(versionedHash, checksum...)
@@ -82,7 +81,7 @@ func (w *Wallet) Address() string {
 // Returns digest hash sha256 and signature.
 func (w *Wallet) Sign(message []byte) (digest [32]byte, signature []byte) {
 	digest = sha256.Sum256(message)
-	signature = ed25519.Sign(w.private, digest[:])
+	signature = ed25519.Sign(w.Private, digest[:])
 	return digest, signature
 }
 
@@ -93,7 +92,7 @@ func (w *Wallet) Verify(message, signature []byte, hash [32]byte) bool {
 	if hash != digest {
 		return false
 	}
-	return ed25519.Verify(w.public, digest[:], signature)
+	return ed25519.Verify(w.Public, digest[:], signature)
 }
 
 func newPair() (ed25519.PrivateKey, ed25519.PublicKey, error) {
