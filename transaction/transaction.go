@@ -2,10 +2,14 @@ package transaction
 
 import (
 	"bytes"
+	"encoding/binary"
 	"errors"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
+
+const createSignTimeDiff = time.Minute * 10
 
 type signer interface {
 	Sign(message []byte) (digest [32]byte, signature []byte)
@@ -18,8 +22,9 @@ type verifier interface {
 
 // Transaction contains transaction information, subject type, subject data, signatues and public keys.
 type Transaction struct {
-	ID                primitive.ObjectID `json:"_id"                bson:"_id"`
-	Hash              []byte             `json:"hash"               bson:"hash"`
+	ID                primitive.ObjectID `json:"-"                  bson:"_id"`
+	CreatedAt         time.Time          `json:"created_at"         bson:"created_at"`
+	Hash              [32]byte           `json:"hash"               bson:"hash"`
 	IssuerAddress     string             `json:"issuer_address"     bson:"issuer_address"`
 	ReceiverAddress   string             `json:"receiver_address"   bson:"receiver_address"`
 	Subject           string             `json:"subject"            bson:"subcject"`
@@ -30,11 +35,16 @@ type Transaction struct {
 
 // New creates new transaction signed by issuer.
 func New(subject string, message []byte, issuer signer) (Transaction, error) {
+	createdAt := time.Now()
+	b := make([]byte, 8)
+	binary.LittleEndian.PutUint64(b, uint64(createdAt.UnixMicro()))
+	message = append(message, b...)
 	hash, signature := issuer.Sign(message)
 
 	return Transaction{
 		ID:                primitive.NilObjectID,
-		Hash:              hash[:],
+		CreatedAt:         createdAt,
+		Hash:              hash,
 		IssuerAddress:     issuer.Address(),
 		ReceiverAddress:   "",
 		Subject:           subject,
@@ -44,19 +54,29 @@ func New(subject string, message []byte, issuer signer) (Transaction, error) {
 	}, nil
 }
 
-// Sign signs trasaction by receiver.
-func (t *Transaction) Sign(receiver signer, v verifier) error {
+// Sign signs Transaction by receiver.
+func (t *Transaction) Sign(receiver signer, v verifier) ([32]byte, error) {
+	now := time.Now()
+
+	if t.CreatedAt.UnixMicro() > now.UnixMicro() {
+		return [32]byte{}, errors.New("transaction is created in future")
+	}
+
+	if t.CreatedAt.Add(createSignTimeDiff).UnixMicro() < now.UnixMicro() {
+		return [32]byte{}, errors.New("transaction is created too long ago")
+	}
+
 	if err := v.Verify(t.Data, t.IssuerSignature, [32]byte(t.Hash), t.IssuerAddress); err != nil {
-		return err
+		return [32]byte{}, err
 	}
 
 	hash, signature := receiver.Sign(t.Data)
 
-	if !bytes.Equal(hash[:], t.Hash) {
-		return errors.New("hash is not equal")
+	if !bytes.Equal(hash[:], t.Hash[:]) {
+		return [32]byte{}, errors.New("hash is not equal")
 	}
 
 	t.ReceiverAddress = receiver.Address()
 	t.ReceiverSignature = signature
-	return nil
+	return hash, nil
 }

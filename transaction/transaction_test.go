@@ -2,6 +2,7 @@ package transaction
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -9,7 +10,42 @@ import (
 type testSignerMock struct{}
 
 func (th testSignerMock) Sign(message []byte) (digest [32]byte, signature []byte) {
-	return [32]byte{}, []byte("signature")
+	return [32]byte{
+			1,
+			2,
+			3,
+			4,
+			5,
+			6,
+			7,
+			8,
+			9,
+			1,
+			2,
+			3,
+			4,
+			6,
+			7,
+			8,
+			9,
+			1,
+			2,
+			3,
+			4,
+			5,
+			6,
+			7,
+			8,
+			9,
+			1,
+			2,
+			3,
+			4,
+			5,
+			6,
+		}, []byte(
+			"signature",
+		)
 }
 
 func (th testSignerMock) Address() string {
@@ -25,6 +61,37 @@ func (tv testVerifierMock) Verify(message, signature []byte, hash [32]byte, addr
 func TestTransaction(t *testing.T) {
 	trx, err := New("subject", []byte("message"), testSignerMock{})
 	assert.Nil(t, err)
-	err = trx.Sign(testSignerMock{}, testVerifierMock{})
+	h, err := trx.Sign(testSignerMock{}, testVerifierMock{})
 	assert.Nil(t, err)
+	assert.NotEmpty(t, h)
+}
+
+func TestTransactionCreatedAndSignedSuccess(t *testing.T) {
+	trx, err := New("subject", []byte("message"), testSignerMock{})
+	assert.Nil(t, err)
+
+	trx.CreatedAt = time.Now().Add(-4 * time.Minute)
+	h, err := trx.Sign(testSignerMock{}, testVerifierMock{})
+	assert.Nil(t, err)
+	assert.NotEmpty(t, h)
+}
+
+func TestTransactionCreatedAndSignedFutureFail(t *testing.T) {
+	trx, err := New("subject", []byte("message"), testSignerMock{})
+	assert.Nil(t, err)
+
+	trx.CreatedAt = time.Now().Add(4 * time.Minute)
+	h, err := trx.Sign(testSignerMock{}, testVerifierMock{})
+	assert.NotNil(t, err)
+	assert.Empty(t, h)
+}
+
+func TestTransactionCreatedAndSignedTimePassedFail(t *testing.T) {
+	trx, err := New("subject", []byte("message"), testSignerMock{})
+	assert.Nil(t, err)
+
+	trx.CreatedAt = time.Now().Add(-11 * time.Minute)
+	h, err := trx.Sign(testSignerMock{}, testVerifierMock{})
+	assert.NotNil(t, err)
+	assert.Empty(t, h)
 }
