@@ -1,13 +1,10 @@
 package blockchain
 
 import (
-	"crypto/sha256"
-	"encoding/binary"
 	"errors"
 	"sync"
-	"time"
 
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"github.com/bartossh/The-Accountant/block"
 )
 
 var (
@@ -18,12 +15,12 @@ var (
 )
 
 type blockReader interface {
-	LastBlock() (Block, error)
-	ReadBlockByHash(hash [32]byte) (Block, error)
+	LastBlock() (block.Block, error)
+	ReadBlockByHash(hash [32]byte) (block.Block, error)
 }
 
 type blockWriter interface {
-	WriteBlock(block Block) error
+	WriteBlock(block block.Block) error
 }
 
 type blockReadWriter interface {
@@ -31,61 +28,22 @@ type blockReadWriter interface {
 	blockWriter
 }
 
-// Block holds block information.
-type Block struct {
-	ID        primitive.ObjectID `json:"-"          bson:"_id"`
-	Index     uint64             `json:"index"      bson:"index"`
-	Timestamp uint64             `json:"timestamp"  bson:"timestamp"`
-	Hash      [32]byte           `json:"hash"       bson:"hash"`
-	PrevHash  [32]byte           `json:"prevHash"   bson:"prevHash"`
-	TrxHashes [][32]byte         `json:"trx_hashes" bson:"trx_hashes"`
-}
-
-// NewBlock creates a new block.
-func NewBlock(next uint64, prevHash [32]byte, trxHashes [][32]byte) Block {
-	ts := uint64(time.Now().UnixNano())
-
-	block := Block{
-		ID:        primitive.NilObjectID,
-		Index:     next,
-		Timestamp: ts,
-		Hash:      [32]byte{},
-		PrevHash:  prevHash,
-		TrxHashes: trxHashes,
-	}
-	block.calculateHash()
-
-	return block
-}
-
-func (b *Block) calculateHash() {
-	var data []byte
-	binary.LittleEndian.AppendUint64(data, b.Index)
-	binary.LittleEndian.AppendUint64(data, b.Timestamp)
-	data = append(data, b.PrevHash[:]...)
-	for _, trx := range b.TrxHashes {
-		data = append(data, trx[:]...)
-	}
-
-	b.Hash = sha256.Sum256(data)
-}
-
-// Chain keeps track of the blocks.
-type Chain struct {
+// Blockchain keeps track of the blocks.
+type Blockchain struct {
 	mux            sync.RWMutex
 	lastBlockHash  [32]byte
 	lastBlockIndex uint64
 	rw             blockReadWriter
 }
 
-// NewChaion creates a new Chain that has access to the blockchain stired in the repository.
-func NewChain(rw blockReadWriter) (*Chain, error) {
+// NewChaion creates a new Blockchain that has access to the blockchain stired in the repository.
+func NewBlockchain(rw blockReadWriter) (*Blockchain, error) {
 	lastBlock, err := rw.LastBlock()
 	if err != nil {
 		return nil, err
 	}
 
-	return &Chain{
+	return &Blockchain{
 		mux:            sync.RWMutex{},
 		lastBlockHash:  lastBlock.Hash,
 		lastBlockIndex: lastBlock.Index,
@@ -93,11 +51,11 @@ func NewChain(rw blockReadWriter) (*Chain, error) {
 	}, nil
 }
 
-// LastNBlocks return the last n blocks.
-func (c *Chain) LastNBlocks(n int) ([]Block, error) {
+// ReadLastNBlocks reads the last n blocks.
+func (c *Blockchain) ReadLastNBlocks(n int) ([]block.Block, error) {
 	c.mux.RLock()
 	defer c.mux.RUnlock()
-	blocks := make([]Block, 0, n)
+	blocks := make([]block.Block, 0, n)
 
 	lastBlockHash := c.lastBlockHash
 	for n > 0 {
@@ -113,11 +71,11 @@ func (c *Chain) LastNBlocks(n int) ([]Block, error) {
 	return blocks, nil
 }
 
-// BlocksFromIndex returns all blocks from given index till the current block index.
-func (c *Chain) BlocksFromIndex(idx uint64) ([]Block, error) {
+// ReadBlocksFromIndex reads all blocks from given index till the current block index.
+func (c *Blockchain) ReadBlocksFromIndex(idx uint64) ([]block.Block, error) {
 	c.mux.RLock()
 	defer c.mux.RUnlock()
-	blocks := make([]Block, 0, c.lastBlockIndex-idx)
+	blocks := make([]block.Block, 0, c.lastBlockIndex-idx)
 
 	lastBlockHash := c.lastBlockHash
 	for {
@@ -137,8 +95,8 @@ func (c *Chain) BlocksFromIndex(idx uint64) ([]Block, error) {
 	return blocks, nil
 }
 
-// AddBlock adds block in to the blockchain repository.
-func (c *Chain) AddBlock(block Block) error {
+// WriteBlock writes block in to the blockchain repository.
+func (c *Blockchain) WriteBlock(block block.Block) error {
 	c.mux.Lock()
 	defer c.mux.Unlock()
 
