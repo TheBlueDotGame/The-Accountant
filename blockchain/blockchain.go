@@ -1,6 +1,7 @@
 package blockchain
 
 import (
+	"context"
 	"errors"
 	"sync"
 
@@ -15,12 +16,12 @@ var (
 )
 
 type blockReader interface {
-	LastBlock() (block.Block, error)
-	ReadBlockByHash(hash [32]byte) (block.Block, error)
+	LastBlock(ctx context.Context) (block.Block, error)
+	ReadBlockByHash(ctx context.Context, hash [32]byte) (block.Block, error)
 }
 
 type blockWriter interface {
-	WriteBlock(block block.Block) error
+	WriteBlock(ctx context.Context, block block.Block) error
 }
 
 type blockReadWriter interface {
@@ -37,8 +38,8 @@ type Blockchain struct {
 }
 
 // NewChaion creates a new Blockchain that has access to the blockchain stired in the repository.
-func NewBlockchain(rw blockReadWriter) (*Blockchain, error) {
-	lastBlock, err := rw.LastBlock()
+func NewBlockchain(ctx context.Context, rw blockReadWriter) (*Blockchain, error) {
+	lastBlock, err := rw.LastBlock(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -51,15 +52,26 @@ func NewBlockchain(rw blockReadWriter) (*Blockchain, error) {
 	}, nil
 }
 
+// LastBlock returns last block hash and index.
+func (c *Blockchain) LastBlockHashIndex(ctx context.Context) ([32]byte, uint64, error) {
+	c.mux.RLock()
+	defer c.mux.RUnlock()
+	bl, err := c.rw.ReadBlockByHash(ctx, c.lastBlockHash)
+	if err != nil {
+		return [32]byte{}, 0, err
+	}
+	return bl.Hash, bl.Index, nil
+}
+
 // ReadLastNBlocks reads the last n blocks.
-func (c *Blockchain) ReadLastNBlocks(n int) ([]block.Block, error) {
+func (c *Blockchain) ReadLastNBlocks(ctx context.Context, n int) ([]block.Block, error) {
 	c.mux.RLock()
 	defer c.mux.RUnlock()
 	blocks := make([]block.Block, 0, n)
 
 	lastBlockHash := c.lastBlockHash
 	for n > 0 {
-		block, err := c.rw.ReadBlockByHash(lastBlockHash)
+		block, err := c.rw.ReadBlockByHash(ctx, lastBlockHash)
 		if err != nil {
 			return nil, err
 		}
@@ -72,14 +84,14 @@ func (c *Blockchain) ReadLastNBlocks(n int) ([]block.Block, error) {
 }
 
 // ReadBlocksFromIndex reads all blocks from given index till the current block index.
-func (c *Blockchain) ReadBlocksFromIndex(idx uint64) ([]block.Block, error) {
+func (c *Blockchain) ReadBlocksFromIndex(ctx context.Context, idx uint64) ([]block.Block, error) {
 	c.mux.RLock()
 	defer c.mux.RUnlock()
 	blocks := make([]block.Block, 0, c.lastBlockIndex-idx)
 
 	lastBlockHash := c.lastBlockHash
 	for {
-		block, err := c.rw.ReadBlockByHash(lastBlockHash)
+		block, err := c.rw.ReadBlockByHash(ctx, lastBlockHash)
 		if err != nil {
 			return nil, err
 		}
@@ -96,7 +108,7 @@ func (c *Blockchain) ReadBlocksFromIndex(idx uint64) ([]block.Block, error) {
 }
 
 // WriteBlock writes block in to the blockchain repository.
-func (c *Blockchain) WriteBlock(block block.Block) error {
+func (c *Blockchain) WriteBlock(ctx context.Context, block block.Block) error {
 	c.mux.Lock()
 	defer c.mux.Unlock()
 
@@ -108,7 +120,7 @@ func (c *Blockchain) WriteBlock(block block.Block) error {
 		return ErrInvalidBlockPrevHash
 	}
 
-	if err := c.rw.WriteBlock(block); err != nil {
+	if err := c.rw.WriteBlock(ctx, block); err != nil {
 		return err
 	}
 
