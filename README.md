@@ -7,15 +7,17 @@ The accountant is not keeping track of all transactions in a single blockchain b
 ## Transaction rules
 
 0. The transaction may happen only when signed by the issuer wallet and receiver wallet.
-1. Transaction is unique per wallet owner.
+1. Transaction is unique per whole blockchain.
 2. Transactions are stored per wallet owner in blocks.
+3. There is a limit of transactions issuer can create per given timespan (configurable).
+4. Transaction has expiration time and cannot be signed after expiration time has passed.
 
 ## Blocks rules
 
-0. Block is stored in the blockchain that is wallet dependent.
+0. Block is stored in the blockchain.
 1. Block may store more than one transaction. The max stored transactions limit per block is adjustable.
-2. One block per wallet owner may be cleated per 15 minutes (this value is adjustable).
-3. Blocks can only be added to the blockchain, and the blockchain cannot be updated.
+2. Blocks can only be added to the blockchain, and the blockchain cannot be updated.
+3. Transaction is stored in the block as transaction hash.
 
 ## Wallet rules
 
