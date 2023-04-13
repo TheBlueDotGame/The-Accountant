@@ -17,7 +17,7 @@ The accountant is not keeping track of all transactions in a single blockchain b
 0. Block is stored in the blockchain.
 1. Block may store more than one transaction. The max stored transactions limit per block is adjustable.
 2. Blocks can only be added to the blockchain, and the blockchain cannot be updated.
-3. Transaction is stored in the block as transaction hash.
+3. Transactions are stored in the block as transactions hash.
 
 ## Wallet rules
 
