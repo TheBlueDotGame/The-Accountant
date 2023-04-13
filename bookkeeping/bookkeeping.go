@@ -13,6 +13,8 @@ const hashChanSize = 100 // number of transactions in a block.
 
 const blockWriteTimestamp = time.Minute * 5 // time between writes of a block to the blockchain repository.
 
+const difficulty uint64 = 5
+
 var (
 	ErrTrxExistsInTheLadger     = errors.New("transaction is already in the ledger")
 	ErrTrxExistsInTheBlockchain = errors.New("transaction is already in the blockchain")
@@ -135,7 +137,7 @@ func (l *Ledger) saveBlock(ctx context.Context) error {
 		return err
 	}
 
-	nb := block.NewBlock(idx, h, l.hashes)
+	nb := block.NewBlock(difficulty, idx, h, l.hashes)
 
 	if err := l.bc.WriteBlock(ctx, nb); err != nil {
 		return err
