@@ -52,7 +52,7 @@ func NewBlockchain(ctx context.Context, rw blockReadWriter) (*Blockchain, error)
 	}, nil
 }
 
-// LastBlock returns last block hash and index.
+// LastBlockHashIndex returns last block hash and index.
 func (c *Blockchain) LastBlockHashIndex(ctx context.Context) ([32]byte, uint64, error) {
 	c.mux.RLock()
 	defer c.mux.RUnlock()
