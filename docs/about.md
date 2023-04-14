@@ -1,18 +1,21 @@
 ---
 layout: page
 title: About The Project
-subtitle: Explain me like for 10 years old.
+subtitle: ...and a bit about technology.
 ---
+
+My name is Bartosz Lenart. I build the IoT, Edge and Cloud back-ends and I want to introduce to you the Accountant software.
+This is distributed backend software allowing for reliable and corruption-resilient accounting. 
+The Accountant software takes care of transactions between the issuer and receiver. Only known issuers and receivers can take part in the transaction but the Accountant doesn’t hold the issuer or receiver's personal information. This anonymises the transaction and keeps the issuer and receiver information private. The transaction requires to be signed cryptographically first by the issuer and then transferred to the receiver. When signed cryptographically by the receiver it goes to the backend and both signatures are validated.
+The signature uses ED25119 elliptic curve asymmetric keys. The public keys of the issuer and the receiver are part of the transaction, whereas the private keys are not known to the accountant's backend and are kept secret by the issuer and the receiver wallets respectively.
+When the transaction is validated with success it is saved in a temporary repository collection and hashes are sent as candidates for the next block to be forged. When the block is forged and validators accept the new block (and corresponding transactions) then all the transactions whose hashes belong to the new block are moved into the final transaction collection. 
+Blockchain and transactions are duplicated along all the validators and stake nodes. But the Accountant system may work as a single node or single stake node with validators.
+
+### Deeper in to Technology
 
 My name is Bartosz Lenart. I build the IoT, Edge and Cloud back-ends. This is distributed backend software allowing for reliable and corruption resilient accounting. 
 This project aims to be a simple package that offers full capability of setting accounting backend and fronted with single library usage, or to use that library to build your own solution on top of the package. Packages are decoupled to the point that custom solution can be easily used.
 Backend then is build fully on [Go](https://go.dev/) programming language environment, where the frontend is build using Go and [WebAssembly](https://webassembly.org/) technology.
-
-
-### Deeper in to Technology
- 
-The project is coded in [Go](https://go.dev/) with addition of [WebAssembly](https://webassembly.org/). It is recommended to compile WebAssembly part with [TinyGo](https://tinygo.org/) compiler to create the smaller binary.
-The repository used for the project is MongoDB but logic depends on abstraction so other solution can be provided. MongoDB has been chosen because of its document based nature and no need for setting schema upfront. Nevertheless, the indexing is required as uniqueness and lack of transaction repetition is dependent on setting unique indexes in the repository. 
 
 
 ### Motto
