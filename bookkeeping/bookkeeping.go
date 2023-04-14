@@ -9,17 +9,25 @@ import (
 	"github.com/bartossh/The-Accountant/transaction"
 )
 
-const hashChanSize = 100 // number of transactions in a block.
+const (
+	minDifficulty = 1
+	maxDifficulty = 255
 
-const blockWriteTimestamp = time.Minute * 5 // time between writes of a block to the blockchain repository.
+	minBlockWriteTimestamp = time.Second
+	maxBlockWriteTimestamp = time.Hour * 4
 
-const difficulty uint64 = 5
+	minBlockTransactionsSize = 1
+	maxBlockTransactionsSize = 60000
+)
 
 var (
-	ErrTrxExistsInTheLadger     = errors.New("transaction is already in the ledger")
-	ErrTrxExistsInTheBlockchain = errors.New("transaction is already in the blockchain")
-	ErrAddressNotExists         = errors.New("address does not exist in the addresses repository")
-	ErrBlockTxsCorrupted        = errors.New("all transaction failed, block corrupted")
+	ErrTrxExistsInTheLadger            = errors.New("transaction is already in the ledger")
+	ErrTrxExistsInTheBlockchain        = errors.New("transaction is already in the blockchain")
+	ErrAddressNotExists                = errors.New("address does not exist in the addresses repository")
+	ErrBlockTxsCorrupted               = errors.New("all transaction failed, block corrupted")
+	ErrDifficultyNotInRange            = errors.New("invalid difficulty, difficulty can by in range [1 : 255]")
+	ErrBlockWriteTimestampNoInRange    = errors.New("block write timestamp is not in range of [one second : four hours]")
+	ErrBlockTransactionsSizeNotInRange = errors.New("block transactions size is not in range of [1 : 60000]")
 )
 
 type trxReader interface {
@@ -56,14 +64,31 @@ type signatureVerifier interface {
 	Verify(message, signature []byte, hash [32]byte, address string) error
 }
 
-// TxHashError is a transaction error on transaction hash.
-type TxHashError struct {
-	Hash [32]byte
-	Err  error
+type Config struct {
+	Difficulty            uint64        `json:"difficulty"              bson:"difficulty"              yaml:"difficulty"`
+	BlockWriteTimestamp   time.Duration `json:"block_write_timestamp"   bson:"block_write_timestamp"   yaml:"block_write_timestamp"`
+	BlockTransactionsSize int           `json:"block_transactions_size" bson:"block_transactions_size" yaml:"block_transactions_size"`
+}
+
+func (c Config) Validate() error {
+	if c.Difficulty < minDifficulty || c.Difficulty > maxDifficulty {
+		return ErrDifficultyNotInRange
+	}
+
+	if c.BlockWriteTimestamp < minBlockWriteTimestamp || c.BlockWriteTimestamp > maxBlockWriteTimestamp {
+		return ErrBlockWriteTimestampNoInRange
+	}
+
+	if c.BlockTransactionsSize < minBlockTransactionsSize || c.BlockTransactionsSize > maxBlockTransactionsSize {
+		return ErrBlockTransactionsSizeNotInRange
+	}
+
+	return nil
 }
 
 // Ledger is a collection of ledger functionality to perform bookkeeping.
 type Ledger struct {
+	config Config
 	hashC  chan [32]byte
 	hashes [][32]byte
 	tx     trxReadWriter
@@ -72,48 +97,64 @@ type Ledger struct {
 	vr     signatureVerifier
 }
 
-// NewLedger creates new Ledger.
+// NewLedger creates new Ledger if config is valid or returns error otherwise.
 func NewLedger(
+	config Config,
 	bc blockReadWriter,
 	tx trxReadWriter,
 	ac addressChecker,
 	vr signatureVerifier,
-) *Ledger {
-	return &Ledger{
-		hashC: make(chan [32]byte, hashChanSize),
-		tx:    tx,
-		bc:    bc,
-		ac:    ac,
-		vr:    vr,
+) (*Ledger, error) {
+	if err := config.Validate(); err != nil {
+		return nil, err
 	}
+
+	return &Ledger{
+		config: config,
+		hashC:  make(chan [32]byte, config.BlockTransactionsSize),
+		tx:     tx,
+		bc:     bc,
+		ac:     ac,
+		vr:     vr,
+	}, nil
 }
 
 // Run runs the Ladger engine that writes blocks to the blockchain repository.
+// Run starts a goroutine and can be stopped by cancelling the context.
 func (l *Ledger) Run(ctx context.Context) {
-	for {
-		select {
-		case <-ctx.Done():
-			if len(l.hashes) > 0 {
-				l.saveBlock(ctx)
-				l.cleanHashes()
-			}
-			break
-		case h := <-l.hashC:
-			l.hashes = append(l.hashes, h)
-			if len(l.hashes) == hashChanSize {
-				l.saveBlock(ctx)
-				l.cleanHashes()
-			}
-		case <-time.After(blockWriteTimestamp):
-			if len(l.hashes) > 0 {
-				l.saveBlock(ctx)
-				l.cleanHashes()
+	go func(ctx context.Context) {
+		for {
+			select {
+			case <-ctx.Done():
+				if len(l.hashes) > 0 {
+					if err := l.saveBlock(ctx); err != nil {
+						// TODO: log error and all the hashes of unsigned transactions (probobly we need to remove transactons)
+					}
+					l.cleanHashes()
+				}
+				break
+			case h := <-l.hashC:
+				l.hashes = append(l.hashes, h)
+				if len(l.hashes) == l.config.BlockTransactionsSize {
+					if err := l.saveBlock(ctx); err != nil {
+						// TODO: log error and all the hashes of unsigned transactions (probobly we need to remove transactons)
+					}
+					l.cleanHashes()
+				}
+			case <-time.After(l.config.BlockWriteTimestamp):
+				if len(l.hashes) > 0 {
+					if err := l.saveBlock(ctx); err != nil {
+						// TODO: log error and all the hashes of unsigned transactions (probobly we need to remove transactons)
+					}
+					l.cleanHashes()
+				}
 			}
 		}
-	}
+	}(ctx)
 }
 
-// WriteTransaction validates and writes a transaction to the repsitory.
+// WriteTransaction validates and writes a transaction to the repository.
+// Transaction is not yet a part of the blockchain.
 func (l *Ledger) WriteTransaction(ctx context.Context, tx *transaction.Transaction) error {
 	if err := l.validateTx(ctx, tx); err != nil {
 		return err
@@ -128,7 +169,7 @@ func (l *Ledger) WriteTransaction(ctx context.Context, tx *transaction.Transacti
 }
 
 func (l *Ledger) cleanHashes() {
-	l.hashes = make([][32]byte, 0, hashChanSize)
+	l.hashes = make([][32]byte, 0, l.config.BlockTransactionsSize)
 }
 
 func (l *Ledger) saveBlock(ctx context.Context) error {
@@ -137,7 +178,7 @@ func (l *Ledger) saveBlock(ctx context.Context) error {
 		return err
 	}
 
-	nb := block.NewBlock(difficulty, idx, h, l.hashes)
+	nb := block.NewBlock(l.config.Difficulty, idx, h, l.hashes)
 
 	if err := l.bc.WriteBlock(ctx, nb); err != nil {
 		return err
