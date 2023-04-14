@@ -1,0 +1,21 @@
+---
+layout: page
+title: About me
+subtitle: I build the IoT
+---
+
+My name is Bartosz Lenart and I build the cloud.
+
+### Technology
+
+I love to program in Go because it is very pragmatic language. Other languages on my favorite list are Rust, C and TypeScript.
+I am working with IoT where I like to use Docker and K8s. In terms of data repository I am use to use PostgreSQL and MongoDB, but I am agnostic in that matter.
+
+### Hobby
+
+I lake astronomy and books and documentaries about physics in general. I like long walks regardless of the weather.
+
+### Motto
+
+My motto is the one from quote of Steve Wozniak: "Wherever smart people work, doors are unlocked."
+

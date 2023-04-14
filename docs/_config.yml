@@ -21,9 +21,7 @@ author: Bartosz Lenart
 
 navbar-links:
   About Me: "aboutme"
-  Resources:
-    - Founder: "https://github.com/bartossh"
-    - Documantation: "https://github.com/bartossh/The-Accountant"
+  Docs: "https://github.com/bartossh/The-Accountant"
   Author's home: "https://github.com/bartossh"
 
 ################
@@ -76,7 +74,7 @@ social-network-links:
 
 # If you want your website to generate an RSS feed, provide a description
 # The URL for the feed will be https://<your_website>/feed.xml
-rss-description: The Accountant is set of golang packages allowing to store signed transactions in a blockchain.
+rss-description: The Accountant is a golang package allowing to store signed transactions in a blockchain.
 
 ###########################
 # --- General options --- #
