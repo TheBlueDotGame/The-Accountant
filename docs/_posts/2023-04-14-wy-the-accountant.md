@@ -1,11 +1,13 @@
 ---
 layout: post
-title: Why The Accountant.
-subtitle: What inspired me to create this package.
+title: Why The Accountant was created.
+subtitle: What inspired me to create this software and what problem it solves.
 cover-img: /assets/img/path.jpg
-thumbnail-img: /assets/img/thumb.png
+thumbnail-img: /assets/img/blockchain_block.png
 share-img: /assets/img/path.jpg
-tags: [software]
+tags: [software, motives, description, explonations]
 ---
 
-There will be full post soon. Kind of working on it.
+Be patient, it will come soon!
+
+Work in progress!
