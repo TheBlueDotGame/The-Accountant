@@ -37,7 +37,7 @@ type Blockchain struct {
 	rw             blockReadWriter
 }
 
-// NewChaion creates a new Blockchain that has access to the blockchain stired in the repository.
+// NewChaion creates a new Blockchain that has access to the blockchain stored in the repository.
 func NewBlockchain(ctx context.Context, rw blockReadWriter) (*Blockchain, error) {
 	lastBlock, err := rw.LastBlock(ctx)
 	if err != nil {
@@ -53,14 +53,10 @@ func NewBlockchain(ctx context.Context, rw blockReadWriter) (*Blockchain, error)
 }
 
 // LastBlockHashIndex returns last block hash and index.
-func (c *Blockchain) LastBlockHashIndex(ctx context.Context) ([32]byte, uint64, error) {
+func (c *Blockchain) LastBlockHashIndex() ([32]byte, uint64) {
 	c.mux.RLock()
 	defer c.mux.RUnlock()
-	bl, err := c.rw.ReadBlockByHash(ctx, c.lastBlockHash)
-	if err != nil {
-		return [32]byte{}, 0, err
-	}
-	return bl.Hash, bl.Index, nil
+	return c.lastBlockHash, c.lastBlockIndex
 }
 
 // ReadLastNBlocks reads the last n blocks.
@@ -83,7 +79,7 @@ func (c *Blockchain) ReadLastNBlocks(ctx context.Context, n int) ([]block.Block,
 	return blocks, nil
 }
 
-// ReadBlocksFromIndex reads all blocks from given index till the current block index.
+// ReadBlocksFromIndex reads all blocks from given index till the current block.
 func (c *Blockchain) ReadBlocksFromIndex(ctx context.Context, idx uint64) ([]block.Block, error) {
 	c.mux.RLock()
 	defer c.mux.RUnlock()

@@ -25,7 +25,10 @@ type Block struct {
 	TrxHashes  [][32]byte         `json:"trx_hashes" bson:"trx_hashes"`
 }
 
-// NewBlock creates a new block.
+// NewBlock creates a new Block hashing it with given difficulty.
+// Higher difficulty requires more computations to happen to find possible target hash.
+// Difficulty is stored inside the Block and is a part of a hashed data.
+// Transactions hashes are prehashed before calculating the Block hash with merkle tree.
 func NewBlock(difficulty, next uint64, prevHash [32]byte, trxHashes [][32]byte) Block {
 	ts := uint64(time.Now().UnixNano())
 
@@ -48,7 +51,9 @@ func NewBlock(difficulty, next uint64, prevHash [32]byte, trxHashes [][32]byte) 
 	return block
 }
 
-// Validate validates block.
+// Validate validates the Block.
+// Validations goes in the same order like Block hashing allgorithm,
+// just the proof of work part is not required as Nonce is arleady known.
 func (b *Block) Validate(trxHashes [][32]byte) bool {
 	if !b.validateTransactionsHashesMatch(trxHashes) {
 		return false
