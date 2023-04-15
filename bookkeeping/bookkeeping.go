@@ -34,13 +34,14 @@ type trxReader interface {
 	ReadTransactionByHash(ctx context.Context, hash [32]byte) (*transaction.Transaction, error)
 }
 
-type trxWriter interface {
-	WriteTransaction(ctx context.Context, trx *transaction.Transaction) error
+type trxWriteMover interface {
+	WriteTemporaryTransaction(ctx context.Context, trx *transaction.Transaction) error
+	MoveTransactionsFromTemporaryToPermanent(ctx context.Context, hash [][32]byte) error
 }
 
 type trxReadWriter interface {
 	trxReader
-	trxWriter
+	trxWriteMover
 }
 
 type blockReader interface {
@@ -127,45 +128,48 @@ func (l *Ledger) Run(ctx context.Context) {
 			select {
 			case <-ctx.Done():
 				if len(l.hashes) > 0 {
-					if err := l.saveBlock(ctx); err != nil {
-						// TODO: log error and all the hashes of unsigned transactions (probobly we need to remove transactons)
-					}
-					l.cleanHashes()
+					l.forge(ctx)
 				}
 				break
 			case h := <-l.hashC:
 				l.hashes = append(l.hashes, h)
 				if len(l.hashes) == l.config.BlockTransactionsSize {
-					if err := l.saveBlock(ctx); err != nil {
-						// TODO: log error and all the hashes of unsigned transactions (probobly we need to remove transactons)
-					}
-					l.cleanHashes()
+					l.forge(ctx)
 				}
 			case <-time.After(l.config.BlockWriteTimestamp):
 				if len(l.hashes) > 0 {
-					if err := l.saveBlock(ctx); err != nil {
-						// TODO: log error and all the hashes of unsigned transactions (probobly we need to remove transactons)
-					}
-					l.cleanHashes()
+					l.forge(ctx)
 				}
 			}
 		}
 	}(ctx)
 }
 
-// WriteTransaction validates and writes a transaction to the repository.
+// WriteTemporaryTransaction validates and writes a transaction to the repository.
 // Transaction is not yet a part of the blockchain.
-func (l *Ledger) WriteTransaction(ctx context.Context, tx *transaction.Transaction) error {
+func (l *Ledger) WriteTemporaryTransaction(ctx context.Context, tx *transaction.Transaction) error {
 	if err := l.validateTx(ctx, tx); err != nil {
 		return err
 	}
-	if err := l.tx.WriteTransaction(ctx, tx); err != nil {
+	if err := l.tx.WriteTemporaryTransaction(ctx, tx); err != nil {
 		return err
 	}
 
 	l.hashC <- tx.Hash
 
 	return nil
+}
+
+func (l *Ledger) forge(ctx context.Context) {
+	defer l.cleanHashes()
+	if err := l.saveBlock(ctx); err != nil {
+		// TODO: log error and all the hashes of unsigned transactions
+		return
+	}
+	if err := l.tx.MoveTransactionsFromTemporaryToPermanent(ctx, l.hashes); err != nil {
+		// TODO: log error and all the hashes. This error will cause inconsistency. Decide what to do with that problem.
+		return
+	}
 }
 
 func (l *Ledger) cleanHashes() {
