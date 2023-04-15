@@ -5,6 +5,8 @@ subtitle: ...and a bit about technology.
 ---
 
 My name is Bartosz Lenart. I build the IoT, Edge and Cloud back-ends and I want to introduce to you “The Accountant” solution.
+
+
 The Accountant is distributed software allowing for reliable and corruption-resilient accounting and transaction validation.
 The Accountant software takes care of transactions between the issuer and receiver. Only issuers and receivers that have public keys in the crated-in system can take part in the transaction. The system doesn’t hold the issuer or receiver's personal information. This anonymises the transaction and keeps the issuer and receiver information private. The transaction requires to be signed cryptographically first by the issuer and then transferred to the receiver. When signed cryptographically by the receiver it goes to the backend and both signatures are validated. Anyone claiming to have a valid document or contract between him and the other person providing that document can be easily validated by checking the document hash. If a transaction with a given hash exists then the document is legitimate.
 The Accountant uses hash SHA 256. The signature uses ED25519 elliptic curve asymmetric keys. The public keys of the issuer and the receiver are part of the transaction, whereas the private keys are not known to the accountant's backend and are kept secret by the issuer and the receiver wallets respectively.
@@ -14,13 +16,13 @@ Blockchain and transactions are duplicated along all the validators and stake no
 ### Technology
 
 1. The programming language The Accountant software is written in is the [Go](https://go.dev/). The choice of programming language was made based on these arguments:
-    - Need for cryptography packages to be part of the standard library, so that it is well tested, maintained, reviewed and will not be dropped or forgotten.
+    - Need for cryptography packages to be part of the standard library, so that it is well tested, maintained, and reviewed.
      - Need for relatively fast language, best if compiled to multiple architectures and systems, without an interpreter or virtual machine. Go can be compiled on IoT devices and microcontrollers thanks to [TinyGo](https://tinygo.org/) compiler.
-     - Language that can be compiled to [WebAssembly](https://webassembly.org/) to create a  safe wallet for web applications. The TinyGo and Go compilers allow for that.
+     - Language that can be compiled to [WebAssembly](https://webassembly.org/) to create a safe wallet for web applications. The TinyGo and Go compilers allow for that.
     - Language that is pragmatic and easy to maintain.
-    - Safe language, good if being garbage collectored  or having other safety feature helping with memory control.
+    - Safe language, garbage collected or having other safety feature helping with memory control.
     - Language that scales well and has good support for executing concurrent code.
-    - A testing feature built into the language.
+    - Tests built into the language.
     - Paradigm-independent language that will not force OOP or functional programming.
     - Good control over memory layout.
     - Good speed of development.
