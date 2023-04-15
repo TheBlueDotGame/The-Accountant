@@ -30,18 +30,9 @@ var (
 	ErrBlockTransactionsSizeNotInRange = errors.New("block transactions size is not in range of [1 : 60000]")
 )
 
-type trxReader interface {
-	ReadTransactionByHash(ctx context.Context, hash [32]byte) (*transaction.Transaction, error)
-}
-
 type trxWriteMover interface {
 	WriteTemporaryTransaction(ctx context.Context, trx *transaction.Transaction) error
 	MoveTransactionsFromTemporaryToPermanent(ctx context.Context, hash [][32]byte) error
-}
-
-type trxReadWriter interface {
-	trxReader
-	trxWriteMover
 }
 
 type blockReader interface {
@@ -92,7 +83,7 @@ type Ledger struct {
 	config Config
 	hashC  chan [32]byte
 	hashes [][32]byte
-	tx     trxReadWriter
+	tx     trxWriteMover
 	bc     blockReadWriter
 	ac     addressChecker
 	vr     signatureVerifier
@@ -102,7 +93,7 @@ type Ledger struct {
 func NewLedger(
 	config Config,
 	bc blockReadWriter,
-	tx trxReadWriter,
+	tx trxWriteMover,
 	ac addressChecker,
 	vr signatureVerifier,
 ) (*Ledger, error) {
