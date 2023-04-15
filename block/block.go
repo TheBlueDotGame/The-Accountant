@@ -21,7 +21,7 @@ type Block struct {
 	Nonce      uint64             `json:"nonce"      bson:"nonce"`
 	Difficulty uint64             `json:"difficulty" bson:"difficulty"`
 	Hash       [32]byte           `json:"hash"       bson:"hash"`
-	PrevHash   [32]byte           `json:"prevHash"   bson:"prevHash"`
+	PrevHash   [32]byte           `json:"prev_hash"  bson:"prev_hash"`
 	TrxHashes  [][32]byte         `json:"trx_hashes" bson:"trx_hashes"`
 }
 
