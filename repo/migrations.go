@@ -118,6 +118,20 @@ var migrations = []migration{
 			return err
 		},
 	},
+	{
+		name: "index_transaction_in_block",
+		run: func(ctx context.Context, user *mongo.Database) error {
+			_, err := user.Collection(transactionsInBlockCollection).
+				Indexes().
+				CreateOne(ctx, mongo.IndexModel{
+					Keys: bson.M{
+						"transaction_hash": 1,
+					},
+					Options: options.Index().SetUnique(true),
+				})
+			return err
+		},
+	},
 }
 
 func (c DataBase) migrate(ctx context.Context, migrationsCollection []migration) ([]string, error) {

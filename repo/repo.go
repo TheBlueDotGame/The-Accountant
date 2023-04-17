@@ -15,6 +15,7 @@ const (
 	transactionsPermanentCollection = "transactionsPermanent"
 	transactionsTemporaryCollection = "transactionsTemporary"
 	blocksCollection                = "blocks"
+	transactionsInBlockCollection   = "transactionsInBlock"
 )
 
 // Database provides database access for read, write and delete of repository entities.

@@ -56,6 +56,11 @@ type signatureVerifier interface {
 	Verify(message, signature []byte, hash [32]byte, address string) error
 }
 
+type trxsInBlockWriteFinder interface {
+	WriteTransactionsInBlock(ctx context.Context, blockHash [32]byte, trxHash [][32]byte) error
+	FindTransactionInBlockHash(ctx context.Context, trxHash [32]byte) ([32]byte, error)
+}
+
 type Config struct {
 	Difficulty            uint64        `json:"difficulty"              bson:"difficulty"              yaml:"difficulty"`
 	BlockWriteTimestamp   time.Duration `json:"block_write_timestamp"   bson:"block_write_timestamp"   yaml:"block_write_timestamp"`
@@ -87,6 +92,7 @@ type Ledger struct {
 	bc     blockReadWriter
 	ac     addressChecker
 	vr     signatureVerifier
+	tf     trxsInBlockWriteFinder
 }
 
 // NewLedger creates new Ledger if config is valid or returns error otherwise.
@@ -96,6 +102,7 @@ func NewLedger(
 	tx trxWriteMover,
 	ac addressChecker,
 	vr signatureVerifier,
+	tf trxsInBlockWriteFinder,
 ) (*Ledger, error) {
 	if err := config.Validate(); err != nil {
 		return nil, err
@@ -108,6 +115,7 @@ func NewLedger(
 		bc:     bc,
 		ac:     ac,
 		vr:     vr,
+		tf:     tf,
 	}, nil
 }
 
@@ -153,13 +161,18 @@ func (l *Ledger) WriteTemporaryTransaction(ctx context.Context, tx *transaction.
 
 func (l *Ledger) forge(ctx context.Context) {
 	defer l.cleanHashes()
-	if err := l.saveBlock(ctx); err != nil {
+	blcHash, err := l.saveBlock(ctx)
+	if err != nil {
 		// TODO: log error and all the hashes of unsigned transactions
 		return
 	}
+
+	if err := l.tf.WriteTransactionsInBlock(ctx, blcHash, l.hashes); err != nil {
+		// TODO: log error with writing block hash and trxs hashes in to the search
+	}
+
 	if err := l.tx.MoveTransactionsFromTemporaryToPermanent(ctx, l.hashes); err != nil {
 		// TODO: log error and all the hashes. This error will cause inconsistency. Decide what to do with that problem.
-		return
 	}
 }
 
@@ -167,19 +180,19 @@ func (l *Ledger) cleanHashes() {
 	l.hashes = make([][32]byte, 0, l.config.BlockTransactionsSize)
 }
 
-func (l *Ledger) saveBlock(ctx context.Context) error {
+func (l *Ledger) saveBlock(ctx context.Context) ([32]byte, error) {
 	h, idx, err := l.bc.LastBlockHashIndex(ctx)
 	if err != nil {
-		return err
+		return [32]byte{}, err
 	}
 
 	nb := block.NewBlock(l.config.Difficulty, idx, h, l.hashes)
 
 	if err := l.bc.WriteBlock(ctx, nb); err != nil {
-		return err
+		return [32]byte{}, err
 	}
 
-	return nil
+	return nb.Hash, nil
 }
 
 func (l *Ledger) validateTx(ctx context.Context, tx *transaction.Transaction) error {
