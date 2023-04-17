@@ -30,33 +30,33 @@ var (
 	ErrBlockTransactionsSizeNotInRange = errors.New("block transactions size is not in range of [1 : 60000]")
 )
 
-type trxWriteMover interface {
+type TrxWriteMover interface {
 	WriteTemporaryTransaction(ctx context.Context, trx *transaction.Transaction) error
 	MoveTransactionsFromTemporaryToPermanent(ctx context.Context, hash [][32]byte) error
 }
 
-type blockReader interface {
+type BlockReader interface {
 	LastBlockHashIndex(ctx context.Context) ([32]byte, uint64, error)
 }
 
-type blockWriter interface {
+type BlockWriter interface {
 	WriteBlock(ctx context.Context, block block.Block) error
 }
 
-type blockReadWriter interface {
-	blockReader
-	blockWriter
+type BlockReadWriter interface {
+	BlockReader
+	BlockWriter
 }
 
-type addressChecker interface {
+type AddressChecker interface {
 	CheckAddressExists(ctx context.Context, address string) (bool, error)
 }
 
-type signatureVerifier interface {
+type SignatureVerifier interface {
 	Verify(message, signature []byte, hash [32]byte, address string) error
 }
 
-type trxsInBlockWriteFinder interface {
+type BlockFinder interface {
 	WriteTransactionsInBlock(ctx context.Context, blockHash [32]byte, trxHash [][32]byte) error
 	FindTransactionInBlockHash(ctx context.Context, trxHash [32]byte) ([32]byte, error)
 }
@@ -88,21 +88,21 @@ type Ledger struct {
 	config Config
 	hashC  chan [32]byte
 	hashes [][32]byte
-	tx     trxWriteMover
-	bc     blockReadWriter
-	ac     addressChecker
-	vr     signatureVerifier
-	tf     trxsInBlockWriteFinder
+	tx     TrxWriteMover
+	bc     BlockReadWriter
+	ac     AddressChecker
+	vr     SignatureVerifier
+	tf     BlockFinder
 }
 
 // NewLedger creates new Ledger if config is valid or returns error otherwise.
 func NewLedger(
 	config Config,
-	bc blockReadWriter,
-	tx trxWriteMover,
-	ac addressChecker,
-	vr signatureVerifier,
-	tf trxsInBlockWriteFinder,
+	bc BlockReadWriter,
+	tx TrxWriteMover,
+	ac AddressChecker,
+	vr SignatureVerifier,
+	tf BlockFinder,
 ) (*Ledger, error) {
 	if err := config.Validate(); err != nil {
 		return nil, err
@@ -144,9 +144,9 @@ func (l *Ledger) Run(ctx context.Context) {
 	}(ctx)
 }
 
-// WriteTemporaryTransaction validates and writes a transaction to the repository.
+// WriteCandidateTransaction validates and writes a transaction to the repository.
 // Transaction is not yet a part of the blockchain.
-func (l *Ledger) WriteTemporaryTransaction(ctx context.Context, tx *transaction.Transaction) error {
+func (l *Ledger) WriteCandidateTransaction(ctx context.Context, tx *transaction.Transaction) error {
 	if err := l.validateTx(ctx, tx); err != nil {
 		return err
 	}

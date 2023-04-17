@@ -11,12 +11,12 @@ import (
 
 const createSignTimeDiff = time.Minute * 10
 
-type signer interface {
+type Signer interface {
 	Sign(message []byte) (digest [32]byte, signature []byte)
 	Address() string
 }
 
-type verifier interface {
+type Verifier interface {
 	Verify(message, signature []byte, hash [32]byte, address string) error
 }
 
@@ -34,7 +34,7 @@ type Transaction struct {
 }
 
 // New creates new transaction signed by issuer.
-func New(subject string, message []byte, issuer signer) (Transaction, error) {
+func New(subject string, message []byte, issuer Signer) (Transaction, error) {
 	createdAt := time.Now()
 	b := make([]byte, 8)
 	binary.LittleEndian.PutUint64(b, uint64(createdAt.UnixMicro()))
@@ -55,7 +55,7 @@ func New(subject string, message []byte, issuer signer) (Transaction, error) {
 }
 
 // Sign signs Transaction by receiver.
-func (t *Transaction) Sign(receiver signer, v verifier) ([32]byte, error) {
+func (t *Transaction) Sign(receiver Signer, v Verifier) ([32]byte, error) {
 	now := time.Now()
 
 	if t.CreatedAt.UnixMicro() > now.UnixMicro() {

@@ -15,18 +15,18 @@ var (
 	ErrInvalidBlockIndex    = errors.New("block index is invalid")
 )
 
-type blockReader interface {
+type BlockReader interface {
 	LastBlock(ctx context.Context) (block.Block, error)
 	ReadBlockByHash(ctx context.Context, hash [32]byte) (block.Block, error)
 }
 
-type blockWriter interface {
+type BlockWriter interface {
 	WriteBlock(ctx context.Context, block block.Block) error
 }
 
-type blockReadWriter interface {
-	blockReader
-	blockWriter
+type BlockReadWriter interface {
+	BlockReader
+	BlockWriter
 }
 
 // Blockchain keeps track of the blocks.
@@ -34,11 +34,11 @@ type Blockchain struct {
 	mux            sync.RWMutex
 	lastBlockHash  [32]byte
 	lastBlockIndex uint64
-	rw             blockReadWriter
+	rw             BlockReadWriter
 }
 
 // NewChaion creates a new Blockchain that has access to the blockchain stored in the repository.
-func NewBlockchain(ctx context.Context, rw blockReadWriter) (*Blockchain, error) {
+func NewBlockchain(ctx context.Context, rw BlockReadWriter) (*Blockchain, error) {
 	lastBlock, err := rw.LastBlock(ctx)
 	if err != nil {
 		return nil, err
