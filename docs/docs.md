@@ -317,6 +317,7 @@ import "github.com/bartossh/The-Accountant/repo"
   - [func Connect(ctx context.Context, connStr, databaseName string) (*DataBase, error)](<#func-connect>)
   - [func (db DataBase) CheckAddressExists(ctx context.Context, address string) (bool, error)](<#func-database-checkaddressexists>)
   - [func (c DataBase) Disconnect(ctx context.Context) error](<#func-database-disconnect>)
+  - [func (db DataBase) FindAddress(ctx context.Context, search string, limit int) ([]string, error)](<#func-database-findaddress>)
   - [func (db DataBase) FindTransactionInBlockHash(ctx context.Context, trxHash [32]byte) ([32]byte, error)](<#func-database-findtransactioninblockhash>)
   - [func (db DataBase) LastBlock(ctx context.Context) (block.Block, error)](<#func-database-lastblock>)
   - [func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context, hash [][32]byte) error](<#func-database-movetransactionsfromtemporarytopermanent>)
@@ -375,7 +376,15 @@ func (c DataBase) Disconnect(ctx context.Context) error
 
 Disconnect disconnects user from database
 
-### func \(DataBase\) [FindTransactionInBlockHash](<https://github.com/bartossh/The-Accountant/blob/main/repo/search.go#L32>)
+### func \(DataBase\) [FindAddress](<https://github.com/bartossh/The-Accountant/blob/main/repo/search.go#L43>)
+
+```go
+func (db DataBase) FindAddress(ctx context.Context, search string, limit int) ([]string, error)
+```
+
+FindAddress looks for matching address in the addresses repository and returns limited slice of matching addresses. If limit is set to 0 or above the 1000 which is maximum then serach is limited to 1000.
+
+### func \(DataBase\) [FindTransactionInBlockHash](<https://github.com/bartossh/The-Accountant/blob/main/repo/search.go#L33>)
 
 ```go
 func (db DataBase) FindTransactionInBlockHash(ctx context.Context, trxHash [32]byte) ([32]byte, error)
@@ -407,7 +416,7 @@ func (db DataBase) ReadBlockByHash(ctx context.Context, hash [32]byte) (block.Bl
 
 ReadBlockByHash returns block with given hash.
 
-### func \(DataBase\) [RunMigration](<https://github.com/bartossh/The-Accountant/blob/main/repo/migrations.go#L190>)
+### func \(DataBase\) [RunMigration](<https://github.com/bartossh/The-Accountant/blob/main/repo/migrations.go#L200>)
 
 ```go
 func (c DataBase) RunMigration(ctx context.Context) error
@@ -439,7 +448,7 @@ func (db DataBase) WriteTemporaryTransaction(ctx context.Context, trx *transacti
 
 WriteTemporaryTransaction writes transaction to the temporary storage.
 
-### func \(DataBase\) [WriteTransactionsInBlock](<https://github.com/bartossh/The-Accountant/blob/main/repo/search.go#L19>)
+### func \(DataBase\) [WriteTransactionsInBlock](<https://github.com/bartossh/The-Accountant/blob/main/repo/search.go#L20>)
 
 ```go
 func (db DataBase) WriteTransactionsInBlock(ctx context.Context, blockHash [32]byte, trxHash [][32]byte) error
@@ -457,7 +466,7 @@ type Migration struct {
 }
 ```
 
-## type [TransactionInBlock](<https://github.com/bartossh/The-Accountant/blob/main/repo/search.go#L12-L16>)
+## type [TransactionInBlock](<https://github.com/bartossh/The-Accountant/blob/main/repo/search.go#L13-L17>)
 
 TransactionInBlock stores relation between Transaction and Block to which Transaction was added. It is tored for fast lookup only.
 
@@ -679,5 +688,4 @@ func (w *Wallet) Version() byte
 ```
 
 Version returns wallet version.
-
 
