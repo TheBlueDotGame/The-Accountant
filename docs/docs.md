@@ -1,7 +1,7 @@
 ---
 layout: page
 title: Documentation.
-subtitle: Package and the REST API ersver.
+subtitle: Package and the REST API server.
 ---
 
 # block
