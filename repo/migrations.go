@@ -51,6 +51,16 @@ var migrations = []migration{
 					},
 					Options: options.Index().SetUnique(true),
 				})
+			if err != nil {
+				return err
+			}
+			_, err = user.Collection(addressesCollection).
+				Indexes().
+				CreateOne(ctx, mongo.IndexModel{
+					Keys: bson.M{
+						"public_key": "text",
+					},
+				})
 			return err
 		},
 	},
