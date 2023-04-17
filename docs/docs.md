@@ -502,6 +502,123 @@ func Base58Decode(input []byte) ([]byte, error)
 func Base58Encode(input []byte) []byte
 ```
 
+# server
+
+```go
+import "github.com/bartossh/The-Accountant/server"
+```
+
+## Index
+
+- [Variables](<#variables>)
+- [func Run(ctx context.Context, c *Config, repo Repository, bookkeeping Bookkeeper) error](<#func-run>)
+- [type Bookkeeper](<#type-bookkeeper>)
+- [type Config](<#type-config>)
+- [type Repository](<#type-repository>)
+- [type SearchAddressResponse](<#type-searchaddressresponse>)
+- [type SearchAddressRquest](<#type-searchaddressrquest>)
+- [type SearchBlockRequest](<#type-searchblockrequest>)
+- [type SearchBlockResponse](<#type-searchblockresponse>)
+- [type TransactionConfirmResponse](<#type-transactionconfirmresponse>)
+
+
+## Variables
+
+```go
+var ErrWrongPortSpecified = errors.New("port must be between 1 and 65535")
+```
+
+## func [Run](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L50>)
+
+```go
+func Run(ctx context.Context, c *Config, repo Repository, bookkeeping Bookkeeper) error
+```
+
+Run initializes routing and runs the server. To stop the server cancel the context.
+
+## type [Bookkeeper](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L34-L37>)
+
+Bookkeeper abstracts methods of the bookeeping of a blockchain.
+
+```go
+type Bookkeeper interface {
+    Run(ctx context.Context)
+    WriteCandidateTransaction(ctx context.Context, tx *transaction.Transaction) error
+}
+```
+
+## type [Config](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L40-L42>)
+
+Config contains configuration of the server.
+
+```go
+type Config struct {
+    Port int
+}
+```
+
+## type [Repository](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L26-L31>)
+
+Repository is the interface that wraps the basic CRUD and Search methods. Repository should be properly indexed to allow for transaction and block hash. as well as address public keys to be and unique and the hash lookup should be fast. Repository holds the blocks and transaction that are part of the blockchain.
+
+```go
+type Repository interface {
+    Disconnect(ctx context.Context) error
+    RunMigration(ctx context.Context) error
+    FindAddress(ctx context.Context, search string, limit int) ([]string, error)
+    FindTransactionInBlockHash(ctx context.Context, trxHash [32]byte) ([32]byte, error)
+}
+```
+
+## type [SearchAddressResponse](<https://github.com/bartossh/The-Accountant/blob/main/server/routes.go#L18-L20>)
+
+SearchAddressResponse is a response for address search.
+
+```go
+type SearchAddressResponse struct {
+    Addresses []string `json:"addresses"`
+}
+```
+
+## type [SearchAddressRquest](<https://github.com/bartossh/The-Accountant/blob/main/server/routes.go#L13-L15>)
+
+SearchAddressRquest is a request to search for address.
+
+```go
+type SearchAddressRquest struct {
+    Address string `json:"address"`
+}
+```
+
+## type [SearchBlockRequest](<https://github.com/bartossh/The-Accountant/blob/main/server/routes.go#L41-L43>)
+
+SearchBlockRequest is a request to search for block.
+
+```go
+type SearchBlockRequest struct {
+    RawTrxHash [32]byte `json:"raw_trx_hash"`
+}
+```
+
+## type [SearchBlockResponse](<https://github.com/bartossh/The-Accountant/blob/main/server/routes.go#L46-L48>)
+
+searchBlockResponse is a response for block search.
+
+```go
+type SearchBlockResponse struct {
+    RawBlockHash [32]byte `json:"raw_block_hash"`
+}
+```
+
+## type [TransactionConfirmResponse](<https://github.com/bartossh/The-Accountant/blob/main/server/routes.go#L69-L72>)
+
+```go
+type TransactionConfirmResponse struct {
+    Succes  bool     `json:"success"`
+    TrxHash [32]byte `json:"trx_hash"`
+}
+```
+
 # transaction
 
 ```go
