@@ -21,7 +21,7 @@ author: Bartosz Lenart
 
 navbar-links:
   About: "about"
-  Docs: "https://github.com/bartossh/The-Accountant"
+  Docs: "docs"
 
 ################
 # --- Logo --- #
@@ -49,7 +49,7 @@ social-network-links:
   email: "lenart.consulting@gmail.com"
   rss: true  # remove this line if you don't want to show an RSS link at the bottom
   github: bartossh
-  patreon: NotSetYet
+  patreon: bartossh
 #  medium: yourname
 #  reddit: yourname
   linkedin: bartoszadamlenart/
