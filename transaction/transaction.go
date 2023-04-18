@@ -9,7 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-const createSignTimeDiff = time.Minute * 10
+const createSignTimeDiff = time.Hour * 24 * 7 // week
 
 type Signer interface {
 	Sign(message []byte) (digest [32]byte, signature []byte)

@@ -32,7 +32,9 @@ var (
 
 type TrxWriteMover interface {
 	WriteTemporaryTransaction(ctx context.Context, trx *transaction.Transaction) error
+	WriteIssuerSignedTransactionForReceiver(ctx context.Context, receiverAddr string, trx *transaction.Transaction) error
 	MoveTransactionsFromTemporaryToPermanent(ctx context.Context, hash [][32]byte) error
+	RemoveAwaitingTransaction(ctx context.Context, trxHash [32]byte) error
 }
 
 type BlockReader interface {
@@ -144,17 +146,38 @@ func (l *Ledger) Run(ctx context.Context) {
 	}(ctx)
 }
 
-// WriteCandidateTransaction validates and writes a transaction to the repository.
-// Transaction is not yet a part of the blockchain.
-func (l *Ledger) WriteCandidateTransaction(ctx context.Context, tx *transaction.Transaction) error {
-	if err := l.validateTx(ctx, tx); err != nil {
-		return err
-	}
-	if err := l.tx.WriteTemporaryTransaction(ctx, tx); err != nil {
+// WriteIssuerSignedTransactionForReceiver validates issuer signature and writes a transaction to the repository for receiver.
+func (l *Ledger) WriteIssuerIssuerSignedTransactionForReceiver(
+	ctx context.Context,
+	receiverAddr string,
+	trx *transaction.Transaction,
+) error {
+	if err := l.validatePartialyTransaction(ctx, receiverAddr, trx); err != nil {
 		return err
 	}
 
-	l.hashC <- tx.Hash
+	if err := l.tx.WriteIssuerSignedTransactionForReceiver(ctx, receiverAddr, trx); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// WriteCandidateTransaction validates and writes a transaction to the repository.
+// Transaction is not yet a part of the blockchain.
+func (l *Ledger) WriteCandidateTransaction(ctx context.Context, trx *transaction.Transaction) error {
+	if err := l.validateFullyTransaction(ctx, trx); err != nil {
+		return err
+	}
+	if err := l.tx.WriteTemporaryTransaction(ctx, trx); err != nil {
+		return err
+	}
+
+	if err := l.tx.RemoveAwaitingTransaction(ctx, trx.Hash); err != nil {
+		return err
+	}
+
+	l.hashC <- trx.Hash
 
 	return nil
 }
@@ -195,8 +218,8 @@ func (l *Ledger) saveBlock(ctx context.Context) ([32]byte, error) {
 	return nb.Hash, nil
 }
 
-func (l *Ledger) validateTx(ctx context.Context, tx *transaction.Transaction) error {
-	exists, err := l.ac.CheckAddressExists(ctx, tx.IssuerAddress)
+func (l *Ledger) validatePartialyTransaction(ctx context.Context, receiverAddr string, trx *transaction.Transaction) error {
+	exists, err := l.ac.CheckAddressExists(ctx, trx.IssuerAddress)
 	if err != nil {
 		return err
 	}
@@ -204,7 +227,7 @@ func (l *Ledger) validateTx(ctx context.Context, tx *transaction.Transaction) er
 		return ErrAddressNotExists
 	}
 
-	exists, err = l.ac.CheckAddressExists(ctx, tx.ReceiverAddress)
+	exists, err = l.ac.CheckAddressExists(ctx, receiverAddr)
 	if err != nil {
 		return err
 	}
@@ -212,11 +235,34 @@ func (l *Ledger) validateTx(ctx context.Context, tx *transaction.Transaction) er
 		return ErrAddressNotExists
 	}
 
-	if err := l.vr.Verify(tx.Data, tx.IssuerSignature, tx.Hash, tx.IssuerAddress); err != nil {
+	if err := l.vr.Verify(trx.Data, trx.IssuerSignature, trx.Hash, trx.IssuerAddress); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (l *Ledger) validateFullyTransaction(ctx context.Context, trx *transaction.Transaction) error {
+	exists, err := l.ac.CheckAddressExists(ctx, trx.IssuerAddress)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return ErrAddressNotExists
+	}
+
+	exists, err = l.ac.CheckAddressExists(ctx, trx.ReceiverAddress)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return ErrAddressNotExists
+	}
+
+	if err := l.vr.Verify(trx.Data, trx.IssuerSignature, trx.Hash, trx.IssuerAddress); err != nil {
 		return err
 	}
 
-	if err := l.vr.Verify(tx.Data, tx.IssuerSignature, tx.Hash, tx.IssuerAddress); err != nil {
+	if err := l.vr.Verify(trx.Data, trx.IssuerSignature, trx.Hash, trx.IssuerAddress); err != nil {
 		return err
 	}
 

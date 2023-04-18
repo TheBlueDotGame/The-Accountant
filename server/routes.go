@@ -66,9 +66,35 @@ func (s *server) trxInBlock(c *fiber.Ctx) error {
 	})
 }
 
-type TransactionConfirmResponse struct {
+type TransactionProposeRequest struct {
+	ReceiverAddr string                  `json:"receiver_addr"`
+	Transaction  transaction.Transaction `json:"transaction"`
+}
+
+type TransactionConfirmProposeResponse struct {
 	Succes  bool     `json:"success"`
 	TrxHash [32]byte `json:"trx_hash"`
+}
+
+func (s *server) propose(c *fiber.Ctx) error {
+	var req TransactionProposeRequest
+	if err := c.BodyParser(&req); err != nil {
+		// TODO log err
+		return fiber.ErrBadRequest
+	}
+
+	if err := s.bookkeeping.WriteIssuerIssuerSignedTransactionForReceiver(c.Context(), req.ReceiverAddr, &req.Transaction); err != nil {
+		// TODO log error
+		return c.JSON(TransactionConfirmProposeResponse{
+			Succes:  false,
+			TrxHash: req.Transaction.Hash,
+		})
+	}
+
+	return c.JSON(TransactionConfirmProposeResponse{
+		Succes:  true,
+		TrxHash: req.Transaction.Hash,
+	})
 }
 
 func (s *server) confirm(c *fiber.Ctx) error {
@@ -80,13 +106,13 @@ func (s *server) confirm(c *fiber.Ctx) error {
 
 	if err := s.bookkeeping.WriteCandidateTransaction(c.Context(), &trx); err != nil {
 		// TODO: log err
-		return c.JSON(TransactionConfirmResponse{
+		return c.JSON(TransactionConfirmProposeResponse{
 			Succes:  false,
 			TrxHash: trx.Hash,
 		})
 	}
 
-	return c.JSON(TransactionConfirmResponse{
+	return c.JSON(TransactionConfirmProposeResponse{
 		Succes:  true,
 		TrxHash: trx.Hash,
 	})

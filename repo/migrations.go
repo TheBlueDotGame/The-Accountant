@@ -93,6 +93,31 @@ var migrations = []migration{
 		},
 	},
 	{
+		name: "index_hash_transactions_awaiting",
+		run: func(ctx context.Context, user *mongo.Database) error {
+			_, err := user.Collection(transactionsAwaitingReceiverCollection).
+				Indexes().
+				CreateOne(ctx, mongo.IndexModel{
+					Keys: bson.M{
+						"transaction_hash": 1,
+					},
+					Options: options.Index().SetUnique(true),
+				})
+			if err != nil {
+				return err
+			}
+			_, err = user.Collection(transactionsAwaitingReceiverCollection).
+				Indexes().
+				CreateOne(ctx, mongo.IndexModel{
+					Keys: bson.M{
+						"receiver_address": 1,
+					},
+					Options: options.Index().SetUnique(false),
+				})
+			return err
+		},
+	},
+	{
 		name: "index_hash_prev_hash_index_blocks",
 		run: func(ctx context.Context, user *mongo.Database) error {
 			_, err := user.Collection(blocksCollection).

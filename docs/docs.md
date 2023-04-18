@@ -176,7 +176,8 @@ import "github.com/bartossh/The-Accountant/bookkeeping"
 - [type Ledger](<#type-ledger>)
   - [func NewLedger(config Config, bc BlockReadWriter, tx TrxWriteMover, ac AddressChecker, vr SignatureVerifier, tf BlockFinder) (*Ledger, error)](<#func-newledger>)
   - [func (l *Ledger) Run(ctx context.Context)](<#func-ledger-run>)
-  - [func (l *Ledger) WriteCandidateTransaction(ctx context.Context, tx *transaction.Transaction) error](<#func-ledger-writecandidatetransaction>)
+  - [func (l *Ledger) WriteCandidateTransaction(ctx context.Context, trx *transaction.Transaction) error](<#func-ledger-writecandidatetransaction>)
+  - [func (l *Ledger) WriteIssuerIssuerSignedTransactionForReceiver(ctx context.Context, receiverAddr string, trx *transaction.Transaction) error](<#func-ledger-writeissuerissuersignedtransactionforreceiver>)
 - [type SignatureVerifier](<#type-signatureverifier>)
 - [type TrxWriteMover](<#type-trxwritemover>)
 
@@ -195,7 +196,7 @@ var (
 )
 ```
 
-## type [AddressChecker](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L51-L53>)
+## type [AddressChecker](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L53-L55>)
 
 ```go
 type AddressChecker interface {
@@ -203,7 +204,7 @@ type AddressChecker interface {
 }
 ```
 
-## type [BlockFinder](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L59-L62>)
+## type [BlockFinder](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L61-L64>)
 
 ```go
 type BlockFinder interface {
@@ -212,7 +213,7 @@ type BlockFinder interface {
 }
 ```
 
-## type [BlockReadWriter](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L46-L49>)
+## type [BlockReadWriter](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L48-L51>)
 
 ```go
 type BlockReadWriter interface {
@@ -221,7 +222,7 @@ type BlockReadWriter interface {
 }
 ```
 
-## type [BlockReader](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L38-L40>)
+## type [BlockReader](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L40-L42>)
 
 ```go
 type BlockReader interface {
@@ -229,7 +230,7 @@ type BlockReader interface {
 }
 ```
 
-## type [BlockWriter](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L42-L44>)
+## type [BlockWriter](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L44-L46>)
 
 ```go
 type BlockWriter interface {
@@ -237,7 +238,7 @@ type BlockWriter interface {
 }
 ```
 
-## type [Config](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L64-L68>)
+## type [Config](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L66-L70>)
 
 ```go
 type Config struct {
@@ -247,13 +248,13 @@ type Config struct {
 }
 ```
 
-### func \(Config\) [Validate](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L70>)
+### func \(Config\) [Validate](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L72>)
 
 ```go
 func (c Config) Validate() error
 ```
 
-## type [Ledger](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L87-L96>)
+## type [Ledger](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L89-L98>)
 
 Ledger is a collection of ledger functionality to perform bookkeeping.
 
@@ -263,7 +264,7 @@ type Ledger struct {
 }
 ```
 
-### func [NewLedger](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L99-L106>)
+### func [NewLedger](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L101-L108>)
 
 ```go
 func NewLedger(config Config, bc BlockReadWriter, tx TrxWriteMover, ac AddressChecker, vr SignatureVerifier, tf BlockFinder) (*Ledger, error)
@@ -271,7 +272,7 @@ func NewLedger(config Config, bc BlockReadWriter, tx TrxWriteMover, ac AddressCh
 
 NewLedger creates new Ledger if config is valid or returns error otherwise.
 
-### func \(\*Ledger\) [Run](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L124>)
+### func \(\*Ledger\) [Run](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L126>)
 
 ```go
 func (l *Ledger) Run(ctx context.Context)
@@ -279,15 +280,23 @@ func (l *Ledger) Run(ctx context.Context)
 
 Run runs the Ladger engine that writes blocks to the blockchain repository. Run starts a goroutine and can be stopped by cancelling the context.
 
-### func \(\*Ledger\) [WriteCandidateTransaction](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L149>)
+### func \(\*Ledger\) [WriteCandidateTransaction](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L168>)
 
 ```go
-func (l *Ledger) WriteCandidateTransaction(ctx context.Context, tx *transaction.Transaction) error
+func (l *Ledger) WriteCandidateTransaction(ctx context.Context, trx *transaction.Transaction) error
 ```
 
 WriteCandidateTransaction validates and writes a transaction to the repository. Transaction is not yet a part of the blockchain.
 
-## type [SignatureVerifier](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L55-L57>)
+### func \(\*Ledger\) [WriteIssuerIssuerSignedTransactionForReceiver](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L150-L154>)
+
+```go
+func (l *Ledger) WriteIssuerIssuerSignedTransactionForReceiver(ctx context.Context, receiverAddr string, trx *transaction.Transaction) error
+```
+
+WriteIssuerSignedTransactionForReceiver validates issuer signature and writes a transaction to the repository for receiver.
+
+## type [SignatureVerifier](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L57-L59>)
 
 ```go
 type SignatureVerifier interface {
@@ -295,12 +304,14 @@ type SignatureVerifier interface {
 }
 ```
 
-## type [TrxWriteMover](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L33-L36>)
+## type [TrxWriteMover](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L33-L38>)
 
 ```go
 type TrxWriteMover interface {
     WriteTemporaryTransaction(ctx context.Context, trx *transaction.Transaction) error
+    WriteIssuerSignedTransactionForReceiver(ctx context.Context, receiverAddr string, trx *transaction.Transaction) error
     MoveTransactionsFromTemporaryToPermanent(ctx context.Context, hash [][32]byte) error
+    RemoveAwaitingTransaction(ctx context.Context, trxHash [32]byte) error
 }
 ```
 
@@ -322,12 +333,15 @@ import "github.com/bartossh/The-Accountant/repo"
   - [func (db DataBase) LastBlock(ctx context.Context) (block.Block, error)](<#func-database-lastblock>)
   - [func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context, hash [][32]byte) error](<#func-database-movetransactionsfromtemporarytopermanent>)
   - [func (db DataBase) ReadBlockByHash(ctx context.Context, hash [32]byte) (block.Block, error)](<#func-database-readblockbyhash>)
+  - [func (db DataBase) RemoveAwaitingTransaction(ctx context.Context, trxHash [32]byte) error](<#func-database-removeawaitingtransaction>)
   - [func (c DataBase) RunMigration(ctx context.Context) error](<#func-database-runmigration>)
   - [func (db DataBase) WriteAddress(ctx context.Context, address Address) error](<#func-database-writeaddress>)
   - [func (db DataBase) WriteBlock(ctx context.Context, block block.Block) error](<#func-database-writeblock>)
+  - [func (db DataBase) WriteIssuerSignedTransactionForReceiver(ctx context.Context, receiverAddr string, trx *transaction.Transaction) error](<#func-database-writeissuersignedtransactionforreceiver>)
   - [func (db DataBase) WriteTemporaryTransaction(ctx context.Context, trx *transaction.Transaction) error](<#func-database-writetemporarytransaction>)
   - [func (db DataBase) WriteTransactionsInBlock(ctx context.Context, blockHash [32]byte, trxHash [][32]byte) error](<#func-database-writetransactionsinblock>)
 - [type Migration](<#type-migration>)
+- [type TransactionAwaitingReceiver](<#type-transactionawaitingreceiver>)
 - [type TransactionInBlock](<#type-transactioninblock>)
 
 
@@ -342,7 +356,7 @@ type Address struct {
 }
 ```
 
-## type [DataBase](<https://github.com/bartossh/The-Accountant/blob/main/repo/repo.go#L22-L24>)
+## type [DataBase](<https://github.com/bartossh/The-Accountant/blob/main/repo/repo.go#L23-L25>)
 
 Database provides database access for read, write and delete of repository entities.
 
@@ -352,7 +366,7 @@ type DataBase struct {
 }
 ```
 
-### func [Connect](<https://github.com/bartossh/The-Accountant/blob/main/repo/repo.go#L27>)
+### func [Connect](<https://github.com/bartossh/The-Accountant/blob/main/repo/repo.go#L28>)
 
 ```go
 func Connect(ctx context.Context, connStr, databaseName string) (*DataBase, error)
@@ -368,7 +382,7 @@ func (db DataBase) CheckAddressExists(ctx context.Context, address string) (bool
 
 CheckAddressExists checks if address exists in the database.
 
-### func \(DataBase\) [Disconnect](<https://github.com/bartossh/The-Accountant/blob/main/repo/repo.go#L43>)
+### func \(DataBase\) [Disconnect](<https://github.com/bartossh/The-Accountant/blob/main/repo/repo.go#L44>)
 
 ```go
 func (c DataBase) Disconnect(ctx context.Context) error
@@ -400,7 +414,7 @@ func (db DataBase) LastBlock(ctx context.Context) (block.Block, error)
 
 LastBlock returns last block from the database.
 
-### func \(DataBase\) [MoveTransactionsFromTemporaryToPermanent](<https://github.com/bartossh/The-Accountant/blob/main/repo/transaction.go#L21>)
+### func \(DataBase\) [MoveTransactionsFromTemporaryToPermanent](<https://github.com/bartossh/The-Accountant/blob/main/repo/transaction.go#L46>)
 
 ```go
 func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context, hash [][32]byte) error
@@ -416,7 +430,13 @@ func (db DataBase) ReadBlockByHash(ctx context.Context, hash [32]byte) (block.Bl
 
 ReadBlockByHash returns block with given hash.
 
-### func \(DataBase\) [RunMigration](<https://github.com/bartossh/The-Accountant/blob/main/repo/migrations.go#L200>)
+### func \(DataBase\) [RemoveAwaitingTransaction](<https://github.com/bartossh/The-Accountant/blob/main/repo/transaction.go#L26>)
+
+```go
+func (db DataBase) RemoveAwaitingTransaction(ctx context.Context, trxHash [32]byte) error
+```
+
+### func \(DataBase\) [RunMigration](<https://github.com/bartossh/The-Accountant/blob/main/repo/migrations.go#L225>)
 
 ```go
 func (c DataBase) RunMigration(ctx context.Context) error
@@ -440,7 +460,13 @@ func (db DataBase) WriteBlock(ctx context.Context, block block.Block) error
 
 WriteBlock writes block to the database.
 
-### func \(DataBase\) [WriteTemporaryTransaction](<https://github.com/bartossh/The-Accountant/blob/main/repo/transaction.go#L13>)
+### func \(DataBase\) [WriteIssuerSignedTransactionForReceiver](<https://github.com/bartossh/The-Accountant/blob/main/repo/transaction.go#L31-L35>)
+
+```go
+func (db DataBase) WriteIssuerSignedTransactionForReceiver(ctx context.Context, receiverAddr string, trx *transaction.Transaction) error
+```
+
+### func \(DataBase\) [WriteTemporaryTransaction](<https://github.com/bartossh/The-Accountant/blob/main/repo/transaction.go#L21>)
 
 ```go
 func (db DataBase) WriteTemporaryTransaction(ctx context.Context, trx *transaction.Transaction) error
@@ -463,6 +489,17 @@ Migration describes migration that is made in the repository database.
 ```go
 type Migration struct {
     Name string `json:"name" bson:"name"`
+}
+```
+
+## type [TransactionAwaitingReceiver](<https://github.com/bartossh/The-Accountant/blob/main/repo/transaction.go#L13-L18>)
+
+```go
+type TransactionAwaitingReceiver struct {
+    ID              primitive.ObjectID      `json:"-"                bson:"_id,omitempty"`
+    ReceiverAddress string                  `json:"receiver_address" bson:"receiver_address"`
+    Transaction     transaction.Transaction `json:"transaction"      bson:"transaction"`
+    TransactionHash [32]byte                `json:"transaction_hash" bson:"transaction_hash"`
 }
 ```
 
@@ -519,7 +556,8 @@ import "github.com/bartossh/The-Accountant/server"
 - [type SearchAddressRquest](<#type-searchaddressrquest>)
 - [type SearchBlockRequest](<#type-searchblockrequest>)
 - [type SearchBlockResponse](<#type-searchblockresponse>)
-- [type TransactionConfirmResponse](<#type-transactionconfirmresponse>)
+- [type TransactionConfirmProposeResponse](<#type-transactionconfirmproposeresponse>)
+- [type TransactionProposeRequest](<#type-transactionproposerequest>)
 
 
 ## Variables
@@ -528,7 +566,7 @@ import "github.com/bartossh/The-Accountant/server"
 var ErrWrongPortSpecified = errors.New("port must be between 1 and 65535")
 ```
 
-## func [Run](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L50>)
+## func [Run](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L51>)
 
 ```go
 func Run(ctx context.Context, c *Config, repo Repository, bookkeeping Bookkeeper) error
@@ -536,7 +574,7 @@ func Run(ctx context.Context, c *Config, repo Repository, bookkeeping Bookkeeper
 
 Run initializes routing and runs the server. To stop the server cancel the context.
 
-## type [Bookkeeper](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L34-L37>)
+## type [Bookkeeper](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L34-L38>)
 
 Bookkeeper abstracts methods of the bookeeping of a blockchain.
 
@@ -544,10 +582,11 @@ Bookkeeper abstracts methods of the bookeeping of a blockchain.
 type Bookkeeper interface {
     Run(ctx context.Context)
     WriteCandidateTransaction(ctx context.Context, tx *transaction.Transaction) error
+    WriteIssuerIssuerSignedTransactionForReceiver(ctx context.Context, receiverAddr string, trx *transaction.Transaction) error
 }
 ```
 
-## type [Config](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L40-L42>)
+## type [Config](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L41-L43>)
 
 Config contains configuration of the server.
 
@@ -610,12 +649,21 @@ type SearchBlockResponse struct {
 }
 ```
 
-## type [TransactionConfirmResponse](<https://github.com/bartossh/The-Accountant/blob/main/server/routes.go#L69-L72>)
+## type [TransactionConfirmProposeResponse](<https://github.com/bartossh/The-Accountant/blob/main/server/routes.go#L74-L77>)
 
 ```go
-type TransactionConfirmResponse struct {
+type TransactionConfirmProposeResponse struct {
     Succes  bool     `json:"success"`
     TrxHash [32]byte `json:"trx_hash"`
+}
+```
+
+## type [TransactionProposeRequest](<https://github.com/bartossh/The-Accountant/blob/main/server/routes.go#L69-L72>)
+
+```go
+type TransactionProposeRequest struct {
+    ReceiverAddr string                  `json:"receiver_addr"`
+    Transaction  transaction.Transaction `json:"transaction"`
 }
 ```
 
