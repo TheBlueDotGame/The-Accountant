@@ -10,12 +10,13 @@ import (
 )
 
 const (
-	migrationsCollection            = "migrations"
-	addressesCollection             = "addresses"
-	transactionsPermanentCollection = "transactionsPermanent"
-	transactionsTemporaryCollection = "transactionsTemporary"
-	blocksCollection                = "blocks"
-	transactionsInBlockCollection   = "transactionsInBlock"
+	migrationsCollection                   = "migrations"
+	addressesCollection                    = "addresses"
+	transactionsPermanentCollection        = "transactionsPermanent"
+	transactionsTemporaryCollection        = "transactionsTemporary"
+	transactionsAwaitingReceiverCollection = "transactionsAwaitingReceiver"
+	blocksCollection                       = "blocks"
+	transactionsInBlockCollection          = "transactionsInBlock"
 )
 
 // Database provides database access for read, write and delete of repository entities.

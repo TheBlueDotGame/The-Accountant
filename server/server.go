@@ -34,6 +34,7 @@ type Repository interface {
 type Bookkeeper interface {
 	Run(ctx context.Context)
 	WriteCandidateTransaction(ctx context.Context, tx *transaction.Transaction) error
+	WriteIssuerIssuerSignedTransactionForReceiver(ctx context.Context, receiverAddr string, trx *transaction.Transaction) error
 }
 
 // Config contains configuration of the server.
@@ -88,6 +89,7 @@ func Run(ctx context.Context, c *Config, repo Repository, bookkeeping Bookkeeper
 	search.Post("/block", s.trxInBlock)
 
 	transaction := router.Group("/transaction")
+	transaction.Post("/propose", s.propose)
 	transaction.Post("/confirm", s.confirm)
 
 	go func() {
