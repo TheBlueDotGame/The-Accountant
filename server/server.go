@@ -34,7 +34,20 @@ type Repository interface {
 type Bookkeeper interface {
 	Run(ctx context.Context)
 	WriteCandidateTransaction(ctx context.Context, tx *transaction.Transaction) error
-	WriteIssuerIssuerSignedTransactionForReceiver(ctx context.Context, receiverAddr string, trx *transaction.Transaction) error
+	WriteIssuerSignedTransactionForReceiver(ctx context.Context, receiverAddr string, trx *transaction.Transaction) error
+	ReadAwaitedTransactionsForAddress(
+		ctx context.Context,
+		message, signature []byte,
+		hash [32]byte,
+		address string,
+	) ([]transaction.Transaction, error)
+}
+
+// RandomDataProvideValidator provides random binary data for signing to prove identity and
+// the validator of data being valid and not expired.
+type RandomDataProvideValidator interface {
+	ProvideData(address string) []byte
+	ValidateData(address string, data []byte) bool
 }
 
 // Config contains configuration of the server.
@@ -45,10 +58,11 @@ type Config struct {
 type server struct {
 	repo        Repository
 	bookkeeping Bookkeeper
+	pv          RandomDataProvideValidator
 }
 
 // Run initializes routing and runs the server. To stop the server cancel the context.
-func Run(ctx context.Context, c *Config, repo Repository, bookkeeping Bookkeeper) error {
+func Run(ctx context.Context, c *Config, repo Repository, bookkeeping Bookkeeper, pv RandomDataProvideValidator) error {
 	var err error
 	ctxx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -69,6 +83,7 @@ func Run(ctx context.Context, c *Config, repo Repository, bookkeeping Bookkeeper
 	s := &server{
 		repo:        repo,
 		bookkeeping: bookkeeping,
+		pv:          pv,
 	}
 
 	router := fiber.New(fiber.Config{
@@ -91,6 +106,8 @@ func Run(ctx context.Context, c *Config, repo Repository, bookkeeping Bookkeeper
 	transaction := router.Group("/transaction")
 	transaction.Post("/propose", s.propose)
 	transaction.Post("/confirm", s.confirm)
+	transaction.Post("/awaited", s.awaited)
+	transaction.Post("/data", s.data)
 
 	go func() {
 		bookkeeping.Run(ctxx)
