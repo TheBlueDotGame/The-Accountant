@@ -30,11 +30,12 @@ var (
 	ErrBlockTransactionsSizeNotInRange = errors.New("block transactions size is not in range of [1 : 60000]")
 )
 
-type TrxWriteMover interface {
+type TrxWriteReadMover interface {
 	WriteTemporaryTransaction(ctx context.Context, trx *transaction.Transaction) error
 	WriteIssuerSignedTransactionForReceiver(ctx context.Context, receiverAddr string, trx *transaction.Transaction) error
 	MoveTransactionsFromTemporaryToPermanent(ctx context.Context, hash [][32]byte) error
 	RemoveAwaitingTransaction(ctx context.Context, trxHash [32]byte) error
+	ReadAwaitingTransactions(ctx context.Context, address string) ([]transaction.Transaction, error)
 }
 
 type BlockReader interface {
@@ -90,7 +91,7 @@ type Ledger struct {
 	config Config
 	hashC  chan [32]byte
 	hashes [][32]byte
-	tx     TrxWriteMover
+	tx     TrxWriteReadMover
 	bc     BlockReadWriter
 	ac     AddressChecker
 	vr     SignatureVerifier
@@ -101,7 +102,7 @@ type Ledger struct {
 func NewLedger(
 	config Config,
 	bc BlockReadWriter,
-	tx TrxWriteMover,
+	tx TrxWriteReadMover,
 	ac AddressChecker,
 	vr SignatureVerifier,
 	tf BlockFinder,
@@ -147,7 +148,7 @@ func (l *Ledger) Run(ctx context.Context) {
 }
 
 // WriteIssuerSignedTransactionForReceiver validates issuer signature and writes a transaction to the repository for receiver.
-func (l *Ledger) WriteIssuerIssuerSignedTransactionForReceiver(
+func (l *Ledger) WriteIssuerSignedTransactionForReceiver(
 	ctx context.Context,
 	receiverAddr string,
 	trx *transaction.Transaction,
@@ -180,6 +181,24 @@ func (l *Ledger) WriteCandidateTransaction(ctx context.Context, trx *transaction
 	l.hashC <- trx.Hash
 
 	return nil
+}
+
+func (l *Ledger) ReadAwaitedTransactionsForAddress(
+	ctx context.Context,
+	message, signature []byte,
+	hash [32]byte,
+	address string,
+) ([]transaction.Transaction, error) {
+	if err := l.vr.Verify(message, signature, hash, address); err != nil {
+		return nil, err
+	}
+
+	trxs, err := l.tx.ReadAwaitingTransactions(ctx, address)
+	if err != nil {
+		return nil, err
+	}
+
+	return trxs, nil
 }
 
 func (l *Ledger) forge(ctx context.Context) {

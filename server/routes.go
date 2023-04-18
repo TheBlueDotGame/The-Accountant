@@ -66,11 +66,13 @@ func (s *server) trxInBlock(c *fiber.Ctx) error {
 	})
 }
 
+// TransactionProposeRequest is a request to propose a transaction.
 type TransactionProposeRequest struct {
 	ReceiverAddr string                  `json:"receiver_addr"`
 	Transaction  transaction.Transaction `json:"transaction"`
 }
 
+// TransactionConfirmProposeResponse is a response for transaction propose.
 type TransactionConfirmProposeResponse struct {
 	Succes  bool     `json:"success"`
 	TrxHash [32]byte `json:"trx_hash"`
@@ -83,7 +85,7 @@ func (s *server) propose(c *fiber.Ctx) error {
 		return fiber.ErrBadRequest
 	}
 
-	if err := s.bookkeeping.WriteIssuerIssuerSignedTransactionForReceiver(c.Context(), req.ReceiverAddr, &req.Transaction); err != nil {
+	if err := s.bookkeeping.WriteIssuerSignedTransactionForReceiver(c.Context(), req.ReceiverAddr, &req.Transaction); err != nil {
 		// TODO log error
 		return c.JSON(TransactionConfirmProposeResponse{
 			Succes:  false,
@@ -116,4 +118,64 @@ func (s *server) confirm(c *fiber.Ctx) error {
 		Succes:  true,
 		TrxHash: trx.Hash,
 	})
+}
+
+// AwaitedTransactionRequest is a request to get awaited transactions for given address.
+// Request contains of Address for which Awaited Transacttions are requested, Data in binary format,
+// Hash of Data ad Signature of the Data to prove that entity doing the request is an Address owner.
+type AwaitedTransactionRequest struct {
+	Address   string   `json:"address"`
+	Data      []byte   `json:"data"`
+	Hash      [32]byte `json:"hash"`
+	Signature []byte   `json:"signature"`
+}
+
+// AwaitedTransactionResponse is a response for awaited transactions request.
+type AwaitedTransactionResponse struct {
+	Success             bool                      `json:"success"`
+	AwaitedTransactions []transaction.Transaction `json:"awaited_transactions"`
+}
+
+func (s *server) awaited(c *fiber.Ctx) error {
+	var req AwaitedTransactionRequest
+	if err := c.BodyParser(&req); err != nil {
+		return fiber.ErrBadRequest
+	}
+
+	if ok := s.pv.ValidateData(req.Address, req.Data); !ok {
+		return fiber.ErrForbidden
+	}
+
+	trxs, err := s.bookkeeping.ReadAwaitedTransactionsForAddress(c.Context(), req.Data, req.Signature, req.Hash, req.Address)
+	if err != nil {
+		// TODO log error
+		return c.JSON(AwaitedTransactionResponse{
+			Success:             false,
+			AwaitedTransactions: nil,
+		})
+	}
+
+	return c.JSON(AwaitedTransactionResponse{
+		Success:             true,
+		AwaitedTransactions: trxs,
+	})
+}
+
+// DataToSignRequest is a request to get data to sign for proving identity.
+type DataToSignRequest struct {
+	Address string `json:"address"`
+}
+
+// DataToSignRequest is a response containing data to sign for proving identity.
+type DataToSignResponse struct {
+	Data []byte `json:"message"`
+}
+
+func (s *server) data(c *fiber.Ctx) error {
+	var req DataToSignRequest
+	if err := c.BodyParser(&req); err != nil {
+		return fiber.ErrBadRequest
+	}
+	d := s.pv.ProvideData(req.Address)
+	return c.JSON(DataToSignResponse{Data: d})
 }

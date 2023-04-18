@@ -23,11 +23,13 @@ func (db DataBase) WriteTemporaryTransaction(ctx context.Context, trx *transacti
 	return err
 }
 
+// RemoveAwaitingTransaction removes transaction from the awaiting transaction storage.
 func (db DataBase) RemoveAwaitingTransaction(ctx context.Context, trxHash [32]byte) error {
 	_, err := db.inner.Collection(transactionsAwaitingReceiverCollection).DeleteOne(ctx, bson.M{"transaction_hash": trxHash})
 	return err
 }
 
+// WriteIssuerSignedTransactionForReceiver writes transaction to the awaiting transaction storage paired with given receiver.
 func (db DataBase) WriteIssuerSignedTransactionForReceiver(
 	ctx context.Context,
 	receiverAddr string,
@@ -40,6 +42,21 @@ func (db DataBase) WriteIssuerSignedTransactionForReceiver(
 	}
 	_, err := db.inner.Collection(transactionsAwaitingReceiverCollection).InsertOne(ctx, awaitingTrx)
 	return err
+}
+
+// ReadAwaitingTransactions reads all transactions paired with given address.
+func (db DataBase) ReadAwaitingTransactions(ctx context.Context, address string) ([]transaction.Transaction, error) {
+	var trxs []transaction.Transaction
+	curs, err := db.inner.Collection(transactionsAwaitingReceiverCollection).Find(ctx, bson.M{"receiver_address": address})
+	if err != nil {
+		return nil, err
+	}
+
+	if err := curs.All(ctx, &trxs); err != nil {
+		return nil, err
+	}
+
+	return trxs, nil
 }
 
 // MoveTransactionsFromTemporaryToPermanent moves transactions from temporary storage to permanent.
