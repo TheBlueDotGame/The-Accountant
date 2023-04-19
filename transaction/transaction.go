@@ -11,16 +11,18 @@ import (
 
 const createSignTimeDiff = time.Hour * 24 * 7 // week
 
+// Signer is an interface for signing transaction.
 type Signer interface {
 	Sign(message []byte) (digest [32]byte, signature []byte)
 	Address() string
 }
 
+// Verifier is an interface for verifying transaction.
 type Verifier interface {
 	Verify(message, signature []byte, hash [32]byte, address string) error
 }
 
-// Transaction contains transaction information, subject type, subject data, signatues and public keys.
+// Transaction contains transaction information, subject type, subject data, signatures and public keys.
 type Transaction struct {
 	ID                primitive.ObjectID `json:"-"                  bson:"_id"`
 	CreatedAt         time.Time          `json:"created_at"         bson:"created_at"`
@@ -54,7 +56,7 @@ func New(subject string, message []byte, issuer Signer) (Transaction, error) {
 	}, nil
 }
 
-// Sign signs Transaction by receiver.
+// Sign verifies issuer signature and signs Transaction by receiver.
 func (t *Transaction) Sign(receiver Signer, v Verifier) ([32]byte, error) {
 	now := time.Now()
 

@@ -9,8 +9,8 @@ func (s *server) alive(c *fiber.Ctx) error {
 	return c.JSON(map[string]interface{}{"alive": true})
 }
 
-// SearchAddressRquest is a request to search for address.
-type SearchAddressRquest struct {
+// SearchAddressRequest is a request to search for address.
+type SearchAddressRequest struct {
 	Address string `json:"address"`
 }
 
@@ -20,7 +20,7 @@ type SearchAddressResponse struct {
 }
 
 func (s *server) address(c *fiber.Ctx) error {
-	var req SearchAddressRquest
+	var req SearchAddressRequest
 
 	if err := c.BodyParser(&req); err != nil {
 		// TODO: log err
@@ -42,7 +42,7 @@ type SearchBlockRequest struct {
 	RawTrxHash [32]byte `json:"raw_trx_hash"`
 }
 
-// searchBlockResponse is a response for block search.
+// SearchBlockResponse is a response for block search.
 type SearchBlockResponse struct {
 	RawBlockHash [32]byte `json:"raw_block_hash"`
 }
@@ -121,8 +121,8 @@ func (s *server) confirm(c *fiber.Ctx) error {
 }
 
 // AwaitedTransactionRequest is a request to get awaited transactions for given address.
-// Request contains of Address for which Awaited Transacttions are requested, Data in binary format,
-// Hash of Data ad Signature of the Data to prove that entity doing the request is an Address owner.
+// Request contains of Address for which Awaited Transactions are requested, Data in binary format,
+// Hash of Data and Signature of the Data to prove that entity doing the request is an Address owner.
 type AwaitedTransactionRequest struct {
 	Address   string   `json:"address"`
 	Data      []byte   `json:"data"`
