@@ -16,15 +16,18 @@ var (
 	ErrInvalidBlockIndex    = errors.New("block index is invalid")
 )
 
+// blockReader is the interface that wraps the basic Read methods.
 type BlockReader interface {
 	LastBlock(ctx context.Context) (block.Block, error)
 	ReadBlockByHash(ctx context.Context, hash [32]byte) (block.Block, error)
 }
 
+// BlockWriter is the interface that wraps the basic Write method.
 type BlockWriter interface {
 	WriteBlock(ctx context.Context, block block.Block) error
 }
 
+// BlockReadWriter is the interface that groups the basic Read and Write methods.
 type BlockReadWriter interface {
 	BlockReader
 	BlockWriter
@@ -38,6 +41,7 @@ type Blockchain struct {
 	rw             BlockReadWriter
 }
 
+// GenesisBlock creates a genesis block.
 func GenesisBlock(ctx context.Context, rw BlockReadWriter) error {
 	if b, err := rw.LastBlock(ctx); err == nil && b.Index != 0 {
 		return errors.New("genesis block already exists")
@@ -47,7 +51,7 @@ func GenesisBlock(ctx context.Context, rw BlockReadWriter) error {
 	return rw.WriteBlock(ctx, b)
 }
 
-// NewChaion creates a new Blockchain that has access to the blockchain stored in the repository.
+// NewBlockchain creates a new Blockchain that has access to the blockchain stored in the repository.
 func NewBlockchain(ctx context.Context, rw BlockReadWriter) (*Blockchain, error) {
 	lastBlock, err := rw.LastBlock(ctx)
 	if err != nil {

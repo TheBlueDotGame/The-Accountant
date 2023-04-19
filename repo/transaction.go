@@ -10,6 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+// TransactionAwaitingReceiver represents transaction awaiting receiver signature.
 type TransactionAwaitingReceiver struct {
 	ID              primitive.ObjectID      `json:"-"                bson:"_id,omitempty"`
 	ReceiverAddress string                  `json:"receiver_address" bson:"receiver_address"`

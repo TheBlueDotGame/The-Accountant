@@ -60,6 +60,7 @@ import "github.com/bartossh/The-Accountant/blockchain"
 ## Index
 
 - [Variables](<#variables>)
+- [func GenesisBlock(ctx context.Context, rw BlockReadWriter) error](<#func-genesisblock>)
 - [type BlockReadWriter](<#type-blockreadwriter>)
 - [type BlockReader](<#type-blockreader>)
 - [type BlockWriter](<#type-blockwriter>)
@@ -82,7 +83,17 @@ var (
 )
 ```
 
-## type [BlockReadWriter](<https://github.com/bartossh/The-Accountant/blob/main/blockchain/blockchain.go#L27-L30>)
+## func [GenesisBlock](<https://github.com/bartossh/The-Accountant/blob/main/blockchain/blockchain.go#L45>)
+
+```go
+func GenesisBlock(ctx context.Context, rw BlockReadWriter) error
+```
+
+GenesisBlock creates a genesis block.
+
+## type [BlockReadWriter](<https://github.com/bartossh/The-Accountant/blob/main/blockchain/blockchain.go#L31-L34>)
+
+BlockReadWriter is the interface that groups the basic Read and Write methods.
 
 ```go
 type BlockReadWriter interface {
@@ -91,7 +102,9 @@ type BlockReadWriter interface {
 }
 ```
 
-## type [BlockReader](<https://github.com/bartossh/The-Accountant/blob/main/blockchain/blockchain.go#L18-L21>)
+## type [BlockReader](<https://github.com/bartossh/The-Accountant/blob/main/blockchain/blockchain.go#L20-L23>)
+
+blockReader is the interface that wraps the basic Read methods.
 
 ```go
 type BlockReader interface {
@@ -100,7 +113,9 @@ type BlockReader interface {
 }
 ```
 
-## type [BlockWriter](<https://github.com/bartossh/The-Accountant/blob/main/blockchain/blockchain.go#L23-L25>)
+## type [BlockWriter](<https://github.com/bartossh/The-Accountant/blob/main/blockchain/blockchain.go#L26-L28>)
+
+BlockWriter is the interface that wraps the basic Write method.
 
 ```go
 type BlockWriter interface {
@@ -108,7 +123,7 @@ type BlockWriter interface {
 }
 ```
 
-## type [Blockchain](<https://github.com/bartossh/The-Accountant/blob/main/blockchain/blockchain.go#L33-L38>)
+## type [Blockchain](<https://github.com/bartossh/The-Accountant/blob/main/blockchain/blockchain.go#L37-L42>)
 
 Blockchain keeps track of the blocks.
 
@@ -118,15 +133,15 @@ type Blockchain struct {
 }
 ```
 
-### func [NewBlockchain](<https://github.com/bartossh/The-Accountant/blob/main/blockchain/blockchain.go#L41>)
+### func [NewBlockchain](<https://github.com/bartossh/The-Accountant/blob/main/blockchain/blockchain.go#L55>)
 
 ```go
 func NewBlockchain(ctx context.Context, rw BlockReadWriter) (*Blockchain, error)
 ```
 
-NewChaion creates a new Blockchain that has access to the blockchain stored in the repository.
+NewBlockchain creates a new Blockchain that has access to the blockchain stored in the repository.
 
-### func \(\*Blockchain\) [LastBlockHashIndex](<https://github.com/bartossh/The-Accountant/blob/main/blockchain/blockchain.go#L56>)
+### func \(\*Blockchain\) [LastBlockHashIndex](<https://github.com/bartossh/The-Accountant/blob/main/blockchain/blockchain.go#L70>)
 
 ```go
 func (c *Blockchain) LastBlockHashIndex() ([32]byte, uint64)
@@ -134,7 +149,7 @@ func (c *Blockchain) LastBlockHashIndex() ([32]byte, uint64)
 
 LastBlockHashIndex returns last block hash and index.
 
-### func \(\*Blockchain\) [ReadBlocksFromIndex](<https://github.com/bartossh/The-Accountant/blob/main/blockchain/blockchain.go#L83>)
+### func \(\*Blockchain\) [ReadBlocksFromIndex](<https://github.com/bartossh/The-Accountant/blob/main/blockchain/blockchain.go#L97>)
 
 ```go
 func (c *Blockchain) ReadBlocksFromIndex(ctx context.Context, idx uint64) ([]block.Block, error)
@@ -142,7 +157,7 @@ func (c *Blockchain) ReadBlocksFromIndex(ctx context.Context, idx uint64) ([]blo
 
 ReadBlocksFromIndex reads all blocks from given index till the current block.
 
-### func \(\*Blockchain\) [ReadLastNBlocks](<https://github.com/bartossh/The-Accountant/blob/main/blockchain/blockchain.go#L63>)
+### func \(\*Blockchain\) [ReadLastNBlocks](<https://github.com/bartossh/The-Accountant/blob/main/blockchain/blockchain.go#L77>)
 
 ```go
 func (c *Blockchain) ReadLastNBlocks(ctx context.Context, n int) ([]block.Block, error)
@@ -150,7 +165,7 @@ func (c *Blockchain) ReadLastNBlocks(ctx context.Context, n int) ([]block.Block,
 
 ReadLastNBlocks reads the last n blocks.
 
-### func \(\*Blockchain\) [WriteBlock](<https://github.com/bartossh/The-Accountant/blob/main/blockchain/blockchain.go#L107>)
+### func \(\*Blockchain\) [WriteBlock](<https://github.com/bartossh/The-Accountant/blob/main/blockchain/blockchain.go#L121>)
 
 ```go
 func (c *Blockchain) WriteBlock(ctx context.Context, block block.Block) error
@@ -228,7 +243,7 @@ type BlockReadWriter interface {
 
 ```go
 type BlockReader interface {
-    LastBlockHashIndex(ctx context.Context) ([32]byte, uint64, error)
+    LastBlockHashIndex() ([32]byte, uint64)
 }
 ```
 
@@ -274,7 +289,7 @@ func NewLedger(config Config, bc BlockReadWriter, tx TrxWriteReadMover, ac Addre
 
 NewLedger creates new Ledger if config is valid or returns error otherwise.
 
-### func \(\*Ledger\) [ReadAwaitedTransactionsForAddress](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L186-L191>)
+### func \(\*Ledger\) [ReadAwaitedTransactionsForAddress](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L187-L192>)
 
 ```go
 func (l *Ledger) ReadAwaitedTransactionsForAddress(ctx context.Context, message, signature []byte, hash [32]byte, address string) ([]transaction.Transaction, error)
@@ -288,7 +303,7 @@ func (l *Ledger) Run(ctx context.Context)
 
 Run runs the Ladger engine that writes blocks to the blockchain repository. Run starts a goroutine and can be stopped by cancelling the context.
 
-### func \(\*Ledger\) [WriteCandidateTransaction](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L169>)
+### func \(\*Ledger\) [WriteCandidateTransaction](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L170>)
 
 ```go
 func (l *Ledger) WriteCandidateTransaction(ctx context.Context, trx *transaction.Transaction) error
@@ -296,7 +311,7 @@ func (l *Ledger) WriteCandidateTransaction(ctx context.Context, trx *transaction
 
 WriteCandidateTransaction validates and writes a transaction to the repository. Transaction is not yet a part of the blockchain.
 
-### func \(\*Ledger\) [WriteIssuerSignedTransactionForReceiver](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L151-L155>)
+### func \(\*Ledger\) [WriteIssuerSignedTransactionForReceiver](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L152-L156>)
 
 ```go
 func (l *Ledger) WriteIssuerSignedTransactionForReceiver(ctx context.Context, receiverAddr string, trx *transaction.Transaction) error
@@ -430,7 +445,7 @@ type DataBase struct {
 func Connect(ctx context.Context, connStr, databaseName string) (*DataBase, error)
 ```
 
-Connect creates new connection to the playableassets repository and returns pointer to that user instance
+Connect creates new connection to the repository and returns pointer to the DataBase.
 
 ### func \(DataBase\) [CheckAddressExists](<https://github.com/bartossh/The-Accountant/blob/main/repo/address.go#L32>)
 
@@ -454,7 +469,7 @@ Disconnect disconnects user from database
 func (db DataBase) FindAddress(ctx context.Context, search string, limit int) ([]string, error)
 ```
 
-FindAddress looks for matching address in the addresses repository and returns limited slice of matching addresses. If limit is set to 0 or above the 1000 which is maximum then serach is limited to 1000.
+FindAddress looks for matching address in the addresses repository and returns limited slice of matching addresses. If limit is set to 0 or above the 1000 which is maximum then search is limited to 1000.
 
 ### func \(DataBase\) [FindTransactionInBlockHash](<https://github.com/bartossh/The-Accountant/blob/main/repo/search.go#L33>)
 
@@ -472,7 +487,7 @@ func (db DataBase) LastBlock(ctx context.Context) (block.Block, error)
 
 LastBlock returns last block from the database.
 
-### func \(DataBase\) [MoveTransactionsFromTemporaryToPermanent](<https://github.com/bartossh/The-Accountant/blob/main/repo/transaction.go#L63>)
+### func \(DataBase\) [MoveTransactionsFromTemporaryToPermanent](<https://github.com/bartossh/The-Accountant/blob/main/repo/transaction.go#L64>)
 
 ```go
 func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context, hash [][32]byte) error
@@ -480,7 +495,7 @@ func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context,
 
 MoveTransactionsFromTemporaryToPermanent moves transactions from temporary storage to permanent.
 
-### func \(DataBase\) [ReadAwaitingTransactions](<https://github.com/bartossh/The-Accountant/blob/main/repo/transaction.go#L48>)
+### func \(DataBase\) [ReadAwaitingTransactions](<https://github.com/bartossh/The-Accountant/blob/main/repo/transaction.go#L49>)
 
 ```go
 func (db DataBase) ReadAwaitingTransactions(ctx context.Context, address string) ([]transaction.Transaction, error)
@@ -496,7 +511,7 @@ func (db DataBase) ReadBlockByHash(ctx context.Context, hash [32]byte) (block.Bl
 
 ReadBlockByHash returns block with given hash.
 
-### func \(DataBase\) [RemoveAwaitingTransaction](<https://github.com/bartossh/The-Accountant/blob/main/repo/transaction.go#L27>)
+### func \(DataBase\) [RemoveAwaitingTransaction](<https://github.com/bartossh/The-Accountant/blob/main/repo/transaction.go#L28>)
 
 ```go
 func (db DataBase) RemoveAwaitingTransaction(ctx context.Context, trxHash [32]byte) error
@@ -528,7 +543,7 @@ func (db DataBase) WriteBlock(ctx context.Context, block block.Block) error
 
 WriteBlock writes block to the database.
 
-### func \(DataBase\) [WriteIssuerSignedTransactionForReceiver](<https://github.com/bartossh/The-Accountant/blob/main/repo/transaction.go#L33-L37>)
+### func \(DataBase\) [WriteIssuerSignedTransactionForReceiver](<https://github.com/bartossh/The-Accountant/blob/main/repo/transaction.go#L34-L38>)
 
 ```go
 func (db DataBase) WriteIssuerSignedTransactionForReceiver(ctx context.Context, receiverAddr string, trx *transaction.Transaction) error
@@ -536,7 +551,7 @@ func (db DataBase) WriteIssuerSignedTransactionForReceiver(ctx context.Context, 
 
 WriteIssuerSignedTransactionForReceiver writes transaction to the awaiting transaction storage paired with given receiver.
 
-### func \(DataBase\) [WriteTemporaryTransaction](<https://github.com/bartossh/The-Accountant/blob/main/repo/transaction.go#L21>)
+### func \(DataBase\) [WriteTemporaryTransaction](<https://github.com/bartossh/The-Accountant/blob/main/repo/transaction.go#L22>)
 
 ```go
 func (db DataBase) WriteTemporaryTransaction(ctx context.Context, trx *transaction.Transaction) error
@@ -550,7 +565,7 @@ WriteTemporaryTransaction writes transaction to the temporary storage.
 func (db DataBase) WriteTransactionsInBlock(ctx context.Context, blockHash [32]byte, trxHash [][32]byte) error
 ```
 
-WrirteTransactionInBlock stores relation between Transaction and Block to which Transaction was added.
+WriteTransactionsInBlock stores relation between Transaction and Block to which Transaction was added.
 
 ## type [Migration](<https://github.com/bartossh/The-Accountant/blob/main/repo/migrations.go#L24-L26>)
 
@@ -562,7 +577,9 @@ type Migration struct {
 }
 ```
 
-## type [TransactionAwaitingReceiver](<https://github.com/bartossh/The-Accountant/blob/main/repo/transaction.go#L13-L18>)
+## type [TransactionAwaitingReceiver](<https://github.com/bartossh/The-Accountant/blob/main/repo/transaction.go#L14-L19>)
+
+TransactionAwaitingReceiver represents transaction awaiting receiver signature.
 
 ```go
 type TransactionAwaitingReceiver struct {
@@ -575,7 +592,7 @@ type TransactionAwaitingReceiver struct {
 
 ## type [TransactionInBlock](<https://github.com/bartossh/The-Accountant/blob/main/repo/search.go#L13-L17>)
 
-TransactionInBlock stores relation between Transaction and Block to which Transaction was added. It is tored for fast lookup only.
+TransactionInBlock stores relation between Transaction and Block to which Transaction was added. It is stored for fast lookup only.
 
 ```go
 type TransactionInBlock struct {
@@ -597,17 +614,21 @@ import "github.com/bartossh/The-Accountant/serializer"
 - [func Base58Encode(input []byte) []byte](<#func-base58encode>)
 
 
-## func [Base58Decode](<https://github.com/bartossh/The-Accountant/blob/main/serializer/serializer.go#L11>)
+## func [Base58Decode](<https://github.com/bartossh/The-Accountant/blob/main/serializer/serializer.go#L13>)
 
 ```go
 func Base58Decode(input []byte) ([]byte, error)
 ```
 
-## func [Base58Encode](<https://github.com/bartossh/The-Accountant/blob/main/serializer/serializer.go#L5>)
+Base58Decode decodes base58 string to byte array.
+
+## func [Base58Encode](<https://github.com/bartossh/The-Accountant/blob/main/serializer/serializer.go#L6>)
 
 ```go
 func Base58Encode(input []byte) []byte
 ```
+
+Base58Encode encodes byte array to base58 string.
 
 # server
 
@@ -627,8 +648,8 @@ import "github.com/bartossh/The-Accountant/server"
 - [type DataToSignResponse](<#type-datatosignresponse>)
 - [type RandomDataProvideValidator](<#type-randomdataprovidevalidator>)
 - [type Repository](<#type-repository>)
+- [type SearchAddressRequest](<#type-searchaddressrequest>)
 - [type SearchAddressResponse](<#type-searchaddressresponse>)
-- [type SearchAddressRquest](<#type-searchaddressrquest>)
 - [type SearchBlockRequest](<#type-searchblockrequest>)
 - [type SearchBlockResponse](<#type-searchblockresponse>)
 - [type TransactionConfirmProposeResponse](<#type-transactionconfirmproposeresponse>)
@@ -651,7 +672,7 @@ Run initializes routing and runs the server. To stop the server cancel the conte
 
 ## type [AwaitedTransactionRequest](<https://github.com/bartossh/The-Accountant/blob/main/server/routes.go#L126-L131>)
 
-AwaitedTransactionRequest is a request to get awaited transactions for given address. Request contains of Address for which Awaited Transacttions are requested, Data in binary format, Hash of Data ad Signature of the Data to prove that entity doing the request is an Address owner.
+AwaitedTransactionRequest is a request to get awaited transactions for given address. Request contains of Address for which Awaited Transactions are requested, Data in binary format, Hash of Data and Signature of the Data to prove that entity doing the request is an Address owner.
 
 ```go
 type AwaitedTransactionRequest struct {
@@ -745,6 +766,16 @@ type Repository interface {
 }
 ```
 
+## type [SearchAddressRequest](<https://github.com/bartossh/The-Accountant/blob/main/server/routes.go#L13-L15>)
+
+SearchAddressRequest is a request to search for address.
+
+```go
+type SearchAddressRequest struct {
+    Address string `json:"address"`
+}
+```
+
 ## type [SearchAddressResponse](<https://github.com/bartossh/The-Accountant/blob/main/server/routes.go#L18-L20>)
 
 SearchAddressResponse is a response for address search.
@@ -752,16 +783,6 @@ SearchAddressResponse is a response for address search.
 ```go
 type SearchAddressResponse struct {
     Addresses []string `json:"addresses"`
-}
-```
-
-## type [SearchAddressRquest](<https://github.com/bartossh/The-Accountant/blob/main/server/routes.go#L13-L15>)
-
-SearchAddressRquest is a request to search for address.
-
-```go
-type SearchAddressRquest struct {
-    Address string `json:"address"`
 }
 ```
 
@@ -777,7 +798,7 @@ type SearchBlockRequest struct {
 
 ## type [SearchBlockResponse](<https://github.com/bartossh/The-Accountant/blob/main/server/routes.go#L46-L48>)
 
-searchBlockResponse is a response for block search.
+SearchBlockResponse is a response for block search.
 
 ```go
 type SearchBlockResponse struct {
@@ -822,7 +843,9 @@ import "github.com/bartossh/The-Accountant/transaction"
 - [type Verifier](<#type-verifier>)
 
 
-## type [Signer](<https://github.com/bartossh/The-Accountant/blob/main/transaction/transaction.go#L14-L17>)
+## type [Signer](<https://github.com/bartossh/The-Accountant/blob/main/transaction/transaction.go#L15-L18>)
+
+Signer is an interface for signing transaction.
 
 ```go
 type Signer interface {
@@ -831,9 +854,9 @@ type Signer interface {
 }
 ```
 
-## type [Transaction](<https://github.com/bartossh/The-Accountant/blob/main/transaction/transaction.go#L24-L34>)
+## type [Transaction](<https://github.com/bartossh/The-Accountant/blob/main/transaction/transaction.go#L26-L36>)
 
-Transaction contains transaction information, subject type, subject data, signatues and public keys.
+Transaction contains transaction information, subject type, subject data, signatures and public keys.
 
 ```go
 type Transaction struct {
@@ -849,7 +872,7 @@ type Transaction struct {
 }
 ```
 
-### func [New](<https://github.com/bartossh/The-Accountant/blob/main/transaction/transaction.go#L37>)
+### func [New](<https://github.com/bartossh/The-Accountant/blob/main/transaction/transaction.go#L39>)
 
 ```go
 func New(subject string, message []byte, issuer Signer) (Transaction, error)
@@ -857,15 +880,17 @@ func New(subject string, message []byte, issuer Signer) (Transaction, error)
 
 New creates new transaction signed by issuer.
 
-### func \(\*Transaction\) [Sign](<https://github.com/bartossh/The-Accountant/blob/main/transaction/transaction.go#L58>)
+### func \(\*Transaction\) [Sign](<https://github.com/bartossh/The-Accountant/blob/main/transaction/transaction.go#L60>)
 
 ```go
 func (t *Transaction) Sign(receiver Signer, v Verifier) ([32]byte, error)
 ```
 
-Sign signs Transaction by receiver.
+Sign verifies issuer signature and signs Transaction by receiver.
 
-## type [Verifier](<https://github.com/bartossh/The-Accountant/blob/main/transaction/transaction.go#L19-L21>)
+## type [Verifier](<https://github.com/bartossh/The-Accountant/blob/main/transaction/transaction.go#L21-L23>)
+
+Verifier is an interface for verifying transaction.
 
 ```go
 type Verifier interface {
@@ -993,6 +1018,16 @@ func (w *Wallet) Version() byte
 ```
 
 Version returns wallet version.
+
+# central
+
+```go
+import "github.com/bartossh/The-Accountant/cmd/central"
+```
+
+## Index
+
+
 
 
 
