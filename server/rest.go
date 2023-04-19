@@ -146,6 +146,10 @@ func (s *server) awaited(c *fiber.Ctx) error {
 		return fiber.ErrForbidden
 	}
 
+	if err := s.bookkeeping.VerifySignature(req.Data, req.Signature, req.Hash, req.Address); err != nil {
+		return fiber.ErrForbidden
+	}
+
 	trxs, err := s.bookkeeping.ReadAwaitedTransactionsForAddress(c.Context(), req.Data, req.Signature, req.Hash, req.Address)
 	if err != nil {
 		// TODO log error
@@ -210,6 +214,11 @@ func (s *server) addressCreate(c *fiber.Ctx) error {
 		}
 		return fiber.ErrForbidden
 	}
+
+	if err := s.bookkeeping.VerifySignature(req.Data, req.Signature, req.Hash, req.Address); err != nil {
+		return fiber.ErrForbidden
+	}
+
 	if ok, err := s.repo.CheckAddressExists(c.Context(), req.Address); ok || err != nil {
 		if err != nil {
 			return fiber.ErrGone

@@ -193,6 +193,7 @@ import "github.com/bartossh/The-Accountant/bookkeeping"
   - [func NewLedger(config Config, bc BlockReadWriter, tx TrxWriteReadMover, ac AddressChecker, vr SignatureVerifier, tf BlockFinder) (*Ledger, error)](<#func-newledger>)
   - [func (l *Ledger) ReadAwaitedTransactionsForAddress(ctx context.Context, message, signature []byte, hash [32]byte, address string) ([]transaction.Transaction, error)](<#func-ledger-readawaitedtransactionsforaddress>)
   - [func (l *Ledger) Run(ctx context.Context)](<#func-ledger-run>)
+  - [func (l *Ledger) VerifySignature(message, signature []byte, hash [32]byte, address string) error](<#func-ledger-verifysignature>)
   - [func (l *Ledger) WriteCandidateTransaction(ctx context.Context, trx *transaction.Transaction) error](<#func-ledger-writecandidatetransaction>)
   - [func (l *Ledger) WriteIssuerSignedTransactionForReceiver(ctx context.Context, receiverAddr string, trx *transaction.Transaction) error](<#func-ledger-writeissuersignedtransactionforreceiver>)
 - [type SignatureVerifier](<#type-signatureverifier>)
@@ -302,6 +303,12 @@ func (l *Ledger) Run(ctx context.Context)
 ```
 
 Run runs the Ladger engine that writes blocks to the blockchain repository. Run starts a goroutine and can be stopped by cancelling the context.
+
+### func \(\*Ledger\) [VerifySignature](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L205>)
+
+```go
+func (l *Ledger) VerifySignature(message, signature []byte, hash [32]byte, address string) error
+```
 
 ### func \(\*Ledger\) [WriteCandidateTransaction](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L170>)
 
@@ -689,6 +696,7 @@ import "github.com/bartossh/The-Accountant/server"
 - [type CreateAddressResponse](<#type-createaddressresponse>)
 - [type DataToSignRequest](<#type-datatosignrequest>)
 - [type DataToSignResponse](<#type-datatosignresponse>)
+- [type Message](<#type-message>)
 - [type RandomDataProvideValidator](<#type-randomdataprovidevalidator>)
 - [type Repository](<#type-repository>)
 - [type SearchAddressRequest](<#type-searchaddressrequest>)
@@ -697,6 +705,7 @@ import "github.com/bartossh/The-Accountant/server"
 - [type SearchBlockResponse](<#type-searchblockresponse>)
 - [type TransactionConfirmProposeResponse](<#type-transactionconfirmproposeresponse>)
 - [type TransactionProposeRequest](<#type-transactionproposerequest>)
+- [type UpgradeToWebsocketRequest](<#type-upgradetowebsocketrequest>)
 
 
 ## Variables
@@ -705,7 +714,7 @@ import "github.com/bartossh/The-Accountant/server"
 var ErrWrongPortSpecified = errors.New("port must be between 1 and 65535")
 ```
 
-## func [Run](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L68>)
+## func [Run](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L70>)
 
 ```go
 func Run(ctx context.Context, c *Config, repo Repository, bookkeeping Bookkeeper, pv RandomDataProvideValidator) error
@@ -713,7 +722,7 @@ func Run(ctx context.Context, c *Config, repo Repository, bookkeeping Bookkeeper
 
 Run initializes routing and runs the server. To stop the server cancel the context.
 
-## type [AwaitedTransactionRequest](<https://github.com/bartossh/The-Accountant/blob/main/server/routes.go#L126-L131>)
+## type [AwaitedTransactionRequest](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L126-L131>)
 
 AwaitedTransactionRequest is a request to get awaited transactions for given address. Request contains of Address for which Awaited Transactions are requested, Data in binary format, Hash of Data and Signature of the Data to prove that entity doing the request is an Address owner.
 
@@ -726,7 +735,7 @@ type AwaitedTransactionRequest struct {
 }
 ```
 
-## type [AwaitedTransactionResponse](<https://github.com/bartossh/The-Accountant/blob/main/server/routes.go#L134-L137>)
+## type [AwaitedTransactionResponse](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L134-L137>)
 
 AwaitedTransactionResponse is a response for awaited transactions request.
 
@@ -737,7 +746,7 @@ type AwaitedTransactionResponse struct {
 }
 ```
 
-## type [Bookkeeper](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L37-L47>)
+## type [Bookkeeper](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L37-L48>)
 
 Bookkeeper abstracts methods of the bookkeeping of a blockchain.
 
@@ -752,10 +761,11 @@ type Bookkeeper interface {
         hash [32]byte,
         address string,
     ) ([]transaction.Transaction, error)
+    VerifySignature(message, signature []byte, hash [32]byte, address string) error
 }
 ```
 
-## type [Config](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L57-L59>)
+## type [Config](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L58-L60>)
 
 Config contains configuration of the server.
 
@@ -765,7 +775,7 @@ type Config struct {
 }
 ```
 
-## type [CreateAddressRequest](<https://github.com/bartossh/The-Accountant/blob/main/server/routes.go#L184-L190>)
+## type [CreateAddressRequest](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L188-L194>)
 
 CreateAddressRequest is a request to create an address.
 
@@ -779,7 +789,7 @@ type CreateAddressRequest struct {
 }
 ```
 
-## type [CreateAddressResponse](<https://github.com/bartossh/The-Accountant/blob/main/server/routes.go#L193-L196>)
+## type [CreateAddressResponse](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L197-L200>)
 
 Response for address creation.
 
@@ -790,7 +800,7 @@ type CreateAddressResponse struct {
 }
 ```
 
-## type [DataToSignRequest](<https://github.com/bartossh/The-Accountant/blob/main/server/routes.go#L165-L167>)
+## type [DataToSignRequest](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L169-L171>)
 
 DataToSignRequest is a request to get data to sign for proving identity.
 
@@ -800,7 +810,7 @@ type DataToSignRequest struct {
 }
 ```
 
-## type [DataToSignResponse](<https://github.com/bartossh/The-Accountant/blob/main/server/routes.go#L170-L172>)
+## type [DataToSignResponse](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L174-L176>)
 
 DataToSignRequest is a response containing data to sign for proving identity.
 
@@ -810,7 +820,20 @@ type DataToSignResponse struct {
 }
 ```
 
-## type [RandomDataProvideValidator](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L51-L54>)
+## type [Message](<https://github.com/bartossh/The-Accountant/blob/main/server/ws.go#L41-L46>)
+
+Message is the message that is used to exchange information between the server and the client.
+
+```go
+type Message struct {
+    Command string `json:"command"`
+    Error   string `json:"error"`
+    Data    []byte `json:"data"`
+    // contains filtered or unexported fields
+}
+```
+
+## type [RandomDataProvideValidator](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L52-L55>)
 
 RandomDataProvideValidator provides random binary data for signing to prove identity and the validator of data being valid and not expired.
 
@@ -837,7 +860,7 @@ type Repository interface {
 }
 ```
 
-## type [SearchAddressRequest](<https://github.com/bartossh/The-Accountant/blob/main/server/routes.go#L13-L15>)
+## type [SearchAddressRequest](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L13-L15>)
 
 SearchAddressRequest is a request to search for address.
 
@@ -847,7 +870,7 @@ type SearchAddressRequest struct {
 }
 ```
 
-## type [SearchAddressResponse](<https://github.com/bartossh/The-Accountant/blob/main/server/routes.go#L18-L20>)
+## type [SearchAddressResponse](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L18-L20>)
 
 SearchAddressResponse is a response for address search.
 
@@ -857,7 +880,7 @@ type SearchAddressResponse struct {
 }
 ```
 
-## type [SearchBlockRequest](<https://github.com/bartossh/The-Accountant/blob/main/server/routes.go#L41-L43>)
+## type [SearchBlockRequest](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L41-L43>)
 
 SearchBlockRequest is a request to search for block.
 
@@ -867,7 +890,7 @@ type SearchBlockRequest struct {
 }
 ```
 
-## type [SearchBlockResponse](<https://github.com/bartossh/The-Accountant/blob/main/server/routes.go#L46-L48>)
+## type [SearchBlockResponse](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L46-L48>)
 
 SearchBlockResponse is a response for block search.
 
@@ -877,7 +900,7 @@ type SearchBlockResponse struct {
 }
 ```
 
-## type [TransactionConfirmProposeResponse](<https://github.com/bartossh/The-Accountant/blob/main/server/routes.go#L76-L79>)
+## type [TransactionConfirmProposeResponse](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L76-L79>)
 
 TransactionConfirmProposeResponse is a response for transaction propose.
 
@@ -888,7 +911,7 @@ type TransactionConfirmProposeResponse struct {
 }
 ```
 
-## type [TransactionProposeRequest](<https://github.com/bartossh/The-Accountant/blob/main/server/routes.go#L70-L73>)
+## type [TransactionProposeRequest](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L70-L73>)
 
 TransactionProposeRequest is a request to propose a transaction.
 
@@ -896,6 +919,20 @@ TransactionProposeRequest is a request to propose a transaction.
 type TransactionProposeRequest struct {
     ReceiverAddr string                  `json:"receiver_addr"`
     Transaction  transaction.Transaction `json:"transaction"`
+}
+```
+
+## type [UpgradeToWebsocketRequest](<https://github.com/bartossh/The-Accountant/blob/main/server/ws.go#L31-L37>)
+
+UpgradeToWebsocketRequest is a request to upgrade to websocket. Request contains signed Data previously sent to client that are signed by  the Client Wallet. Signature verifies if given Address is paired with private key that was used to sign the data.
+
+```go
+type UpgradeToWebsocketRequest struct {
+    Address   string   `json:"address"`
+    Token     string   `json:"token"`
+    Data      []byte   `json:"data"`
+    Hash      [32]byte `json:"hash"`
+    Signature []byte   `json:"signature"`
 }
 ```
 

@@ -44,6 +44,7 @@ type Bookkeeper interface {
 		hash [32]byte,
 		address string,
 	) ([]transaction.Transaction, error)
+	VerifySignature(message, signature []byte, hash [32]byte, address string) error
 }
 
 // RandomDataProvideValidator provides random binary data for signing to prove identity and
@@ -62,6 +63,7 @@ type server struct {
 	repo         Repository
 	bookkeeping  Bookkeeper
 	randDataProv RandomDataProvideValidator
+	hub          *hub
 }
 
 // Run initializes routing and runs the server. To stop the server cancel the context.
@@ -87,6 +89,7 @@ func Run(ctx context.Context, c *Config, repo Repository, bookkeeping Bookkeeper
 		repo:         repo,
 		bookkeeping:  bookkeeping,
 		randDataProv: pv,
+		hub:          newHub(),
 	}
 
 	router := fiber.New(fiber.Config{
@@ -115,6 +118,8 @@ func Run(ctx context.Context, c *Config, repo Repository, bookkeeping Bookkeeper
 	address := router.Group("/address")
 	address.Post("/create", s.addressCreate)
 
+	router.Group("/ws", s.wsWrapper)
+
 	go func() {
 		bookkeeping.Run(ctxx)
 		err := router.Listen(fmt.Sprintf("0.0.0.0:%v", c.Port))
@@ -122,6 +127,7 @@ func Run(ctx context.Context, c *Config, repo Repository, bookkeeping Bookkeeper
 			cancel()
 		}
 	}()
+	go s.hub.run(ctx)
 
 	<-ctxx.Done()
 

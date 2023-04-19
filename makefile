@@ -3,3 +3,6 @@ start:
 
 build:
 	go build -o bin/central cmd/central/main.go
+
+documentation:
+	./gendocs.sh
