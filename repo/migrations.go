@@ -167,6 +167,20 @@ var migrations = []migration{
 			return err
 		},
 	},
+	{
+		name: "index_token",
+		run: func(ctx context.Context, user *mongo.Database) error {
+			_, err := user.Collection(tokensCollection).
+				Indexes().
+				CreateOne(ctx, mongo.IndexModel{
+					Keys: bson.M{
+						"token": 1,
+					},
+					Options: options.Index().SetUnique(true),
+				})
+			return err
+		},
+	},
 }
 
 func (c DataBase) migrate(ctx context.Context, migrationsCollection []migration) ([]string, error) {

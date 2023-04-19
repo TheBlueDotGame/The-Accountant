@@ -17,6 +17,7 @@ const (
 	transactionsAwaitingReceiverCollection = "transactionsAwaitingReceiver"
 	blocksCollection                       = "blocks"
 	transactionsInBlockCollection          = "transactionsInBlock"
+	tokensCollection                       = "tokens"
 )
 
 // Database provides database access for read, write and delete of repository entities.

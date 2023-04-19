@@ -49,7 +49,7 @@ NewBlock creates a new Block hashing it with given difficulty. Higher difficulty
 func (b *Block) Validate(trxHashes [][32]byte) bool
 ```
 
-Validate validates the Block. Validations goes in the same order like Block hashing allgorithm, just the proof of work part is not required as Nonce is arleady known.
+Validate validates the Block. Validations goes in the same order like Block hashing algorithm, just the proof of work part is not required as Nonce is already known.
 
 # blockchain
 
@@ -399,21 +399,25 @@ import "github.com/bartossh/The-Accountant/repo"
 - [type DataBase](<#type-database>)
   - [func Connect(ctx context.Context, connStr, databaseName string) (*DataBase, error)](<#func-connect>)
   - [func (db DataBase) CheckAddressExists(ctx context.Context, address string) (bool, error)](<#func-database-checkaddressexists>)
+  - [func (db *DataBase) CheckToken(ctx context.Context, token string) (bool, error)](<#func-database-checktoken>)
   - [func (c DataBase) Disconnect(ctx context.Context) error](<#func-database-disconnect>)
   - [func (db DataBase) FindAddress(ctx context.Context, search string, limit int) ([]string, error)](<#func-database-findaddress>)
   - [func (db DataBase) FindTransactionInBlockHash(ctx context.Context, trxHash [32]byte) ([32]byte, error)](<#func-database-findtransactioninblockhash>)
+  - [func (db *DataBase) InvalidateToken(ctx context.Context, token string) error](<#func-database-invalidatetoken>)
   - [func (db DataBase) LastBlock(ctx context.Context) (block.Block, error)](<#func-database-lastblock>)
   - [func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context, hash [][32]byte) error](<#func-database-movetransactionsfromtemporarytopermanent>)
   - [func (db DataBase) ReadAwaitingTransactions(ctx context.Context, address string) ([]transaction.Transaction, error)](<#func-database-readawaitingtransactions>)
   - [func (db DataBase) ReadBlockByHash(ctx context.Context, hash [32]byte) (block.Block, error)](<#func-database-readblockbyhash>)
   - [func (db DataBase) RemoveAwaitingTransaction(ctx context.Context, trxHash [32]byte) error](<#func-database-removeawaitingtransaction>)
   - [func (c DataBase) RunMigration(ctx context.Context) error](<#func-database-runmigration>)
-  - [func (db DataBase) WriteAddress(ctx context.Context, address Address) error](<#func-database-writeaddress>)
+  - [func (db DataBase) WriteAddress(ctx context.Context, address string) error](<#func-database-writeaddress>)
   - [func (db DataBase) WriteBlock(ctx context.Context, block block.Block) error](<#func-database-writeblock>)
   - [func (db DataBase) WriteIssuerSignedTransactionForReceiver(ctx context.Context, receiverAddr string, trx *transaction.Transaction) error](<#func-database-writeissuersignedtransactionforreceiver>)
   - [func (db DataBase) WriteTemporaryTransaction(ctx context.Context, trx *transaction.Transaction) error](<#func-database-writetemporarytransaction>)
+  - [func (db *DataBase) WriteToken(ctx context.Context, token string, expirationDate int64) error](<#func-database-writetoken>)
   - [func (db DataBase) WriteTransactionsInBlock(ctx context.Context, blockHash [32]byte, trxHash [][32]byte) error](<#func-database-writetransactionsinblock>)
 - [type Migration](<#type-migration>)
+- [type Token](<#type-token>)
 - [type TransactionAwaitingReceiver](<#type-transactionawaitingreceiver>)
 - [type TransactionInBlock](<#type-transactioninblock>)
 
@@ -429,7 +433,7 @@ type Address struct {
 }
 ```
 
-## type [DataBase](<https://github.com/bartossh/The-Accountant/blob/main/repo/repo.go#L23-L25>)
+## type [DataBase](<https://github.com/bartossh/The-Accountant/blob/main/repo/repo.go#L24-L26>)
 
 Database provides database access for read, write and delete of repository entities.
 
@@ -439,7 +443,7 @@ type DataBase struct {
 }
 ```
 
-### func [Connect](<https://github.com/bartossh/The-Accountant/blob/main/repo/repo.go#L28>)
+### func [Connect](<https://github.com/bartossh/The-Accountant/blob/main/repo/repo.go#L29>)
 
 ```go
 func Connect(ctx context.Context, connStr, databaseName string) (*DataBase, error)
@@ -447,15 +451,23 @@ func Connect(ctx context.Context, connStr, databaseName string) (*DataBase, erro
 
 Connect creates new connection to the repository and returns pointer to the DataBase.
 
-### func \(DataBase\) [CheckAddressExists](<https://github.com/bartossh/The-Accountant/blob/main/repo/address.go#L32>)
+### func \(DataBase\) [CheckAddressExists](<https://github.com/bartossh/The-Accountant/blob/main/repo/address.go#L36>)
 
 ```go
 func (db DataBase) CheckAddressExists(ctx context.Context, address string) (bool, error)
 ```
 
-CheckAddressExists checks if address exists in the database.
+CheckAddressExists checks if address exists in the database. Returns true if exists and error if database error different from ErrNoDocuments.
 
-### func \(DataBase\) [Disconnect](<https://github.com/bartossh/The-Accountant/blob/main/repo/repo.go#L44>)
+### func \(\*DataBase\) [CheckToken](<https://github.com/bartossh/The-Accountant/blob/main/repo/token.go#L21>)
+
+```go
+func (db *DataBase) CheckToken(ctx context.Context, token string) (bool, error)
+```
+
+CheckToken checks if token exists in the database is valid and didn't expire.
+
+### func \(DataBase\) [Disconnect](<https://github.com/bartossh/The-Accountant/blob/main/repo/repo.go#L45>)
 
 ```go
 func (c DataBase) Disconnect(ctx context.Context) error
@@ -478,6 +490,14 @@ func (db DataBase) FindTransactionInBlockHash(ctx context.Context, trxHash [32]b
 ```
 
 FindTransactionInBlockHash finds Block hash in to which Transaction with given hash was added.
+
+### func \(\*DataBase\) [InvalidateToken](<https://github.com/bartossh/The-Accountant/blob/main/repo/token.go#L52>)
+
+```go
+func (db *DataBase) InvalidateToken(ctx context.Context, token string) error
+```
+
+InvalidateToken invalidates token.
 
 ### func \(DataBase\) [LastBlock](<https://github.com/bartossh/The-Accountant/blob/main/repo/block.go#L13>)
 
@@ -519,7 +539,7 @@ func (db DataBase) RemoveAwaitingTransaction(ctx context.Context, trxHash [32]by
 
 RemoveAwaitingTransaction removes transaction from the awaiting transaction storage.
 
-### func \(DataBase\) [RunMigration](<https://github.com/bartossh/The-Accountant/blob/main/repo/migrations.go#L225>)
+### func \(DataBase\) [RunMigration](<https://github.com/bartossh/The-Accountant/blob/main/repo/migrations.go#L239>)
 
 ```go
 func (c DataBase) RunMigration(ctx context.Context) error
@@ -530,7 +550,7 @@ RunMigrationUp runs all the migrations
 ### func \(DataBase\) [WriteAddress](<https://github.com/bartossh/The-Accountant/blob/main/repo/address.go#L19>)
 
 ```go
-func (db DataBase) WriteAddress(ctx context.Context, address Address) error
+func (db DataBase) WriteAddress(ctx context.Context, address string) error
 ```
 
 WriteAddress writes unique address to the database.
@@ -559,6 +579,14 @@ func (db DataBase) WriteTemporaryTransaction(ctx context.Context, trx *transacti
 
 WriteTemporaryTransaction writes transaction to the temporary storage.
 
+### func \(\*DataBase\) [WriteToken](<https://github.com/bartossh/The-Accountant/blob/main/repo/token.go#L39>)
+
+```go
+func (db *DataBase) WriteToken(ctx context.Context, token string, expirationDate int64) error
+```
+
+WriteToken writes unique token to the database.
+
 ### func \(DataBase\) [WriteTransactionsInBlock](<https://github.com/bartossh/The-Accountant/blob/main/repo/search.go#L20>)
 
 ```go
@@ -574,6 +602,19 @@ Migration describes migration that is made in the repository database.
 ```go
 type Migration struct {
     Name string `json:"name" bson:"name"`
+}
+```
+
+## type [Token](<https://github.com/bartossh/The-Accountant/blob/main/repo/token.go#L13-L18>)
+
+Token holds information about unique token.
+
+```go
+type Token struct {
+    ID             primitive.ObjectID `json:"-" bson:"_id,omitempty"`
+    Token          string             `json:"token" bson:"token"`
+    Valid          bool               `json:"valid" bson:"valid"`
+    ExpirationDate int64              `json:"expiration_date" bson:"expiration_date"`
 }
 ```
 
@@ -644,6 +685,8 @@ import "github.com/bartossh/The-Accountant/server"
 - [type AwaitedTransactionResponse](<#type-awaitedtransactionresponse>)
 - [type Bookkeeper](<#type-bookkeeper>)
 - [type Config](<#type-config>)
+- [type CreateAddressRequest](<#type-createaddressrequest>)
+- [type CreateAddressResponse](<#type-createaddressresponse>)
 - [type DataToSignRequest](<#type-datatosignrequest>)
 - [type DataToSignResponse](<#type-datatosignresponse>)
 - [type RandomDataProvideValidator](<#type-randomdataprovidevalidator>)
@@ -662,7 +705,7 @@ import "github.com/bartossh/The-Accountant/server"
 var ErrWrongPortSpecified = errors.New("port must be between 1 and 65535")
 ```
 
-## func [Run](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L65>)
+## func [Run](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L68>)
 
 ```go
 func Run(ctx context.Context, c *Config, repo Repository, bookkeeping Bookkeeper, pv RandomDataProvideValidator) error
@@ -694,9 +737,9 @@ type AwaitedTransactionResponse struct {
 }
 ```
 
-## type [Bookkeeper](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L34-L44>)
+## type [Bookkeeper](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L37-L47>)
 
-Bookkeeper abstracts methods of the bookeeping of a blockchain.
+Bookkeeper abstracts methods of the bookkeeping of a blockchain.
 
 ```go
 type Bookkeeper interface {
@@ -712,13 +755,38 @@ type Bookkeeper interface {
 }
 ```
 
-## type [Config](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L54-L56>)
+## type [Config](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L57-L59>)
 
 Config contains configuration of the server.
 
 ```go
 type Config struct {
     Port int
+}
+```
+
+## type [CreateAddressRequest](<https://github.com/bartossh/The-Accountant/blob/main/server/routes.go#L184-L190>)
+
+CreateAddressRequest is a request to create an address.
+
+```go
+type CreateAddressRequest struct {
+    Address   string   `json:"address"`
+    Token     string   `json:"token"`
+    Data      []byte   `json:"data"`
+    Hash      [32]byte `json:"hash"`
+    Signature []byte   `json:"signature"`
+}
+```
+
+## type [CreateAddressResponse](<https://github.com/bartossh/The-Accountant/blob/main/server/routes.go#L193-L196>)
+
+Response for address creation.
+
+```go
+type CreateAddressResponse struct {
+    Success bool   `json:"success"`
+    Address string `json:"address"`
 }
 ```
 
@@ -742,7 +810,7 @@ type DataToSignResponse struct {
 }
 ```
 
-## type [RandomDataProvideValidator](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L48-L51>)
+## type [RandomDataProvideValidator](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L51-L54>)
 
 RandomDataProvideValidator provides random binary data for signing to prove identity and the validator of data being valid and not expired.
 
@@ -753,7 +821,7 @@ type RandomDataProvideValidator interface {
 }
 ```
 
-## type [Repository](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L26-L31>)
+## type [Repository](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L26-L34>)
 
 Repository is the interface that wraps the basic CRUD and Search methods. Repository should be properly indexed to allow for transaction and block hash. as well as address public keys to be and unique and the hash lookup should be fast. Repository holds the blocks and transaction that are part of the blockchain.
 
@@ -762,7 +830,10 @@ type Repository interface {
     Disconnect(ctx context.Context) error
     RunMigration(ctx context.Context) error
     FindAddress(ctx context.Context, search string, limit int) ([]string, error)
+    CheckAddressExists(ctx context.Context, address string) (bool, error)
+    WriteAddress(ctx context.Context, address string) error
     FindTransactionInBlockHash(ctx context.Context, trxHash [32]byte) ([32]byte, error)
+    CheckToken(ctx context.Context, token string) (bool, error)
 }
 ```
 
@@ -812,7 +883,7 @@ TransactionConfirmProposeResponse is a response for transaction propose.
 
 ```go
 type TransactionConfirmProposeResponse struct {
-    Succes  bool     `json:"success"`
+    Success bool     `json:"success"`
     TrxHash [32]byte `json:"trx_hash"`
 }
 ```
