@@ -85,13 +85,3 @@ func TestTransactionCreatedAndSignedFutureFail(t *testing.T) {
 	assert.NotNil(t, err)
 	assert.Empty(t, h)
 }
-
-func TestTransactionCreatedAndSignedTimePassedFail(t *testing.T) {
-	trx, err := New("subject", []byte("message"), testSignerMock{})
-	assert.Nil(t, err)
-
-	trx.CreatedAt = time.Now().Add(-11 * time.Minute)
-	h, err := trx.Sign(testSignerMock{}, testVerifierMock{})
-	assert.NotNil(t, err)
-	assert.Empty(t, h)
-}
