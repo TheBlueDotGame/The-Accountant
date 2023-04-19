@@ -39,7 +39,7 @@ type TrxWriteReadMover interface {
 }
 
 type BlockReader interface {
-	LastBlockHashIndex(ctx context.Context) ([32]byte, uint64, error)
+	LastBlockHashIndex() ([32]byte, uint64)
 }
 
 type BlockWriter interface {
@@ -126,13 +126,14 @@ func NewLedger(
 // Run starts a goroutine and can be stopped by cancelling the context.
 func (l *Ledger) Run(ctx context.Context) {
 	go func(ctx context.Context) {
+	outer:
 		for {
 			select {
 			case <-ctx.Done():
 				if len(l.hashes) > 0 {
 					l.forge(ctx)
 				}
-				break
+				break outer
 			case h := <-l.hashC:
 				l.hashes = append(l.hashes, h)
 				if len(l.hashes) == l.config.BlockTransactionsSize {
@@ -223,11 +224,7 @@ func (l *Ledger) cleanHashes() {
 }
 
 func (l *Ledger) saveBlock(ctx context.Context) ([32]byte, error) {
-	h, idx, err := l.bc.LastBlockHashIndex(ctx)
-	if err != nil {
-		return [32]byte{}, err
-	}
-
+	h, idx := l.bc.LastBlockHashIndex()
 	nb := block.NewBlock(l.config.Difficulty, idx, h, l.hashes)
 
 	if err := l.bc.WriteBlock(ctx, nb); err != nil {

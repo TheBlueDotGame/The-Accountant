@@ -24,7 +24,7 @@ type DataBase struct {
 	inner mongo.Database
 }
 
-// Connect creates new connection to the playableassets repository and returns pointer to that user instance
+// Connect creates new connection to the repository and returns pointer to the DataBase.
 func Connect(ctx context.Context, connStr, databaseName string) (*DataBase, error) {
 	conn, err := mongo.Connect(ctx, options.Client().ApplyURI(connStr))
 	if err != nil {
