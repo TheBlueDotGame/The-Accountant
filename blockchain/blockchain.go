@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"context"
+	"crypto/sha256"
 	"errors"
 	"sync"
 
@@ -35,6 +36,15 @@ type Blockchain struct {
 	lastBlockHash  [32]byte
 	lastBlockIndex uint64
 	rw             BlockReadWriter
+}
+
+func GenesisBlock(ctx context.Context, rw BlockReadWriter) error {
+	if b, err := rw.LastBlock(ctx); err == nil && b.Index != 0 {
+		return errors.New("genesis block already exists")
+	}
+	h := sha256.Sum256([]byte("genesis block"))
+	b := block.NewBlock(0, 1, h, [][32]byte{})
+	return rw.WriteBlock(ctx, b)
 }
 
 // NewChaion creates a new Blockchain that has access to the blockchain stored in the repository.
