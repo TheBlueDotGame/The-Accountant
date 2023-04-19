@@ -74,7 +74,7 @@ type TransactionProposeRequest struct {
 
 // TransactionConfirmProposeResponse is a response for transaction propose.
 type TransactionConfirmProposeResponse struct {
-	Succes  bool     `json:"success"`
+	Success bool     `json:"success"`
 	TrxHash [32]byte `json:"trx_hash"`
 }
 
@@ -88,13 +88,13 @@ func (s *server) propose(c *fiber.Ctx) error {
 	if err := s.bookkeeping.WriteIssuerSignedTransactionForReceiver(c.Context(), req.ReceiverAddr, &req.Transaction); err != nil {
 		// TODO log error
 		return c.JSON(TransactionConfirmProposeResponse{
-			Succes:  false,
+			Success: false,
 			TrxHash: req.Transaction.Hash,
 		})
 	}
 
 	return c.JSON(TransactionConfirmProposeResponse{
-		Succes:  true,
+		Success: true,
 		TrxHash: req.Transaction.Hash,
 	})
 }
@@ -109,13 +109,13 @@ func (s *server) confirm(c *fiber.Ctx) error {
 	if err := s.bookkeeping.WriteCandidateTransaction(c.Context(), &trx); err != nil {
 		// TODO: log err
 		return c.JSON(TransactionConfirmProposeResponse{
-			Succes:  false,
+			Success: false,
 			TrxHash: trx.Hash,
 		})
 	}
 
 	return c.JSON(TransactionConfirmProposeResponse{
-		Succes:  true,
+		Success: true,
 		TrxHash: trx.Hash,
 	})
 }
@@ -142,7 +142,7 @@ func (s *server) awaited(c *fiber.Ctx) error {
 		return fiber.ErrBadRequest
 	}
 
-	if ok := s.pv.ValidateData(req.Address, req.Data); !ok {
+	if ok := s.randDataProv.ValidateData(req.Address, req.Data); !ok {
 		return fiber.ErrForbidden
 	}
 
@@ -176,6 +176,49 @@ func (s *server) data(c *fiber.Ctx) error {
 	if err := c.BodyParser(&req); err != nil {
 		return fiber.ErrBadRequest
 	}
-	d := s.pv.ProvideData(req.Address)
+	d := s.randDataProv.ProvideData(req.Address)
 	return c.JSON(DataToSignResponse{Data: d})
+}
+
+// CreateAddressRequest is a request to create an address.
+type CreateAddressRequest struct {
+	Address   string   `json:"address"`
+	Token     string   `json:"token"`
+	Data      []byte   `json:"data"`
+	Hash      [32]byte `json:"hash"`
+	Signature []byte   `json:"signature"`
+}
+
+// Response for address creation.
+type CreateAddressResponse struct {
+	Success bool   `json:"success"`
+	Address string `json:"address"`
+}
+
+func (s *server) addressCreate(c *fiber.Ctx) error {
+	var req CreateAddressRequest
+	if err := c.BodyParser(&req); err != nil {
+		return fiber.ErrBadRequest
+	}
+	if ok := s.randDataProv.ValidateData(req.Address, req.Data); !ok {
+		return fiber.ErrForbidden
+	}
+
+	if ok, err := s.repo.CheckToken(c.Context(), req.Token); !ok || err != nil {
+		if err != nil {
+			return fiber.ErrGone
+		}
+		return fiber.ErrForbidden
+	}
+	if ok, err := s.repo.CheckAddressExists(c.Context(), req.Address); ok || err != nil {
+		if err != nil {
+			return fiber.ErrGone
+		}
+		return fiber.ErrConflict
+	}
+
+	if err := s.repo.WriteAddress(c.Context(), req.Address); err != nil {
+		return fiber.ErrConflict
+	}
+	return c.JSON(CreateAddressResponse{Success: true, Address: req.Address})
 }

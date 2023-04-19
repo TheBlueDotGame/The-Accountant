@@ -52,8 +52,8 @@ func NewBlock(difficulty, next uint64, prevHash [32]byte, trxHashes [][32]byte) 
 }
 
 // Validate validates the Block.
-// Validations goes in the same order like Block hashing allgorithm,
-// just the proof of work part is not required as Nonce is arleady known.
+// Validations goes in the same order like Block hashing algorithm,
+// just the proof of work part is not required as Nonce is already known.
 func (b *Block) Validate(trxHashes [][32]byte) bool {
 	if !b.validateTransactionsHashesMatch(trxHashes) {
 		return false

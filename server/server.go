@@ -27,10 +27,13 @@ type Repository interface {
 	Disconnect(ctx context.Context) error
 	RunMigration(ctx context.Context) error
 	FindAddress(ctx context.Context, search string, limit int) ([]string, error)
+	CheckAddressExists(ctx context.Context, address string) (bool, error)
+	WriteAddress(ctx context.Context, address string) error
 	FindTransactionInBlockHash(ctx context.Context, trxHash [32]byte) ([32]byte, error)
+	CheckToken(ctx context.Context, token string) (bool, error)
 }
 
-// Bookkeeper abstracts methods of the bookeeping of a blockchain.
+// Bookkeeper abstracts methods of the bookkeeping of a blockchain.
 type Bookkeeper interface {
 	Run(ctx context.Context)
 	WriteCandidateTransaction(ctx context.Context, tx *transaction.Transaction) error
@@ -56,9 +59,9 @@ type Config struct {
 }
 
 type server struct {
-	repo        Repository
-	bookkeeping Bookkeeper
-	pv          RandomDataProvideValidator
+	repo         Repository
+	bookkeeping  Bookkeeper
+	randDataProv RandomDataProvideValidator
 }
 
 // Run initializes routing and runs the server. To stop the server cancel the context.
@@ -81,9 +84,9 @@ func Run(ctx context.Context, c *Config, repo Repository, bookkeeping Bookkeeper
 	}
 
 	s := &server{
-		repo:        repo,
-		bookkeeping: bookkeeping,
-		pv:          pv,
+		repo:         repo,
+		bookkeeping:  bookkeeping,
+		randDataProv: pv,
 	}
 
 	router := fiber.New(fiber.Config{
@@ -108,6 +111,9 @@ func Run(ctx context.Context, c *Config, repo Repository, bookkeeping Bookkeeper
 	transaction.Post("/confirm", s.confirm)
 	transaction.Post("/awaited", s.awaited)
 	transaction.Post("/data", s.data)
+
+	address := router.Group("/address")
+	address.Post("/create", s.addressCreate)
 
 	go func() {
 		bookkeeping.Run(ctxx)
