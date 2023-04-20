@@ -154,7 +154,7 @@ func (l *Ledger) WriteIssuerSignedTransactionForReceiver(
 	receiverAddr string,
 	trx *transaction.Transaction,
 ) error {
-	if err := l.validatePartialyTransaction(ctx, receiverAddr, trx); err != nil {
+	if err := l.validatePartiallyTransaction(ctx, receiverAddr, trx); err != nil {
 		return err
 	}
 
@@ -202,6 +202,10 @@ func (l *Ledger) ReadAwaitedTransactionsForAddress(
 	return trxs, nil
 }
 
+func (l *Ledger) VerifySignature(message, signature []byte, hash [32]byte, address string) error {
+	return l.vr.Verify(message, signature, hash, address)
+}
+
 func (l *Ledger) forge(ctx context.Context) {
 	defer l.cleanHashes()
 	blcHash, err := l.saveBlock(ctx)
@@ -234,7 +238,7 @@ func (l *Ledger) saveBlock(ctx context.Context) ([32]byte, error) {
 	return nb.Hash, nil
 }
 
-func (l *Ledger) validatePartialyTransaction(ctx context.Context, receiverAddr string, trx *transaction.Transaction) error {
+func (l *Ledger) validatePartiallyTransaction(ctx context.Context, receiverAddr string, trx *transaction.Transaction) error {
 	exists, err := l.ac.CheckAddressExists(ctx, trx.IssuerAddress)
 	if err != nil {
 		return err
