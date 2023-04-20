@@ -65,9 +65,9 @@ type BlockFinder interface {
 }
 
 type Config struct {
-	Difficulty            uint64        `json:"difficulty"              bson:"difficulty"              yaml:"difficulty"`
-	BlockWriteTimestamp   time.Duration `json:"block_write_timestamp"   bson:"block_write_timestamp"   yaml:"block_write_timestamp"`
-	BlockTransactionsSize int           `json:"block_transactions_size" bson:"block_transactions_size" yaml:"block_transactions_size"`
+	Difficulty            uint64 `json:"difficulty"              bson:"difficulty"              yaml:"difficulty"`
+	BlockWriteTimestamp   uint64 `json:"block_write_timestamp"   bson:"block_write_timestamp"   yaml:"block_write_timestamp"`
+	BlockTransactionsSize int    `json:"block_transactions_size" bson:"block_transactions_size" yaml:"block_transactions_size"`
 }
 
 func (c Config) Validate() error {
@@ -75,7 +75,8 @@ func (c Config) Validate() error {
 		return ErrDifficultyNotInRange
 	}
 
-	if c.BlockWriteTimestamp < minBlockWriteTimestamp || c.BlockWriteTimestamp > maxBlockWriteTimestamp {
+	if time.Duration(c.BlockWriteTimestamp)*time.Second < minBlockWriteTimestamp ||
+		time.Duration(c.BlockWriteTimestamp)*time.Second > maxBlockWriteTimestamp {
 		return ErrBlockWriteTimestampNoInRange
 	}
 
@@ -125,6 +126,7 @@ func NewLedger(
 // Run runs the Ladger engine that writes blocks to the blockchain repository.
 // Run starts a goroutine and can be stopped by cancelling the context.
 func (l *Ledger) Run(ctx context.Context) {
+	ts := time.Duration(l.config.BlockWriteTimestamp) * time.Second
 	go func(ctx context.Context) {
 	outer:
 		for {
@@ -139,7 +141,7 @@ func (l *Ledger) Run(ctx context.Context) {
 				if len(l.hashes) == l.config.BlockTransactionsSize {
 					l.forge(ctx)
 				}
-			case <-time.After(l.config.BlockWriteTimestamp):
+			case <-time.After(ts):
 				if len(l.hashes) > 0 {
 					l.forge(ctx)
 				}

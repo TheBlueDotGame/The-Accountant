@@ -20,14 +20,22 @@ const (
 	tokensCollection                       = "tokens"
 )
 
+// Config contains configuration for the database.
+type Config struct {
+	ConnStr      string `yaml:"conn_str"`         // ConnStr is the connection string to the database.
+	DatabaseName string `yaml:"database_name"`    // DatabaseName is the name of the database.
+	Token        string `yaml:"token"`            // Token is the token that is used to confirm api clients access.
+	TokenExpire  int64  `yaml:"token_expiration"` // TokenExpire is the number of seconds after which token expires.
+}
+
 // Database provides database access for read, write and delete of repository entities.
 type DataBase struct {
 	inner mongo.Database
 }
 
 // Connect creates new connection to the repository and returns pointer to the DataBase.
-func Connect(ctx context.Context, connStr, databaseName string) (*DataBase, error) {
-	conn, err := mongo.Connect(ctx, options.Client().ApplyURI(connStr))
+func Connect(ctx context.Context, cfg Config) (*DataBase, error) {
+	conn, err := mongo.Connect(ctx, options.Client().ApplyURI(cfg.ConnStr))
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +46,7 @@ func Connect(ctx context.Context, connStr, databaseName string) (*DataBase, erro
 		return nil, err
 	}
 
-	return &DataBase{*conn.Database(databaseName)}, nil
+	return &DataBase{*conn.Database(cfg.DatabaseName)}, nil
 }
 
 // Disconnect disconnects user from database

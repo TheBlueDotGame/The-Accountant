@@ -81,7 +81,7 @@ type RandomDataProvideValidator interface {
 
 // Config contains configuration of the server.
 type Config struct {
-	Port int
+	Port int `yaml:"port"`
 }
 
 type server struct {
@@ -92,7 +92,7 @@ type server struct {
 }
 
 // Run initializes routing and runs the server. To stop the server cancel the context.
-func Run(ctx context.Context, c *Config, repo Repository, bookkeeping Bookkeeper, pv RandomDataProvideValidator) error {
+func Run(ctx context.Context, c Config, repo Repository, bookkeeping Bookkeeper, pv RandomDataProvideValidator) error {
 	var err error
 	ctxx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -106,7 +106,7 @@ func Run(ctx context.Context, c *Config, repo Repository, bookkeeping Bookkeeper
 		return err
 	}
 
-	if err := validateConfig(c); err != nil {
+	if err := validateConfig(&c); err != nil {
 		return err
 	}
 

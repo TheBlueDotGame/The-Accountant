@@ -11,7 +11,7 @@ import (
 func TestGenerateValidateSuccess(t *testing.T) {
 	address := "somerandomaddressthatisvalid"
 
-	c := New(context.Background(), 1*time.Second)
+	c := New(context.Background(), Config{Longevity: 60})
 
 	d := c.ProvideData(address)
 	ok := c.ValidateData(address, d)
@@ -22,7 +22,7 @@ func TestGenerateValidateSuccess(t *testing.T) {
 func TestGenerateValidateFailAddress(t *testing.T) {
 	address := "somerandomaddressthatisvalid"
 
-	c := New(context.Background(), 1*time.Second)
+	c := New(context.Background(), Config{Longevity: 60})
 
 	d := c.ProvideData(address)
 	ok := c.ValidateData("somerandomaddressthatisnotvalid", d)
@@ -33,7 +33,7 @@ func TestGenerateValidateFailAddress(t *testing.T) {
 func TestGenerateValidateFailData(t *testing.T) {
 	address := "somerandomaddressthatisvalid"
 
-	c := New(context.Background(), 1*time.Second)
+	c := New(context.Background(), Config{Longevity: 60})
 
 	c.ProvideData(address)
 	ok := c.ValidateData(address, []byte{})
@@ -44,10 +44,10 @@ func TestGenerateValidateFailData(t *testing.T) {
 func TestGenerateValidateFailTimePassed(t *testing.T) {
 	address := "somerandomaddressthatisvalid"
 
-	c := New(context.Background(), 100*time.Millisecond)
+	c := New(context.Background(), Config{Longevity: 1})
 	d := c.ProvideData(address)
 
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(2 * time.Second)
 
 	ok := c.ValidateData(address, d)
 

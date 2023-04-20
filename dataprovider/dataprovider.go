@@ -8,6 +8,11 @@ import (
 	"time"
 )
 
+// Config holds configuration for Cache.
+type Config struct {
+	Longevity uint64 `yaml:"longevity"` // Data longevity in seconds.
+}
+
 type data struct {
 	raw       []byte
 	timestamp int64
@@ -21,7 +26,11 @@ type Cache struct {
 }
 
 // New creates new Cache and runs the cleaner.
-func New(ctx context.Context, longevity time.Duration) *Cache {
+func New(ctx context.Context, cfg Config) *Cache {
+	if cfg.Longevity == 0 {
+		cfg.Longevity = 60
+	}
+	longevity := time.Duration(cfg.Longevity) * time.Second
 	c := &Cache{
 		data:      make(map[string]data),
 		mux:       sync.RWMutex{},
