@@ -11,8 +11,33 @@ import (
 )
 
 const (
-	apiVersion = "1.0.0"
-	header     = "The Accountant"
+	ApiVersion = "1.0.0"
+	Header     = "The Accountant"
+)
+
+const (
+	searchGroupURL      = "/search"
+	addressURL          = "/address"
+	blockURL            = "/block"
+	transactionGroupURL = "/transaction"
+	proposeURL          = "/propose"
+	confirmURL          = "/confirm"
+	awaitedURL          = "/awaited"
+	validatorGroupURL   = "/validator"
+	dataURL             = "/data"
+	addressGroupURL     = "/address"
+	createURL           = "/create"
+)
+
+const (
+	AliveURL              = "/alive"                         // URL to check if server is alive and version.
+	SearchAddressURL      = searchGroupURL + addressURL      // URL to search for address.
+	SearchBlockURL        = searchGroupURL + blockURL        // URL to search for block that contains transaction hash.
+	ProposeTransactionURL = transactionGroupURL + proposeURL // URL to propose transaction signed by the issuer.
+	ConfirmTransactionURL = transactionGroupURL + confirmURL // URL to confirm transaction signed by the receiver.
+	AwaitedTransactionURL = transactionGroupURL + awaitedURL // URL to get awaited transactions for the receiver.
+	DataToValidateURL     = validatorGroupURL + dataURL      // URL to get data to validate address by signing rew message.
+	WsURL                 = "/ws"                            // URL to connect to websocket.
 )
 
 const queryLimit = 100
@@ -98,27 +123,29 @@ func Run(ctx context.Context, c *Config, repo Repository, bookkeeping Bookkeeper
 		StrictRouting: true,
 		ReadTimeout:   time.Second * 5,
 		WriteTimeout:  time.Second * 5,
-		ServerHeader:  header,
-		AppName:       apiVersion,
+		ServerHeader:  Header,
+		AppName:       ApiVersion,
 		Concurrency:   4096,
 	})
 
-	router.Get("/alive", s.alive)
+	router.Get(AliveURL, s.alive)
 
-	search := router.Group("/search")
-	search.Post("/address", s.address)
-	search.Post("/block", s.trxInBlock)
+	search := router.Group(searchGroupURL)
+	search.Post(addressURL, s.address)
+	search.Post(blockURL, s.trxInBlock)
 
-	transaction := router.Group("/transaction")
-	transaction.Post("/propose", s.propose)
-	transaction.Post("/confirm", s.confirm)
-	transaction.Post("/awaited", s.awaited)
-	transaction.Post("/data", s.data)
+	transaction := router.Group(transactionGroupURL)
+	transaction.Post(proposeURL, s.propose)
+	transaction.Post(confirmURL, s.confirm)
+	transaction.Post(addressURL, s.awaited)
 
-	address := router.Group("/address")
-	address.Post("/create", s.addressCreate)
+	validator := router.Group(validatorGroupURL)
+	validator.Post(dataURL, s.data)
 
-	router.Group("/ws", s.wsWrapper)
+	address := router.Group(addressGroupURL)
+	address.Post(createURL, s.addressCreate)
+
+	router.Group(WsURL, s.wsWrapper)
 
 	go func() {
 		bookkeeping.Run(ctxx)
