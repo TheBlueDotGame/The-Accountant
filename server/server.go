@@ -100,7 +100,7 @@ func Run(ctx context.Context, c *Config, repo Repository, bookkeeping Bookkeeper
 		WriteTimeout:  time.Second * 5,
 		ServerHeader:  header,
 		AppName:       apiVersion,
-		Concurrency:   256 * 2048,
+		Concurrency:   4096,
 	})
 
 	router.Get("/alive", s.alive)

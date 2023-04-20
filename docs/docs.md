@@ -705,7 +705,7 @@ import "github.com/bartossh/The-Accountant/server"
 - [type SearchBlockResponse](<#type-searchblockresponse>)
 - [type TransactionConfirmProposeResponse](<#type-transactionconfirmproposeresponse>)
 - [type TransactionProposeRequest](<#type-transactionproposerequest>)
-- [type UpgradeToWebsocketRequest](<#type-upgradetowebsocketrequest>)
+- [type UpgradeConnectionRequest](<#type-upgradeconnectionrequest>)
 
 
 ## Variables
@@ -820,15 +820,15 @@ type DataToSignResponse struct {
 }
 ```
 
-## type [Message](<https://github.com/bartossh/The-Accountant/blob/main/server/ws.go#L41-L46>)
+## type [Message](<https://github.com/bartossh/The-Accountant/blob/main/server/ws.go#L43-L48>)
 
 Message is the message that is used to exchange information between the server and the client.
 
 ```go
 type Message struct {
-    Command string `json:"command"`
-    Error   string `json:"error"`
-    Data    []byte `json:"data"`
+    Command string `json:"command"` // Command is the command that refers to the action handler in websocket protocol.
+    Error   string `json:"error"`   // Error is the error message that is sent to the client.
+    Data    []byte `json:"data"`    // Data is compressed data that is sent to the client. Based on the command, the client will know how to decompress the data.
     // contains filtered or unexported fields
 }
 ```
@@ -922,12 +922,12 @@ type TransactionProposeRequest struct {
 }
 ```
 
-## type [UpgradeToWebsocketRequest](<https://github.com/bartossh/The-Accountant/blob/main/server/ws.go#L31-L37>)
+## type [UpgradeConnectionRequest](<https://github.com/bartossh/The-Accountant/blob/main/server/ws.go#L33-L39>)
 
-UpgradeToWebsocketRequest is a request to upgrade to websocket. Request contains signed Data previously sent to client that are signed by  the Client Wallet. Signature verifies if given Address is paired with private key that was used to sign the data.
+UpgradeConnectionRequest is a request to upgrade to websocket. Request contains signed Data previously sent to client. Signature verifies if given Address is paired with private key that was used to sign the data.
 
 ```go
-type UpgradeToWebsocketRequest struct {
+type UpgradeConnectionRequest struct {
     Address   string   `json:"address"`
     Token     string   `json:"token"`
     Data      []byte   `json:"data"`

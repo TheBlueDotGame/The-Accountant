@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -23,12 +22,15 @@ const (
 	clientMessageChannelsBufferSize = 512
 )
 
-// UpgradeToWebsocketRequest is a request to upgrade to websocket.
-// Request contains signed Data previously sent to client
-// that are signed by  the Client Wallet.
+const (
+	echo = "echo"
+)
+
+// UpgradeConnectionRequest is a request to upgrade to websocket.
+// Request contains signed Data previously sent to client.
 // Signature verifies if given Address is paired with private key that
 // was used to sign the data.
-type UpgradeToWebsocketRequest struct {
+type UpgradeConnectionRequest struct {
 	Address   string   `json:"address"`
 	Token     string   `json:"token"`
 	Data      []byte   `json:"data"`
@@ -40,22 +42,22 @@ type UpgradeToWebsocketRequest struct {
 // the server and the client.
 type Message struct {
 	receivers []string
-	Command   string `json:"command"`
-	Error     string `json:"error"`
-	Data      []byte `json:"data"`
+	Command   string `json:"command"` // Command is the command that refers to the action handler in websocket protocol.
+	Error     string `json:"error"`   // Error is the error message that is sent to the client.
+	Data      []byte `json:"data"`    // Data is compressed data that is sent to the client. Based on the command, the client will know how to decompress the data.
 }
 
 type socket struct {
 	address string
 	hub     *hub
 	conn    *websocket.Conn
-	send    chan *Message
+	send    chan []byte
 	repo    Repository
 	close   chan struct{}
 }
 
 func (s *server) wsWrapper(c *fiber.Ctx) error {
-	var req UpgradeToWebsocketRequest
+	var req UpgradeConnectionRequest
 	if err := c.BodyParser(&req); err != nil {
 		return fiber.ErrBadRequest
 	}
@@ -76,7 +78,7 @@ func (s *server) wsWrapper(c *fiber.Ctx) error {
 		address: req.Address,
 		hub:     s.hub,
 		conn:    nil,
-		send:    make(chan *Message, clientMessageChannelsBufferSize),
+		send:    make(chan []byte, clientMessageChannelsBufferSize),
 		repo:    s.repo,
 		close:   make(chan struct{}, 1),
 	}
@@ -105,9 +107,9 @@ func (c *socket) readPump() {
 		if err != nil {
 			switch {
 			case websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure):
-				log.Printf("client %s closing due to %s\n", c.address, err)
+				//TODO log fmt.Printf("client %s closing due to %s\n", c.address, err)
 			default:
-				log.Printf("closing connection to the client %s due to unexpected error %s\n", c.address, err)
+				//TODO: log fmt.Printf("closing connection to the client %s due to unexpected error %s\n", c.address, err)
 			}
 
 			close(c.send)
@@ -125,20 +127,17 @@ func (c *socket) writePump() {
 	}()
 	for {
 		select {
-		case message, ok := <-c.send:
+		case raw, ok := <-c.send:
 			c.conn.SetWriteDeadline(time.Now().Add(socketWriteWait))
 			if !ok {
 				// The hub closed the channel.
+				// TODO: Log closing channel
 				c.hub.unregister <- c
 				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
-
-			raw, err := json.Marshal(&message)
-			if err != nil {
-				return
-			}
 			if err := c.conn.WriteMessage(websocket.TextMessage, raw); err != nil {
+				// TODO: log error
 				c.hub.unregister <- c
 				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
@@ -147,7 +146,7 @@ func (c *socket) writePump() {
 		case <-ticker.C:
 			c.conn.SetWriteDeadline(time.Now().Add(socketWriteWait))
 			if err := c.conn.WriteMessage(websocket.PingMessage, []byte(c.address)); err != nil {
-				fmt.Printf("Closing connection to the client %s, due to %s", c.address, err)
+				// TODO: log fmt.Printf("Closing connection to the client %s, due to %s", c.address, err)
 				c.hub.unregister <- c
 				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
@@ -159,14 +158,14 @@ func (c *socket) writePump() {
 func ctxClose(close <-chan struct{}) (context.Context, context.CancelFunc) {
 	ctx, cancel := context.WithTimeout(context.Background(), socketContextExp)
 	go func() {
-	M:
+	outer:
 		for {
 			select {
 			case <-close:
 				cancel()
-				break M
+				break outer
 			case <-ctx.Done():
-				break M
+				break outer
 			}
 		}
 	}()
@@ -198,13 +197,18 @@ outer:
 		case client := <-h.unregister:
 			delete(h.clients, client.address)
 		case message := <-h.broadcast:
+			raw, err := json.Marshal(&message)
+			if err != nil {
+				//TODO: log error
+				continue outer
+			}
 			for _, addr := range message.receivers {
 				client, ok := h.clients[addr]
 				if !ok {
-					continue
+					continue outer
 				}
 				select {
-				case h.clients[addr].send <- message:
+				case h.clients[addr].send <- raw:
 				default:
 					delete(h.clients, client.address)
 				}
@@ -224,7 +228,7 @@ func (c *socket) process(msg *Message) {
 	ctx, cancel := ctxClose(c.close)
 	defer cancel()
 	switch msg.Command {
-	case "echo":
+	case echo:
 		if err := c.echo(ctx, msg); err != nil {
 			c.sendCommand(setCommandError(msg, err))
 		}
@@ -241,7 +245,12 @@ func setCommandError(msg *Message, err error) *Message {
 }
 
 func (c socket) sendCommand(msg *Message) {
-	c.send <- msg
+	raw, err := json.Marshal(&msg)
+	if err != nil {
+		// TODO: log error
+		return
+	}
+	c.send <- raw
 }
 
 func (c socket) broadcastCommend(msg *Message) {
