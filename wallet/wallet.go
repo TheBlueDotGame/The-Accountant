@@ -18,8 +18,8 @@ const (
 
 // Wallet holds public and private key of the wallet owner.
 type Wallet struct {
-	Private ed25519.PrivateKey
-	Public  ed25519.PublicKey
+	Private ed25519.PrivateKey `json:"private" bson:"private"`
+	Public  ed25519.PublicKey  `json:"public" bson:"public"`
 }
 
 // New tries to creates a new Wallet or returns error otherwise.

@@ -1,0 +1,13 @@
+bookkeeper:
+  difficulty: 1
+  block_write_timestamp: 300
+  block_transactions_size: 25
+server:
+  port: 8080
+database:
+  conn_str: "mongodb://example_user:user_secret@localhost:27017"
+  database_name: "accountant"
+  token: "somerandomtokenfoapiclients"
+  token_expiration: 604800
+dataprovider:
+  longevity: 300
