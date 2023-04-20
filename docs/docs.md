@@ -346,6 +346,64 @@ type TrxWriteReadMover interface {
 }
 ```
 
+# client
+
+```go
+import "github.com/bartossh/The-Accountant/client"
+```
+
+## Index
+
+- [Variables](<#variables>)
+- [type Rest](<#type-rest>)
+  - [func NewRest(apiRoot string, timeout time.Duration) *Rest](<#func-newrest>)
+  - [func (r *Rest) DataToSign(address string) (server.DataToSignResponse, error)](<#func-rest-datatosign>)
+  - [func (r *Rest) ValidateApiVersion() error](<#func-rest-validateapiversion>)
+
+
+## Variables
+
+```go
+var (
+    ErrApiVersionMismatch = fmt.Errorf("api version mismatch")
+    ErrApiHeaderMismatch  = fmt.Errorf("api header mismatch")
+)
+```
+
+## type [Rest](<https://github.com/bartossh/The-Accountant/blob/main/client/client.go#L20-L23>)
+
+Rest is a rest client for the API.
+
+```go
+type Rest struct {
+    // contains filtered or unexported fields
+}
+```
+
+### func [NewRest](<https://github.com/bartossh/The-Accountant/blob/main/client/client.go#L26>)
+
+```go
+func NewRest(apiRoot string, timeout time.Duration) *Rest
+```
+
+NewRest creates a new rest client.
+
+### func \(\*Rest\) [DataToSign](<https://github.com/bartossh/The-Accountant/blob/main/client/client.go#L115>)
+
+```go
+func (r *Rest) DataToSign(address string) (server.DataToSignResponse, error)
+```
+
+DataToValidate makes http request to the API server and returns data to validate.
+
+### func \(\*Rest\) [ValidateApiVersion](<https://github.com/bartossh/The-Accountant/blob/main/client/client.go#L97>)
+
+```go
+func (r *Rest) ValidateApiVersion() error
+```
+
+ValidateApiVersion makes a call to the API server and validates client and server API versions and header correctness.
+
 # dataprovider
 
 ```go
@@ -686,8 +744,10 @@ import "github.com/bartossh/The-Accountant/server"
 
 ## Index
 
+- [Constants](<#constants>)
 - [Variables](<#variables>)
 - [func Run(ctx context.Context, c *Config, repo Repository, bookkeeping Bookkeeper, pv RandomDataProvideValidator) error](<#func-run>)
+- [type AliveResponse](<#type-aliveresponse>)
 - [type AwaitedTransactionRequest](<#type-awaitedtransactionrequest>)
 - [type AwaitedTransactionResponse](<#type-awaitedtransactionresponse>)
 - [type Bookkeeper](<#type-bookkeeper>)
@@ -708,13 +768,35 @@ import "github.com/bartossh/The-Accountant/server"
 - [type UpgradeConnectionRequest](<#type-upgradeconnectionrequest>)
 
 
+## Constants
+
+```go
+const (
+    ApiVersion = "1.0.0"
+    Header     = "The Accountant"
+)
+```
+
+```go
+const (
+    AliveURL              = "/alive"                         // URL to check if server is alive and version.
+    SearchAddressURL      = searchGroupURL + addressURL      // URL to search for address.
+    SearchBlockURL        = searchGroupURL + blockURL        // URL to search for block that contains transaction hash.
+    ProposeTransactionURL = transactionGroupURL + proposeURL // URL to propose transaction signed by the issuer.
+    ConfirmTransactionURL = transactionGroupURL + confirmURL // URL to confirm transaction signed by the receiver.
+    AwaitedTransactionURL = transactionGroupURL + awaitedURL // URL to get awaited transactions for the receiver.
+    DataToValidateURL     = validatorGroupURL + dataURL      // URL to get data to validate address by signing rew message.
+    WsURL                 = "/ws"                            // URL to connect to websocket.
+)
+```
+
 ## Variables
 
 ```go
 var ErrWrongPortSpecified = errors.New("port must be between 1 and 65535")
 ```
 
-## func [Run](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L70>)
+## func [Run](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L95>)
 
 ```go
 func Run(ctx context.Context, c *Config, repo Repository, bookkeeping Bookkeeper, pv RandomDataProvideValidator) error
@@ -722,7 +804,19 @@ func Run(ctx context.Context, c *Config, repo Repository, bookkeeping Bookkeeper
 
 Run initializes routing and runs the server. To stop the server cancel the context.
 
-## type [AwaitedTransactionRequest](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L126-L131>)
+## type [AliveResponse](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L9-L13>)
+
+AliveResponse is a response for alive and version check.
+
+```go
+type AliveResponse struct {
+    Alive      bool   `json:"alive"`
+    APIVersion string `json:"api_version"`
+    APIHeader  string `json:"api_header"`
+}
+```
+
+## type [AwaitedTransactionRequest](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L138-L143>)
 
 AwaitedTransactionRequest is a request to get awaited transactions for given address. Request contains of Address for which Awaited Transactions are requested, Data in binary format, Hash of Data and Signature of the Data to prove that entity doing the request is an Address owner.
 
@@ -735,7 +829,7 @@ type AwaitedTransactionRequest struct {
 }
 ```
 
-## type [AwaitedTransactionResponse](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L134-L137>)
+## type [AwaitedTransactionResponse](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L146-L149>)
 
 AwaitedTransactionResponse is a response for awaited transactions request.
 
@@ -746,7 +840,7 @@ type AwaitedTransactionResponse struct {
 }
 ```
 
-## type [Bookkeeper](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L37-L48>)
+## type [Bookkeeper](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L62-L73>)
 
 Bookkeeper abstracts methods of the bookkeeping of a blockchain.
 
@@ -765,7 +859,7 @@ type Bookkeeper interface {
 }
 ```
 
-## type [Config](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L58-L60>)
+## type [Config](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L83-L85>)
 
 Config contains configuration of the server.
 
@@ -775,7 +869,7 @@ type Config struct {
 }
 ```
 
-## type [CreateAddressRequest](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L188-L194>)
+## type [CreateAddressRequest](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L200-L206>)
 
 CreateAddressRequest is a request to create an address.
 
@@ -789,7 +883,7 @@ type CreateAddressRequest struct {
 }
 ```
 
-## type [CreateAddressResponse](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L197-L200>)
+## type [CreateAddressResponse](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L209-L212>)
 
 Response for address creation.
 
@@ -800,7 +894,7 @@ type CreateAddressResponse struct {
 }
 ```
 
-## type [DataToSignRequest](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L169-L171>)
+## type [DataToSignRequest](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L181-L183>)
 
 DataToSignRequest is a request to get data to sign for proving identity.
 
@@ -810,7 +904,7 @@ type DataToSignRequest struct {
 }
 ```
 
-## type [DataToSignResponse](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L174-L176>)
+## type [DataToSignResponse](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L186-L188>)
 
 DataToSignRequest is a response containing data to sign for proving identity.
 
@@ -833,7 +927,7 @@ type Message struct {
 }
 ```
 
-## type [RandomDataProvideValidator](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L52-L55>)
+## type [RandomDataProvideValidator](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L77-L80>)
 
 RandomDataProvideValidator provides random binary data for signing to prove identity and the validator of data being valid and not expired.
 
@@ -844,7 +938,7 @@ type RandomDataProvideValidator interface {
 }
 ```
 
-## type [Repository](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L26-L34>)
+## type [Repository](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L51-L59>)
 
 Repository is the interface that wraps the basic CRUD and Search methods. Repository should be properly indexed to allow for transaction and block hash. as well as address public keys to be and unique and the hash lookup should be fast. Repository holds the blocks and transaction that are part of the blockchain.
 
@@ -860,7 +954,7 @@ type Repository interface {
 }
 ```
 
-## type [SearchAddressRequest](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L13-L15>)
+## type [SearchAddressRequest](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L25-L27>)
 
 SearchAddressRequest is a request to search for address.
 
@@ -870,7 +964,7 @@ type SearchAddressRequest struct {
 }
 ```
 
-## type [SearchAddressResponse](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L18-L20>)
+## type [SearchAddressResponse](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L30-L32>)
 
 SearchAddressResponse is a response for address search.
 
@@ -880,7 +974,7 @@ type SearchAddressResponse struct {
 }
 ```
 
-## type [SearchBlockRequest](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L41-L43>)
+## type [SearchBlockRequest](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L53-L55>)
 
 SearchBlockRequest is a request to search for block.
 
@@ -890,7 +984,7 @@ type SearchBlockRequest struct {
 }
 ```
 
-## type [SearchBlockResponse](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L46-L48>)
+## type [SearchBlockResponse](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L58-L60>)
 
 SearchBlockResponse is a response for block search.
 
@@ -900,7 +994,7 @@ type SearchBlockResponse struct {
 }
 ```
 
-## type [TransactionConfirmProposeResponse](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L76-L79>)
+## type [TransactionConfirmProposeResponse](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L88-L91>)
 
 TransactionConfirmProposeResponse is a response for transaction propose.
 
@@ -911,7 +1005,7 @@ type TransactionConfirmProposeResponse struct {
 }
 ```
 
-## type [TransactionProposeRequest](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L70-L73>)
+## type [TransactionProposeRequest](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L82-L85>)
 
 TransactionProposeRequest is a request to propose a transaction.
 

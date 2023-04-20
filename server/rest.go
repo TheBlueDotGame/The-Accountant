@@ -5,8 +5,20 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+// AliveResponse is a response for alive and version check.
+type AliveResponse struct {
+	Alive      bool   `json:"alive"`
+	APIVersion string `json:"api_version"`
+	APIHeader  string `json:"api_header"`
+}
+
 func (s *server) alive(c *fiber.Ctx) error {
-	return c.JSON(map[string]interface{}{"alive": true})
+	return c.JSON(
+		AliveResponse{
+			Alive:      true,
+			APIVersion: ApiVersion,
+			APIHeader:  Header,
+		})
 }
 
 // SearchAddressRequest is a request to search for address.
