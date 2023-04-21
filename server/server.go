@@ -37,6 +37,7 @@ const (
 	ConfirmTransactionURL = transactionGroupURL + confirmURL // URL to confirm transaction signed by the receiver.
 	AwaitedTransactionURL = transactionGroupURL + awaitedURL // URL to get awaited transactions for the receiver.
 	DataToValidateURL     = validatorGroupURL + dataURL      // URL to get data to validate address by signing rew message.
+	CreateAddressURL      = addressGroupURL + createURL      // URL to create new address.
 	WsURL                 = "/ws"                            // URL to connect to websocket.
 )
 
