@@ -36,6 +36,7 @@ type TrxWriteReadMover interface {
 	MoveTransactionsFromTemporaryToPermanent(ctx context.Context, hash [][32]byte) error
 	RemoveAwaitingTransaction(ctx context.Context, trxHash [32]byte) error
 	ReadAwaitingTransactionsByReceiver(ctx context.Context, address string) ([]transaction.Transaction, error)
+	ReadAwaitingTransactionsByIssuer(ctx context.Context, address string) ([]transaction.Transaction, error)
 }
 
 type BlockReader interface {
@@ -197,6 +198,24 @@ func (l *Ledger) ReadAwaitedTransactionsForAddress(
 	}
 
 	trxs, err := l.tx.ReadAwaitingTransactionsByReceiver(ctx, address)
+	if err != nil {
+		return nil, err
+	}
+
+	return trxs, nil
+}
+
+func (l *Ledger) ReadIssuedTransactionsByAddress(
+	ctx context.Context,
+	message, signature []byte,
+	hash [32]byte,
+	address string,
+) ([]transaction.Transaction, error) {
+	if err := l.vr.Verify(message, signature, hash, address); err != nil {
+		return nil, err
+	}
+
+	trxs, err := l.tx.ReadAwaitingTransactionsByIssuer(ctx, address)
 	if err != nil {
 		return nil, err
 	}

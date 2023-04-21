@@ -132,10 +132,10 @@ func (s *server) confirm(c *fiber.Ctx) error {
 	})
 }
 
-// AwaitedTransactionRequest is a request to get awaited transactions for given address.
-// Request contains of Address for which Awaited Transactions are requested, Data in binary format,
+// AwaitedIssuedTransactionRequest is a request to get awaited or issued transactions for given address.
+// Request contains of Address for which Transactions are requested, Data in binary format,
 // Hash of Data and Signature of the Data to prove that entity doing the request is an Address owner.
-type AwaitedTransactionRequest struct {
+type AwaitedIssuedTransactionRequest struct {
 	Address   string   `json:"address"`
 	Data      []byte   `json:"data"`
 	Hash      [32]byte `json:"hash"`
@@ -149,7 +149,7 @@ type AwaitedTransactionResponse struct {
 }
 
 func (s *server) awaited(c *fiber.Ctx) error {
-	var req AwaitedTransactionRequest
+	var req AwaitedIssuedTransactionRequest
 	if err := c.BodyParser(&req); err != nil {
 		return fiber.ErrBadRequest
 	}
@@ -174,6 +174,41 @@ func (s *server) awaited(c *fiber.Ctx) error {
 	return c.JSON(AwaitedTransactionResponse{
 		Success:             true,
 		AwaitedTransactions: trxs,
+	})
+}
+
+// AwaitedTransactionResponse is a response for issued transactions request.
+type IssuedTransactionResponse struct {
+	Success            bool                      `json:"success"`
+	IssuedTransactions []transaction.Transaction `json:"issued_transactions"`
+}
+
+func (s *server) issued(c *fiber.Ctx) error {
+	var req AwaitedIssuedTransactionRequest
+	if err := c.BodyParser(&req); err != nil {
+		return fiber.ErrBadRequest
+	}
+
+	if ok := s.randDataProv.ValidateData(req.Address, req.Data); !ok {
+		return fiber.ErrForbidden
+	}
+
+	if err := s.bookkeeping.VerifySignature(req.Data, req.Signature, req.Hash, req.Address); err != nil {
+		return fiber.ErrForbidden
+	}
+
+	trxs, err := s.bookkeeping.ReadIssuedTransactionsByAddress(c.Context(), req.Data, req.Signature, req.Hash, req.Address)
+	if err != nil {
+		// TODO log error
+		return c.JSON(IssuedTransactionResponse{
+			Success:            false,
+			IssuedTransactions: nil,
+		})
+	}
+
+	return c.JSON(IssuedTransactionResponse{
+		Success:            true,
+		IssuedTransactions: trxs,
 	})
 }
 

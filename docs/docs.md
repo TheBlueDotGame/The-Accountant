@@ -192,6 +192,7 @@ import "github.com/bartossh/The-Accountant/bookkeeping"
 - [type Ledger](<#type-ledger>)
   - [func NewLedger(config Config, bc BlockReadWriter, tx TrxWriteReadMover, ac AddressChecker, vr SignatureVerifier, tf BlockFinder) (*Ledger, error)](<#func-newledger>)
   - [func (l *Ledger) ReadAwaitedTransactionsForAddress(ctx context.Context, message, signature []byte, hash [32]byte, address string) ([]transaction.Transaction, error)](<#func-ledger-readawaitedtransactionsforaddress>)
+  - [func (l *Ledger) ReadIssuedTransactionsByAddress(ctx context.Context, message, signature []byte, hash [32]byte, address string) ([]transaction.Transaction, error)](<#func-ledger-readissuedtransactionsbyaddress>)
   - [func (l *Ledger) Run(ctx context.Context)](<#func-ledger-run>)
   - [func (l *Ledger) VerifySignature(message, signature []byte, hash [32]byte, address string) error](<#func-ledger-verifysignature>)
   - [func (l *Ledger) WriteCandidateTransaction(ctx context.Context, trx *transaction.Transaction) error](<#func-ledger-writecandidatetransaction>)
@@ -214,7 +215,7 @@ var (
 )
 ```
 
-## type [AddressChecker](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L54-L56>)
+## type [AddressChecker](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L55-L57>)
 
 ```go
 type AddressChecker interface {
@@ -222,7 +223,7 @@ type AddressChecker interface {
 }
 ```
 
-## type [BlockFinder](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L62-L65>)
+## type [BlockFinder](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L63-L66>)
 
 ```go
 type BlockFinder interface {
@@ -231,7 +232,7 @@ type BlockFinder interface {
 }
 ```
 
-## type [BlockReadWriter](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L49-L52>)
+## type [BlockReadWriter](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L50-L53>)
 
 ```go
 type BlockReadWriter interface {
@@ -240,7 +241,7 @@ type BlockReadWriter interface {
 }
 ```
 
-## type [BlockReader](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L41-L43>)
+## type [BlockReader](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L42-L44>)
 
 ```go
 type BlockReader interface {
@@ -248,7 +249,7 @@ type BlockReader interface {
 }
 ```
 
-## type [BlockWriter](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L45-L47>)
+## type [BlockWriter](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L46-L48>)
 
 ```go
 type BlockWriter interface {
@@ -256,7 +257,7 @@ type BlockWriter interface {
 }
 ```
 
-## type [Config](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L67-L71>)
+## type [Config](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L68-L72>)
 
 ```go
 type Config struct {
@@ -266,13 +267,13 @@ type Config struct {
 }
 ```
 
-### func \(Config\) [Validate](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L73>)
+### func \(Config\) [Validate](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L74>)
 
 ```go
 func (c Config) Validate() error
 ```
 
-## type [Ledger](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L91-L100>)
+## type [Ledger](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L92-L101>)
 
 Ledger is a collection of ledger functionality to perform bookkeeping.
 
@@ -282,7 +283,7 @@ type Ledger struct {
 }
 ```
 
-### func [NewLedger](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L103-L110>)
+### func [NewLedger](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L104-L111>)
 
 ```go
 func NewLedger(config Config, bc BlockReadWriter, tx TrxWriteReadMover, ac AddressChecker, vr SignatureVerifier, tf BlockFinder) (*Ledger, error)
@@ -290,13 +291,19 @@ func NewLedger(config Config, bc BlockReadWriter, tx TrxWriteReadMover, ac Addre
 
 NewLedger creates new Ledger if config is valid or returns error otherwise.
 
-### func \(\*Ledger\) [ReadAwaitedTransactionsForAddress](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L189-L194>)
+### func \(\*Ledger\) [ReadAwaitedTransactionsForAddress](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L190-L195>)
 
 ```go
 func (l *Ledger) ReadAwaitedTransactionsForAddress(ctx context.Context, message, signature []byte, hash [32]byte, address string) ([]transaction.Transaction, error)
 ```
 
-### func \(\*Ledger\) [Run](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L128>)
+### func \(\*Ledger\) [ReadIssuedTransactionsByAddress](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L208-L213>)
+
+```go
+func (l *Ledger) ReadIssuedTransactionsByAddress(ctx context.Context, message, signature []byte, hash [32]byte, address string) ([]transaction.Transaction, error)
+```
+
+### func \(\*Ledger\) [Run](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L129>)
 
 ```go
 func (l *Ledger) Run(ctx context.Context)
@@ -304,13 +311,13 @@ func (l *Ledger) Run(ctx context.Context)
 
 Run runs the Ladger engine that writes blocks to the blockchain repository. Run starts a goroutine and can be stopped by cancelling the context.
 
-### func \(\*Ledger\) [VerifySignature](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L207>)
+### func \(\*Ledger\) [VerifySignature](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L226>)
 
 ```go
 func (l *Ledger) VerifySignature(message, signature []byte, hash [32]byte, address string) error
 ```
 
-### func \(\*Ledger\) [WriteCandidateTransaction](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L172>)
+### func \(\*Ledger\) [WriteCandidateTransaction](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L173>)
 
 ```go
 func (l *Ledger) WriteCandidateTransaction(ctx context.Context, trx *transaction.Transaction) error
@@ -318,7 +325,7 @@ func (l *Ledger) WriteCandidateTransaction(ctx context.Context, trx *transaction
 
 WriteCandidateTransaction validates and writes a transaction to the repository. Transaction is not yet a part of the blockchain.
 
-### func \(\*Ledger\) [WriteIssuerSignedTransactionForReceiver](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L154-L158>)
+### func \(\*Ledger\) [WriteIssuerSignedTransactionForReceiver](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L155-L159>)
 
 ```go
 func (l *Ledger) WriteIssuerSignedTransactionForReceiver(ctx context.Context, receiverAddr string, trx *transaction.Transaction) error
@@ -326,7 +333,7 @@ func (l *Ledger) WriteIssuerSignedTransactionForReceiver(ctx context.Context, re
 
 WriteIssuerSignedTransactionForReceiver validates issuer signature and writes a transaction to the repository for receiver.
 
-## type [SignatureVerifier](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L58-L60>)
+## type [SignatureVerifier](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L59-L61>)
 
 ```go
 type SignatureVerifier interface {
@@ -334,7 +341,7 @@ type SignatureVerifier interface {
 }
 ```
 
-## type [TrxWriteReadMover](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L33-L39>)
+## type [TrxWriteReadMover](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L33-L40>)
 
 ```go
 type TrxWriteReadMover interface {
@@ -343,6 +350,7 @@ type TrxWriteReadMover interface {
     MoveTransactionsFromTemporaryToPermanent(ctx context.Context, hash [][32]byte) error
     RemoveAwaitingTransaction(ctx context.Context, trxHash [32]byte) error
     ReadAwaitingTransactionsByReceiver(ctx context.Context, address string) ([]transaction.Transaction, error)
+    ReadAwaitingTransactionsByIssuer(ctx context.Context, address string) ([]transaction.Transaction, error)
 }
 ```
 
@@ -362,6 +370,7 @@ import "github.com/bartossh/The-Accountant/client"
   - [func (r *Rest) FlushWalletFromMemory()](<#func-rest-flushwalletfrommemory>)
   - [func (r *Rest) NewWallet(token string) error](<#func-rest-newwallet>)
   - [func (r *Rest) ProposeTransaction(receiverAddr string, subject string, data []byte) error](<#func-rest-proposetransaction>)
+  - [func (r *Rest) ReadIssuedTransactions() ([]transaction.Transaction, error)](<#func-rest-readissuedtransactions>)
   - [func (r *Rest) ReadWaitingTransactions() ([]transaction.Transaction, error)](<#func-rest-readwaitingtransactions>)
   - [func (r *Rest) ReadWalletFromFile(path string) error](<#func-rest-readwalletfromfile>)
   - [func (r *Rest) SaveWalletToFile(path string) error](<#func-rest-savewallettofile>)
@@ -420,7 +429,7 @@ func (r *Rest) ConfirmTransaction(trx transaction.Transaction) error
 
 ConfirmTransaction confirms transaction by signing it with the wallet and then sending it to the API server.
 
-### func \(\*Rest\) [FlushWalletFromMemory](<https://github.com/bartossh/The-Accountant/blob/main/client/client.go#L245>)
+### func \(\*Rest\) [FlushWalletFromMemory](<https://github.com/bartossh/The-Accountant/blob/main/client/client.go#L274>)
 
 ```go
 func (r *Rest) FlushWalletFromMemory()
@@ -444,6 +453,14 @@ func (r *Rest) ProposeTransaction(receiverAddr string, subject string, data []by
 
 ProposeTransaction sends a Transaction proposal to the API server for provided receiver address. Subject describes how to read the data from the transaction. For example, if the subject is "json", then the data can by decoded to map\[sting\]any, when subject "pdf" than it should be decoded by proper pdf decoder, when "csv" then it should be decoded by proper csv decoder.
 
+### func \(\*Rest\) [ReadIssuedTransactions](<https://github.com/bartossh/The-Accountant/blob/main/client/client.go#L222>)
+
+```go
+func (r *Rest) ReadIssuedTransactions() ([]transaction.Transaction, error)
+```
+
+ReadIssuedTransactions reads all issued transactions belonging to current wallet from the API server.
+
 ### func \(\*Rest\) [ReadWaitingTransactions](<https://github.com/bartossh/The-Accountant/blob/main/client/client.go#L192>)
 
 ```go
@@ -452,7 +469,7 @@ func (r *Rest) ReadWaitingTransactions() ([]transaction.Transaction, error)
 
 ReadWaitingTransactions reads all waiting transactions belonging to current wallet from the API server.
 
-### func \(\*Rest\) [ReadWalletFromFile](<https://github.com/bartossh/The-Accountant/blob/main/client/client.go#L231>)
+### func \(\*Rest\) [ReadWalletFromFile](<https://github.com/bartossh/The-Accountant/blob/main/client/client.go#L260>)
 
 ```go
 func (r *Rest) ReadWalletFromFile(path string) error
@@ -460,7 +477,7 @@ func (r *Rest) ReadWalletFromFile(path string) error
 
 ReadWalletFromFile reads the wallet from the file in the path.
 
-### func \(\*Rest\) [SaveWalletToFile](<https://github.com/bartossh/The-Accountant/blob/main/client/client.go#L222>)
+### func \(\*Rest\) [SaveWalletToFile](<https://github.com/bartossh/The-Accountant/blob/main/client/client.go#L251>)
 
 ```go
 func (r *Rest) SaveWalletToFile(path string) error
@@ -936,7 +953,7 @@ import "github.com/bartossh/The-Accountant/server"
 - [Variables](<#variables>)
 - [func Run(ctx context.Context, c Config, repo Repository, bookkeeping Bookkeeper, pv RandomDataProvideValidator) error](<#func-run>)
 - [type AliveResponse](<#type-aliveresponse>)
-- [type AwaitedTransactionRequest](<#type-awaitedtransactionrequest>)
+- [type AwaitedIssuedTransactionRequest](<#type-awaitedissuedtransactionrequest>)
 - [type AwaitedTransactionResponse](<#type-awaitedtransactionresponse>)
 - [type Bookkeeper](<#type-bookkeeper>)
 - [type Config](<#type-config>)
@@ -944,6 +961,7 @@ import "github.com/bartossh/The-Accountant/server"
 - [type CreateAddressResponse](<#type-createaddressresponse>)
 - [type DataToSignRequest](<#type-datatosignrequest>)
 - [type DataToSignResponse](<#type-datatosignresponse>)
+- [type IssuedTransactionResponse](<#type-issuedtransactionresponse>)
 - [type Message](<#type-message>)
 - [type RandomDataProvideValidator](<#type-randomdataprovidevalidator>)
 - [type Repository](<#type-repository>)
@@ -973,6 +991,7 @@ const (
     ProposeTransactionURL = transactionGroupURL + proposeURL // URL to propose transaction signed by the issuer.
     ConfirmTransactionURL = transactionGroupURL + confirmURL // URL to confirm transaction signed by the receiver.
     AwaitedTransactionURL = transactionGroupURL + awaitedURL // URL to get awaited transactions for the receiver.
+    IssuedTransactionURL  = transactionGroupURL + issuedURL  // URL to get issued transactions for the issuer.
     DataToValidateURL     = validatorGroupURL + dataURL      // URL to get data to validate address by signing rew message.
     CreateAddressURL      = addressGroupURL + createURL      // URL to create new address.
     WsURL                 = "/ws"                            // URL to connect to websocket.
@@ -985,7 +1004,7 @@ const (
 var ErrWrongPortSpecified = errors.New("port must be between 1 and 65535")
 ```
 
-## func [Run](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L97>)
+## func [Run](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L105>)
 
 ```go
 func Run(ctx context.Context, c Config, repo Repository, bookkeeping Bookkeeper, pv RandomDataProvideValidator) error
@@ -1005,12 +1024,12 @@ type AliveResponse struct {
 }
 ```
 
-## type [AwaitedTransactionRequest](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L138-L143>)
+## type [AwaitedIssuedTransactionRequest](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L138-L143>)
 
-AwaitedTransactionRequest is a request to get awaited transactions for given address. Request contains of Address for which Awaited Transactions are requested, Data in binary format, Hash of Data and Signature of the Data to prove that entity doing the request is an Address owner.
+AwaitedIssuedTransactionRequest is a request to get awaited or issued transactions for given address. Request contains of Address for which Transactions are requested, Data in binary format, Hash of Data and Signature of the Data to prove that entity doing the request is an Address owner.
 
 ```go
-type AwaitedTransactionRequest struct {
+type AwaitedIssuedTransactionRequest struct {
     Address   string   `json:"address"`
     Data      []byte   `json:"data"`
     Hash      [32]byte `json:"hash"`
@@ -1029,7 +1048,7 @@ type AwaitedTransactionResponse struct {
 }
 ```
 
-## type [Bookkeeper](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L64-L75>)
+## type [Bookkeeper](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L66-L83>)
 
 Bookkeeper abstracts methods of the bookkeeping of a blockchain.
 
@@ -1044,11 +1063,17 @@ type Bookkeeper interface {
         hash [32]byte,
         address string,
     ) ([]transaction.Transaction, error)
+    ReadIssuedTransactionsByAddress(
+        ctx context.Context,
+        message, signature []byte,
+        hash [32]byte,
+        address string,
+    ) ([]transaction.Transaction, error)
     VerifySignature(message, signature []byte, hash [32]byte, address string) error
 }
 ```
 
-## type [Config](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L85-L87>)
+## type [Config](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L93-L95>)
 
 Config contains configuration of the server.
 
@@ -1058,7 +1083,7 @@ type Config struct {
 }
 ```
 
-## type [CreateAddressRequest](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L200-L206>)
+## type [CreateAddressRequest](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L235-L241>)
 
 CreateAddressRequest is a request to create an address.
 
@@ -1072,7 +1097,7 @@ type CreateAddressRequest struct {
 }
 ```
 
-## type [CreateAddressResponse](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L209-L212>)
+## type [CreateAddressResponse](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L244-L247>)
 
 Response for address creation.
 
@@ -1083,7 +1108,7 @@ type CreateAddressResponse struct {
 }
 ```
 
-## type [DataToSignRequest](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L181-L183>)
+## type [DataToSignRequest](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L216-L218>)
 
 DataToSignRequest is a request to get data to sign for proving identity.
 
@@ -1093,13 +1118,24 @@ type DataToSignRequest struct {
 }
 ```
 
-## type [DataToSignResponse](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L186-L188>)
+## type [DataToSignResponse](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L221-L223>)
 
 DataToSignRequest is a response containing data to sign for proving identity.
 
 ```go
 type DataToSignResponse struct {
     Data []byte `json:"message"`
+}
+```
+
+## type [IssuedTransactionResponse](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L181-L184>)
+
+AwaitedTransactionResponse is a response for issued transactions request.
+
+```go
+type IssuedTransactionResponse struct {
+    Success            bool                      `json:"success"`
+    IssuedTransactions []transaction.Transaction `json:"issued_transactions"`
 }
 ```
 
@@ -1116,7 +1152,7 @@ type Message struct {
 }
 ```
 
-## type [RandomDataProvideValidator](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L79-L82>)
+## type [RandomDataProvideValidator](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L87-L90>)
 
 RandomDataProvideValidator provides random binary data for signing to prove identity and the validator of data being valid and not expired.
 
@@ -1127,7 +1163,7 @@ type RandomDataProvideValidator interface {
 }
 ```
 
-## type [Repository](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L52-L61>)
+## type [Repository](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L54-L63>)
 
 Repository is the interface that wraps the basic CRUD and Search methods. Repository should be properly indexed to allow for transaction and block hash. as well as address public keys to be and unique and the hash lookup should be fast. Repository holds the blocks and transaction that are part of the blockchain.
 

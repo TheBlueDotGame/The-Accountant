@@ -200,7 +200,7 @@ func (r *Rest) ReadWaitingTransactions() ([]transaction.Transaction, error) {
 	}
 
 	hash, signature := r.w.Sign(data.Data)
-	req := server.AwaitedTransactionRequest{
+	req := server.AwaitedIssuedTransactionRequest{
 		Address:   r.w.Address(),
 		Data:      data.Data,
 		Hash:      hash,
@@ -216,6 +216,35 @@ func (r *Rest) ReadWaitingTransactions() ([]transaction.Transaction, error) {
 
 	return res.AwaitedTransactions, nil
 
+}
+
+// ReadIssuedTransactions reads all issued transactions belonging to current wallet from the API server.
+func (r *Rest) ReadIssuedTransactions() ([]transaction.Transaction, error) {
+	if !r.ready {
+		return nil, ErrWalletNotReady
+	}
+
+	data, err := r.dataToSign(r.w.Address())
+	if err != nil {
+		return nil, errors.Join(ErrRejectedByServer, err)
+	}
+
+	hash, signature := r.w.Sign(data.Data)
+	req := server.AwaitedIssuedTransactionRequest{
+		Address:   r.w.Address(),
+		Data:      data.Data,
+		Hash:      hash,
+		Signature: signature,
+	}
+	var res server.IssuedTransactionResponse
+	if err := r.makePost(server.IssuedTransactionURL, req, &res); err != nil {
+		return nil, errors.Join(ErrRejectedByServer, err)
+	}
+	if !res.Success {
+		return nil, errors.Join(ErrRejectedByServer, errors.New("failed to read issued transactions"))
+	}
+
+	return res.IssuedTransactions, nil
 }
 
 // SaveWalletToFile saves the wallet to the file in the path.
