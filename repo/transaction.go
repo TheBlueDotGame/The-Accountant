@@ -14,6 +14,7 @@ import (
 type TransactionAwaitingReceiver struct {
 	ID              primitive.ObjectID      `json:"-"                bson:"_id,omitempty"`
 	ReceiverAddress string                  `json:"receiver_address" bson:"receiver_address"`
+	IssuerAddress   string                  `json:"issuer_address"   bson:"issuer_address"`
 	Transaction     transaction.Transaction `json:"transaction"      bson:"transaction"`
 	TransactionHash [32]byte                `json:"transaction_hash" bson:"transaction_hash"`
 }
@@ -45,10 +46,25 @@ func (db DataBase) WriteIssuerSignedTransactionForReceiver(
 	return err
 }
 
-// ReadAwaitingTransactions reads all transactions paired with given address.
-func (db DataBase) ReadAwaitingTransactions(ctx context.Context, address string) ([]transaction.Transaction, error) {
+// ReadAwaitingTransactionsByReceiver reads all transactions paired with given receiver address.
+func (db DataBase) ReadAwaitingTransactionsByReceiver(ctx context.Context, address string) ([]transaction.Transaction, error) {
 	var trxs []transaction.Transaction
 	curs, err := db.inner.Collection(transactionsAwaitingReceiverCollection).Find(ctx, bson.M{"receiver_address": address})
+	if err != nil {
+		return nil, err
+	}
+
+	if err := curs.All(ctx, &trxs); err != nil {
+		return nil, err
+	}
+
+	return trxs, nil
+}
+
+// ReadAwaitingTransactionsByReceiver reads all transactions paired with given issuer address.
+func (db DataBase) ReadAwaitingTransactionsByIssuer(ctx context.Context, address string) ([]transaction.Transaction, error) {
+	var trxs []transaction.Transaction
+	curs, err := db.inner.Collection(transactionsAwaitingReceiverCollection).Find(ctx, bson.M{"issuer_address": address})
 	if err != nil {
 		return nil, err
 	}

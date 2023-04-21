@@ -11,9 +11,9 @@ import (
 
 // Token holds information about unique token.
 type Token struct {
-	ID             primitive.ObjectID `json:"-" bson:"_id,omitempty"`
-	Token          string             `json:"token" bson:"token"`
-	Valid          bool               `json:"valid" bson:"valid"`
+	ID             primitive.ObjectID `json:"-"               bson:"_id,omitempty"`
+	Token          string             `json:"token"           bson:"token"`
+	Valid          bool               `json:"valid"           bson:"valid"`
 	ExpirationDate int64              `json:"expiration_date" bson:"expiration_date"`
 }
 

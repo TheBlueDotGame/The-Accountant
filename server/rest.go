@@ -227,6 +227,10 @@ func (s *server) addressCreate(c *fiber.Ctx) error {
 		return fiber.ErrForbidden
 	}
 
+	if err := s.repo.InvalidateToken(c.Context(), req.Token); err != nil {
+		return fiber.ErrGone
+	}
+
 	if err := s.bookkeeping.VerifySignature(req.Data, req.Signature, req.Hash, req.Address); err != nil {
 		return fiber.ErrForbidden
 	}

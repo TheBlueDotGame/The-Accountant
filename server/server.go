@@ -57,6 +57,7 @@ type Repository interface {
 	WriteAddress(ctx context.Context, address string) error
 	FindTransactionInBlockHash(ctx context.Context, trxHash [32]byte) ([32]byte, error)
 	CheckToken(ctx context.Context, token string) (bool, error)
+	InvalidateToken(ctx context.Context, token string) error
 }
 
 // Bookkeeper abstracts methods of the bookkeeping of a blockchain.

@@ -342,7 +342,7 @@ type TrxWriteReadMover interface {
     WriteIssuerSignedTransactionForReceiver(ctx context.Context, receiverAddr string, trx *transaction.Transaction) error
     MoveTransactionsFromTemporaryToPermanent(ctx context.Context, hash [][32]byte) error
     RemoveAwaitingTransaction(ctx context.Context, trxHash [32]byte) error
-    ReadAwaitingTransactions(ctx context.Context, address string) ([]transaction.Transaction, error)
+    ReadAwaitingTransactionsByReceiver(ctx context.Context, address string) ([]transaction.Transaction, error)
 }
 ```
 
@@ -636,7 +636,8 @@ import "github.com/bartossh/The-Accountant/repo"
   - [func (db *DataBase) InvalidateToken(ctx context.Context, token string) error](<#func-database-invalidatetoken>)
   - [func (db DataBase) LastBlock(ctx context.Context) (block.Block, error)](<#func-database-lastblock>)
   - [func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context, hash [][32]byte) error](<#func-database-movetransactionsfromtemporarytopermanent>)
-  - [func (db DataBase) ReadAwaitingTransactions(ctx context.Context, address string) ([]transaction.Transaction, error)](<#func-database-readawaitingtransactions>)
+  - [func (db DataBase) ReadAwaitingTransactionsByIssuer(ctx context.Context, address string) ([]transaction.Transaction, error)](<#func-database-readawaitingtransactionsbyissuer>)
+  - [func (db DataBase) ReadAwaitingTransactionsByReceiver(ctx context.Context, address string) ([]transaction.Transaction, error)](<#func-database-readawaitingtransactionsbyreceiver>)
   - [func (db DataBase) ReadBlockByHash(ctx context.Context, hash [32]byte) (block.Block, error)](<#func-database-readblockbyhash>)
   - [func (db DataBase) RemoveAwaitingTransaction(ctx context.Context, trxHash [32]byte) error](<#func-database-removeawaitingtransaction>)
   - [func (c DataBase) RunMigration(ctx context.Context) error](<#func-database-runmigration>)
@@ -750,7 +751,7 @@ func (db DataBase) LastBlock(ctx context.Context) (block.Block, error)
 
 LastBlock returns last block from the database.
 
-### func \(DataBase\) [MoveTransactionsFromTemporaryToPermanent](<https://github.com/bartossh/The-Accountant/blob/main/repo/transaction.go#L64>)
+### func \(DataBase\) [MoveTransactionsFromTemporaryToPermanent](<https://github.com/bartossh/The-Accountant/blob/main/repo/transaction.go#L80>)
 
 ```go
 func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context, hash [][32]byte) error
@@ -758,13 +759,21 @@ func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context,
 
 MoveTransactionsFromTemporaryToPermanent moves transactions from temporary storage to permanent.
 
-### func \(DataBase\) [ReadAwaitingTransactions](<https://github.com/bartossh/The-Accountant/blob/main/repo/transaction.go#L49>)
+### func \(DataBase\) [ReadAwaitingTransactionsByIssuer](<https://github.com/bartossh/The-Accountant/blob/main/repo/transaction.go#L65>)
 
 ```go
-func (db DataBase) ReadAwaitingTransactions(ctx context.Context, address string) ([]transaction.Transaction, error)
+func (db DataBase) ReadAwaitingTransactionsByIssuer(ctx context.Context, address string) ([]transaction.Transaction, error)
 ```
 
-ReadAwaitingTransactions reads all transactions paired with given address.
+ReadAwaitingTransactionsByReceiver reads all transactions paired with given issuer address.
+
+### func \(DataBase\) [ReadAwaitingTransactionsByReceiver](<https://github.com/bartossh/The-Accountant/blob/main/repo/transaction.go#L50>)
+
+```go
+func (db DataBase) ReadAwaitingTransactionsByReceiver(ctx context.Context, address string) ([]transaction.Transaction, error)
+```
+
+ReadAwaitingTransactionsByReceiver reads all transactions paired with given receiver address.
 
 ### func \(DataBase\) [ReadBlockByHash](<https://github.com/bartossh/The-Accountant/blob/main/repo/block.go#L35>)
 
@@ -774,7 +783,7 @@ func (db DataBase) ReadBlockByHash(ctx context.Context, hash [32]byte) (block.Bl
 
 ReadBlockByHash returns block with given hash.
 
-### func \(DataBase\) [RemoveAwaitingTransaction](<https://github.com/bartossh/The-Accountant/blob/main/repo/transaction.go#L28>)
+### func \(DataBase\) [RemoveAwaitingTransaction](<https://github.com/bartossh/The-Accountant/blob/main/repo/transaction.go#L29>)
 
 ```go
 func (db DataBase) RemoveAwaitingTransaction(ctx context.Context, trxHash [32]byte) error
@@ -782,7 +791,7 @@ func (db DataBase) RemoveAwaitingTransaction(ctx context.Context, trxHash [32]by
 
 RemoveAwaitingTransaction removes transaction from the awaiting transaction storage.
 
-### func \(DataBase\) [RunMigration](<https://github.com/bartossh/The-Accountant/blob/main/repo/migrations.go#L239>)
+### func \(DataBase\) [RunMigration](<https://github.com/bartossh/The-Accountant/blob/main/repo/migrations.go#L250>)
 
 ```go
 func (c DataBase) RunMigration(ctx context.Context) error
@@ -806,7 +815,7 @@ func (db DataBase) WriteBlock(ctx context.Context, block block.Block) error
 
 WriteBlock writes block to the database.
 
-### func \(DataBase\) [WriteIssuerSignedTransactionForReceiver](<https://github.com/bartossh/The-Accountant/blob/main/repo/transaction.go#L34-L38>)
+### func \(DataBase\) [WriteIssuerSignedTransactionForReceiver](<https://github.com/bartossh/The-Accountant/blob/main/repo/transaction.go#L35-L39>)
 
 ```go
 func (db DataBase) WriteIssuerSignedTransactionForReceiver(ctx context.Context, receiverAddr string, trx *transaction.Transaction) error
@@ -814,7 +823,7 @@ func (db DataBase) WriteIssuerSignedTransactionForReceiver(ctx context.Context, 
 
 WriteIssuerSignedTransactionForReceiver writes transaction to the awaiting transaction storage paired with given receiver.
 
-### func \(DataBase\) [WriteTemporaryTransaction](<https://github.com/bartossh/The-Accountant/blob/main/repo/transaction.go#L22>)
+### func \(DataBase\) [WriteTemporaryTransaction](<https://github.com/bartossh/The-Accountant/blob/main/repo/transaction.go#L23>)
 
 ```go
 func (db DataBase) WriteTemporaryTransaction(ctx context.Context, trx *transaction.Transaction) error
@@ -854,14 +863,14 @@ Token holds information about unique token.
 
 ```go
 type Token struct {
-    ID             primitive.ObjectID `json:"-" bson:"_id,omitempty"`
-    Token          string             `json:"token" bson:"token"`
-    Valid          bool               `json:"valid" bson:"valid"`
+    ID             primitive.ObjectID `json:"-"               bson:"_id,omitempty"`
+    Token          string             `json:"token"           bson:"token"`
+    Valid          bool               `json:"valid"           bson:"valid"`
     ExpirationDate int64              `json:"expiration_date" bson:"expiration_date"`
 }
 ```
 
-## type [TransactionAwaitingReceiver](<https://github.com/bartossh/The-Accountant/blob/main/repo/transaction.go#L14-L19>)
+## type [TransactionAwaitingReceiver](<https://github.com/bartossh/The-Accountant/blob/main/repo/transaction.go#L14-L20>)
 
 TransactionAwaitingReceiver represents transaction awaiting receiver signature.
 
@@ -869,6 +878,7 @@ TransactionAwaitingReceiver represents transaction awaiting receiver signature.
 type TransactionAwaitingReceiver struct {
     ID              primitive.ObjectID      `json:"-"                bson:"_id,omitempty"`
     ReceiverAddress string                  `json:"receiver_address" bson:"receiver_address"`
+    IssuerAddress   string                  `json:"issuer_address"   bson:"issuer_address"`
     Transaction     transaction.Transaction `json:"transaction"      bson:"transaction"`
     TransactionHash [32]byte                `json:"transaction_hash" bson:"transaction_hash"`
 }
@@ -975,7 +985,7 @@ const (
 var ErrWrongPortSpecified = errors.New("port must be between 1 and 65535")
 ```
 
-## func [Run](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L96>)
+## func [Run](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L97>)
 
 ```go
 func Run(ctx context.Context, c Config, repo Repository, bookkeeping Bookkeeper, pv RandomDataProvideValidator) error
@@ -1019,7 +1029,7 @@ type AwaitedTransactionResponse struct {
 }
 ```
 
-## type [Bookkeeper](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L63-L74>)
+## type [Bookkeeper](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L64-L75>)
 
 Bookkeeper abstracts methods of the bookkeeping of a blockchain.
 
@@ -1038,7 +1048,7 @@ type Bookkeeper interface {
 }
 ```
 
-## type [Config](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L84-L86>)
+## type [Config](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L85-L87>)
 
 Config contains configuration of the server.
 
@@ -1106,7 +1116,7 @@ type Message struct {
 }
 ```
 
-## type [RandomDataProvideValidator](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L78-L81>)
+## type [RandomDataProvideValidator](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L79-L82>)
 
 RandomDataProvideValidator provides random binary data for signing to prove identity and the validator of data being valid and not expired.
 
@@ -1117,7 +1127,7 @@ type RandomDataProvideValidator interface {
 }
 ```
 
-## type [Repository](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L52-L60>)
+## type [Repository](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L52-L61>)
 
 Repository is the interface that wraps the basic CRUD and Search methods. Repository should be properly indexed to allow for transaction and block hash. as well as address public keys to be and unique and the hash lookup should be fast. Repository holds the blocks and transaction that are part of the blockchain.
 
@@ -1130,6 +1140,7 @@ type Repository interface {
     WriteAddress(ctx context.Context, address string) error
     FindTransactionInBlockHash(ctx context.Context, trxHash [32]byte) ([32]byte, error)
     CheckToken(ctx context.Context, token string) (bool, error)
+    InvalidateToken(ctx context.Context, token string) error
 }
 ```
 

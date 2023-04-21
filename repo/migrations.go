@@ -114,6 +114,17 @@ var migrations = []migration{
 					},
 					Options: options.Index().SetUnique(false),
 				})
+			if err != nil {
+				return err
+			}
+			_, err = user.Collection(transactionsAwaitingReceiverCollection).
+				Indexes().
+				CreateOne(ctx, mongo.IndexModel{
+					Keys: bson.M{
+						"issuer_address": 1,
+					},
+					Options: options.Index().SetUnique(false),
+				})
 			return err
 		},
 	},
