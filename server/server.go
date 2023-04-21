@@ -23,6 +23,7 @@ const (
 	proposeURL          = "/propose"
 	confirmURL          = "/confirm"
 	awaitedURL          = "/awaited"
+	issuedURL           = "/issued"
 	validatorGroupURL   = "/validator"
 	dataURL             = "/data"
 	addressGroupURL     = "/address"
@@ -36,6 +37,7 @@ const (
 	ProposeTransactionURL = transactionGroupURL + proposeURL // URL to propose transaction signed by the issuer.
 	ConfirmTransactionURL = transactionGroupURL + confirmURL // URL to confirm transaction signed by the receiver.
 	AwaitedTransactionURL = transactionGroupURL + awaitedURL // URL to get awaited transactions for the receiver.
+	IssuedTransactionURL  = transactionGroupURL + issuedURL  // URL to get issued transactions for the issuer.
 	DataToValidateURL     = validatorGroupURL + dataURL      // URL to get data to validate address by signing rew message.
 	CreateAddressURL      = addressGroupURL + createURL      // URL to create new address.
 	WsURL                 = "/ws"                            // URL to connect to websocket.
@@ -66,6 +68,12 @@ type Bookkeeper interface {
 	WriteCandidateTransaction(ctx context.Context, tx *transaction.Transaction) error
 	WriteIssuerSignedTransactionForReceiver(ctx context.Context, receiverAddr string, trx *transaction.Transaction) error
 	ReadAwaitedTransactionsForAddress(
+		ctx context.Context,
+		message, signature []byte,
+		hash [32]byte,
+		address string,
+	) ([]transaction.Transaction, error)
+	ReadIssuedTransactionsByAddress(
 		ctx context.Context,
 		message, signature []byte,
 		hash [32]byte,
@@ -140,6 +148,7 @@ func Run(ctx context.Context, c Config, repo Repository, bookkeeping Bookkeeper,
 	transaction.Post(proposeURL, s.propose)
 	transaction.Post(confirmURL, s.confirm)
 	transaction.Post(addressURL, s.awaited)
+	transaction.Post(issuedURL, s.issued)
 
 	validator := router.Group(validatorGroupURL)
 	validator.Post(dataURL, s.data)
