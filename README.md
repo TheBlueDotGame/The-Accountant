@@ -368,22 +368,46 @@ import "github.com/bartossh/The-Accountant/client"
 ## Index
 
 - [Variables](<#variables>)
+- [type NewSignValidatorCreator](<#type-newsignvalidatorcreator>)
 - [type Rest](<#type-rest>)
-  - [func NewRest(apiRoot string, timeout time.Duration) *Rest](<#func-newrest>)
-  - [func (r *Rest) DataToSign(address string) (server.DataToSignResponse, error)](<#func-rest-datatosign>)
+  - [func NewRest(apiRoot string, timeout time.Duration, fw transaction.Verifier, wrs WalletReadSaver, walletCreator NewSignValidatorCreator) *Rest](<#func-newrest>)
+  - [func (r *Rest) ConfirmTransaction(trx transaction.Transaction) error](<#func-rest-confirmtransaction>)
+  - [func (r *Rest) FlushWalletFromMemory()](<#func-rest-flushwalletfrommemory>)
+  - [func (r *Rest) NewWallet(token string) error](<#func-rest-newwallet>)
+  - [func (r *Rest) ProposeTransaction(receiverAddr string, subject string, data []byte) error](<#func-rest-proposetransaction>)
+  - [func (r *Rest) ReadWaitingTransactions() ([]transaction.Transaction, error)](<#func-rest-readwaitingtransactions>)
+  - [func (r *Rest) ReadWalletFromFile(path string) error](<#func-rest-readwalletfromfile>)
+  - [func (r *Rest) SaveWalletToFile(path string) error](<#func-rest-savewallettofile>)
   - [func (r *Rest) ValidateApiVersion() error](<#func-rest-validateapiversion>)
+- [type WalletReadSaver](<#type-walletreadsaver>)
 
 
 ## Variables
 
 ```go
 var (
-    ErrApiVersionMismatch = fmt.Errorf("api version mismatch")
-    ErrApiHeaderMismatch  = fmt.Errorf("api header mismatch")
+    ErrApiVersionMismatch            = fmt.Errorf("api version mismatch")
+    ErrApiHeaderMismatch             = fmt.Errorf("api header mismatch")
+    ErrStatusCodeMismatch            = fmt.Errorf("status code mismatch")
+    ErrContentTypeMismatch           = fmt.Errorf("content type mismatch")
+    ErrWalletChecksumMismatch        = fmt.Errorf("wallet checksum mismatch")
+    ErrWalletVersionMismatch         = fmt.Errorf("wallet version mismatch")
+    ErrServerReturnsInconsistentData = fmt.Errorf("server returns inconsistent data")
+    ErrRejectedByServer              = fmt.Errorf("rejected by server")
+    ErrWalletNotReady                = fmt.Errorf("wallet not ready, read wallet first")
+    ErrSigningFailed                 = fmt.Errorf("signing failed")
 )
 ```
 
-## type [Rest](<https://github.com/bartossh/The-Accountant/blob/main/client/client.go#L20-L23>)
+## type [NewSignValidatorCreator](<https://github.com/bartossh/The-Accountant/blob/main/client/client.go#L41>)
+
+NewWalletCreator is a function that creates a new SignValidator.
+
+```go
+type NewSignValidatorCreator func() (wallet.Wallet, error)
+```
+
+## type [Rest](<https://github.com/bartossh/The-Accountant/blob/main/client/client.go#L44-L52>)
 
 Rest is a rest client for the API.
 
@@ -393,29 +417,88 @@ type Rest struct {
 }
 ```
 
-### func [NewRest](<https://github.com/bartossh/The-Accountant/blob/main/client/client.go#L26>)
+### func [NewRest](<https://github.com/bartossh/The-Accountant/blob/main/client/client.go#L55-L58>)
 
 ```go
-func NewRest(apiRoot string, timeout time.Duration) *Rest
+func NewRest(apiRoot string, timeout time.Duration, fw transaction.Verifier, wrs WalletReadSaver, walletCreator NewSignValidatorCreator) *Rest
 ```
 
 NewRest creates a new rest client.
 
-### func \(\*Rest\) [DataToSign](<https://github.com/bartossh/The-Accountant/blob/main/client/client.go#L115>)
+### func \(\*Rest\) [ConfirmTransaction](<https://github.com/bartossh/The-Accountant/blob/main/client/client.go#L166>)
 
 ```go
-func (r *Rest) DataToSign(address string) (server.DataToSignResponse, error)
+func (r *Rest) ConfirmTransaction(trx transaction.Transaction) error
 ```
 
-DataToValidate makes http request to the API server and returns data to validate.
+ConfirmTransaction confirms transaction by signing it with the wallet and then sending it to the API server.
 
-### func \(\*Rest\) [ValidateApiVersion](<https://github.com/bartossh/The-Accountant/blob/main/client/client.go#L97>)
+### func \(\*Rest\) [FlushWalletFromMemory](<https://github.com/bartossh/The-Accountant/blob/main/client/client.go#L245>)
+
+```go
+func (r *Rest) FlushWalletFromMemory()
+```
+
+FlushWalletFromMemory flushes the wallet from the memory. Do it after you have saved the wallet to the file. It is recommended to use this just before logging out from the UI or closing the front end app that.
+
+### func \(\*Rest\) [NewWallet](<https://github.com/bartossh/The-Accountant/blob/main/client/client.go#L81>)
+
+```go
+func (r *Rest) NewWallet(token string) error
+```
+
+NewWallet creates a new wallet and sends a request to the API server to validate the wallet.
+
+### func \(\*Rest\) [ProposeTransaction](<https://github.com/bartossh/The-Accountant/blob/main/client/client.go#L134>)
+
+```go
+func (r *Rest) ProposeTransaction(receiverAddr string, subject string, data []byte) error
+```
+
+ProposeTransaction sends a Transaction proposal to the API server for provided receiver address. Subject describes how to read the data from the transaction. For example, if the subject is "json", then the data can by decoded to map\[sting\]any, when subject "pdf" than it should be decoded by proper pdf decoder, when "csv" then it should be decoded by proper csv decoder.
+
+### func \(\*Rest\) [ReadWaitingTransactions](<https://github.com/bartossh/The-Accountant/blob/main/client/client.go#L192>)
+
+```go
+func (r *Rest) ReadWaitingTransactions() ([]transaction.Transaction, error)
+```
+
+ReadWaitingTransactions reads all waiting transactions belonging to current wallet from the API server.
+
+### func \(\*Rest\) [ReadWalletFromFile](<https://github.com/bartossh/The-Accountant/blob/main/client/client.go#L231>)
+
+```go
+func (r *Rest) ReadWalletFromFile(path string) error
+```
+
+ReadWalletFromFile reads the wallet from the file in the path.
+
+### func \(\*Rest\) [SaveWalletToFile](<https://github.com/bartossh/The-Accountant/blob/main/client/client.go#L222>)
+
+```go
+func (r *Rest) SaveWalletToFile(path string) error
+```
+
+SaveWalletToFile saves the wallet to the file in the path.
+
+### func \(\*Rest\) [ValidateApiVersion](<https://github.com/bartossh/The-Accountant/blob/main/client/client.go#L63>)
 
 ```go
 func (r *Rest) ValidateApiVersion() error
 ```
 
 ValidateApiVersion makes a call to the API server and validates client and server API versions and header correctness.
+
+## type [WalletReadSaver](<https://github.com/bartossh/The-Accountant/blob/main/client/client.go#L35-L38>)
+
+WalletReadSaver allows to read and save the wallet.
+
+```go
+type WalletReadSaver interface {
+    ReadWallet(path string) (wallet.Wallet, error)
+    SaveWallet(path string, w wallet.Wallet) error
+}
+```
 
 # configuration
 
@@ -508,6 +591,43 @@ type Config struct {
     Longevity uint64 `yaml:"longevity"` // Data longevity in seconds.
 }
 ```
+
+# fileoperations
+
+```go
+import "github.com/bartossh/The-Accountant/fileoperations"
+```
+
+## Index
+
+- [type Helper](<#type-helper>)
+  - [func (h Helper) ReadWallet(path string) (wallet.Wallet, error)](<#func-helper-readwallet>)
+  - [func (h Helper) SaveWallet(path string, w wallet.Wallet) error](<#func-helper-savewallet>)
+
+
+## type [Helper](<https://github.com/bartossh/The-Accountant/blob/main/fileoperations/fileoperations.go#L4>)
+
+Helper holds all file operation methods.
+
+```go
+type Helper struct{}
+```
+
+### func \(Helper\) [ReadWallet](<https://github.com/bartossh/The-Accountant/blob/main/fileoperations/wallet.go#L10>)
+
+```go
+func (h Helper) ReadWallet(path string) (wallet.Wallet, error)
+```
+
+RereadWallet reads wallet from the file.
+
+### func \(Helper\) [SaveWallet](<https://github.com/bartossh/The-Accountant/blob/main/fileoperations/wallet.go#L23>)
+
+```go
+func (h Helper) SaveWallet(path string, w wallet.Wallet) error
+```
+
+SaveWallet saves wallet to the file.
 
 # repo
 
@@ -857,6 +977,7 @@ const (
     ConfirmTransactionURL = transactionGroupURL + confirmURL // URL to confirm transaction signed by the receiver.
     AwaitedTransactionURL = transactionGroupURL + awaitedURL // URL to get awaited transactions for the receiver.
     DataToValidateURL     = validatorGroupURL + dataURL      // URL to get data to validate address by signing rew message.
+    CreateAddressURL      = addressGroupURL + createURL      // URL to create new address.
     WsURL                 = "/ws"                            // URL to connect to websocket.
 )
 ```
@@ -867,7 +988,7 @@ const (
 var ErrWrongPortSpecified = errors.New("port must be between 1 and 65535")
 ```
 
-## func [Run](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L95>)
+## func [Run](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L96>)
 
 ```go
 func Run(ctx context.Context, c Config, repo Repository, bookkeeping Bookkeeper, pv RandomDataProvideValidator) error
@@ -911,7 +1032,7 @@ type AwaitedTransactionResponse struct {
 }
 ```
 
-## type [Bookkeeper](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L62-L73>)
+## type [Bookkeeper](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L63-L74>)
 
 Bookkeeper abstracts methods of the bookkeeping of a blockchain.
 
@@ -930,7 +1051,7 @@ type Bookkeeper interface {
 }
 ```
 
-## type [Config](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L83-L85>)
+## type [Config](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L84-L86>)
 
 Config contains configuration of the server.
 
@@ -998,7 +1119,7 @@ type Message struct {
 }
 ```
 
-## type [RandomDataProvideValidator](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L77-L80>)
+## type [RandomDataProvideValidator](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L78-L81>)
 
 RandomDataProvideValidator provides random binary data for signing to prove identity and the validator of data being valid and not expired.
 
@@ -1009,7 +1130,7 @@ type RandomDataProvideValidator interface {
 }
 ```
 
-## type [Repository](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L51-L59>)
+## type [Repository](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L52-L60>)
 
 Repository is the interface that wraps the basic CRUD and Search methods. Repository should be properly indexed to allow for transaction and block hash. as well as address public keys to be and unique and the hash lookup should be fast. Repository holds the blocks and transaction that are part of the blockchain.
 

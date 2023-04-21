@@ -68,11 +68,11 @@ func (w *Wallet) Version() byte {
 
 // Address creates address from the public key that contains wallet version and checksum.
 func (w *Wallet) Address() string {
-	versionedHash := append([]byte{version}, w.Public...)
-	checksum := checksum(versionedHash)
+	vers := append([]byte{version}, w.Public...)
+	cs := checksum(vers)
 
-	fullHash := append(versionedHash, checksum...)
-	address := serializer.Base58Encode(fullHash)
+	full := append(vers, cs...)
+	address := serializer.Base58Encode(full)
 
 	return string(address)
 }

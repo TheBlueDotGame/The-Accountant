@@ -3,13 +3,11 @@ package wallet
 import (
 	"math/rand"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func generateRandom(bytesNum int) []byte {
-	rand.Seed(time.Now().UnixNano())
 	b := make([]byte, 0, bytesNum)
 
 	for i := 0; i < bytesNum; i++ {
