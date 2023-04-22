@@ -21,6 +21,7 @@ func (db DataBase) WriteTransactionsInBlock(ctx context.Context, blockHash [32]b
 	trxsInB := make([]any, 0, len(trxHash))
 	for _, trx := range trxHash {
 		trxsInB = append(trxsInB, TransactionInBlock{
+			ID:              primitive.NewObjectID(),
 			BlockHash:       blockHash,
 			TransactionHash: trx,
 		})

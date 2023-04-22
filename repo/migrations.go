@@ -150,17 +150,17 @@ var migrations = []migration{
 					},
 					Options: options.Index().SetUnique(true),
 				})
+			if err != nil {
+				return err
+			}
 			_, err = user.Collection(blocksCollection).
 				Indexes().
 				CreateOne(ctx, mongo.IndexModel{
 					Keys: bson.M{
-						"index": 1,
+						"index": -1,
 					},
 					Options: options.Index().SetUnique(true),
 				})
-			if err != nil {
-				return err
-			}
 			return err
 		},
 	},

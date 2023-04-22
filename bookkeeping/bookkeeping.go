@@ -11,7 +11,7 @@ import (
 
 const (
 	minDifficulty = 1
-	maxDifficulty = 255
+	maxDifficulty = 124
 
 	minBlockWriteTimestamp = time.Second
 	maxBlockWriteTimestamp = time.Hour * 4
@@ -127,8 +127,8 @@ func NewLedger(
 // Run runs the Ladger engine that writes blocks to the blockchain repository.
 // Run starts a goroutine and can be stopped by cancelling the context.
 func (l *Ledger) Run(ctx context.Context) {
-	ts := time.Duration(l.config.BlockWriteTimestamp) * time.Second
 	go func(ctx context.Context) {
+		ticker := time.NewTicker(time.Duration(l.config.BlockWriteTimestamp) * time.Second)
 	outer:
 		for {
 			select {
@@ -142,12 +142,13 @@ func (l *Ledger) Run(ctx context.Context) {
 				if len(l.hashes) == l.config.BlockTransactionsSize {
 					l.forge(ctx)
 				}
-			case <-time.After(ts):
+			case <-ticker.C:
 				if len(l.hashes) > 0 {
 					l.forge(ctx)
 				}
 			}
 		}
+		ticker.Stop()
 	}(ctx)
 }
 
@@ -214,6 +215,7 @@ func (l *Ledger) cleanHashes() {
 
 func (l *Ledger) saveBlock(ctx context.Context) ([32]byte, error) {
 	h, idx := l.bc.LastBlockHashIndex()
+	idx++
 	nb := block.NewBlock(l.config.Difficulty, idx, h, l.hashes)
 
 	if err := l.bc.WriteBlock(ctx, nb); err != nil {
