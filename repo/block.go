@@ -6,6 +6,7 @@ import (
 
 	"github.com/bartossh/The-Accountant/block"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
@@ -13,7 +14,7 @@ import (
 func (db DataBase) LastBlock(ctx context.Context) (block.Block, error) {
 	var b []block.Block
 
-	opts := options.Find().SetSort(bson.M{"index": 1}).SetLimit(1)
+	opts := options.Find().SetSort(bson.M{"index": -1}).SetLimit(1)
 
 	curs, err := db.inner.Collection(blocksCollection).Find(ctx, bson.M{}, opts)
 	if err != nil {
@@ -42,6 +43,7 @@ func (db DataBase) ReadBlockByHash(ctx context.Context, hash [32]byte) (block.Bl
 
 // WriteBlock writes block to the database.
 func (db DataBase) WriteBlock(ctx context.Context, block block.Block) error {
+	block.ID = primitive.NewObjectID()
 	if _, err := db.inner.Collection(blocksCollection).InsertOne(ctx, block); err != nil {
 		return err
 	}

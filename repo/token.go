@@ -38,6 +38,7 @@ func (db *DataBase) CheckToken(ctx context.Context, token string) (bool, error) 
 // WriteToken writes unique token to the database.
 func (db *DataBase) WriteToken(ctx context.Context, token string, expirationDate int64) error {
 	t := Token{
+		ID:             primitive.NewObjectID(),
 		Token:          token,
 		Valid:          true,
 		ExpirationDate: expirationDate,

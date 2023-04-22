@@ -22,6 +22,7 @@ func (db DataBase) WriteAddress(ctx context.Context, address string) error {
 	}
 
 	addr := Address{
+		ID:        primitive.NewObjectID(),
 		PublicKey: address,
 	}
 

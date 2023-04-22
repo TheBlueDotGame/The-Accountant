@@ -3,7 +3,6 @@
 package client
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -51,10 +50,7 @@ func TestFullClientApiCycle(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(awaitedTrx))
 
-	fmt.Printf("Awaited transaction: %#v\n", awaitedTrx[0])
-
 	err = receiver.ConfirmTransaction(awaitedTrx[0])
-	fmt.Println(err)
 	assert.Nil(t, err)
 
 	issuer.FlushWalletFromMemory()

@@ -21,6 +21,7 @@ type TransactionAwaitingReceiverSignature struct {
 
 // WriteTemporaryTransaction writes transaction to the temporary storage.
 func (db DataBase) WriteTemporaryTransaction(ctx context.Context, trx *transaction.Transaction) error {
+	trx.ID = primitive.NewObjectID()
 	_, err := db.inner.Collection(transactionsTemporaryCollection).InsertOne(ctx, trx)
 	return err
 }
@@ -38,6 +39,7 @@ func (db DataBase) WriteIssuerSignedTransactionForReceiver(
 	trx *transaction.Transaction,
 ) error {
 	awaitingTrx := TransactionAwaitingReceiverSignature{
+		ID:              primitive.NilObjectID,
 		ReceiverAddress: receiverAddr,
 		IssuerAddress:   trx.IssuerAddress,
 		Transaction:     *trx,
@@ -49,32 +51,40 @@ func (db DataBase) WriteIssuerSignedTransactionForReceiver(
 
 // ReadAwaitingTransactionsByReceiver reads all transactions paired with given receiver address.
 func (db DataBase) ReadAwaitingTransactionsByReceiver(ctx context.Context, address string) ([]transaction.Transaction, error) {
-	var trxs []transaction.Transaction
+	var trxsAwaiting []TransactionAwaitingReceiverSignature
 	curs, err := db.inner.Collection(transactionsAwaitingReceiverCollection).Find(ctx, bson.M{"receiver_address": address})
 	if err != nil {
 		return nil, err
 	}
 
-	if err := curs.All(ctx, &trxs); err != nil {
+	if err := curs.All(ctx, &trxsAwaiting); err != nil {
 		return nil, err
 	}
+	result := make([]transaction.Transaction, 0, len(trxsAwaiting))
+	for _, awaitTrx := range trxsAwaiting {
+		result = append(result, awaitTrx.Transaction)
+	}
 
-	return trxs, nil
+	return result, nil
 }
 
 // ReadAwaitingTransactionsByReceiver reads all transactions paired with given issuer address.
 func (db DataBase) ReadAwaitingTransactionsByIssuer(ctx context.Context, address string) ([]transaction.Transaction, error) {
-	var trxs []transaction.Transaction
+	var awaitTrxs []TransactionAwaitingReceiverSignature
 	curs, err := db.inner.Collection(transactionsAwaitingReceiverCollection).Find(ctx, bson.M{"issuer_address": address})
 	if err != nil {
 		return nil, err
 	}
 
-	if err := curs.All(ctx, &trxs); err != nil {
+	if err := curs.All(ctx, &awaitTrxs); err != nil {
 		return nil, err
 	}
+	result := make([]transaction.Transaction, 0, len(awaitTrxs))
+	for _, awaitTrx := range awaitTrxs {
+		result = append(result, awaitTrx.Transaction)
+	}
 
-	return trxs, nil
+	return result, nil
 }
 
 // MoveTransactionsFromTemporaryToPermanent moves transactions from temporary storage to permanent.
@@ -91,6 +101,7 @@ func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context,
 		if err := curs.Decode(&trx); err != nil {
 			return err
 		}
+		trx.ID = primitive.NewObjectID()
 		if _, er := db.inner.Collection(transactionsPermanentCollection).InsertOne(ctx, trx); err != nil {
 			err = errors.Join(er)
 			continue
@@ -99,7 +110,8 @@ func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context,
 		deleteHashes = append(deleteHashes, trx.Hash)
 	}
 
-	if _, er := db.inner.Collection(transactionsTemporaryCollection).DeleteMany(ctx, bson.M{"hash": bson.M{"$in": deleteHashes}}); err != nil {
+	if _, er := db.inner.Collection(transactionsTemporaryCollection).
+		DeleteMany(ctx, bson.M{"hash": bson.M{"$in": deleteHashes}}); err != nil {
 		err = errors.Join(er)
 	}
 
