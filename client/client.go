@@ -127,6 +127,16 @@ func (r *Rest) NewWallet(token string) error {
 	return nil
 }
 
+// Address reads the wallet address.
+// Address is a string representation of wallet public key.
+func (r *Rest) Address() (string, error) {
+	if !r.ready {
+		return "", ErrWalletNotReady
+	}
+
+	return r.w.Address(), nil
+}
+
 // ProposeTransaction sends a Transaction proposal to the API server for provided receiver address.
 // Subject describes how to read the data from the transaction. For example, if the subject is "json",
 // then the data can by decoded to map[sting]any, when subject "pdf" than it should be decoded by proper pdf decoder,
@@ -351,7 +361,9 @@ func (r *Rest) makeGet(path string, out any) error {
 }
 
 func (r *Rest) dataToSign(address string) (server.DataToSignResponse, error) {
-	var req server.DataToSignRequest
+	req := server.DataToSignRequest{
+		Address: address,
+	}
 	var resp server.DataToSignResponse
 	if err := r.makePost(server.DataToValidateURL, req, &resp); err != nil {
 		return server.DataToSignResponse{}, err

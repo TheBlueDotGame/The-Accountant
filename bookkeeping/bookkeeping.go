@@ -187,42 +187,6 @@ func (l *Ledger) WriteCandidateTransaction(ctx context.Context, trx *transaction
 	return nil
 }
 
-func (l *Ledger) ReadAwaitedTransactionsForAddress(
-	ctx context.Context,
-	message, signature []byte,
-	hash [32]byte,
-	address string,
-) ([]transaction.Transaction, error) {
-	if err := l.vr.Verify(message, signature, hash, address); err != nil {
-		return nil, err
-	}
-
-	trxs, err := l.tx.ReadAwaitingTransactionsByReceiver(ctx, address)
-	if err != nil {
-		return nil, err
-	}
-
-	return trxs, nil
-}
-
-func (l *Ledger) ReadIssuedTransactionsByAddress(
-	ctx context.Context,
-	message, signature []byte,
-	hash [32]byte,
-	address string,
-) ([]transaction.Transaction, error) {
-	if err := l.vr.Verify(message, signature, hash, address); err != nil {
-		return nil, err
-	}
-
-	trxs, err := l.tx.ReadAwaitingTransactionsByIssuer(ctx, address)
-	if err != nil {
-		return nil, err
-	}
-
-	return trxs, nil
-}
-
 func (l *Ledger) VerifySignature(message, signature []byte, hash [32]byte, address string) error {
 	return l.vr.Verify(message, signature, hash, address)
 }

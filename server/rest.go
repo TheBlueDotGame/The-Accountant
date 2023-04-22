@@ -162,7 +162,7 @@ func (s *server) awaited(c *fiber.Ctx) error {
 		return fiber.ErrForbidden
 	}
 
-	trxs, err := s.bookkeeping.ReadAwaitedTransactionsForAddress(c.Context(), req.Data, req.Signature, req.Hash, req.Address)
+	trxs, err := s.repo.ReadAwaitingTransactionsByReceiver(c.Context(), req.Address)
 	if err != nil {
 		// TODO log error
 		return c.JSON(AwaitedTransactionResponse{
@@ -197,7 +197,7 @@ func (s *server) issued(c *fiber.Ctx) error {
 		return fiber.ErrForbidden
 	}
 
-	trxs, err := s.bookkeeping.ReadIssuedTransactionsByAddress(c.Context(), req.Data, req.Signature, req.Hash, req.Address)
+	trxs, err := s.repo.ReadAwaitingTransactionsByIssuer(c.Context(), req.Address)
 	if err != nil {
 		// TODO log error
 		return c.JSON(IssuedTransactionResponse{

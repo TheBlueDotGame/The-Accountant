@@ -9,7 +9,14 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-const createSignTimeDiff = time.Hour * 24 * 7 // week
+const ExpirationTimeInDays = 7
+
+var (
+	ErrTransactionHasAFutureTime        = errors.New("transaction has a future time")
+	ErrExpiredTransaction               = errors.New("transaction has expired")
+	ErrTransactionHashIsInvalid         = errors.New("transaction hash is invalid")
+	ErrSignatureNotValidOrDataCorrupted = errors.New("signature not valid or data are corrupted")
+)
 
 // Signer is an interface for signing transaction.
 type Signer interface {
@@ -23,6 +30,7 @@ type Verifier interface {
 }
 
 // Transaction contains transaction information, subject type, subject data, signatures and public keys.
+// Transaction is valid for a week from being issued.
 type Transaction struct {
 	ID                primitive.ObjectID `json:"-"                  bson:"_id"`
 	CreatedAt         time.Time          `json:"created_at"         bson:"created_at"`
@@ -60,25 +68,29 @@ func New(subject string, message []byte, issuer Signer) (Transaction, error) {
 func (t *Transaction) Sign(receiver Signer, v Verifier) ([32]byte, error) {
 	now := time.Now()
 
-	if t.CreatedAt.UnixMicro() > now.UnixMicro() {
-		return [32]byte{}, errors.New("transaction is created in future")
+	if t.CreatedAt.Unix() > now.Unix() {
+		return [32]byte{}, ErrTransactionHasAFutureTime
 	}
 
-	if t.CreatedAt.Add(createSignTimeDiff).UnixMicro() < now.UnixMicro() {
-		return [32]byte{}, errors.New("transaction is created too long ago")
+	if addTime(t.CreatedAt).Unix() < now.Unix() {
+		return [32]byte{}, ErrExpiredTransaction
 	}
 
 	if err := v.Verify(t.Data, t.IssuerSignature, [32]byte(t.Hash), t.IssuerAddress); err != nil {
-		return [32]byte{}, err
+		return [32]byte{}, errors.Join(ErrSignatureNotValidOrDataCorrupted, err)
 	}
 
 	hash, signature := receiver.Sign(t.Data)
 
 	if !bytes.Equal(hash[:], t.Hash[:]) {
-		return [32]byte{}, errors.New("hash is not equal")
+		return [32]byte{}, ErrTransactionHashIsInvalid
 	}
 
 	t.ReceiverAddress = receiver.Address()
 	t.ReceiverSignature = signature
 	return hash, nil
+}
+
+func addTime(t time.Time) time.Time {
+	return t.AddDate(0, 0, ExpirationTimeInDays)
 }
