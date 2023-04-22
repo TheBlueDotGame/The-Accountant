@@ -10,8 +10,8 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-// TransactionAwaitingReceiver represents transaction awaiting receiver signature.
-type TransactionAwaitingReceiver struct {
+// TransactionAwaitingReceiverSignature represents transaction awaiting receiver signature.
+type TransactionAwaitingReceiverSignature struct {
 	ID              primitive.ObjectID      `json:"-"                bson:"_id,omitempty"`
 	ReceiverAddress string                  `json:"receiver_address" bson:"receiver_address"`
 	IssuerAddress   string                  `json:"issuer_address"   bson:"issuer_address"`
@@ -37,8 +37,9 @@ func (db DataBase) WriteIssuerSignedTransactionForReceiver(
 	receiverAddr string,
 	trx *transaction.Transaction,
 ) error {
-	awaitingTrx := TransactionAwaitingReceiver{
+	awaitingTrx := TransactionAwaitingReceiverSignature{
 		ReceiverAddress: receiverAddr,
+		IssuerAddress:   trx.IssuerAddress,
 		Transaction:     *trx,
 		TransactionHash: trx.Hash,
 	}
@@ -90,16 +91,16 @@ func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context,
 		if err := curs.Decode(&trx); err != nil {
 			return err
 		}
-		if _, err := db.inner.Collection(transactionsPermanentCollection).InsertOne(ctx, trx); err != nil {
-			err = errors.Join(err)
+		if _, er := db.inner.Collection(transactionsPermanentCollection).InsertOne(ctx, trx); err != nil {
+			err = errors.Join(er)
 			continue
 		}
 
 		deleteHashes = append(deleteHashes, trx.Hash)
 	}
 
-	if _, err := db.inner.Collection(transactionsTemporaryCollection).DeleteMany(ctx, bson.M{"hash": bson.M{"$in": deleteHashes}}); err != nil {
-		err = errors.Join(err)
+	if _, er := db.inner.Collection(transactionsTemporaryCollection).DeleteMany(ctx, bson.M{"hash": bson.M{"$in": deleteHashes}}); err != nil {
+		err = errors.Join(er)
 	}
 
 	return err

@@ -60,6 +60,8 @@ type Repository interface {
 	FindTransactionInBlockHash(ctx context.Context, trxHash [32]byte) ([32]byte, error)
 	CheckToken(ctx context.Context, token string) (bool, error)
 	InvalidateToken(ctx context.Context, token string) error
+	ReadAwaitingTransactionsByIssuer(ctx context.Context, address string) ([]transaction.Transaction, error)
+	ReadAwaitingTransactionsByReceiver(ctx context.Context, address string) ([]transaction.Transaction, error)
 }
 
 // Bookkeeper abstracts methods of the bookkeeping of a blockchain.
@@ -67,18 +69,6 @@ type Bookkeeper interface {
 	Run(ctx context.Context)
 	WriteCandidateTransaction(ctx context.Context, tx *transaction.Transaction) error
 	WriteIssuerSignedTransactionForReceiver(ctx context.Context, receiverAddr string, trx *transaction.Transaction) error
-	ReadAwaitedTransactionsForAddress(
-		ctx context.Context,
-		message, signature []byte,
-		hash [32]byte,
-		address string,
-	) ([]transaction.Transaction, error)
-	ReadIssuedTransactionsByAddress(
-		ctx context.Context,
-		message, signature []byte,
-		hash [32]byte,
-		address string,
-	) ([]transaction.Transaction, error)
 	VerifySignature(message, signature []byte, hash [32]byte, address string) error
 }
 
@@ -147,7 +137,7 @@ func Run(ctx context.Context, c Config, repo Repository, bookkeeping Bookkeeper,
 	transaction := router.Group(transactionGroupURL)
 	transaction.Post(proposeURL, s.propose)
 	transaction.Post(confirmURL, s.confirm)
-	transaction.Post(addressURL, s.awaited)
+	transaction.Post(awaitedURL, s.awaited)
 	transaction.Post(issuedURL, s.issued)
 
 	validator := router.Group(validatorGroupURL)
