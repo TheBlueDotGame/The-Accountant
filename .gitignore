@@ -34,6 +34,7 @@
 # settings
 server_settings.yaml
 server_settings.yml
+.env
 
 # ide
 .vscode

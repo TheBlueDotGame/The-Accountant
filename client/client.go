@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/bartossh/The-Accountant/server"
-	"github.com/bartossh/The-Accountant/transaction"
-	"github.com/bartossh/The-Accountant/wallet"
+	"github.com/bartossh/Computantis/server"
+	"github.com/bartossh/Computantis/transaction"
+	"github.com/bartossh/Computantis/wallet"
 	"github.com/valyala/fasthttp"
 )
 

@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/bartossh/The-Accountant/transaction"
+	"github.com/bartossh/Computantis/transaction"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"

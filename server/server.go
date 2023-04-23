@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/bartossh/The-Accountant/transaction"
+	"github.com/bartossh/Computantis/transaction"
 	"github.com/gofiber/fiber/v2"
 )
 
 const (
 	ApiVersion = "1.0.0"
-	Header     = "The Accountant"
+	Header     = "Computantis"
 )
 
 const (

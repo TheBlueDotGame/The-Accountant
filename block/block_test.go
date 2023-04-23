@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/bartossh/The-Accountant/transaction"
-	"github.com/bartossh/The-Accountant/wallet"
+	"github.com/bartossh/Computantis/transaction"
+	"github.com/bartossh/Computantis/wallet"
 	"github.com/stretchr/testify/assert"
 )
 

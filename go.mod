@@ -1,4 +1,4 @@
-module github.com/bartossh/The-Accountant
+module github.com/bartossh/Computantis
 
 go 1.20
 

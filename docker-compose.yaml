@@ -1,13 +1,16 @@
-
 version: '3.1'
 
 services:
-
-  mongo:
+  mongo_blockchain:
     image: mongo
-    restart: always
+    restart: on-failure
     ports:
       - 27017:27017
     environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: root
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_DB_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_DB_PASSWORD}
+    volumes:
+      - "mongodb_data_blockchain:/data/db"
+
+volumes:
+  mongodb_data_blockchain:

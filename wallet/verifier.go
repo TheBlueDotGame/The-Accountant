@@ -6,7 +6,7 @@ import (
 	"crypto/sha256"
 	"errors"
 
-	"github.com/bartossh/The-Accountant/serializer"
+	"github.com/bartossh/Computantis/serializer"
 )
 
 // Helper provides wallet helper functionalities without knowing about wallet private and public keys.

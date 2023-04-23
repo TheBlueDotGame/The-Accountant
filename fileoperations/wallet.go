@@ -3,7 +3,7 @@ package fileoperations
 import (
 	"os"
 
-	"github.com/bartossh/The-Accountant/wallet"
+	"github.com/bartossh/Computantis/wallet"
 )
 
 // RereadWallet reads wallet from the file.

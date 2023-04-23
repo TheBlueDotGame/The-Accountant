@@ -6,13 +6,13 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/bartossh/The-Accountant/blockchain"
-	"github.com/bartossh/The-Accountant/bookkeeping"
-	"github.com/bartossh/The-Accountant/configuration"
-	"github.com/bartossh/The-Accountant/dataprovider"
-	"github.com/bartossh/The-Accountant/repo"
-	"github.com/bartossh/The-Accountant/server"
-	"github.com/bartossh/The-Accountant/wallet"
+	"github.com/bartossh/Computantis/blockchain"
+	"github.com/bartossh/Computantis/bookkeeping"
+	"github.com/bartossh/Computantis/configuration"
+	"github.com/bartossh/Computantis/dataprovider"
+	"github.com/bartossh/Computantis/repo"
+	"github.com/bartossh/Computantis/server"
+	"github.com/bartossh/Computantis/wallet"
 )
 
 func main() {
