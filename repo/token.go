@@ -18,7 +18,7 @@ type Token struct {
 }
 
 // CheckToken checks if token exists in the database is valid and didn't expire.
-func (db *DataBase) CheckToken(ctx context.Context, token string) (bool, error) {
+func (db DataBase) CheckToken(ctx context.Context, token string) (bool, error) {
 	var t Token
 	if err := db.inner.Collection(tokensCollection).FindOne(ctx, bson.M{"token": token}).Decode(&t); err != nil {
 		if err == mongo.ErrNoDocuments {
@@ -36,7 +36,7 @@ func (db *DataBase) CheckToken(ctx context.Context, token string) (bool, error) 
 }
 
 // WriteToken writes unique token to the database.
-func (db *DataBase) WriteToken(ctx context.Context, token string, expirationDate int64) error {
+func (db DataBase) WriteToken(ctx context.Context, token string, expirationDate int64) error {
 	t := Token{
 		ID:             primitive.NewObjectID(),
 		Token:          token,
@@ -50,7 +50,7 @@ func (db *DataBase) WriteToken(ctx context.Context, token string, expirationDate
 }
 
 // InvalidateToken invalidates token.
-func (db *DataBase) InvalidateToken(ctx context.Context, token string) error {
+func (db DataBase) InvalidateToken(ctx context.Context, token string) error {
 	return db.inner.Collection(tokensCollection).
 		FindOneAndUpdate(ctx, bson.M{"token": token}, bson.M{"$set": bson.M{"valid": false}}).Err()
 }

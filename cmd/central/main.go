@@ -10,6 +10,7 @@ import (
 	"github.com/bartossh/Computantis/bookkeeping"
 	"github.com/bartossh/Computantis/configuration"
 	"github.com/bartossh/Computantis/dataprovider"
+	"github.com/bartossh/Computantis/logging"
 	"github.com/bartossh/Computantis/repo"
 	"github.com/bartossh/Computantis/server"
 	"github.com/bartossh/Computantis/wallet"
@@ -39,6 +40,12 @@ func main() {
 		return
 	}
 
+	callbackOnErr := func(err error) {
+		fmt.Println("error with logger: ", err)
+	}
+
+	log := logging.New(callbackOnErr, db)
+
 	if err := blockchain.GenesisBlock(ctx, db); err != nil {
 		fmt.Println(err)
 	}
@@ -52,7 +59,7 @@ func main() {
 
 	verifier := wallet.Helper{}
 
-	ladger, err := bookkeeping.NewLedger(cfg.Bookkeeper, blc, db, db, verifier, db)
+	ladger, err := bookkeeping.NewLedger(cfg.Bookkeeper, blc, db, db, verifier, db, log)
 	if err != nil {
 		fmt.Println(err)
 		c <- os.Interrupt
@@ -61,7 +68,7 @@ func main() {
 
 	dataProvider := dataprovider.New(ctx, cfg.DataProvider)
 
-	err = server.Run(ctx, cfg.Server, db, ladger, dataProvider)
+	err = server.Run(ctx, cfg.Server, db, ladger, dataProvider, log)
 	if err != nil {
 		fmt.Println(err)
 	}

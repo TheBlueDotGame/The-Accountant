@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/bartossh/Computantis/logger"
 	"github.com/bartossh/Computantis/transaction"
 	"github.com/gofiber/fiber/v2"
 )
@@ -89,10 +90,13 @@ type server struct {
 	bookkeeping  Bookkeeper
 	randDataProv RandomDataProvideValidator
 	hub          *hub
+	log          logger.Logger
 }
 
 // Run initializes routing and runs the server. To stop the server cancel the context.
-func Run(ctx context.Context, c Config, repo Repository, bookkeeping Bookkeeper, pv RandomDataProvideValidator) error {
+func Run(
+	ctx context.Context, c Config, repo Repository, bookkeeping Bookkeeper, pv RandomDataProvideValidator, log logger.Logger,
+) error {
 	var err error
 	ctxx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -114,7 +118,8 @@ func Run(ctx context.Context, c Config, repo Repository, bookkeeping Bookkeeper,
 		repo:         repo,
 		bookkeeping:  bookkeeping,
 		randDataProv: pv,
-		hub:          newHub(),
+		hub:          newHub(log),
+		log:          log,
 	}
 
 	router := fiber.New(fiber.Config{

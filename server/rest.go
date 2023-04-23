@@ -1,6 +1,8 @@
 package server
 
 import (
+	"fmt"
+
 	"github.com/bartossh/Computantis/transaction"
 	"github.com/gofiber/fiber/v2"
 )
@@ -35,12 +37,12 @@ func (s *server) address(c *fiber.Ctx) error {
 	var req SearchAddressRequest
 
 	if err := c.BodyParser(&req); err != nil {
-		// TODO: log err
+		s.log.Error(fmt.Sprintf("address endpoint, failed to parse request body: %s", err.Error()))
 		return fiber.ErrBadRequest
 	}
 	results, err := s.repo.FindAddress(c.Context(), req.Address, queryLimit)
 	if err != nil {
-		// TODO: log error
+		s.log.Error(fmt.Sprintf("address endpoint, failed to find address: %s", err.Error()))
 		return fiber.ErrNotFound
 	}
 
@@ -63,13 +65,13 @@ func (s *server) trxInBlock(c *fiber.Ctx) error {
 	var req SearchBlockRequest
 
 	if err := c.BodyParser(&req); err != nil {
-		// TODO: log err
+		s.log.Error(fmt.Sprintf("trx_in_block endpoint, failed to parse request body: %s", err.Error()))
 		return fiber.ErrBadRequest
 	}
 
 	res, err := s.repo.FindTransactionInBlockHash(c.Context(), req.RawTrxHash)
 	if err != nil {
-		// TODO: log error
+		s.log.Error(fmt.Sprintf("trx_in_block endpoint, failed to find transaction in block: %s", err.Error()))
 		return fiber.ErrNotFound
 	}
 
@@ -93,12 +95,12 @@ type TransactionConfirmProposeResponse struct {
 func (s *server) propose(c *fiber.Ctx) error {
 	var req TransactionProposeRequest
 	if err := c.BodyParser(&req); err != nil {
-		// TODO log err
+		s.log.Error(fmt.Sprintf("propose endpoint, failed to parse request body: %s", err.Error()))
 		return fiber.ErrBadRequest
 	}
 
 	if err := s.bookkeeping.WriteIssuerSignedTransactionForReceiver(c.Context(), req.ReceiverAddr, &req.Transaction); err != nil {
-		// TODO log error
+		s.log.Error(fmt.Sprintf("propose endpoint, failed to write transaction: %s", err.Error()))
 		return c.JSON(TransactionConfirmProposeResponse{
 			Success: false,
 			TrxHash: req.Transaction.Hash,
@@ -114,12 +116,12 @@ func (s *server) propose(c *fiber.Ctx) error {
 func (s *server) confirm(c *fiber.Ctx) error {
 	var trx transaction.Transaction
 	if err := c.BodyParser(&trx); err != nil {
-		// TODO: log err
+		s.log.Error(fmt.Sprintf("confirm endpoint, failed to parse request body: %s", err.Error()))
 		return fiber.ErrBadRequest
 	}
 
 	if err := s.bookkeeping.WriteCandidateTransaction(c.Context(), &trx); err != nil {
-		// TODO: log err
+		s.log.Error(fmt.Sprintf("confirm endpoint, failed to write candidate transaction: %s", err.Error()))
 		return c.JSON(TransactionConfirmProposeResponse{
 			Success: false,
 			TrxHash: trx.Hash,
@@ -151,20 +153,26 @@ type AwaitedTransactionResponse struct {
 func (s *server) awaited(c *fiber.Ctx) error {
 	var req AwaitedIssuedTransactionRequest
 	if err := c.BodyParser(&req); err != nil {
+		s.log.Error(fmt.Sprintf("awaited endpoint, failed to parse request body: %s", err.Error()))
 		return fiber.ErrBadRequest
 	}
 
 	if ok := s.randDataProv.ValidateData(req.Address, req.Data); !ok {
+		s.log.Error(fmt.Sprintf("awaited endpoint, failed to validate data for address: %s", req.Address))
 		return fiber.ErrForbidden
 	}
 
 	if err := s.bookkeeping.VerifySignature(req.Data, req.Signature, req.Hash, req.Address); err != nil {
+		s.log.Error(
+			fmt.Sprintf("awaited endpoint, failed to verify signature for address: %s, %s", req.Address, err.Error()))
 		return fiber.ErrForbidden
 	}
 
 	trxs, err := s.repo.ReadAwaitingTransactionsByReceiver(c.Context(), req.Address)
 	if err != nil {
-		// TODO log error
+		s.log.Error(
+			fmt.Sprintf("awaited endpoint, failed to read awaiting transactions for address: %s, %s",
+				req.Address, err.Error()))
 		return c.JSON(AwaitedTransactionResponse{
 			Success:             false,
 			AwaitedTransactions: nil,
@@ -186,20 +194,25 @@ type IssuedTransactionResponse struct {
 func (s *server) issued(c *fiber.Ctx) error {
 	var req AwaitedIssuedTransactionRequest
 	if err := c.BodyParser(&req); err != nil {
+		s.log.Error(fmt.Sprintf("issued endpoint, failed to parse request body: %s", err.Error()))
 		return fiber.ErrBadRequest
 	}
 
 	if ok := s.randDataProv.ValidateData(req.Address, req.Data); !ok {
+		s.log.Error(fmt.Sprintf("issued endpoint, failed to validate data for address: %s", req.Address))
 		return fiber.ErrForbidden
 	}
 
 	if err := s.bookkeeping.VerifySignature(req.Data, req.Signature, req.Hash, req.Address); err != nil {
+		s.log.Error(
+			fmt.Sprintf("issued endpoint, failed to verify signature for address: %s, %s", req.Address, err.Error()))
 		return fiber.ErrForbidden
 	}
 
 	trxs, err := s.repo.ReadAwaitingTransactionsByIssuer(c.Context(), req.Address)
 	if err != nil {
-		// TODO log error
+		s.log.Error(fmt.Sprintf("issued endpoint, failed to read issued transactions for address: %s, %s",
+			req.Address, err.Error()))
 		return c.JSON(IssuedTransactionResponse{
 			Success:            false,
 			IssuedTransactions: nil,
@@ -225,6 +238,7 @@ type DataToSignResponse struct {
 func (s *server) data(c *fiber.Ctx) error {
 	var req DataToSignRequest
 	if err := c.BodyParser(&req); err != nil {
+		s.log.Error(fmt.Sprintf("data endpoint, failed to parse request body: %s", err.Error()))
 		return fiber.ErrBadRequest
 	}
 	d := s.randDataProv.ProvideData(req.Address)
@@ -249,35 +263,45 @@ type CreateAddressResponse struct {
 func (s *server) addressCreate(c *fiber.Ctx) error {
 	var req CreateAddressRequest
 	if err := c.BodyParser(&req); err != nil {
+		s.log.Error(fmt.Sprintf("address create endpoint, failed to parse request body: %s", err.Error()))
 		return fiber.ErrBadRequest
 	}
 	if ok := s.randDataProv.ValidateData(req.Address, req.Data); !ok {
+		s.log.Error(fmt.Sprintf("address create endpoint, failed to validate data for address: %s", req.Address))
 		return fiber.ErrForbidden
 	}
 
 	if ok, err := s.repo.CheckToken(c.Context(), req.Token); !ok || err != nil {
 		if err != nil {
+			s.log.Error(fmt.Sprintf("address create endpoint, failed to check token: %s", err.Error()))
 			return fiber.ErrGone
 		}
+		s.log.Error(fmt.Sprintf("address create endpoint, token is invalid: %s", req.Token))
 		return fiber.ErrForbidden
 	}
 
 	if err := s.repo.InvalidateToken(c.Context(), req.Token); err != nil {
+		s.log.Error(fmt.Sprintf("address create endpoint, failed to invalidate token: %s", err.Error()))
 		return fiber.ErrGone
 	}
 
 	if err := s.bookkeeping.VerifySignature(req.Data, req.Signature, req.Hash, req.Address); err != nil {
+		s.log.Error(fmt.Sprintf("address create endpoint, failed to verify signature for address: %s, %s",
+			req.Address, err.Error()))
 		return fiber.ErrForbidden
 	}
 
 	if ok, err := s.repo.CheckAddressExists(c.Context(), req.Address); ok || err != nil {
 		if err != nil {
+			s.log.Error(fmt.Sprintf("address create endpoint, failed to check address: %s", err.Error()))
 			return fiber.ErrGone
 		}
+		s.log.Error(fmt.Sprintf("address create endpoint, address already exists: %s", req.Address))
 		return fiber.ErrConflict
 	}
 
 	if err := s.repo.WriteAddress(c.Context(), req.Address); err != nil {
+		s.log.Error(fmt.Sprintf("address create endpoint, failed to write address: %s", err.Error()))
 		return fiber.ErrConflict
 	}
 	return c.JSON(CreateAddressResponse{Success: true, Address: req.Address})

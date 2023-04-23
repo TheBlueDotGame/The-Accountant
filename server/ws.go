@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/bartossh/Computantis/logger"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
 )
@@ -54,23 +55,28 @@ type socket struct {
 	send    chan []byte
 	repo    Repository
 	close   chan struct{}
+	log     logger.Logger
 }
 
 func (s *server) wsWrapper(c *fiber.Ctx) error {
 	var req UpgradeConnectionRequest
 	if err := c.BodyParser(&req); err != nil {
+		s.log.Error(fmt.Sprintf("failed to parse request body: %s", err.Error()))
 		return fiber.ErrBadRequest
 	}
 
 	if ok, err := s.repo.CheckToken(c.Context(), req.Token); !ok || err != nil {
+		s.log.Error(fmt.Sprintf("failed to check token: %s", err.Error()))
 		return fiber.ErrForbidden
 	}
 
 	if ok := s.randDataProv.ValidateData(req.Address, req.Data); !ok {
+		s.log.Error(fmt.Sprintf("failed to validate data for address %s", req.Address))
 		return fiber.ErrForbidden
 	}
 
 	if err := s.bookkeeping.VerifySignature(req.Data, req.Signature, req.Hash, req.Address); err != nil {
+		s.log.Error(fmt.Sprintf("failed to verify signature: %s", err.Error()))
 		return fiber.ErrForbidden
 	}
 
@@ -81,6 +87,7 @@ func (s *server) wsWrapper(c *fiber.Ctx) error {
 		send:    make(chan []byte, clientMessageChannelsBufferSize),
 		repo:    s.repo,
 		close:   make(chan struct{}, 1),
+		log:     s.log,
 	}
 
 	serveWs := func(conn *websocket.Conn) {
@@ -107,9 +114,9 @@ func (c *socket) readPump() {
 		if err != nil {
 			switch {
 			case websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure):
-				//TODO log fmt.Printf("client %s closing due to %s\n", c.address, err)
+				c.log.Info(fmt.Sprintf("socket closing connection to the client %s due to unexpected error %s\n", c.address, err))
 			default:
-				//TODO: log fmt.Printf("closing connection to the client %s due to unexpected error %s\n", c.address, err)
+				c.log.Info(fmt.Sprintf("socket closing connection to the client %s due to error %s\n", c.address, err))
 			}
 
 			close(c.send)
@@ -130,14 +137,13 @@ func (c *socket) writePump() {
 		case raw, ok := <-c.send:
 			c.conn.SetWriteDeadline(time.Now().Add(socketWriteWait))
 			if !ok {
-				// The hub closed the channel.
-				// TODO: Log closing channel
+				c.log.Info(fmt.Sprintf("socket closing connection to the client %s due to channel close", c.address))
 				c.hub.unregister <- c
 				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
 			if err := c.conn.WriteMessage(websocket.TextMessage, raw); err != nil {
-				// TODO: log error
+				c.log.Error(fmt.Sprintf("socket closing connection to the client %s due to %s", c.address, err))
 				c.hub.unregister <- c
 				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
@@ -146,7 +152,7 @@ func (c *socket) writePump() {
 		case <-ticker.C:
 			c.conn.SetWriteDeadline(time.Now().Add(socketWriteWait))
 			if err := c.conn.WriteMessage(websocket.PingMessage, []byte(c.address)); err != nil {
-				// TODO: log fmt.Printf("Closing connection to the client %s, due to %s", c.address, err)
+				c.log.Error(fmt.Sprintf("socket closing connection to the client %s due to %s", c.address, err))
 				c.hub.unregister <- c
 				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
@@ -177,14 +183,16 @@ type hub struct {
 	broadcast  chan *Message
 	register   chan *socket
 	unregister chan *socket
+	log        logger.Logger
 }
 
-func newHub() *hub {
+func newHub(log logger.Logger) *hub {
 	return &hub{
 		broadcast:  make(chan *Message, hubInnerChannelsBufferSize),
 		register:   make(chan *socket, hubInnerChannelsBufferSize),
 		unregister: make(chan *socket, hubInnerChannelsBufferSize),
 		clients:    make(map[string]*socket, hubInnerChannelsBufferSize),
+		log:        log,
 	}
 }
 
@@ -199,7 +207,7 @@ outer:
 		case message := <-h.broadcast:
 			raw, err := json.Marshal(&message)
 			if err != nil {
-				//TODO: log error
+				h.log.Error(fmt.Sprintf("hub failed to marshal message: %s", err.Error()))
 				continue outer
 			}
 			for _, addr := range message.receivers {
@@ -235,6 +243,7 @@ func (c *socket) process(msg *Message) {
 		c.sendCommand(msg)
 
 	default:
+		c.log.Info(fmt.Sprintf("socket received unknown command %s", msg.Command))
 		c.sendCommand(setCommandError(msg, fmt.Errorf("unknown command %s", msg.Command)))
 	}
 }
@@ -247,7 +256,7 @@ func setCommandError(msg *Message, err error) *Message {
 func (c socket) sendCommand(msg *Message) {
 	raw, err := json.Marshal(&msg)
 	if err != nil {
-		// TODO: log error
+		c.log.Error(fmt.Sprintf("socket failed to marshal message: %s", err.Error()))
 		return
 	}
 	c.send <- raw

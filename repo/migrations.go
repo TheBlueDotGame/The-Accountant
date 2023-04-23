@@ -192,6 +192,31 @@ var migrations = []migration{
 			return err
 		},
 	},
+	{
+		name: "index_logger_level_created_at",
+		run: func(ctx context.Context, user *mongo.Database) error {
+			_, err := user.Collection(tokensCollection).
+				Indexes().
+				CreateOne(ctx, mongo.IndexModel{
+					Keys: bson.M{
+						"level": 1,
+					},
+					Options: options.Index().SetUnique(false),
+				})
+			if err != nil {
+				return err
+			}
+			_, err = user.Collection(tokensCollection).
+				Indexes().
+				CreateOne(ctx, mongo.IndexModel{
+					Keys: bson.M{
+						"created_at": 1,
+					},
+					Options: options.Index().SetUnique(false),
+				})
+			return err
+		},
+	},
 }
 
 func (c DataBase) migrate(ctx context.Context, migrationsCollection []migration) ([]string, error) {
