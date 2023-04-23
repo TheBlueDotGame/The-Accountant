@@ -1,12 +1,12 @@
-# The Accountant
+# Computantis
 
-[![Go](https://github.com/bartossh/The-Accountant/actions/workflows/go.yml/badge.svg)](https://github.com/bartossh/The-Accountant/actions/workflows/go.yml)
-[![CodeQL](https://github.com/bartossh/The-Accountant/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/bartossh/The-Accountant/actions/workflows/github-code-scanning/codeql)
-[![pages-build-deployment](https://github.com/bartossh/The-Accountant/actions/workflows/pages/pages-build-deployment/badge.svg)](https://github.com/bartossh/The-Accountant/actions/workflows/pages/pages-build-deployment)
+[![Go](https://github.com/bartossh/Computantis/actions/workflows/go.yml/badge.svg)](https://github.com/bartossh/Computantis/actions/workflows/go.yml)
+[![CodeQL](https://github.com/bartossh/Computantis/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/bartossh/Computantis/actions/workflows/github-code-scanning/codeql)
+[![pages-build-deployment](https://github.com/bartossh/Computantis/actions/workflows/pages/pages-build-deployment/badge.svg)](https://github.com/bartossh/Computantis/actions/workflows/pages/pages-build-deployment)
 
-The accountant is a service that keeps track of transactions between wallets.
+Computantis is a service that keeps track of transactions between wallets.
 Each wallet has its own independent history of transactions. There is a set of rules allowing for transactions to happen.
-The accountant is not keeping track of all transactions in a single blockchain but rather allows to keep transactions signed by an authority. A signed transaction is valid transaction only if the issuer and receiver of the transaction are existing within the system.
+Computantis is not keeping track of all transactions in a single blockchain but rather allows to keep transactions signed by an authority. A signed transaction is valid transaction only if the issuer and receiver of the transaction are existing within the system.
 
 ## Execute the server
 

@@ -1,7 +1,7 @@
 package server
 
 import (
-	"github.com/bartossh/The-Accountant/transaction"
+	"github.com/bartossh/Computantis/transaction"
 	"github.com/gofiber/fiber/v2"
 )
 

@@ -1,12 +1,12 @@
-# The Accountant
+# Computantis
 
-[![Go](https://github.com/bartossh/The-Accountant/actions/workflows/go.yml/badge.svg)](https://github.com/bartossh/The-Accountant/actions/workflows/go.yml)
-[![CodeQL](https://github.com/bartossh/The-Accountant/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/bartossh/The-Accountant/actions/workflows/github-code-scanning/codeql)
-[![pages-build-deployment](https://github.com/bartossh/The-Accountant/actions/workflows/pages/pages-build-deployment/badge.svg)](https://github.com/bartossh/The-Accountant/actions/workflows/pages/pages-build-deployment)
+[![Go](https://github.com/bartossh/Computantis/actions/workflows/go.yml/badge.svg)](https://github.com/bartossh/Computantis/actions/workflows/go.yml)
+[![CodeQL](https://github.com/bartossh/Computantis/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/bartossh/Computantis/actions/workflows/github-code-scanning/codeql)
+[![pages-build-deployment](https://github.com/bartossh/Computantis/actions/workflows/pages/pages-build-deployment/badge.svg)](https://github.com/bartossh/Computantis/actions/workflows/pages/pages-build-deployment)
 
-The accountant is a service that keeps track of transactions between wallets.
+Computantis is a service that keeps track of transactions between wallets.
 Each wallet has its own independent history of transactions. There is a set of rules allowing for transactions to happen.
-The accountant is not keeping track of all transactions in a single blockchain but rather allows to keep transactions signed by an authority. A signed transaction is valid transaction only if the issuer and receiver of the transaction are existing within the system.
+Computantis is not keeping track of all transactions in a single blockchain but rather allows to keep transactions signed by an authority. A signed transaction is valid transaction only if the issuer and receiver of the transaction are existing within the system.
 
 ## Execute the server
 
@@ -25,7 +25,7 @@ The accountant is not keeping track of all transactions in a single blockchain b
 # block
 
 ```go
-import "github.com/bartossh/The-Accountant/block"
+import "github.com/bartossh/Computantis/block"
 ```
 
 ## Index
@@ -35,7 +35,7 @@ import "github.com/bartossh/The-Accountant/block"
   - [func (b *Block) Validate(trxHashes [][32]byte) bool](<#func-block-validate>)
 
 
-## type [Block](<https://github.com/bartossh/The-Accountant/blob/main/block/block.go#L17-L26>)
+## type [Block](<https://github.com/bartossh/Computantis/blob/main/block/block.go#L17-L26>)
 
 Block holds block information.
 
@@ -52,7 +52,7 @@ type Block struct {
 }
 ```
 
-### func [NewBlock](<https://github.com/bartossh/The-Accountant/blob/main/block/block.go#L32>)
+### func [NewBlock](<https://github.com/bartossh/Computantis/blob/main/block/block.go#L32>)
 
 ```go
 func NewBlock(difficulty, next uint64, prevHash [32]byte, trxHashes [][32]byte) Block
@@ -60,7 +60,7 @@ func NewBlock(difficulty, next uint64, prevHash [32]byte, trxHashes [][32]byte) 
 
 NewBlock creates a new Block hashing it with given difficulty. Higher difficulty requires more computations to happen to find possible target hash. Difficulty is stored inside the Block and is a part of a hashed data. Transactions hashes are prehashed before calculating the Block hash with merkle tree.
 
-### func \(\*Block\) [Validate](<https://github.com/bartossh/The-Accountant/blob/main/block/block.go#L57>)
+### func \(\*Block\) [Validate](<https://github.com/bartossh/Computantis/blob/main/block/block.go#L57>)
 
 ```go
 func (b *Block) Validate(trxHashes [][32]byte) bool
@@ -71,7 +71,7 @@ Validate validates the Block. Validations goes in the same order like Block hash
 # blockchain
 
 ```go
-import "github.com/bartossh/The-Accountant/blockchain"
+import "github.com/bartossh/Computantis/blockchain"
 ```
 
 ## Index
@@ -100,7 +100,7 @@ var (
 )
 ```
 
-## func [GenesisBlock](<https://github.com/bartossh/The-Accountant/blob/main/blockchain/blockchain.go#L45>)
+## func [GenesisBlock](<https://github.com/bartossh/Computantis/blob/main/blockchain/blockchain.go#L45>)
 
 ```go
 func GenesisBlock(ctx context.Context, rw BlockReadWriter) error
@@ -108,7 +108,7 @@ func GenesisBlock(ctx context.Context, rw BlockReadWriter) error
 
 GenesisBlock creates a genesis block.
 
-## type [BlockReadWriter](<https://github.com/bartossh/The-Accountant/blob/main/blockchain/blockchain.go#L31-L34>)
+## type [BlockReadWriter](<https://github.com/bartossh/Computantis/blob/main/blockchain/blockchain.go#L31-L34>)
 
 BlockReadWriter is the interface that groups the basic Read and Write methods.
 
@@ -119,7 +119,7 @@ type BlockReadWriter interface {
 }
 ```
 
-## type [BlockReader](<https://github.com/bartossh/The-Accountant/blob/main/blockchain/blockchain.go#L20-L23>)
+## type [BlockReader](<https://github.com/bartossh/Computantis/blob/main/blockchain/blockchain.go#L20-L23>)
 
 blockReader is the interface that wraps the basic Read methods.
 
@@ -130,7 +130,7 @@ type BlockReader interface {
 }
 ```
 
-## type [BlockWriter](<https://github.com/bartossh/The-Accountant/blob/main/blockchain/blockchain.go#L26-L28>)
+## type [BlockWriter](<https://github.com/bartossh/Computantis/blob/main/blockchain/blockchain.go#L26-L28>)
 
 BlockWriter is the interface that wraps the basic Write method.
 
@@ -140,7 +140,7 @@ type BlockWriter interface {
 }
 ```
 
-## type [Blockchain](<https://github.com/bartossh/The-Accountant/blob/main/blockchain/blockchain.go#L37-L42>)
+## type [Blockchain](<https://github.com/bartossh/Computantis/blob/main/blockchain/blockchain.go#L37-L42>)
 
 Blockchain keeps track of the blocks.
 
@@ -150,7 +150,7 @@ type Blockchain struct {
 }
 ```
 
-### func [NewBlockchain](<https://github.com/bartossh/The-Accountant/blob/main/blockchain/blockchain.go#L55>)
+### func [NewBlockchain](<https://github.com/bartossh/Computantis/blob/main/blockchain/blockchain.go#L55>)
 
 ```go
 func NewBlockchain(ctx context.Context, rw BlockReadWriter) (*Blockchain, error)
@@ -158,7 +158,7 @@ func NewBlockchain(ctx context.Context, rw BlockReadWriter) (*Blockchain, error)
 
 NewBlockchain creates a new Blockchain that has access to the blockchain stored in the repository.
 
-### func \(\*Blockchain\) [LastBlockHashIndex](<https://github.com/bartossh/The-Accountant/blob/main/blockchain/blockchain.go#L70>)
+### func \(\*Blockchain\) [LastBlockHashIndex](<https://github.com/bartossh/Computantis/blob/main/blockchain/blockchain.go#L70>)
 
 ```go
 func (c *Blockchain) LastBlockHashIndex() ([32]byte, uint64)
@@ -166,7 +166,7 @@ func (c *Blockchain) LastBlockHashIndex() ([32]byte, uint64)
 
 LastBlockHashIndex returns last block hash and index.
 
-### func \(\*Blockchain\) [ReadBlocksFromIndex](<https://github.com/bartossh/The-Accountant/blob/main/blockchain/blockchain.go#L97>)
+### func \(\*Blockchain\) [ReadBlocksFromIndex](<https://github.com/bartossh/Computantis/blob/main/blockchain/blockchain.go#L97>)
 
 ```go
 func (c *Blockchain) ReadBlocksFromIndex(ctx context.Context, idx uint64) ([]block.Block, error)
@@ -174,7 +174,7 @@ func (c *Blockchain) ReadBlocksFromIndex(ctx context.Context, idx uint64) ([]blo
 
 ReadBlocksFromIndex reads all blocks from given index till the current block.
 
-### func \(\*Blockchain\) [ReadLastNBlocks](<https://github.com/bartossh/The-Accountant/blob/main/blockchain/blockchain.go#L77>)
+### func \(\*Blockchain\) [ReadLastNBlocks](<https://github.com/bartossh/Computantis/blob/main/blockchain/blockchain.go#L77>)
 
 ```go
 func (c *Blockchain) ReadLastNBlocks(ctx context.Context, n int) ([]block.Block, error)
@@ -182,7 +182,7 @@ func (c *Blockchain) ReadLastNBlocks(ctx context.Context, n int) ([]block.Block,
 
 ReadLastNBlocks reads the last n blocks.
 
-### func \(\*Blockchain\) [WriteBlock](<https://github.com/bartossh/The-Accountant/blob/main/blockchain/blockchain.go#L121>)
+### func \(\*Blockchain\) [WriteBlock](<https://github.com/bartossh/Computantis/blob/main/blockchain/blockchain.go#L121>)
 
 ```go
 func (c *Blockchain) WriteBlock(ctx context.Context, block block.Block) error
@@ -193,7 +193,7 @@ WriteBlock writes block in to the blockchain repository.
 # bookkeeping
 
 ```go
-import "github.com/bartossh/The-Accountant/bookkeeping"
+import "github.com/bartossh/Computantis/bookkeeping"
 ```
 
 ## Index
@@ -230,7 +230,7 @@ var (
 )
 ```
 
-## type [AddressChecker](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L55-L57>)
+## type [AddressChecker](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L55-L57>)
 
 ```go
 type AddressChecker interface {
@@ -238,7 +238,7 @@ type AddressChecker interface {
 }
 ```
 
-## type [BlockFinder](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L63-L66>)
+## type [BlockFinder](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L63-L66>)
 
 ```go
 type BlockFinder interface {
@@ -247,7 +247,7 @@ type BlockFinder interface {
 }
 ```
 
-## type [BlockReadWriter](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L50-L53>)
+## type [BlockReadWriter](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L50-L53>)
 
 ```go
 type BlockReadWriter interface {
@@ -256,7 +256,7 @@ type BlockReadWriter interface {
 }
 ```
 
-## type [BlockReader](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L42-L44>)
+## type [BlockReader](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L42-L44>)
 
 ```go
 type BlockReader interface {
@@ -264,7 +264,7 @@ type BlockReader interface {
 }
 ```
 
-## type [BlockWriter](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L46-L48>)
+## type [BlockWriter](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L46-L48>)
 
 ```go
 type BlockWriter interface {
@@ -272,7 +272,7 @@ type BlockWriter interface {
 }
 ```
 
-## type [Config](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L68-L72>)
+## type [Config](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L68-L72>)
 
 ```go
 type Config struct {
@@ -282,13 +282,13 @@ type Config struct {
 }
 ```
 
-### func \(Config\) [Validate](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L74>)
+### func \(Config\) [Validate](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L74>)
 
 ```go
 func (c Config) Validate() error
 ```
 
-## type [Ledger](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L92-L101>)
+## type [Ledger](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L92-L101>)
 
 Ledger is a collection of ledger functionality to perform bookkeeping.
 
@@ -298,7 +298,7 @@ type Ledger struct {
 }
 ```
 
-### func [NewLedger](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L104-L111>)
+### func [NewLedger](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L104-L111>)
 
 ```go
 func NewLedger(config Config, bc BlockReadWriter, tx TrxWriteReadMover, ac AddressChecker, vr SignatureVerifier, tf BlockFinder) (*Ledger, error)
@@ -306,7 +306,7 @@ func NewLedger(config Config, bc BlockReadWriter, tx TrxWriteReadMover, ac Addre
 
 NewLedger creates new Ledger if config is valid or returns error otherwise.
 
-### func \(\*Ledger\) [Run](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L129>)
+### func \(\*Ledger\) [Run](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L129>)
 
 ```go
 func (l *Ledger) Run(ctx context.Context)
@@ -314,13 +314,13 @@ func (l *Ledger) Run(ctx context.Context)
 
 Run runs the Ladger engine that writes blocks to the blockchain repository. Run starts a goroutine and can be stopped by cancelling the context.
 
-### func \(\*Ledger\) [VerifySignature](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L191>)
+### func \(\*Ledger\) [VerifySignature](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L191>)
 
 ```go
 func (l *Ledger) VerifySignature(message, signature []byte, hash [32]byte, address string) error
 ```
 
-### func \(\*Ledger\) [WriteCandidateTransaction](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L174>)
+### func \(\*Ledger\) [WriteCandidateTransaction](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L174>)
 
 ```go
 func (l *Ledger) WriteCandidateTransaction(ctx context.Context, trx *transaction.Transaction) error
@@ -328,7 +328,7 @@ func (l *Ledger) WriteCandidateTransaction(ctx context.Context, trx *transaction
 
 WriteCandidateTransaction validates and writes a transaction to the repository. Transaction is not yet a part of the blockchain.
 
-### func \(\*Ledger\) [WriteIssuerSignedTransactionForReceiver](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L156-L160>)
+### func \(\*Ledger\) [WriteIssuerSignedTransactionForReceiver](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L156-L160>)
 
 ```go
 func (l *Ledger) WriteIssuerSignedTransactionForReceiver(ctx context.Context, receiverAddr string, trx *transaction.Transaction) error
@@ -336,7 +336,7 @@ func (l *Ledger) WriteIssuerSignedTransactionForReceiver(ctx context.Context, re
 
 WriteIssuerSignedTransactionForReceiver validates issuer signature and writes a transaction to the repository for receiver.
 
-## type [SignatureVerifier](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L59-L61>)
+## type [SignatureVerifier](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L59-L61>)
 
 ```go
 type SignatureVerifier interface {
@@ -344,7 +344,7 @@ type SignatureVerifier interface {
 }
 ```
 
-## type [TrxWriteReadMover](<https://github.com/bartossh/The-Accountant/blob/main/bookkeeping/bookkeeping.go#L33-L40>)
+## type [TrxWriteReadMover](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L33-L40>)
 
 ```go
 type TrxWriteReadMover interface {
@@ -360,7 +360,7 @@ type TrxWriteReadMover interface {
 # client
 
 ```go
-import "github.com/bartossh/The-Accountant/client"
+import "github.com/bartossh/Computantis/client"
 ```
 
 ## Index
@@ -399,7 +399,7 @@ var (
 )
 ```
 
-## type [NewSignValidatorCreator](<https://github.com/bartossh/The-Accountant/blob/main/client/client.go#L41>)
+## type [NewSignValidatorCreator](<https://github.com/bartossh/Computantis/blob/main/client/client.go#L41>)
 
 NewWalletCreator is a function that creates a new SignValidator.
 
@@ -407,7 +407,7 @@ NewWalletCreator is a function that creates a new SignValidator.
 type NewSignValidatorCreator func() (wallet.Wallet, error)
 ```
 
-## type [Rest](<https://github.com/bartossh/The-Accountant/blob/main/client/client.go#L44-L52>)
+## type [Rest](<https://github.com/bartossh/Computantis/blob/main/client/client.go#L44-L52>)
 
 Rest is a rest client for the API.
 
@@ -417,7 +417,7 @@ type Rest struct {
 }
 ```
 
-### func [NewRest](<https://github.com/bartossh/The-Accountant/blob/main/client/client.go#L55-L58>)
+### func [NewRest](<https://github.com/bartossh/Computantis/blob/main/client/client.go#L55-L58>)
 
 ```go
 func NewRest(apiRoot string, timeout time.Duration, fw transaction.Verifier, wrs WalletReadSaver, walletCreator NewSignValidatorCreator) *Rest
@@ -425,7 +425,7 @@ func NewRest(apiRoot string, timeout time.Duration, fw transaction.Verifier, wrs
 
 NewRest creates a new rest client.
 
-### func \(\*Rest\) [Address](<https://github.com/bartossh/The-Accountant/blob/main/client/client.go#L132>)
+### func \(\*Rest\) [Address](<https://github.com/bartossh/Computantis/blob/main/client/client.go#L132>)
 
 ```go
 func (r *Rest) Address() (string, error)
@@ -433,7 +433,7 @@ func (r *Rest) Address() (string, error)
 
 Address reads the wallet address. Address is a string representation of wallet public key.
 
-### func \(\*Rest\) [ConfirmTransaction](<https://github.com/bartossh/The-Accountant/blob/main/client/client.go#L176>)
+### func \(\*Rest\) [ConfirmTransaction](<https://github.com/bartossh/Computantis/blob/main/client/client.go#L176>)
 
 ```go
 func (r *Rest) ConfirmTransaction(trx transaction.Transaction) error
@@ -441,7 +441,7 @@ func (r *Rest) ConfirmTransaction(trx transaction.Transaction) error
 
 ConfirmTransaction confirms transaction by signing it with the wallet and then sending it to the API server.
 
-### func \(\*Rest\) [FlushWalletFromMemory](<https://github.com/bartossh/The-Accountant/blob/main/client/client.go#L284>)
+### func \(\*Rest\) [FlushWalletFromMemory](<https://github.com/bartossh/Computantis/blob/main/client/client.go#L284>)
 
 ```go
 func (r *Rest) FlushWalletFromMemory()
@@ -449,7 +449,7 @@ func (r *Rest) FlushWalletFromMemory()
 
 FlushWalletFromMemory flushes the wallet from the memory. Do it after you have saved the wallet to the file. It is recommended to use this just before logging out from the UI or closing the front end app that.
 
-### func \(\*Rest\) [NewWallet](<https://github.com/bartossh/The-Accountant/blob/main/client/client.go#L81>)
+### func \(\*Rest\) [NewWallet](<https://github.com/bartossh/Computantis/blob/main/client/client.go#L81>)
 
 ```go
 func (r *Rest) NewWallet(token string) error
@@ -457,7 +457,7 @@ func (r *Rest) NewWallet(token string) error
 
 NewWallet creates a new wallet and sends a request to the API server to validate the wallet.
 
-### func \(\*Rest\) [ProposeTransaction](<https://github.com/bartossh/The-Accountant/blob/main/client/client.go#L144>)
+### func \(\*Rest\) [ProposeTransaction](<https://github.com/bartossh/Computantis/blob/main/client/client.go#L144>)
 
 ```go
 func (r *Rest) ProposeTransaction(receiverAddr string, subject string, data []byte) error
@@ -465,7 +465,7 @@ func (r *Rest) ProposeTransaction(receiverAddr string, subject string, data []by
 
 ProposeTransaction sends a Transaction proposal to the API server for provided receiver address. Subject describes how to read the data from the transaction. For example, if the subject is "json", then the data can by decoded to map\[sting\]any, when subject "pdf" than it should be decoded by proper pdf decoder, when "csv" then it should be decoded by proper csv decoder.
 
-### func \(\*Rest\) [ReadIssuedTransactions](<https://github.com/bartossh/The-Accountant/blob/main/client/client.go#L232>)
+### func \(\*Rest\) [ReadIssuedTransactions](<https://github.com/bartossh/Computantis/blob/main/client/client.go#L232>)
 
 ```go
 func (r *Rest) ReadIssuedTransactions() ([]transaction.Transaction, error)
@@ -473,7 +473,7 @@ func (r *Rest) ReadIssuedTransactions() ([]transaction.Transaction, error)
 
 ReadIssuedTransactions reads all issued transactions belonging to current wallet from the API server.
 
-### func \(\*Rest\) [ReadWaitingTransactions](<https://github.com/bartossh/The-Accountant/blob/main/client/client.go#L202>)
+### func \(\*Rest\) [ReadWaitingTransactions](<https://github.com/bartossh/Computantis/blob/main/client/client.go#L202>)
 
 ```go
 func (r *Rest) ReadWaitingTransactions() ([]transaction.Transaction, error)
@@ -481,7 +481,7 @@ func (r *Rest) ReadWaitingTransactions() ([]transaction.Transaction, error)
 
 ReadWaitingTransactions reads all waiting transactions belonging to current wallet from the API server.
 
-### func \(\*Rest\) [ReadWalletFromFile](<https://github.com/bartossh/The-Accountant/blob/main/client/client.go#L270>)
+### func \(\*Rest\) [ReadWalletFromFile](<https://github.com/bartossh/Computantis/blob/main/client/client.go#L270>)
 
 ```go
 func (r *Rest) ReadWalletFromFile(path string) error
@@ -489,7 +489,7 @@ func (r *Rest) ReadWalletFromFile(path string) error
 
 ReadWalletFromFile reads the wallet from the file in the path.
 
-### func \(\*Rest\) [SaveWalletToFile](<https://github.com/bartossh/The-Accountant/blob/main/client/client.go#L261>)
+### func \(\*Rest\) [SaveWalletToFile](<https://github.com/bartossh/Computantis/blob/main/client/client.go#L261>)
 
 ```go
 func (r *Rest) SaveWalletToFile(path string) error
@@ -497,7 +497,7 @@ func (r *Rest) SaveWalletToFile(path string) error
 
 SaveWalletToFile saves the wallet to the file in the path.
 
-### func \(\*Rest\) [ValidateApiVersion](<https://github.com/bartossh/The-Accountant/blob/main/client/client.go#L63>)
+### func \(\*Rest\) [ValidateApiVersion](<https://github.com/bartossh/Computantis/blob/main/client/client.go#L63>)
 
 ```go
 func (r *Rest) ValidateApiVersion() error
@@ -505,7 +505,7 @@ func (r *Rest) ValidateApiVersion() error
 
 ValidateApiVersion makes a call to the API server and validates client and server API versions and header correctness.
 
-## type [WalletReadSaver](<https://github.com/bartossh/The-Accountant/blob/main/client/client.go#L35-L38>)
+## type [WalletReadSaver](<https://github.com/bartossh/Computantis/blob/main/client/client.go#L35-L38>)
 
 WalletReadSaver allows to read and save the wallet.
 
@@ -519,7 +519,7 @@ type WalletReadSaver interface {
 # configuration
 
 ```go
-import "github.com/bartossh/The-Accountant/configuration"
+import "github.com/bartossh/Computantis/configuration"
 ```
 
 ## Index
@@ -528,7 +528,7 @@ import "github.com/bartossh/The-Accountant/configuration"
   - [func Read(path string) (Main, error)](<#func-read>)
 
 
-## type [Main](<https://github.com/bartossh/The-Accountant/blob/main/configuration/configuration.go#L16-L21>)
+## type [Main](<https://github.com/bartossh/Computantis/blob/main/configuration/configuration.go#L16-L21>)
 
 Main is the main configuration of the application that corresponds to the \*.yaml file that holds the configuration.
 
@@ -541,7 +541,7 @@ type Main struct {
 }
 ```
 
-### func [Read](<https://github.com/bartossh/The-Accountant/blob/main/configuration/configuration.go#L24>)
+### func [Read](<https://github.com/bartossh/Computantis/blob/main/configuration/configuration.go#L24>)
 
 ```go
 func Read(path string) (Main, error)
@@ -552,7 +552,7 @@ Read reads the configuration  from the file and returns the MainYaml struct.
 # dataprovider
 
 ```go
-import "github.com/bartossh/The-Accountant/dataprovider"
+import "github.com/bartossh/Computantis/dataprovider"
 ```
 
 ## Index
@@ -564,7 +564,7 @@ import "github.com/bartossh/The-Accountant/dataprovider"
 - [type Config](<#type-config>)
 
 
-## type [Cache](<https://github.com/bartossh/The-Accountant/blob/main/dataprovider/dataprovider.go#L22-L26>)
+## type [Cache](<https://github.com/bartossh/Computantis/blob/main/dataprovider/dataprovider.go#L22-L26>)
 
 Cache is a simple in\-memory cache for storing generated data.
 
@@ -574,7 +574,7 @@ type Cache struct {
 }
 ```
 
-### func [New](<https://github.com/bartossh/The-Accountant/blob/main/dataprovider/dataprovider.go#L29>)
+### func [New](<https://github.com/bartossh/Computantis/blob/main/dataprovider/dataprovider.go#L29>)
 
 ```go
 func New(ctx context.Context, cfg Config) *Cache
@@ -582,7 +582,7 @@ func New(ctx context.Context, cfg Config) *Cache
 
 New creates new Cache and runs the cleaner.
 
-### func \(\*Cache\) [ProvideData](<https://github.com/bartossh/The-Accountant/blob/main/dataprovider/dataprovider.go#L65>)
+### func \(\*Cache\) [ProvideData](<https://github.com/bartossh/Computantis/blob/main/dataprovider/dataprovider.go#L65>)
 
 ```go
 func (c *Cache) ProvideData(address string) []byte
@@ -590,7 +590,7 @@ func (c *Cache) ProvideData(address string) []byte
 
 ProvideData generates data and stores it referring to given address.
 
-### func \(\*Cache\) [ValidateData](<https://github.com/bartossh/The-Accountant/blob/main/dataprovider/dataprovider.go#L80>)
+### func \(\*Cache\) [ValidateData](<https://github.com/bartossh/Computantis/blob/main/dataprovider/dataprovider.go#L80>)
 
 ```go
 func (c *Cache) ValidateData(address string, data []byte) bool
@@ -598,7 +598,7 @@ func (c *Cache) ValidateData(address string, data []byte) bool
 
 ValidateData checks if data is stored for given address and is not expired.
 
-## type [Config](<https://github.com/bartossh/The-Accountant/blob/main/dataprovider/dataprovider.go#L12-L14>)
+## type [Config](<https://github.com/bartossh/Computantis/blob/main/dataprovider/dataprovider.go#L12-L14>)
 
 Config holds configuration for Cache.
 
@@ -611,7 +611,7 @@ type Config struct {
 # fileoperations
 
 ```go
-import "github.com/bartossh/The-Accountant/fileoperations"
+import "github.com/bartossh/Computantis/fileoperations"
 ```
 
 ## Index
@@ -621,7 +621,7 @@ import "github.com/bartossh/The-Accountant/fileoperations"
   - [func (h Helper) SaveWallet(path string, w wallet.Wallet) error](<#func-helper-savewallet>)
 
 
-## type [Helper](<https://github.com/bartossh/The-Accountant/blob/main/fileoperations/fileoperations.go#L4>)
+## type [Helper](<https://github.com/bartossh/Computantis/blob/main/fileoperations/fileoperations.go#L4>)
 
 Helper holds all file operation methods.
 
@@ -629,7 +629,7 @@ Helper holds all file operation methods.
 type Helper struct{}
 ```
 
-### func \(Helper\) [ReadWallet](<https://github.com/bartossh/The-Accountant/blob/main/fileoperations/wallet.go#L10>)
+### func \(Helper\) [ReadWallet](<https://github.com/bartossh/Computantis/blob/main/fileoperations/wallet.go#L10>)
 
 ```go
 func (h Helper) ReadWallet(path string) (wallet.Wallet, error)
@@ -637,7 +637,7 @@ func (h Helper) ReadWallet(path string) (wallet.Wallet, error)
 
 RereadWallet reads wallet from the file.
 
-### func \(Helper\) [SaveWallet](<https://github.com/bartossh/The-Accountant/blob/main/fileoperations/wallet.go#L23>)
+### func \(Helper\) [SaveWallet](<https://github.com/bartossh/Computantis/blob/main/fileoperations/wallet.go#L23>)
 
 ```go
 func (h Helper) SaveWallet(path string, w wallet.Wallet) error
@@ -648,7 +648,7 @@ SaveWallet saves wallet to the file.
 # repo
 
 ```go
-import "github.com/bartossh/The-Accountant/repo"
+import "github.com/bartossh/Computantis/repo"
 ```
 
 ## Index
@@ -682,7 +682,7 @@ import "github.com/bartossh/The-Accountant/repo"
 - [type TransactionInBlock](<#type-transactioninblock>)
 
 
-## type [Address](<https://github.com/bartossh/The-Accountant/blob/main/repo/address.go#L13-L16>)
+## type [Address](<https://github.com/bartossh/Computantis/blob/main/repo/address.go#L13-L16>)
 
 Address holds information about unique PublicKey.
 
@@ -693,7 +693,7 @@ type Address struct {
 }
 ```
 
-## type [Config](<https://github.com/bartossh/The-Accountant/blob/main/repo/repo.go#L24-L29>)
+## type [Config](<https://github.com/bartossh/Computantis/blob/main/repo/repo.go#L24-L29>)
 
 Config contains configuration for the database.
 
@@ -706,7 +706,7 @@ type Config struct {
 }
 ```
 
-## type [DataBase](<https://github.com/bartossh/The-Accountant/blob/main/repo/repo.go#L32-L34>)
+## type [DataBase](<https://github.com/bartossh/Computantis/blob/main/repo/repo.go#L32-L34>)
 
 Database provides database access for read, write and delete of repository entities.
 
@@ -716,7 +716,7 @@ type DataBase struct {
 }
 ```
 
-### func [Connect](<https://github.com/bartossh/The-Accountant/blob/main/repo/repo.go#L37>)
+### func [Connect](<https://github.com/bartossh/Computantis/blob/main/repo/repo.go#L37>)
 
 ```go
 func Connect(ctx context.Context, cfg Config) (*DataBase, error)
@@ -724,7 +724,7 @@ func Connect(ctx context.Context, cfg Config) (*DataBase, error)
 
 Connect creates new connection to the repository and returns pointer to the DataBase.
 
-### func \(DataBase\) [CheckAddressExists](<https://github.com/bartossh/The-Accountant/blob/main/repo/address.go#L37>)
+### func \(DataBase\) [CheckAddressExists](<https://github.com/bartossh/Computantis/blob/main/repo/address.go#L37>)
 
 ```go
 func (db DataBase) CheckAddressExists(ctx context.Context, address string) (bool, error)
@@ -732,7 +732,7 @@ func (db DataBase) CheckAddressExists(ctx context.Context, address string) (bool
 
 CheckAddressExists checks if address exists in the database. Returns true if exists and error if database error different from ErrNoDocuments.
 
-### func \(\*DataBase\) [CheckToken](<https://github.com/bartossh/The-Accountant/blob/main/repo/token.go#L21>)
+### func \(\*DataBase\) [CheckToken](<https://github.com/bartossh/Computantis/blob/main/repo/token.go#L21>)
 
 ```go
 func (db *DataBase) CheckToken(ctx context.Context, token string) (bool, error)
@@ -740,7 +740,7 @@ func (db *DataBase) CheckToken(ctx context.Context, token string) (bool, error)
 
 CheckToken checks if token exists in the database is valid and didn't expire.
 
-### func \(DataBase\) [Disconnect](<https://github.com/bartossh/The-Accountant/blob/main/repo/repo.go#L53>)
+### func \(DataBase\) [Disconnect](<https://github.com/bartossh/Computantis/blob/main/repo/repo.go#L53>)
 
 ```go
 func (c DataBase) Disconnect(ctx context.Context) error
@@ -748,7 +748,7 @@ func (c DataBase) Disconnect(ctx context.Context) error
 
 Disconnect disconnects user from database
 
-### func \(DataBase\) [FindAddress](<https://github.com/bartossh/The-Accountant/blob/main/repo/search.go#L44>)
+### func \(DataBase\) [FindAddress](<https://github.com/bartossh/Computantis/blob/main/repo/search.go#L44>)
 
 ```go
 func (db DataBase) FindAddress(ctx context.Context, search string, limit int) ([]string, error)
@@ -756,7 +756,7 @@ func (db DataBase) FindAddress(ctx context.Context, search string, limit int) ([
 
 FindAddress looks for matching address in the addresses repository and returns limited slice of matching addresses. If limit is set to 0 or above the 1000 which is maximum then search is limited to 1000.
 
-### func \(DataBase\) [FindTransactionInBlockHash](<https://github.com/bartossh/The-Accountant/blob/main/repo/search.go#L34>)
+### func \(DataBase\) [FindTransactionInBlockHash](<https://github.com/bartossh/Computantis/blob/main/repo/search.go#L34>)
 
 ```go
 func (db DataBase) FindTransactionInBlockHash(ctx context.Context, trxHash [32]byte) ([32]byte, error)
@@ -764,7 +764,7 @@ func (db DataBase) FindTransactionInBlockHash(ctx context.Context, trxHash [32]b
 
 FindTransactionInBlockHash finds Block hash in to which Transaction with given hash was added.
 
-### func \(\*DataBase\) [InvalidateToken](<https://github.com/bartossh/The-Accountant/blob/main/repo/token.go#L53>)
+### func \(\*DataBase\) [InvalidateToken](<https://github.com/bartossh/Computantis/blob/main/repo/token.go#L53>)
 
 ```go
 func (db *DataBase) InvalidateToken(ctx context.Context, token string) error
@@ -772,7 +772,7 @@ func (db *DataBase) InvalidateToken(ctx context.Context, token string) error
 
 InvalidateToken invalidates token.
 
-### func \(DataBase\) [LastBlock](<https://github.com/bartossh/The-Accountant/blob/main/repo/block.go#L14>)
+### func \(DataBase\) [LastBlock](<https://github.com/bartossh/Computantis/blob/main/repo/block.go#L14>)
 
 ```go
 func (db DataBase) LastBlock(ctx context.Context) (block.Block, error)
@@ -780,7 +780,7 @@ func (db DataBase) LastBlock(ctx context.Context) (block.Block, error)
 
 LastBlock returns last block from the database.
 
-### func \(DataBase\) [MoveTransactionsFromTemporaryToPermanent](<https://github.com/bartossh/The-Accountant/blob/main/repo/transaction.go#L91>)
+### func \(DataBase\) [MoveTransactionsFromTemporaryToPermanent](<https://github.com/bartossh/Computantis/blob/main/repo/transaction.go#L91>)
 
 ```go
 func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context, hash [][32]byte) error
@@ -788,7 +788,7 @@ func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context,
 
 MoveTransactionsFromTemporaryToPermanent moves transactions from temporary storage to permanent.
 
-### func \(DataBase\) [ReadAwaitingTransactionsByIssuer](<https://github.com/bartossh/The-Accountant/blob/main/repo/transaction.go#L72>)
+### func \(DataBase\) [ReadAwaitingTransactionsByIssuer](<https://github.com/bartossh/Computantis/blob/main/repo/transaction.go#L72>)
 
 ```go
 func (db DataBase) ReadAwaitingTransactionsByIssuer(ctx context.Context, address string) ([]transaction.Transaction, error)
@@ -796,7 +796,7 @@ func (db DataBase) ReadAwaitingTransactionsByIssuer(ctx context.Context, address
 
 ReadAwaitingTransactionsByReceiver reads all transactions paired with given issuer address.
 
-### func \(DataBase\) [ReadAwaitingTransactionsByReceiver](<https://github.com/bartossh/The-Accountant/blob/main/repo/transaction.go#L53>)
+### func \(DataBase\) [ReadAwaitingTransactionsByReceiver](<https://github.com/bartossh/Computantis/blob/main/repo/transaction.go#L53>)
 
 ```go
 func (db DataBase) ReadAwaitingTransactionsByReceiver(ctx context.Context, address string) ([]transaction.Transaction, error)
@@ -804,7 +804,7 @@ func (db DataBase) ReadAwaitingTransactionsByReceiver(ctx context.Context, addre
 
 ReadAwaitingTransactionsByReceiver reads all transactions paired with given receiver address.
 
-### func \(DataBase\) [ReadBlockByHash](<https://github.com/bartossh/The-Accountant/blob/main/repo/block.go#L36>)
+### func \(DataBase\) [ReadBlockByHash](<https://github.com/bartossh/Computantis/blob/main/repo/block.go#L36>)
 
 ```go
 func (db DataBase) ReadBlockByHash(ctx context.Context, hash [32]byte) (block.Block, error)
@@ -812,7 +812,7 @@ func (db DataBase) ReadBlockByHash(ctx context.Context, hash [32]byte) (block.Bl
 
 ReadBlockByHash returns block with given hash.
 
-### func \(DataBase\) [RemoveAwaitingTransaction](<https://github.com/bartossh/The-Accountant/blob/main/repo/transaction.go#L30>)
+### func \(DataBase\) [RemoveAwaitingTransaction](<https://github.com/bartossh/Computantis/blob/main/repo/transaction.go#L30>)
 
 ```go
 func (db DataBase) RemoveAwaitingTransaction(ctx context.Context, trxHash [32]byte) error
@@ -820,7 +820,7 @@ func (db DataBase) RemoveAwaitingTransaction(ctx context.Context, trxHash [32]by
 
 RemoveAwaitingTransaction removes transaction from the awaiting transaction storage.
 
-### func \(DataBase\) [RunMigration](<https://github.com/bartossh/The-Accountant/blob/main/repo/migrations.go#L250>)
+### func \(DataBase\) [RunMigration](<https://github.com/bartossh/Computantis/blob/main/repo/migrations.go#L250>)
 
 ```go
 func (c DataBase) RunMigration(ctx context.Context) error
@@ -828,7 +828,7 @@ func (c DataBase) RunMigration(ctx context.Context) error
 
 RunMigrationUp runs all the migrations
 
-### func \(DataBase\) [WriteAddress](<https://github.com/bartossh/The-Accountant/blob/main/repo/address.go#L19>)
+### func \(DataBase\) [WriteAddress](<https://github.com/bartossh/Computantis/blob/main/repo/address.go#L19>)
 
 ```go
 func (db DataBase) WriteAddress(ctx context.Context, address string) error
@@ -836,7 +836,7 @@ func (db DataBase) WriteAddress(ctx context.Context, address string) error
 
 WriteAddress writes unique address to the database.
 
-### func \(DataBase\) [WriteBlock](<https://github.com/bartossh/The-Accountant/blob/main/repo/block.go#L45>)
+### func \(DataBase\) [WriteBlock](<https://github.com/bartossh/Computantis/blob/main/repo/block.go#L45>)
 
 ```go
 func (db DataBase) WriteBlock(ctx context.Context, block block.Block) error
@@ -844,7 +844,7 @@ func (db DataBase) WriteBlock(ctx context.Context, block block.Block) error
 
 WriteBlock writes block to the database.
 
-### func \(DataBase\) [WriteIssuerSignedTransactionForReceiver](<https://github.com/bartossh/The-Accountant/blob/main/repo/transaction.go#L36-L40>)
+### func \(DataBase\) [WriteIssuerSignedTransactionForReceiver](<https://github.com/bartossh/Computantis/blob/main/repo/transaction.go#L36-L40>)
 
 ```go
 func (db DataBase) WriteIssuerSignedTransactionForReceiver(ctx context.Context, receiverAddr string, trx *transaction.Transaction) error
@@ -852,7 +852,7 @@ func (db DataBase) WriteIssuerSignedTransactionForReceiver(ctx context.Context, 
 
 WriteIssuerSignedTransactionForReceiver writes transaction to the awaiting transaction storage paired with given receiver.
 
-### func \(DataBase\) [WriteTemporaryTransaction](<https://github.com/bartossh/The-Accountant/blob/main/repo/transaction.go#L23>)
+### func \(DataBase\) [WriteTemporaryTransaction](<https://github.com/bartossh/Computantis/blob/main/repo/transaction.go#L23>)
 
 ```go
 func (db DataBase) WriteTemporaryTransaction(ctx context.Context, trx *transaction.Transaction) error
@@ -860,7 +860,7 @@ func (db DataBase) WriteTemporaryTransaction(ctx context.Context, trx *transacti
 
 WriteTemporaryTransaction writes transaction to the temporary storage.
 
-### func \(\*DataBase\) [WriteToken](<https://github.com/bartossh/The-Accountant/blob/main/repo/token.go#L39>)
+### func \(\*DataBase\) [WriteToken](<https://github.com/bartossh/Computantis/blob/main/repo/token.go#L39>)
 
 ```go
 func (db *DataBase) WriteToken(ctx context.Context, token string, expirationDate int64) error
@@ -868,7 +868,7 @@ func (db *DataBase) WriteToken(ctx context.Context, token string, expirationDate
 
 WriteToken writes unique token to the database.
 
-### func \(DataBase\) [WriteTransactionsInBlock](<https://github.com/bartossh/The-Accountant/blob/main/repo/search.go#L20>)
+### func \(DataBase\) [WriteTransactionsInBlock](<https://github.com/bartossh/Computantis/blob/main/repo/search.go#L20>)
 
 ```go
 func (db DataBase) WriteTransactionsInBlock(ctx context.Context, blockHash [32]byte, trxHash [][32]byte) error
@@ -876,7 +876,7 @@ func (db DataBase) WriteTransactionsInBlock(ctx context.Context, blockHash [32]b
 
 WriteTransactionsInBlock stores relation between Transaction and Block to which Transaction was added.
 
-## type [Migration](<https://github.com/bartossh/The-Accountant/blob/main/repo/migrations.go#L24-L26>)
+## type [Migration](<https://github.com/bartossh/Computantis/blob/main/repo/migrations.go#L24-L26>)
 
 Migration describes migration that is made in the repository database.
 
@@ -886,7 +886,7 @@ type Migration struct {
 }
 ```
 
-## type [Token](<https://github.com/bartossh/The-Accountant/blob/main/repo/token.go#L13-L18>)
+## type [Token](<https://github.com/bartossh/Computantis/blob/main/repo/token.go#L13-L18>)
 
 Token holds information about unique token.
 
@@ -899,7 +899,7 @@ type Token struct {
 }
 ```
 
-## type [TransactionAwaitingReceiverSignature](<https://github.com/bartossh/The-Accountant/blob/main/repo/transaction.go#L14-L20>)
+## type [TransactionAwaitingReceiverSignature](<https://github.com/bartossh/Computantis/blob/main/repo/transaction.go#L14-L20>)
 
 TransactionAwaitingReceiverSignature represents transaction awaiting receiver signature.
 
@@ -913,7 +913,7 @@ type TransactionAwaitingReceiverSignature struct {
 }
 ```
 
-## type [TransactionInBlock](<https://github.com/bartossh/The-Accountant/blob/main/repo/search.go#L13-L17>)
+## type [TransactionInBlock](<https://github.com/bartossh/Computantis/blob/main/repo/search.go#L13-L17>)
 
 TransactionInBlock stores relation between Transaction and Block to which Transaction was added. It is stored for fast lookup only.
 
@@ -928,7 +928,7 @@ type TransactionInBlock struct {
 # serializer
 
 ```go
-import "github.com/bartossh/The-Accountant/serializer"
+import "github.com/bartossh/Computantis/serializer"
 ```
 
 ## Index
@@ -937,7 +937,7 @@ import "github.com/bartossh/The-Accountant/serializer"
 - [func Base58Encode(input []byte) []byte](<#func-base58encode>)
 
 
-## func [Base58Decode](<https://github.com/bartossh/The-Accountant/blob/main/serializer/serializer.go#L13>)
+## func [Base58Decode](<https://github.com/bartossh/Computantis/blob/main/serializer/serializer.go#L13>)
 
 ```go
 func Base58Decode(input []byte) ([]byte, error)
@@ -945,7 +945,7 @@ func Base58Decode(input []byte) ([]byte, error)
 
 Base58Decode decodes base58 string to byte array.
 
-## func [Base58Encode](<https://github.com/bartossh/The-Accountant/blob/main/serializer/serializer.go#L6>)
+## func [Base58Encode](<https://github.com/bartossh/Computantis/blob/main/serializer/serializer.go#L6>)
 
 ```go
 func Base58Encode(input []byte) []byte
@@ -956,7 +956,7 @@ Base58Encode encodes byte array to base58 string.
 # server
 
 ```go
-import "github.com/bartossh/The-Accountant/server"
+import "github.com/bartossh/Computantis/server"
 ```
 
 ## Index
@@ -991,7 +991,7 @@ import "github.com/bartossh/The-Accountant/server"
 ```go
 const (
     ApiVersion = "1.0.0"
-    Header     = "The Accountant"
+    Header     = "Computantis"
 )
 ```
 
@@ -1016,7 +1016,7 @@ const (
 var ErrWrongPortSpecified = errors.New("port must be between 1 and 65535")
 ```
 
-## func [Run](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L95>)
+## func [Run](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L95>)
 
 ```go
 func Run(ctx context.Context, c Config, repo Repository, bookkeeping Bookkeeper, pv RandomDataProvideValidator) error
@@ -1024,7 +1024,7 @@ func Run(ctx context.Context, c Config, repo Repository, bookkeeping Bookkeeper,
 
 Run initializes routing and runs the server. To stop the server cancel the context.
 
-## type [AliveResponse](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L9-L13>)
+## type [AliveResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L9-L13>)
 
 AliveResponse is a response for alive and version check.
 
@@ -1036,7 +1036,7 @@ type AliveResponse struct {
 }
 ```
 
-## type [AwaitedIssuedTransactionRequest](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L138-L143>)
+## type [AwaitedIssuedTransactionRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L138-L143>)
 
 AwaitedIssuedTransactionRequest is a request to get awaited or issued transactions for given address. Request contains of Address for which Transactions are requested, Data in binary format, Hash of Data and Signature of the Data to prove that entity doing the request is an Address owner.
 
@@ -1049,7 +1049,7 @@ type AwaitedIssuedTransactionRequest struct {
 }
 ```
 
-## type [AwaitedTransactionResponse](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L146-L149>)
+## type [AwaitedTransactionResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L146-L149>)
 
 AwaitedTransactionResponse is a response for awaited transactions request.
 
@@ -1060,7 +1060,7 @@ type AwaitedTransactionResponse struct {
 }
 ```
 
-## type [Bookkeeper](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L68-L73>)
+## type [Bookkeeper](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L68-L73>)
 
 Bookkeeper abstracts methods of the bookkeeping of a blockchain.
 
@@ -1073,7 +1073,7 @@ type Bookkeeper interface {
 }
 ```
 
-## type [Config](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L83-L85>)
+## type [Config](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L83-L85>)
 
 Config contains configuration of the server.
 
@@ -1083,7 +1083,7 @@ type Config struct {
 }
 ```
 
-## type [CreateAddressRequest](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L235-L241>)
+## type [CreateAddressRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L235-L241>)
 
 CreateAddressRequest is a request to create an address.
 
@@ -1097,7 +1097,7 @@ type CreateAddressRequest struct {
 }
 ```
 
-## type [CreateAddressResponse](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L244-L247>)
+## type [CreateAddressResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L244-L247>)
 
 Response for address creation.
 
@@ -1108,7 +1108,7 @@ type CreateAddressResponse struct {
 }
 ```
 
-## type [DataToSignRequest](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L216-L218>)
+## type [DataToSignRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L216-L218>)
 
 DataToSignRequest is a request to get data to sign for proving identity.
 
@@ -1118,7 +1118,7 @@ type DataToSignRequest struct {
 }
 ```
 
-## type [DataToSignResponse](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L221-L223>)
+## type [DataToSignResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L221-L223>)
 
 DataToSignRequest is a response containing data to sign for proving identity.
 
@@ -1128,7 +1128,7 @@ type DataToSignResponse struct {
 }
 ```
 
-## type [IssuedTransactionResponse](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L181-L184>)
+## type [IssuedTransactionResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L181-L184>)
 
 AwaitedTransactionResponse is a response for issued transactions request.
 
@@ -1139,7 +1139,7 @@ type IssuedTransactionResponse struct {
 }
 ```
 
-## type [Message](<https://github.com/bartossh/The-Accountant/blob/main/server/ws.go#L43-L48>)
+## type [Message](<https://github.com/bartossh/Computantis/blob/main/server/ws.go#L43-L48>)
 
 Message is the message that is used to exchange information between the server and the client.
 
@@ -1152,7 +1152,7 @@ type Message struct {
 }
 ```
 
-## type [RandomDataProvideValidator](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L77-L80>)
+## type [RandomDataProvideValidator](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L77-L80>)
 
 RandomDataProvideValidator provides random binary data for signing to prove identity and the validator of data being valid and not expired.
 
@@ -1163,7 +1163,7 @@ type RandomDataProvideValidator interface {
 }
 ```
 
-## type [Repository](<https://github.com/bartossh/The-Accountant/blob/main/server/server.go#L54-L65>)
+## type [Repository](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L54-L65>)
 
 Repository is the interface that wraps the basic CRUD and Search methods. Repository should be properly indexed to allow for transaction and block hash. as well as address public keys to be and unique and the hash lookup should be fast. Repository holds the blocks and transaction that are part of the blockchain.
 
@@ -1182,7 +1182,7 @@ type Repository interface {
 }
 ```
 
-## type [SearchAddressRequest](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L25-L27>)
+## type [SearchAddressRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L25-L27>)
 
 SearchAddressRequest is a request to search for address.
 
@@ -1192,7 +1192,7 @@ type SearchAddressRequest struct {
 }
 ```
 
-## type [SearchAddressResponse](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L30-L32>)
+## type [SearchAddressResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L30-L32>)
 
 SearchAddressResponse is a response for address search.
 
@@ -1202,7 +1202,7 @@ type SearchAddressResponse struct {
 }
 ```
 
-## type [SearchBlockRequest](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L53-L55>)
+## type [SearchBlockRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L53-L55>)
 
 SearchBlockRequest is a request to search for block.
 
@@ -1212,7 +1212,7 @@ type SearchBlockRequest struct {
 }
 ```
 
-## type [SearchBlockResponse](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L58-L60>)
+## type [SearchBlockResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L58-L60>)
 
 SearchBlockResponse is a response for block search.
 
@@ -1222,7 +1222,7 @@ type SearchBlockResponse struct {
 }
 ```
 
-## type [TransactionConfirmProposeResponse](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L88-L91>)
+## type [TransactionConfirmProposeResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L88-L91>)
 
 TransactionConfirmProposeResponse is a response for transaction propose.
 
@@ -1233,7 +1233,7 @@ type TransactionConfirmProposeResponse struct {
 }
 ```
 
-## type [TransactionProposeRequest](<https://github.com/bartossh/The-Accountant/blob/main/server/rest.go#L82-L85>)
+## type [TransactionProposeRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L82-L85>)
 
 TransactionProposeRequest is a request to propose a transaction.
 
@@ -1244,7 +1244,7 @@ type TransactionProposeRequest struct {
 }
 ```
 
-## type [UpgradeConnectionRequest](<https://github.com/bartossh/The-Accountant/blob/main/server/ws.go#L33-L39>)
+## type [UpgradeConnectionRequest](<https://github.com/bartossh/Computantis/blob/main/server/ws.go#L33-L39>)
 
 UpgradeConnectionRequest is a request to upgrade to websocket. Request contains signed Data previously sent to client. Signature verifies if given Address is paired with private key that was used to sign the data.
 
@@ -1261,7 +1261,7 @@ type UpgradeConnectionRequest struct {
 # transaction
 
 ```go
-import "github.com/bartossh/The-Accountant/transaction"
+import "github.com/bartossh/Computantis/transaction"
 ```
 
 ## Index
@@ -1292,7 +1292,7 @@ var (
 )
 ```
 
-## type [Signer](<https://github.com/bartossh/The-Accountant/blob/main/transaction/transaction.go#L22-L25>)
+## type [Signer](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L22-L25>)
 
 Signer is an interface for signing transaction.
 
@@ -1303,7 +1303,7 @@ type Signer interface {
 }
 ```
 
-## type [Transaction](<https://github.com/bartossh/The-Accountant/blob/main/transaction/transaction.go#L34-L44>)
+## type [Transaction](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L34-L44>)
 
 Transaction contains transaction information, subject type, subject data, signatures and public keys. Transaction is valid for a week from being issued.
 
@@ -1321,7 +1321,7 @@ type Transaction struct {
 }
 ```
 
-### func [New](<https://github.com/bartossh/The-Accountant/blob/main/transaction/transaction.go#L47>)
+### func [New](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L47>)
 
 ```go
 func New(subject string, message []byte, issuer Signer) (Transaction, error)
@@ -1329,7 +1329,7 @@ func New(subject string, message []byte, issuer Signer) (Transaction, error)
 
 New creates new transaction signed by issuer.
 
-### func \(\*Transaction\) [Sign](<https://github.com/bartossh/The-Accountant/blob/main/transaction/transaction.go#L68>)
+### func \(\*Transaction\) [Sign](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L68>)
 
 ```go
 func (t *Transaction) Sign(receiver Signer, v Verifier) ([32]byte, error)
@@ -1337,7 +1337,7 @@ func (t *Transaction) Sign(receiver Signer, v Verifier) ([32]byte, error)
 
 Sign verifies issuer signature and signs Transaction by receiver.
 
-## type [Verifier](<https://github.com/bartossh/The-Accountant/blob/main/transaction/transaction.go#L28-L30>)
+## type [Verifier](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L28-L30>)
 
 Verifier is an interface for verifying transaction.
 
@@ -1350,7 +1350,7 @@ type Verifier interface {
 # wallet
 
 ```go
-import "github.com/bartossh/The-Accountant/wallet"
+import "github.com/bartossh/Computantis/wallet"
 ```
 
 ## Index
@@ -1369,7 +1369,7 @@ import "github.com/bartossh/The-Accountant/wallet"
   - [func (w *Wallet) Version() byte](<#func-wallet-version>)
 
 
-## type [Helper](<https://github.com/bartossh/The-Accountant/blob/main/wallet/verifier.go#L13>)
+## type [Helper](<https://github.com/bartossh/Computantis/blob/main/wallet/verifier.go#L13>)
 
 Helper provides wallet helper functionalities without knowing about wallet private and public keys.
 
@@ -1377,7 +1377,7 @@ Helper provides wallet helper functionalities without knowing about wallet priva
 type Helper struct{}
 ```
 
-### func \(Helper\) [AddressToPubKey](<https://github.com/bartossh/The-Accountant/blob/main/wallet/verifier.go#L16>)
+### func \(Helper\) [AddressToPubKey](<https://github.com/bartossh/Computantis/blob/main/wallet/verifier.go#L16>)
 
 ```go
 func (h Helper) AddressToPubKey(address string) (ed25519.PublicKey, error)
@@ -1385,7 +1385,7 @@ func (h Helper) AddressToPubKey(address string) (ed25519.PublicKey, error)
 
 AddressToPubKey creates ED25519 public key from address, or returns error otherwise.
 
-### func \(Helper\) [Verify](<https://github.com/bartossh/The-Accountant/blob/main/wallet/verifier.go#L37>)
+### func \(Helper\) [Verify](<https://github.com/bartossh/Computantis/blob/main/wallet/verifier.go#L37>)
 
 ```go
 func (h Helper) Verify(message, signature []byte, hash [32]byte, address string) error
@@ -1393,7 +1393,7 @@ func (h Helper) Verify(message, signature []byte, hash [32]byte, address string)
 
 Verify verifies if message is signed by given key and hash is equal.
 
-## type [Wallet](<https://github.com/bartossh/The-Accountant/blob/main/wallet/wallet.go#L20-L23>)
+## type [Wallet](<https://github.com/bartossh/Computantis/blob/main/wallet/wallet.go#L20-L23>)
 
 Wallet holds public and private key of the wallet owner.
 
@@ -1404,7 +1404,7 @@ type Wallet struct {
 }
 ```
 
-### func [DecodeGOBWallet](<https://github.com/bartossh/The-Accountant/blob/main/wallet/wallet.go#L35>)
+### func [DecodeGOBWallet](<https://github.com/bartossh/Computantis/blob/main/wallet/wallet.go#L35>)
 
 ```go
 func DecodeGOBWallet(data []byte) (Wallet, error)
@@ -1412,7 +1412,7 @@ func DecodeGOBWallet(data []byte) (Wallet, error)
 
 DecodeGOBWallet tries to decode Wallet from gob representation or returns error otherwise.
 
-### func [New](<https://github.com/bartossh/The-Accountant/blob/main/wallet/wallet.go#L26>)
+### func [New](<https://github.com/bartossh/Computantis/blob/main/wallet/wallet.go#L26>)
 
 ```go
 func New() (Wallet, error)
@@ -1420,7 +1420,7 @@ func New() (Wallet, error)
 
 New tries to creates a new Wallet or returns error otherwise.
 
-### func \(\*Wallet\) [Address](<https://github.com/bartossh/The-Accountant/blob/main/wallet/wallet.go#L70>)
+### func \(\*Wallet\) [Address](<https://github.com/bartossh/Computantis/blob/main/wallet/wallet.go#L70>)
 
 ```go
 func (w *Wallet) Address() string
@@ -1428,7 +1428,7 @@ func (w *Wallet) Address() string
 
 Address creates address from the public key that contains wallet version and checksum.
 
-### func \(\*Wallet\) [ChecksumLength](<https://github.com/bartossh/The-Accountant/blob/main/wallet/wallet.go#L60>)
+### func \(\*Wallet\) [ChecksumLength](<https://github.com/bartossh/Computantis/blob/main/wallet/wallet.go#L60>)
 
 ```go
 func (w *Wallet) ChecksumLength() int
@@ -1436,7 +1436,7 @@ func (w *Wallet) ChecksumLength() int
 
 ChecksumLength returns checksum length.
 
-### func \(\*Wallet\) [EncodeGOB](<https://github.com/bartossh/The-Accountant/blob/main/wallet/wallet.go#L47>)
+### func \(\*Wallet\) [EncodeGOB](<https://github.com/bartossh/Computantis/blob/main/wallet/wallet.go#L47>)
 
 ```go
 func (w *Wallet) EncodeGOB() ([]byte, error)
@@ -1444,7 +1444,7 @@ func (w *Wallet) EncodeGOB() ([]byte, error)
 
 EncodeGOB tries to encodes Wallet in to the gob representation or returns error otherwise.
 
-### func \(\*Wallet\) [Sign](<https://github.com/bartossh/The-Accountant/blob/main/wallet/wallet.go#L82>)
+### func \(\*Wallet\) [Sign](<https://github.com/bartossh/Computantis/blob/main/wallet/wallet.go#L82>)
 
 ```go
 func (w *Wallet) Sign(message []byte) (digest [32]byte, signature []byte)
@@ -1452,7 +1452,7 @@ func (w *Wallet) Sign(message []byte) (digest [32]byte, signature []byte)
 
 Signe signs the message with Ed25519 signature. Returns digest hash sha256 and signature.
 
-### func \(\*Wallet\) [Verify](<https://github.com/bartossh/The-Accountant/blob/main/wallet/wallet.go#L90>)
+### func \(\*Wallet\) [Verify](<https://github.com/bartossh/Computantis/blob/main/wallet/wallet.go#L90>)
 
 ```go
 func (w *Wallet) Verify(message, signature []byte, hash [32]byte) bool
@@ -1460,7 +1460,7 @@ func (w *Wallet) Verify(message, signature []byte, hash [32]byte) bool
 
 Verify verifies message ED25519 signature and hash. Uses hashing sha256.
 
-### func \(\*Wallet\) [Version](<https://github.com/bartossh/The-Accountant/blob/main/wallet/wallet.go#L65>)
+### func \(\*Wallet\) [Version](<https://github.com/bartossh/Computantis/blob/main/wallet/wallet.go#L65>)
 
 ```go
 func (w *Wallet) Version() byte
@@ -1471,7 +1471,7 @@ Version returns wallet version.
 # central
 
 ```go
-import "github.com/bartossh/The-Accountant/cmd/central"
+import "github.com/bartossh/Computantis/cmd/central"
 ```
 
 ## Index

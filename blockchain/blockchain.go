@@ -6,7 +6,7 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/bartossh/The-Accountant/block"
+	"github.com/bartossh/Computantis/block"
 )
 
 var (

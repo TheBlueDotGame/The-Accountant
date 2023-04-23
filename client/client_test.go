@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bartossh/The-Accountant/fileoperations"
-	"github.com/bartossh/The-Accountant/wallet"
+	"github.com/bartossh/Computantis/fileoperations"
+	"github.com/bartossh/Computantis/wallet"
 	"github.com/stretchr/testify/assert"
 )
 

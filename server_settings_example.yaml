@@ -11,3 +11,5 @@ database:
   token_expiration: 604800
 dataprovider:
   longevity: 300
+graylog:
+  host: 

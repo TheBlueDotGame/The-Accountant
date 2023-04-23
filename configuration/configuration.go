@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/bartossh/The-Accountant/bookkeeping"
-	"github.com/bartossh/The-Accountant/dataprovider"
-	"github.com/bartossh/The-Accountant/repo"
-	"github.com/bartossh/The-Accountant/server"
+	"github.com/bartossh/Computantis/bookkeeping"
+	"github.com/bartossh/Computantis/dataprovider"
+	"github.com/bartossh/Computantis/repo"
+	"github.com/bartossh/Computantis/server"
 	"gopkg.in/yaml.v2"
 )
 

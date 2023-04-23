@@ -5,8 +5,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/bartossh/The-Accountant/block"
-	"github.com/bartossh/The-Accountant/transaction"
+	"github.com/bartossh/Computantis/block"
+	"github.com/bartossh/Computantis/transaction"
 )
 
 const (

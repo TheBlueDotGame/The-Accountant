@@ -6,3 +6,7 @@ build:
 
 documentation:
 	./gendocs.sh
+
+generate-secret:
+	./secret.sh
+

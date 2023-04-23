@@ -10,7 +10,7 @@
 ############################
 
 # Name of website
-title: The Accountant
+title: Computantis
 
 # Your name to show in the footer
 author: Bartosz Lenart
@@ -73,7 +73,7 @@ social-network-links:
 
 # If you want your website to generate an RSS feed, provide a description
 # The URL for the feed will be https://<your_website>/feed.xml
-rss-description: The Accountant is a golang package allowing to store signed transactions in a blockchain.
+rss-description: Computantis is a golang package allowing to store signed transactions in a blockchain.
 
 ###########################
 # --- General options --- #
@@ -88,7 +88,7 @@ share-links-active:
 
 # How to display the link to your website in the footer
 # Remove this if you don't want a link in the footer
-# url-pretty: "The-Accountant"
+# url-pretty: "Computantis"
 
 # Excerpt word length - Truncate the excerpt of each post on the feed page to the specified number of words
 excerpt_length: 50

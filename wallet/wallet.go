@@ -8,7 +8,7 @@ import (
 	"crypto/sha256"
 	"encoding/gob"
 
-	"github.com/bartossh/The-Accountant/serializer"
+	"github.com/bartossh/Computantis/serializer"
 )
 
 const (
