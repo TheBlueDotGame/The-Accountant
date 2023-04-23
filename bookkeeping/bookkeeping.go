@@ -3,9 +3,12 @@ package bookkeeping
 import (
 	"context"
 	"errors"
+	"fmt"
+	"log"
 	"time"
 
 	"github.com/bartossh/Computantis/block"
+	"github.com/bartossh/Computantis/logger"
 	"github.com/bartossh/Computantis/transaction"
 )
 
@@ -98,6 +101,7 @@ type Ledger struct {
 	ac     AddressChecker
 	vr     SignatureVerifier
 	tf     BlockFinder
+	log    logger.Logger
 }
 
 // NewLedger creates new Ledger if config is valid or returns error otherwise.
@@ -108,6 +112,7 @@ func NewLedger(
 	ac AddressChecker,
 	vr SignatureVerifier,
 	tf BlockFinder,
+	log logger.Logger,
 ) (*Ledger, error) {
 	if err := config.Validate(); err != nil {
 		return nil, err
@@ -121,6 +126,7 @@ func NewLedger(
 		ac:     ac,
 		vr:     vr,
 		tf:     tf,
+		log:    log,
 	}, nil
 }
 
@@ -196,16 +202,16 @@ func (l *Ledger) forge(ctx context.Context) {
 	defer l.cleanHashes()
 	blcHash, err := l.saveBlock(ctx)
 	if err != nil {
-		// TODO: log error and all the hashes of unsigned transactions
+		log.Fatal(fmt.Sprintf("error while saving block: %s", err.Error()))
 		return
 	}
 
 	if err := l.tf.WriteTransactionsInBlock(ctx, blcHash, l.hashes); err != nil {
-		// TODO: log error with writing block hash and trxs hashes in to the search
+		log.Fatal(fmt.Sprintf("error while writing transactions in block [%v]: %s", blcHash, err.Error()))
 	}
 
 	if err := l.tx.MoveTransactionsFromTemporaryToPermanent(ctx, l.hashes); err != nil {
-		// TODO: log error and all the hashes. This error will cause inconsistency. Decide what to do with that problem.
+		log.Fatal(fmt.Sprintf("error while moving transactions from temporary to permanent: %s", err.Error()))
 	}
 }
 
