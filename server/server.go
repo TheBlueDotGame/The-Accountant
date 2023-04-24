@@ -13,7 +13,7 @@ import (
 
 const (
 	ApiVersion = "1.0.0"
-	Header     = "Computantis"
+	Header     = "Computantis-Central"
 )
 
 const (

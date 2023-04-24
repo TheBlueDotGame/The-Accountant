@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/bartossh/Computantis/block"
 	"github.com/bartossh/Computantis/logger"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
@@ -27,25 +28,13 @@ const (
 	echo = "echo"
 )
 
-// UpgradeConnectionRequest is a request to upgrade to websocket.
-// Request contains signed Data previously sent to client.
-// Signature verifies if given Address is paired with private key that
-// was used to sign the data.
-type UpgradeConnectionRequest struct {
-	Address   string   `json:"address"`
-	Token     string   `json:"token"`
-	Data      []byte   `json:"data"`
-	Hash      [32]byte `json:"hash"`
-	Signature []byte   `json:"signature"`
-}
-
 // Message is the message that is used to exchange information between
 // the server and the client.
 type Message struct {
 	receivers []string
-	Command   string `json:"command"` // Command is the command that refers to the action handler in websocket protocol.
-	Error     string `json:"error"`   // Error is the error message that is sent to the client.
-	Data      []byte `json:"data"`    // Data is compressed data that is sent to the client. Based on the command, the client will know how to decompress the data.
+	Command   string      `json:"command"` // Command is the command that refers to the action handler in websocket protocol.
+	Error     string      `json:"error"`   // Error is the error message that is sent to the client.
+	Block     block.Block `json:"block"`   // Block is the block that is sent to the client.
 }
 
 type socket struct {
@@ -59,29 +48,29 @@ type socket struct {
 }
 
 func (s *server) wsWrapper(c *fiber.Ctx) error {
-	var req UpgradeConnectionRequest
-	if err := c.BodyParser(&req); err != nil {
-		s.log.Error(fmt.Sprintf("failed to parse request body: %s", err.Error()))
-		return fiber.ErrBadRequest
+	h := c.GetReqHeaders()
+
+	token, ok := h["token"]
+	if !ok || token == "" {
+		s.log.Error(
+			fmt.Sprintf("websocket server, no token provided from address: %s", c.ClientHelloInfo().Conn.LocalAddr().String()))
+		return fiber.ErrForbidden
 	}
 
-	if ok, err := s.repo.CheckToken(c.Context(), req.Token); !ok || err != nil {
+	if ok, err := s.repo.CheckToken(c.Context(), token); !ok || err != nil {
 		s.log.Error(fmt.Sprintf("failed to check token: %s", err.Error()))
 		return fiber.ErrForbidden
 	}
 
-	if ok := s.randDataProv.ValidateData(req.Address, req.Data); !ok {
-		s.log.Error(fmt.Sprintf("failed to validate data for address %s", req.Address))
-		return fiber.ErrForbidden
-	}
-
-	if err := s.bookkeeping.VerifySignature(req.Data, req.Signature, req.Hash, req.Address); err != nil {
-		s.log.Error(fmt.Sprintf("failed to verify signature: %s", err.Error()))
+	addr, ok := h["address"]
+	if !ok || addr == "" {
+		s.log.Error(
+			fmt.Sprintf("websocket server, no address provided from address: %s", c.ClientHelloInfo().Conn.LocalAddr().String()))
 		return fiber.ErrForbidden
 	}
 
 	client := &socket{
-		address: req.Address,
+		address: addr,
 		hub:     s.hub,
 		conn:    nil,
 		send:    make(chan []byte, clientMessageChannelsBufferSize),
