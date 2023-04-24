@@ -273,15 +273,15 @@ func (s *server) addressCreate(c *fiber.Ctx) error {
 
 	if ok, err := s.repo.CheckToken(c.Context(), req.Token); !ok || err != nil {
 		if err != nil {
-			s.log.Error(fmt.Sprintf("address create endpoint, failed to check token: %s", err.Error()))
+			s.log.Error(fmt.Sprintf("address create endpoint, address: %s, failed to check token: %s", req.Address, err.Error()))
 			return fiber.ErrGone
 		}
-		s.log.Error(fmt.Sprintf("address create endpoint, token is invalid: %s", req.Token))
+		s.log.Error(fmt.Sprintf("address create endpoint, token: %s not found in the repository", req.Token))
 		return fiber.ErrForbidden
 	}
 
 	if err := s.repo.InvalidateToken(c.Context(), req.Token); err != nil {
-		s.log.Error(fmt.Sprintf("address create endpoint, failed to invalidate token: %s", err.Error()))
+		s.log.Error(fmt.Sprintf("address create endpoint, failed to invalidate token: %s, %s", req.Token, err.Error()))
 		return fiber.ErrGone
 	}
 
@@ -293,16 +293,17 @@ func (s *server) addressCreate(c *fiber.Ctx) error {
 
 	if ok, err := s.repo.CheckAddressExists(c.Context(), req.Address); ok || err != nil {
 		if err != nil {
-			s.log.Error(fmt.Sprintf("address create endpoint, failed to check address: %s", err.Error()))
+			s.log.Error(fmt.Sprintf("address create endpoint, failed to check address: %s,%s", req.Address, err.Error()))
 			return fiber.ErrGone
 		}
-		s.log.Error(fmt.Sprintf("address create endpoint, address already exists: %s", req.Address))
+		s.log.Error(fmt.Sprintf("address create endpoint, address already exists: %s, %s", req.Address, err.Error()))
 		return fiber.ErrConflict
 	}
 
 	if err := s.repo.WriteAddress(c.Context(), req.Address); err != nil {
-		s.log.Error(fmt.Sprintf("address create endpoint, failed to write address: %s", err.Error()))
+		s.log.Error(fmt.Sprintf("address create endpoint, failed to write address: %s, %s", req.Address, err.Error()))
 		return fiber.ErrConflict
 	}
-	return c.JSON(CreateAddressResponse{Success: true, Address: req.Address})
+
+	return c.JSON(&CreateAddressResponse{Success: true, Address: req.Address})
 }

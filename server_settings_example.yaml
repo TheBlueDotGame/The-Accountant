@@ -6,7 +6,7 @@ server:
   port: 8080
 database:
   conn_str: "mongodb://example_user:user_secret@localhost:27017"
-  database_name: "accountant"
+  database_name: "computantis"
   token: "somerandomtokenfoapiclients"
   token_expiration: 604800
 dataprovider:
