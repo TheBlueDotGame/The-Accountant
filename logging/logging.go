@@ -2,6 +2,7 @@ package logging
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"time"
 
@@ -13,13 +14,14 @@ import (
 // Helper implements logger.Logger interface.
 // Writing is done concurrently with out blocking the current thread.
 type Helper struct {
-	callOnErr func(error)
-	writers   []io.Writer
+	callOnWriteLogErr func(error)
+	callOnFatal       func(error)
+	writers           []io.Writer
 }
 
 // New creates new Helper.
-func New(callOnErr func(error), writers ...io.Writer) Helper {
-	return Helper{callOnErr: callOnErr, writers: writers}
+func New(callOnWriteLogErr, callOnFatal func(error), writers ...io.Writer) Helper {
+	return Helper{callOnWriteLogErr: callOnWriteLogErr, callOnFatal: callOnFatal, writers: writers}
 }
 
 // Debug writes debug log.
@@ -74,19 +76,34 @@ func (h Helper) Fatal(msg string) {
 		Msg:       msg,
 		CreatedAt: time.Now(),
 	}
-	h.write(&l)
+	h.writeFatal(&l)
 }
 
 func (h Helper) write(l *logger.Log) {
 	go func() {
 		raw, err := json.Marshal(l)
 		if err != nil {
-			h.callOnErr(err)
+			h.callOnWriteLogErr(err)
 		}
 		for _, w := range h.writers {
 			if _, err := w.Write(raw); err != nil {
-				h.callOnErr(err)
+				h.callOnWriteLogErr(err)
 			}
 		}
+	}()
+}
+
+func (h Helper) writeFatal(l *logger.Log) {
+	go func() {
+		raw, err := json.Marshal(l)
+		if err != nil {
+			h.callOnWriteLogErr(err)
+		}
+		for _, w := range h.writers {
+			if _, err := w.Write(raw); err != nil {
+				h.callOnWriteLogErr(err)
+			}
+		}
+		h.callOnFatal(fmt.Errorf(l.Msg))
 	}()
 }

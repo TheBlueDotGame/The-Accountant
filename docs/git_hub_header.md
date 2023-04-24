@@ -20,3 +20,9 @@ Computantis is not keeping track of all transactions in a single blockchain but 
 0. Run database `docker compose up`.
 1. Create `server_settings.yaml` according to `server_settings_example.yaml` in the repo root folder.
 2. Run `make run` or `go run cmd/central/main.go`.
+
+## Stress test
+
+Directory `./stress/` contains REST API performance tests. 
+For example the test on MacBook with M2 arm64 chip, 24GB RAM, mongodb run in docker container with 1CPU and 1GB RAM,
+for full cycle of creating 1000 transactions took 3.75 sec.

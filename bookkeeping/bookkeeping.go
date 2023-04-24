@@ -40,6 +40,7 @@ type TrxWriteReadMover interface {
 	RemoveAwaitingTransaction(ctx context.Context, trxHash [32]byte) error
 	ReadAwaitingTransactionsByReceiver(ctx context.Context, address string) ([]transaction.Transaction, error)
 	ReadAwaitingTransactionsByIssuer(ctx context.Context, address string) ([]transaction.Transaction, error)
+	ReadTemporaryTransactions(ctx context.Context) ([]transaction.Transaction, error)
 }
 
 type BlockReader interface {
@@ -133,6 +134,9 @@ func NewLedger(
 // Run runs the Ladger engine that writes blocks to the blockchain repository.
 // Run starts a goroutine and can be stopped by cancelling the context.
 func (l *Ledger) Run(ctx context.Context) {
+	if err := l.forgeTemporary(ctx); err != nil {
+		l.log.Fatal(fmt.Sprintf("forging temporary failed: %s", err.Error()))
+	}
 	go func(ctx context.Context) {
 		ticker := time.NewTicker(time.Duration(l.config.BlockWriteTimestamp) * time.Second)
 	outer:
@@ -196,6 +200,18 @@ func (l *Ledger) WriteCandidateTransaction(ctx context.Context, trx *transaction
 
 func (l *Ledger) VerifySignature(message, signature []byte, hash [32]byte, address string) error {
 	return l.vr.Verify(message, signature, hash, address)
+}
+
+func (l *Ledger) forgeTemporary(ctx context.Context) error {
+	trxs, err := l.tx.ReadTemporaryTransactions(ctx)
+	if err != nil {
+		return err
+	}
+	for _, trx := range trxs {
+		l.hashes = append(l.hashes, trx.Hash)
+	}
+	l.forge(ctx)
+	return nil
 }
 
 func (l *Ledger) forge(ctx context.Context) {

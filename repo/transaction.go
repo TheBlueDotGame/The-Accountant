@@ -117,3 +117,19 @@ func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context,
 
 	return err
 }
+
+// ReadTemporaryTransactions reads transactions from the temporary storage.
+func (db DataBase) ReadTemporaryTransactions(ctx context.Context) ([]transaction.Transaction, error) {
+	var trxs []transaction.Transaction
+	curs, err := db.inner.Collection(transactionsTemporaryCollection).Find(ctx, bson.M{})
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	if err := curs.All(ctx, &trxs); err != nil {
+		return nil, err
+	}
+	return trxs, nil
+}

@@ -44,7 +44,11 @@ func main() {
 		fmt.Println("error with logger: ", err)
 	}
 
-	log := logging.New(callbackOnErr, db)
+	callbackOnFatal := func(err error) {
+		panic(fmt.Sprintf("error with logger: %s", err))
+	}
+
+	log := logging.New(callbackOnErr, callbackOnFatal, db)
 
 	if err := blockchain.GenesisBlock(ctx, db); err != nil {
 		fmt.Println(err)
