@@ -8,6 +8,7 @@ import (
 	"github.com/bartossh/Computantis/dataprovider"
 	"github.com/bartossh/Computantis/repo"
 	"github.com/bartossh/Computantis/server"
+	"github.com/bartossh/Computantis/validator"
 	"gopkg.in/yaml.v2"
 )
 
@@ -18,6 +19,7 @@ type Main struct {
 	Server       server.Config       `yaml:"server"`
 	Database     repo.Config         `yaml:"database"`
 	DataProvider dataprovider.Config `yaml:"data_provider"`
+	Validator    validator.Config    `yaml:"validator"`
 }
 
 // Read reads the configuration  from the file and returns the MainYaml struct.

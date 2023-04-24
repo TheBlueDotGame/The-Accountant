@@ -19,6 +19,7 @@ const (
 	transactionsInBlockCollection          = "transactionsInBlock"
 	tokensCollection                       = "tokens"
 	logsCollection                         = "logs"
+	validatorStatusCollection              = "validatorStatus"
 )
 
 // Config contains configuration for the database.

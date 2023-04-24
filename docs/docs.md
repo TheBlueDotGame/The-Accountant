@@ -355,6 +355,7 @@ import "github.com/bartossh/Computantis/client"
   - [func NewRest(apiRoot string, timeout time.Duration, fw transaction.Verifier, wrs WalletReadSaver, walletCreator NewSignValidatorCreator) *Rest](<#func-newrest>)
   - [func (r *Rest) Address() (string, error)](<#func-rest-address>)
   - [func (r *Rest) ConfirmTransaction(trx transaction.Transaction) error](<#func-rest-confirmtransaction>)
+  - [func (r *Rest) DataToSign(address string) (server.DataToSignResponse, error)](<#func-rest-datatosign>)
   - [func (r *Rest) FlushWalletFromMemory()](<#func-rest-flushwalletfrommemory>)
   - [func (r *Rest) NewWallet(token string) error](<#func-rest-newwallet>)
   - [func (r *Rest) ProposeTransaction(receiverAddr string, subject string, data []byte) error](<#func-rest-proposetransaction>)
@@ -362,6 +363,7 @@ import "github.com/bartossh/Computantis/client"
   - [func (r *Rest) ReadWaitingTransactions() ([]transaction.Transaction, error)](<#func-rest-readwaitingtransactions>)
   - [func (r *Rest) ReadWalletFromFile(path string) error](<#func-rest-readwalletfromfile>)
   - [func (r *Rest) SaveWalletToFile(path string) error](<#func-rest-savewallettofile>)
+  - [func (r *Rest) Sign(d []byte) (digest [32]byte, signature []byte, err error)](<#func-rest-sign>)
   - [func (r *Rest) ValidateApiVersion() error](<#func-rest-validateapiversion>)
 - [type WalletReadSaver](<#type-walletreadsaver>)
 
@@ -425,7 +427,15 @@ func (r *Rest) ConfirmTransaction(trx transaction.Transaction) error
 
 ConfirmTransaction confirms transaction by signing it with the wallet and then sending it to the API server.
 
-### func \(\*Rest\) [FlushWalletFromMemory](<https://github.com/bartossh/Computantis/blob/main/client/client.go#L284>)
+### func \(\*Rest\) [DataToSign](<https://github.com/bartossh/Computantis/blob/main/client/client.go#L281>)
+
+```go
+func (r *Rest) DataToSign(address string) (server.DataToSignResponse, error)
+```
+
+DataToSign returns data to sign for the given address.
+
+### func \(\*Rest\) [FlushWalletFromMemory](<https://github.com/bartossh/Computantis/blob/main/client/client.go#L305>)
 
 ```go
 func (r *Rest) FlushWalletFromMemory()
@@ -481,6 +491,14 @@ func (r *Rest) SaveWalletToFile(path string) error
 
 SaveWalletToFile saves the wallet to the file in the path.
 
+### func \(\*Rest\) [Sign](<https://github.com/bartossh/Computantis/blob/main/client/client.go#L293>)
+
+```go
+func (r *Rest) Sign(d []byte) (digest [32]byte, signature []byte, err error)
+```
+
+Sign signs the given data with the wallet and returns digest and signature or error otherwise.
+
 ### func \(\*Rest\) [ValidateApiVersion](<https://github.com/bartossh/Computantis/blob/main/client/client.go#L63>)
 
 ```go
@@ -512,7 +530,7 @@ import "github.com/bartossh/Computantis/configuration"
   - [func Read(path string) (Main, error)](<#func-read>)
 
 
-## type [Main](<https://github.com/bartossh/Computantis/blob/main/configuration/configuration.go#L16-L21>)
+## type [Main](<https://github.com/bartossh/Computantis/blob/main/configuration/configuration.go#L17-L23>)
 
 Main is the main configuration of the application that corresponds to the \*.yaml file that holds the configuration.
 
@@ -522,10 +540,11 @@ type Main struct {
     Server       server.Config       `yaml:"server"`
     Database     repo.Config         `yaml:"database"`
     DataProvider dataprovider.Config `yaml:"data_provider"`
+    Validator    validator.Config    `yaml:"validator"`
 }
 ```
 
-### func [Read](<https://github.com/bartossh/Computantis/blob/main/configuration/configuration.go#L24>)
+### func [Read](<https://github.com/bartossh/Computantis/blob/main/configuration/configuration.go#L26>)
 
 ```go
 func Read(path string) (Main, error)
@@ -766,6 +785,7 @@ import "github.com/bartossh/Computantis/repo"
   - [func (db DataBase) ReadAwaitingTransactionsByIssuer(ctx context.Context, address string) ([]transaction.Transaction, error)](<#func-database-readawaitingtransactionsbyissuer>)
   - [func (db DataBase) ReadAwaitingTransactionsByReceiver(ctx context.Context, address string) ([]transaction.Transaction, error)](<#func-database-readawaitingtransactionsbyreceiver>)
   - [func (db DataBase) ReadBlockByHash(ctx context.Context, hash [32]byte) (block.Block, error)](<#func-database-readblockbyhash>)
+  - [func (db DataBase) ReadLastValidatorStatus(ctx context.Context, last int64) ([]ValidatorStatus, error)](<#func-database-readlastvalidatorstatus>)
   - [func (db DataBase) ReadTemporaryTransactions(ctx context.Context) ([]transaction.Transaction, error)](<#func-database-readtemporarytransactions>)
   - [func (db DataBase) RemoveAwaitingTransaction(ctx context.Context, trxHash [32]byte) error](<#func-database-removeawaitingtransaction>)
   - [func (c DataBase) RunMigration(ctx context.Context) error](<#func-database-runmigration>)
@@ -776,10 +796,12 @@ import "github.com/bartossh/Computantis/repo"
   - [func (db DataBase) WriteTemporaryTransaction(ctx context.Context, trx *transaction.Transaction) error](<#func-database-writetemporarytransaction>)
   - [func (db DataBase) WriteToken(ctx context.Context, token string, expirationDate int64) error](<#func-database-writetoken>)
   - [func (db DataBase) WriteTransactionsInBlock(ctx context.Context, blockHash [32]byte, trxHash [][32]byte) error](<#func-database-writetransactionsinblock>)
+  - [func (db DataBase) WriteValidatorStatus(ctx context.Context, vs *ValidatorStatus) error](<#func-database-writevalidatorstatus>)
 - [type Migration](<#type-migration>)
 - [type Token](<#type-token>)
 - [type TransactionAwaitingReceiverSignature](<#type-transactionawaitingreceiversignature>)
 - [type TransactionInBlock](<#type-transactioninblock>)
+- [type ValidatorStatus](<#type-validatorstatus>)
 
 
 ## type [Address](<https://github.com/bartossh/Computantis/blob/main/repo/address.go#L13-L16>)
@@ -793,7 +815,7 @@ type Address struct {
 }
 ```
 
-## type [Config](<https://github.com/bartossh/Computantis/blob/main/repo/repo.go#L25-L30>)
+## type [Config](<https://github.com/bartossh/Computantis/blob/main/repo/repo.go#L26-L31>)
 
 Config contains configuration for the database.
 
@@ -806,7 +828,7 @@ type Config struct {
 }
 ```
 
-## type [DataBase](<https://github.com/bartossh/Computantis/blob/main/repo/repo.go#L33-L35>)
+## type [DataBase](<https://github.com/bartossh/Computantis/blob/main/repo/repo.go#L34-L36>)
 
 Database provides database access for read, write and delete of repository entities.
 
@@ -816,7 +838,7 @@ type DataBase struct {
 }
 ```
 
-### func [Connect](<https://github.com/bartossh/Computantis/blob/main/repo/repo.go#L38>)
+### func [Connect](<https://github.com/bartossh/Computantis/blob/main/repo/repo.go#L39>)
 
 ```go
 func Connect(ctx context.Context, cfg Config) (*DataBase, error)
@@ -840,7 +862,7 @@ func (db DataBase) CheckToken(ctx context.Context, token string) (bool, error)
 
 CheckToken checks if token exists in the database is valid and didn't expire.
 
-### func \(DataBase\) [Disconnect](<https://github.com/bartossh/Computantis/blob/main/repo/repo.go#L54>)
+### func \(DataBase\) [Disconnect](<https://github.com/bartossh/Computantis/blob/main/repo/repo.go#L55>)
 
 ```go
 func (c DataBase) Disconnect(ctx context.Context) error
@@ -911,6 +933,14 @@ func (db DataBase) ReadBlockByHash(ctx context.Context, hash [32]byte) (block.Bl
 ```
 
 ReadBlockByHash returns block with given hash.
+
+### func \(DataBase\) [ReadLastValidatorStatus](<https://github.com/bartossh/Computantis/blob/main/repo/validator.go#L29>)
+
+```go
+func (db DataBase) ReadLastValidatorStatus(ctx context.Context, last int64) ([]ValidatorStatus, error)
+```
+
+ReadLastValidatorStatus reads last validator statuses from the database.
 
 ### func \(DataBase\) [ReadTemporaryTransactions](<https://github.com/bartossh/Computantis/blob/main/repo/transaction.go#L122>)
 
@@ -992,6 +1022,14 @@ func (db DataBase) WriteTransactionsInBlock(ctx context.Context, blockHash [32]b
 
 WriteTransactionsInBlock stores relation between Transaction and Block to which Transaction was added.
 
+### func \(DataBase\) [WriteValidatorStatus](<https://github.com/bartossh/Computantis/blob/main/repo/validator.go#L23>)
+
+```go
+func (db DataBase) WriteValidatorStatus(ctx context.Context, vs *ValidatorStatus) error
+```
+
+WriteValidatorStatus writes validator status to the database.
+
 ## type [Migration](<https://github.com/bartossh/Computantis/blob/main/repo/migrations.go#L24-L26>)
 
 Migration describes migration that is made in the repository database.
@@ -1038,6 +1076,20 @@ type TransactionInBlock struct {
     ID              primitive.ObjectID `json:"-" bson:"_id,omitempty"`
     BlockHash       [32]byte           `json:"-" bson:"block_hash"`
     TransactionHash [32]byte           `json:"-" bson:"transaction_hash"`
+}
+```
+
+## type [ValidatorStatus](<https://github.com/bartossh/Computantis/blob/main/repo/validator.go#L14-L20>)
+
+ValidatorStatus is a status of each received block by the validator.
+
+```go
+type ValidatorStatus struct {
+    ID        primitive.ObjectID `json:"-"          bson:"_id,omitempty"`
+    Index     int64              `json:"index"      bson:"index"`
+    Block     block.Block        `json:"block"      bson:"block"`
+    Valid     bool               `json:"valid"      bson:"valid"`
+    CreatedAt time.Time          `json:"created_at" bson:"created_at"`
 }
 ```
 
@@ -1099,7 +1151,6 @@ import "github.com/bartossh/Computantis/server"
 - [type SearchBlockResponse](<#type-searchblockresponse>)
 - [type TransactionConfirmProposeResponse](<#type-transactionconfirmproposeresponse>)
 - [type TransactionProposeRequest](<#type-transactionproposerequest>)
-- [type UpgradeConnectionRequest](<#type-upgradeconnectionrequest>)
 
 
 ## Constants
@@ -1107,7 +1158,7 @@ import "github.com/bartossh/Computantis/server"
 ```go
 const (
     ApiVersion = "1.0.0"
-    Header     = "Computantis"
+    Header     = "Computantis-Central"
 )
 ```
 
@@ -1255,15 +1306,15 @@ type IssuedTransactionResponse struct {
 }
 ```
 
-## type [Message](<https://github.com/bartossh/Computantis/blob/main/server/ws.go#L44-L49>)
+## type [Message](<https://github.com/bartossh/Computantis/blob/main/server/ws.go#L33-L38>)
 
 Message is the message that is used to exchange information between the server and the client.
 
 ```go
 type Message struct {
-    Command string `json:"command"` // Command is the command that refers to the action handler in websocket protocol.
-    Error   string `json:"error"`   // Error is the error message that is sent to the client.
-    Data    []byte `json:"data"`    // Data is compressed data that is sent to the client. Based on the command, the client will know how to decompress the data.
+    Command string      `json:"command"` // Command is the command that refers to the action handler in websocket protocol.
+    Error   string      `json:"error"`   // Error is the error message that is sent to the client.
+    Block   block.Block `json:"block"`   // Block is the block that is sent to the client.
     // contains filtered or unexported fields
 }
 ```
@@ -1357,20 +1408,6 @@ TransactionProposeRequest is a request to propose a transaction.
 type TransactionProposeRequest struct {
     ReceiverAddr string                  `json:"receiver_addr"`
     Transaction  transaction.Transaction `json:"transaction"`
-}
-```
-
-## type [UpgradeConnectionRequest](<https://github.com/bartossh/Computantis/blob/main/server/ws.go#L34-L40>)
-
-UpgradeConnectionRequest is a request to upgrade to websocket. Request contains signed Data previously sent to client. Signature verifies if given Address is paired with private key that was used to sign the data.
-
-```go
-type UpgradeConnectionRequest struct {
-    Address   string   `json:"address"`
-    Token     string   `json:"token"`
-    Data      []byte   `json:"data"`
-    Hash      [32]byte `json:"hash"`
-    Signature []byte   `json:"signature"`
 }
 ```
 
@@ -1470,6 +1507,59 @@ Verifier is an interface for verifying transaction.
 ```go
 type Verifier interface {
     Verify(message, signature []byte, hash [32]byte, address string) error
+}
+```
+
+# validator
+
+```go
+import "github.com/bartossh/Computantis/validator"
+```
+
+## Index
+
+- [Constants](<#constants>)
+- [func Run(ctx context.Context, cfg Config, srw StatusReadWriter, log logger.Logger) error](<#func-run>)
+- [type Config](<#type-config>)
+- [type StatusReadWriter](<#type-statusreadwriter>)
+
+
+## Constants
+
+```go
+const (
+    Header = "Computantis-Validator"
+)
+```
+
+## func [Run](<https://github.com/bartossh/Computantis/blob/main/validator/validator.go#L46>)
+
+```go
+func Run(ctx context.Context, cfg Config, srw StatusReadWriter, log logger.Logger) error
+```
+
+Run initializes routing and runs the validator. To stop the validator cancel the context. Validator connects to the central server via websocket and listens for new blocks.
+
+## type [Config](<https://github.com/bartossh/Computantis/blob/main/validator/validator.go#L27-L33>)
+
+Config contains configuration of the validator.
+
+```go
+type Config struct {
+    Token      string `yaml:"token"`
+    Address    string `yaml:"address"`
+    Websocket  string `yaml:"websocket"`
+    Port       int    `yaml:"port"`
+    WalletPath string `yaml:"wallet_path"`
+}
+```
+
+## type [StatusReadWriter](<https://github.com/bartossh/Computantis/blob/main/validator/validator.go#L21-L24>)
+
+```go
+type StatusReadWriter interface {
+    WriteValidatorStatus(ctx context.Context, vs *repo.ValidatorStatus) error
+    ReadLastValidatorStatus(ctx context.Context, last int64) ([]repo.ValidatorStatus, error)
 }
 ```
 
@@ -1598,6 +1688,16 @@ Version returns wallet version.
 
 ```go
 import "github.com/bartossh/Computantis/cmd/central"
+```
+
+## Index
+
+
+
+# validator
+
+```go
+import "github.com/bartossh/Computantis/cmd/validator"
 ```
 
 ## Index

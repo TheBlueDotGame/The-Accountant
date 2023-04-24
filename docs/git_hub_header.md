@@ -23,6 +23,6 @@ Computantis is not keeping track of all transactions in a single blockchain but 
 
 ## Stress test
 
-Directory `./stress/` contains REST API performance tests. 
-For example the test on MacBook with M2 arm64 chip, 24GB RAM, mongodb run in docker container with 1CPU and 1GB RAM,
-for full cycle of creating 1000 transactions took 3.75 sec.
+Directory `stress/` contains central node REST API performance tests. 
+Test on MacBook with M2 arm64 chip, 24GB RAM, mongodb run in docker container with 1CPU and 1GB RAM,
+25 transactions per block, full cycle of creating 1000 transactions took 3.75 sec.

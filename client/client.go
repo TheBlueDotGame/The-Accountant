@@ -94,7 +94,7 @@ func (r *Rest) NewWallet(token string) error {
 			fmt.Errorf("version mismatch, expected %d but got %d", version, w.Version()))
 	}
 
-	dataToSign, err := r.dataToSign(w.Address())
+	dataToSign, err := r.DataToSign(w.Address())
 	if err != nil {
 		return errors.Join(ErrRejectedByServer, err)
 	}
@@ -204,7 +204,7 @@ func (r *Rest) ReadWaitingTransactions() ([]transaction.Transaction, error) {
 		return nil, ErrWalletNotReady
 	}
 
-	data, err := r.dataToSign(r.w.Address())
+	data, err := r.DataToSign(r.w.Address())
 	if err != nil {
 		return nil, errors.Join(ErrRejectedByServer, err)
 	}
@@ -234,7 +234,7 @@ func (r *Rest) ReadIssuedTransactions() ([]transaction.Transaction, error) {
 		return nil, ErrWalletNotReady
 	}
 
-	data, err := r.dataToSign(r.w.Address())
+	data, err := r.DataToSign(r.w.Address())
 	if err != nil {
 		return nil, errors.Join(ErrRejectedByServer, err)
 	}
@@ -275,6 +275,27 @@ func (r *Rest) ReadWalletFromFile(path string) error {
 	r.w = w
 	r.ready = true
 	return nil
+}
+
+// DataToSign returns data to sign for the given address.
+func (r *Rest) DataToSign(address string) (server.DataToSignResponse, error) {
+	req := server.DataToSignRequest{
+		Address: address,
+	}
+	var resp server.DataToSignResponse
+	if err := r.makePost(server.DataToValidateURL, req, &resp); err != nil {
+		return server.DataToSignResponse{}, err
+	}
+	return resp, nil
+}
+
+// Sign signs the given data with the wallet and returns digest and signature or error otherwise.
+func (r *Rest) Sign(d []byte) (digest [32]byte, signature []byte, err error) {
+	if !r.ready {
+		return digest, signature, ErrWalletNotReady
+	}
+	digest, signature = r.w.Sign(d)
+	return
 }
 
 // FlushWalletFromMemory flushes the wallet from the memory.
@@ -358,15 +379,4 @@ func (r *Rest) makeGet(path string, out any) error {
 	}
 
 	return json.Unmarshal(resp.Body(), out)
-}
-
-func (r *Rest) dataToSign(address string) (server.DataToSignResponse, error) {
-	req := server.DataToSignRequest{
-		Address: address,
-	}
-	var resp server.DataToSignResponse
-	if err := r.makePost(server.DataToValidateURL, req, &resp); err != nil {
-		return server.DataToSignResponse{}, err
-	}
-	return resp, nil
 }
