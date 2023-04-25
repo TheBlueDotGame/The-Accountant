@@ -34,6 +34,7 @@ type BlockReadWriter interface {
 }
 
 // Blockchain keeps track of the blocks.
+// It is keeps history immutable, only available writes are new block appends.
 type Blockchain struct {
 	mux            sync.RWMutex
 	lastBlockHash  [32]byte
@@ -47,12 +48,12 @@ func GenesisBlock(ctx context.Context, rw BlockReadWriter) error {
 		return errors.New("genesis block already exists")
 	}
 	h := sha256.Sum256([]byte("genesis block"))
-	b := block.NewBlock(0, 1, h, [][32]byte{})
+	b := block.New(0, 1, h, [][32]byte{})
 	return rw.WriteBlock(ctx, b)
 }
 
-// NewBlockchain creates a new Blockchain that has access to the blockchain stored in the repository.
-func NewBlockchain(ctx context.Context, rw BlockReadWriter) (*Blockchain, error) {
+// New creates a new Blockchain that has access to the blockchain stored in the repository.
+func New(ctx context.Context, rw BlockReadWriter) (*Blockchain, error) {
 	lastBlock, err := rw.LastBlock(ctx)
 	if err != nil {
 		return nil, err

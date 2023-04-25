@@ -12,9 +12,9 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// Main is the main configuration of the application that corresponds to the *.yaml file
+// Configuration is the main configuration of the application that corresponds to the *.yaml file
 // that holds the configuration.
-type Main struct {
+type Configuration struct {
 	Bookkeeper   bookkeeping.Config  `yaml:"bookkeeper"`
 	Server       server.Config       `yaml:"server"`
 	Database     repo.Config         `yaml:"database"`
@@ -23,16 +23,16 @@ type Main struct {
 }
 
 // Read reads the configuration  from the file and returns the MainYaml struct.
-func Read(path string) (Main, error) {
+func Read(path string) (Configuration, error) {
 	buf, err := os.ReadFile(path)
 	if err != nil {
-		return Main{}, err
+		return Configuration{}, err
 	}
 
-	var main Main
+	var main Configuration
 	err = yaml.Unmarshal(buf, &main)
 	if err != nil {
-		return Main{}, fmt.Errorf("in file %q: %w", path, err)
+		return Configuration{}, fmt.Errorf("in file %q: %w", path, err)
 	}
 
 	return main, err

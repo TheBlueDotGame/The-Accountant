@@ -217,6 +217,20 @@ var migrations = []migration{
 			return err
 		},
 	},
+	{
+		name: "index_validator_status_index",
+		run: func(ctx context.Context, user *mongo.Database) error {
+			_, err := user.Collection(validatorStatusCollection).
+				Indexes().
+				CreateOne(ctx, mongo.IndexModel{
+					Keys: bson.M{
+						"index": -1,
+					},
+					Options: options.Index().SetUnique(true),
+				})
+			return err
+		},
+	},
 }
 
 func (c DataBase) migrate(ctx context.Context, migrationsCollection []migration) ([]string, error) {

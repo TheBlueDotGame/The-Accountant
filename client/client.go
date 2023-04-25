@@ -40,8 +40,8 @@ type WalletReadSaver interface {
 // NewWalletCreator is a function that creates a new SignValidator.
 type NewSignValidatorCreator func() (wallet.Wallet, error)
 
-// Rest is a rest client for the API.
-type Rest struct {
+// Client is a rest client for the API.
+type Client struct {
 	apiRoot       string
 	timeout       time.Duration
 	verifier      transaction.Verifier
@@ -51,16 +51,16 @@ type Rest struct {
 	ready         bool
 }
 
-// NewRest creates a new rest client.
-func NewRest(
+// NewClient creates a new rest client.
+func NewClient(
 	apiRoot string, timeout time.Duration, fw transaction.Verifier,
 	wrs WalletReadSaver, walletCreator NewSignValidatorCreator,
-) *Rest {
-	return &Rest{apiRoot: apiRoot, timeout: timeout, verifier: fw, wrs: wrs, walletCreator: walletCreator}
+) *Client {
+	return &Client{apiRoot: apiRoot, timeout: timeout, verifier: fw, wrs: wrs, walletCreator: walletCreator}
 }
 
 // ValidateApiVersion makes a call to the API server and validates client and server API versions and header correctness.
-func (r *Rest) ValidateApiVersion() error {
+func (r *Client) ValidateApiVersion() error {
 	var alive server.AliveResponse
 	if err := r.makeGet("alive", &alive); err != nil {
 		return err
@@ -78,7 +78,7 @@ func (r *Rest) ValidateApiVersion() error {
 }
 
 // NewWallet creates a new wallet and sends a request to the API server to validate the wallet.
-func (r *Rest) NewWallet(token string) error {
+func (r *Client) NewWallet(token string) error {
 	w, err := r.walletCreator()
 	if err != nil {
 		return err
@@ -129,7 +129,7 @@ func (r *Rest) NewWallet(token string) error {
 
 // Address reads the wallet address.
 // Address is a string representation of wallet public key.
-func (r *Rest) Address() (string, error) {
+func (r *Client) Address() (string, error) {
 	if !r.ready {
 		return "", ErrWalletNotReady
 	}
@@ -141,7 +141,7 @@ func (r *Rest) Address() (string, error) {
 // Subject describes how to read the data from the transaction. For example, if the subject is "json",
 // then the data can by decoded to map[sting]any, when subject "pdf" than it should be decoded by proper pdf decoder,
 // when "csv" then it should be decoded by proper csv decoder.
-func (r *Rest) ProposeTransaction(receiverAddr string, subject string, data []byte) error {
+func (r *Client) ProposeTransaction(receiverAddr string, subject string, data []byte) error {
 	if !r.ready {
 		return ErrWalletNotReady
 	}
@@ -173,7 +173,7 @@ func (r *Rest) ProposeTransaction(receiverAddr string, subject string, data []by
 
 // ConfirmTransaction confirms transaction by signing it with the wallet
 // and then sending it to the API server.
-func (r *Rest) ConfirmTransaction(trx transaction.Transaction) error {
+func (r *Client) ConfirmTransaction(trx transaction.Transaction) error {
 	if !r.ready {
 		return ErrWalletNotReady
 	}
@@ -199,7 +199,7 @@ func (r *Rest) ConfirmTransaction(trx transaction.Transaction) error {
 }
 
 // ReadWaitingTransactions reads all waiting transactions belonging to current wallet from the API server.
-func (r *Rest) ReadWaitingTransactions() ([]transaction.Transaction, error) {
+func (r *Client) ReadWaitingTransactions() ([]transaction.Transaction, error) {
 	if !r.ready {
 		return nil, ErrWalletNotReady
 	}
@@ -229,7 +229,7 @@ func (r *Rest) ReadWaitingTransactions() ([]transaction.Transaction, error) {
 }
 
 // ReadIssuedTransactions reads all issued transactions belonging to current wallet from the API server.
-func (r *Rest) ReadIssuedTransactions() ([]transaction.Transaction, error) {
+func (r *Client) ReadIssuedTransactions() ([]transaction.Transaction, error) {
 	if !r.ready {
 		return nil, ErrWalletNotReady
 	}
@@ -258,7 +258,7 @@ func (r *Rest) ReadIssuedTransactions() ([]transaction.Transaction, error) {
 }
 
 // SaveWalletToFile saves the wallet to the file in the path.
-func (r *Rest) SaveWalletToFile(path string) error {
+func (r *Client) SaveWalletToFile(path string) error {
 	if !r.ready {
 		return ErrWalletNotReady
 	}
@@ -267,7 +267,7 @@ func (r *Rest) SaveWalletToFile(path string) error {
 }
 
 // ReadWalletFromFile reads the wallet from the file in the path.
-func (r *Rest) ReadWalletFromFile(path string) error {
+func (r *Client) ReadWalletFromFile(path string) error {
 	w, err := r.wrs.ReadWallet(path)
 	if err != nil {
 		return err
@@ -278,7 +278,7 @@ func (r *Rest) ReadWalletFromFile(path string) error {
 }
 
 // DataToSign returns data to sign for the given address.
-func (r *Rest) DataToSign(address string) (server.DataToSignResponse, error) {
+func (r *Client) DataToSign(address string) (server.DataToSignResponse, error) {
 	req := server.DataToSignRequest{
 		Address: address,
 	}
@@ -290,7 +290,7 @@ func (r *Rest) DataToSign(address string) (server.DataToSignResponse, error) {
 }
 
 // Sign signs the given data with the wallet and returns digest and signature or error otherwise.
-func (r *Rest) Sign(d []byte) (digest [32]byte, signature []byte, err error) {
+func (r *Client) Sign(d []byte) (digest [32]byte, signature []byte, err error) {
 	if !r.ready {
 		return digest, signature, ErrWalletNotReady
 	}
@@ -302,12 +302,12 @@ func (r *Rest) Sign(d []byte) (digest [32]byte, signature []byte, err error) {
 // Do it after you have saved the wallet to the file.
 // It is recommended to use this just before logging out from the UI
 // or closing the front end app that.
-func (r *Rest) FlushWalletFromMemory() {
+func (r *Client) FlushWalletFromMemory() {
 	r.w = wallet.Wallet{}
 	r.ready = false
 }
 
-func (r *Rest) makePost(path string, out, in any) error {
+func (r *Client) makePost(path string, out, in any) error {
 	req := fasthttp.AcquireRequest()
 	defer fasthttp.ReleaseRequest(req)
 
@@ -347,7 +347,7 @@ func (r *Rest) makePost(path string, out, in any) error {
 	return json.Unmarshal(resp.Body(), in)
 }
 
-func (r *Rest) makeGet(path string, out any) error {
+func (r *Client) makeGet(path string, out any) error {
 	req := fasthttp.AcquireRequest()
 	defer fasthttp.ReleaseRequest(req)
 

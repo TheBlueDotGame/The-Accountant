@@ -25,11 +25,11 @@ type Block struct {
 	TrxHashes  [][32]byte         `json:"trx_hashes" bson:"trx_hashes"`
 }
 
-// NewBlock creates a new Block hashing it with given difficulty.
+// New creates a new Block hashing it with given difficulty.
 // Higher difficulty requires more computations to happen to find possible target hash.
 // Difficulty is stored inside the Block and is a part of a hashed data.
 // Transactions hashes are prehashed before calculating the Block hash with merkle tree.
-func NewBlock(difficulty, next uint64, prevHash [32]byte, trxHashes [][32]byte) Block {
+func New(difficulty, next uint64, prevHash [32]byte, trxHashes [][32]byte) Block {
 	ts := uint64(time.Now().UnixNano())
 
 	block := Block{
@@ -190,7 +190,7 @@ func (pow *proofOfWork) run(trxHash [32]byte) (uint64, [32]byte) {
 	var hash [32]byte
 	var nonce uint64
 
-	for nonce <= math.MaxUint64 {
+	for nonce < math.MaxUint64 {
 		data := pow.initData(nonce, trxHash)
 		hash = sha256.Sum256(data)
 		intHash.SetBytes(hash[:])

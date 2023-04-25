@@ -20,13 +20,13 @@ import (
 )
 
 func TestFullClientApiCycle(t *testing.T) {
-	issuer := client.NewRest("http://localhost:8080", 5*time.Second, wallet.Helper{}, fileoperations.Helper{}, wallet.New)
+	issuer := client.NewClient("http://localhost:8080", 5*time.Second, wallet.Helper{}, fileoperations.Helper{}, wallet.New)
 	err := issuer.ValidateApiVersion()
 	assert.Nil(t, err)
 	err = issuer.NewWallet("wpg6d0grqJjyRicC8oI0/w6IGivm5ypFNTO/wwPGW9A=")
 	assert.Nil(t, err)
 
-	receiver := client.NewRest("http://localhost:8080", 5*time.Second, wallet.Helper{}, fileoperations.Helper{}, wallet.New)
+	receiver := client.NewClient("http://localhost:8080", 5*time.Second, wallet.Helper{}, fileoperations.Helper{}, wallet.New)
 	err = receiver.ValidateApiVersion()
 	assert.Nil(t, err)
 	err = receiver.NewWallet("GWFuhvyFnmMg1/vhPCfoa9ct1pAMC1pWwlRg4kt0D/w=")

@@ -25,12 +25,12 @@ func (db DataBase) WriteValidatorStatus(ctx context.Context, vs *ValidatorStatus
 	return err
 }
 
-// ReadLastValidatorStatus reads last validator statuses from the database.
-func (db DataBase) ReadLastValidatorStatus(ctx context.Context, last int64) ([]ValidatorStatus, error) {
+// ReadLastNValidatorStatuses reads last validator statuses from the database.
+func (db DataBase) ReadLastNValidatorStatuses(ctx context.Context, last int64) ([]ValidatorStatus, error) {
 	var results []ValidatorStatus
 	opts := options.Find().SetSort(bson.M{"index": -1}).SetLimit(last)
 
-	curs, err := db.inner.Collection(blocksCollection).Find(ctx, bson.M{}, opts)
+	curs, err := db.inner.Collection(validatorStatusCollection).Find(ctx, bson.M{}, opts)
 	if err != nil {
 		return nil, err
 	}

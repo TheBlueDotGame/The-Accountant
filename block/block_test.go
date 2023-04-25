@@ -28,7 +28,7 @@ func TestBlockCreate(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotEmpty(t, trxHash)
 
-	blc := NewBlock(difficulty, 0, [32]byte{}, [][32]byte{trxHash})
+	blc := New(difficulty, 0, [32]byte{}, [][32]byte{trxHash})
 
 	assert.NotEmpty(t, blc.Hash)
 
@@ -44,7 +44,7 @@ func TestBlockCreate(t *testing.T) {
 
 		ntrxHash, err := ntrx.Sign(&receiver, verifier)
 		assert.Nil(t, err)
-		newBlck := NewBlock(difficulty, uint64(i), blockchain[i-1].Hash, [][32]byte{ntrxHash})
+		newBlck := New(difficulty, uint64(i), blockchain[i-1].Hash, [][32]byte{ntrxHash})
 		blockchain = append(blockchain, newBlck)
 	}
 
@@ -74,7 +74,7 @@ func TestBlockValidateSuccess(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotEmpty(t, trxHash)
 
-	blc := NewBlock(difficulty, 0, [32]byte{}, [][32]byte{trxHash})
+	blc := New(difficulty, 0, [32]byte{}, [][32]byte{trxHash})
 
 	assert.NotEmpty(t, blc.Hash)
 
@@ -90,7 +90,7 @@ func TestBlockValidateSuccess(t *testing.T) {
 
 		ntrxHash, err := ntrx.Sign(&receiver, verifier)
 		assert.Nil(t, err)
-		newBlck := NewBlock(difficulty, uint64(i), blockchain[i-1].Hash, [][32]byte{ntrxHash})
+		newBlck := New(difficulty, uint64(i), blockchain[i-1].Hash, [][32]byte{ntrxHash})
 		blockchain = append(blockchain, newBlck)
 	}
 
@@ -122,7 +122,7 @@ func TestBlockValidateFailure(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotEmpty(t, trxHash)
 
-	blc := NewBlock(difficulty, 0, [32]byte{}, [][32]byte{trxHash})
+	blc := New(difficulty, 0, [32]byte{}, [][32]byte{trxHash})
 
 	assert.NotEmpty(t, blc.Hash)
 
@@ -138,7 +138,7 @@ func TestBlockValidateFailure(t *testing.T) {
 
 		ntrxHash, err := ntrx.Sign(&receiver, verifier)
 		assert.Nil(t, err)
-		newBlck := NewBlock(difficulty, uint64(i), blockchain[i-1].Hash, [][32]byte{ntrxHash})
+		newBlck := New(difficulty, uint64(i), blockchain[i-1].Hash, [][32]byte{ntrxHash})
 		blockchain = append(blockchain, newBlck)
 	}
 
@@ -171,7 +171,7 @@ func Benchmark1000Blocks(b *testing.B) {
 		assert.Nil(b, err)
 		assert.NotEmpty(b, trxHash)
 
-		blc := NewBlock(difficulty, 0, [32]byte{}, [][32]byte{trxHash})
+		blc := New(difficulty, 0, [32]byte{}, [][32]byte{trxHash})
 
 		assert.NotEmpty(b, blc.Hash)
 
@@ -187,7 +187,7 @@ func Benchmark1000Blocks(b *testing.B) {
 
 			ntrxHash, err := ntrx.Sign(&receiver, verifier)
 			assert.Nil(b, err)
-			newBlck := NewBlock(difficulty, 1, blockchain[i-1].Hash, [][32]byte{ntrxHash})
+			newBlck := New(difficulty, 1, blockchain[i-1].Hash, [][32]byte{ntrxHash})
 			blockchain = append(blockchain, newBlck)
 		}
 	}
@@ -212,6 +212,6 @@ func Benchmark1_Block(b *testing.B) {
 		assert.Nil(b, err)
 		assert.NotEmpty(b, trxHash)
 
-		NewBlock(difficulty, 0, [32]byte{}, [][32]byte{trxHash})
+		New(difficulty, 0, [32]byte{}, [][32]byte{trxHash})
 	}
 }
