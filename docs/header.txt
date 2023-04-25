@@ -1,5 +1,5 @@
 ---
 layout: page
 title: Documentation.
-subtitle: Package and the REST API server.
+subtitle: Package: Blockchain, Wallet, REST API server, client and validator.
 ---
