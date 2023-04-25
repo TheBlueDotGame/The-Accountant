@@ -5,7 +5,7 @@ subtitle: What problem this software is solving.
 cover-img: /assets/img/14-04-23.png
 thumbnail-img: /assets/img/blockchain_block.png
 share-img: /assets/img/14-04-23.png
-tags: [software, motives, description, explonations]
+tags: [software, motives, description, explanations]
 ---
 
 There is plenty if not a gazillion blockchains on the market. Why then create a new one?
