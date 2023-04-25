@@ -20,7 +20,7 @@ const (
 
 type StatusReadWriter interface {
 	WriteValidatorStatus(ctx context.Context, vs *repo.ValidatorStatus) error
-	ReadLastValidatorStatus(ctx context.Context, last int64) ([]repo.ValidatorStatus, error)
+	ReadLastNValidatorStatuses(ctx context.Context, last int64) ([]repo.ValidatorStatus, error)
 }
 
 // Config contains configuration of the validator.

@@ -17,10 +17,10 @@ const (
 	maxDifficulty = 124
 
 	minBlockWriteTimestamp = time.Second
-	maxBlockWriteTimestamp = time.Hour * 4
+	maxBlockWriteTimestamp = time.Hour * 4 // value is picked arbitrary
 
 	minBlockTransactionsSize = 1
-	maxBlockTransactionsSize = 60000
+	maxBlockTransactionsSize = 60000 // calculated to be below 16MB of a block size
 )
 
 var (
@@ -105,8 +105,8 @@ type Ledger struct {
 	log    logger.Logger
 }
 
-// NewLedger creates new Ledger if config is valid or returns error otherwise.
-func NewLedger(
+// New creates new Ledger if config is valid or returns error otherwise.
+func New(
 	config Config,
 	bc BlockReadWriter,
 	tx TrxWriteReadMover,
@@ -198,6 +198,7 @@ func (l *Ledger) WriteCandidateTransaction(ctx context.Context, trx *transaction
 	return nil
 }
 
+// VerifySignature verifies signature of the message.
 func (l *Ledger) VerifySignature(message, signature []byte, hash [32]byte, address string) error {
 	return l.vr.Verify(message, signature, hash, address)
 }
@@ -238,7 +239,7 @@ func (l *Ledger) cleanHashes() {
 func (l *Ledger) saveBlock(ctx context.Context) ([32]byte, error) {
 	h, idx := l.bc.LastBlockHashIndex()
 	idx++
-	nb := block.NewBlock(l.config.Difficulty, idx, h, l.hashes)
+	nb := block.New(l.config.Difficulty, idx, h, l.hashes)
 
 	if err := l.bc.WriteBlock(ctx, nb); err != nil {
 		return [32]byte{}, err

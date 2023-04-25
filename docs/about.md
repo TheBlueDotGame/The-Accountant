@@ -38,7 +38,7 @@ It is good practice to have many validator nodes held by independent entities.
 
 The choice of programming language was made based on these arguments:
    - Well maintained and trusted cryptography library. In Go it is part of the standard library.
-   - Relatively fast language. It is fastest than Java and slower than Rust.
+   - Relatively fast language. It is faster than Java and slower (not always) than Rust.
    - Compiled language on many architectures, no virtual machine. It uses LLVM as a compiler backend allowing for a large spectrum of architectures to be run on.
    - Language that is pragmatic and easy to maintain. It is C with GC and abstractions. 
    - Safe language. It has GC, powerful error handling and a great typing system.

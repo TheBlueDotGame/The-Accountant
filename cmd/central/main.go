@@ -54,7 +54,7 @@ func main() {
 		fmt.Println(err)
 	}
 
-	blc, err := blockchain.NewBlockchain(ctx, db)
+	blc, err := blockchain.New(ctx, db)
 	if err != nil {
 		fmt.Println(err)
 		c <- os.Interrupt
@@ -63,7 +63,7 @@ func main() {
 
 	verifier := wallet.Helper{}
 
-	ladger, err := bookkeeping.NewLedger(cfg.Bookkeeper, blc, db, db, verifier, db, log)
+	ladger, err := bookkeeping.New(cfg.Bookkeeper, blc, db, db, verifier, db, log)
 	if err != nil {
 		fmt.Println(err)
 		c <- os.Interrupt
