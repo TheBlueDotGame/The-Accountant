@@ -6,14 +6,20 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/bartossh/Computantis/block"
 	"github.com/bartossh/Computantis/blockchain"
 	"github.com/bartossh/Computantis/bookkeeping"
 	"github.com/bartossh/Computantis/configuration"
 	"github.com/bartossh/Computantis/dataprovider"
 	"github.com/bartossh/Computantis/logging"
+	"github.com/bartossh/Computantis/reactive"
 	"github.com/bartossh/Computantis/repo"
 	"github.com/bartossh/Computantis/server"
 	"github.com/bartossh/Computantis/wallet"
+)
+
+const (
+	rxBufferSize = 100
 )
 
 func main() {
@@ -62,8 +68,9 @@ func main() {
 	}
 
 	verifier := wallet.Helper{}
+	rx := reactive.New[block.Block](rxBufferSize)
 
-	ladger, err := bookkeeping.New(cfg.Bookkeeper, blc, db, db, verifier, db, log)
+	ladger, err := bookkeeping.New(cfg.Bookkeeper, blc, db, db, verifier, db, log, rx)
 	if err != nil {
 		fmt.Println(err)
 		c <- os.Interrupt
@@ -72,7 +79,7 @@ func main() {
 
 	dataProvider := dataprovider.New(ctx, cfg.DataProvider)
 
-	err = server.Run(ctx, cfg.Server, db, ladger, dataProvider, log)
+	err = server.Run(ctx, cfg.Server, db, ladger, dataProvider, log, rx.Subscribe())
 	if err != nil {
 		log.Error(err.Error())
 		fmt.Println(err)

@@ -48,7 +48,7 @@ round-avatar: true
 social-network-links:
   email: "lenart.consulting@gmail.com"
   rss: true  # remove this line if you don't want to show an RSS link at the bottom
-  github: bartossh
+  github: bartossh/Computantis
   patreon: bartossh
 #  medium: yourname
 #  reddit: yourname

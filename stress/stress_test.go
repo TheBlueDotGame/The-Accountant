@@ -1,4 +1,5 @@
-// go:build stress
+//go:build stress
+
 // Running stress test requirements:
 // - create test database to ensure your data is not polluted,
 // - ensure your database contains valid tokens allowing to create wallets,

@@ -33,6 +33,7 @@ var (
 	ErrBlockTransactionsSizeNotInRange = errors.New("block transactions size is not in range of [1 : 60000]")
 )
 
+// TrxWriteReadMover provides transactions write, read and move methods.
 type TrxWriteReadMover interface {
 	WriteTemporaryTransaction(ctx context.Context, trx *transaction.Transaction) error
 	WriteIssuerSignedTransactionForReceiver(ctx context.Context, receiverAddr string, trx *transaction.Transaction) error
@@ -43,30 +44,41 @@ type TrxWriteReadMover interface {
 	ReadTemporaryTransactions(ctx context.Context) ([]transaction.Transaction, error)
 }
 
+// BlockReadWriter provides block read and write methods.
 type BlockReader interface {
 	LastBlockHashIndex() ([32]byte, uint64)
 }
 
+// BlockWriter provides block write methods.
 type BlockWriter interface {
 	WriteBlock(ctx context.Context, block block.Block) error
 }
 
+// BlockReadWriter provides block read and write methods.
 type BlockReadWriter interface {
 	BlockReader
 	BlockWriter
 }
 
+// AddressChecker provides address existence check method.
 type AddressChecker interface {
 	CheckAddressExists(ctx context.Context, address string) (bool, error)
 }
 
+// SignatureVerifier provides signature verification method.
 type SignatureVerifier interface {
 	Verify(message, signature []byte, hash [32]byte, address string) error
 }
 
+// BlockFinder provides block finder method.
 type BlockFinder interface {
 	WriteTransactionsInBlock(ctx context.Context, blockHash [32]byte, trxHash [][32]byte) error
 	FindTransactionInBlockHash(ctx context.Context, trxHash [32]byte) ([32]byte, error)
+}
+
+// BlockSubscription provides block publishing method.
+type BlockSubscription interface {
+	Publish(block.Block)
 }
 
 type Config struct {
@@ -103,6 +115,7 @@ type Ledger struct {
 	vr     SignatureVerifier
 	tf     BlockFinder
 	log    logger.Logger
+	blcSub BlockSubscription
 }
 
 // New creates new Ledger if config is valid or returns error otherwise.
@@ -114,6 +127,7 @@ func New(
 	vr SignatureVerifier,
 	tf BlockFinder,
 	log logger.Logger,
+	blcSub BlockSubscription,
 ) (*Ledger, error) {
 	if err := config.Validate(); err != nil {
 		return nil, err
@@ -128,13 +142,14 @@ func New(
 		vr:     vr,
 		tf:     tf,
 		log:    log,
+		blcSub: blcSub,
 	}, nil
 }
 
 // Run runs the Ladger engine that writes blocks to the blockchain repository.
 // Run starts a goroutine and can be stopped by cancelling the context.
 func (l *Ledger) Run(ctx context.Context) {
-	if err := l.forgeTemporary(ctx); err != nil {
+	if err := l.forgeTemporaryTrxs(ctx); err != nil {
 		l.log.Fatal(fmt.Sprintf("forging temporary failed: %s", err.Error()))
 	}
 	go func(ctx context.Context) {
@@ -203,7 +218,7 @@ func (l *Ledger) VerifySignature(message, signature []byte, hash [32]byte, addre
 	return l.vr.Verify(message, signature, hash, address)
 }
 
-func (l *Ledger) forgeTemporary(ctx context.Context) error {
+func (l *Ledger) forgeTemporaryTrxs(ctx context.Context) error {
 	trxs, err := l.tx.ReadTemporaryTransactions(ctx)
 	if err != nil {
 		return err
@@ -217,7 +232,7 @@ func (l *Ledger) forgeTemporary(ctx context.Context) error {
 
 func (l *Ledger) forge(ctx context.Context) {
 	defer l.cleanHashes()
-	blcHash, err := l.saveBlock(ctx)
+	blcHash, err := l.savePublishNewBlock(ctx)
 	if err != nil {
 		log.Fatal(fmt.Sprintf("error while saving block: %s", err.Error()))
 		return
@@ -236,7 +251,7 @@ func (l *Ledger) cleanHashes() {
 	l.hashes = make([][32]byte, 0, l.config.BlockTransactionsSize)
 }
 
-func (l *Ledger) saveBlock(ctx context.Context) ([32]byte, error) {
+func (l *Ledger) savePublishNewBlock(ctx context.Context) ([32]byte, error) {
 	h, idx := l.bc.LastBlockHashIndex()
 	idx++
 	nb := block.New(l.config.Difficulty, idx, h, l.hashes)
@@ -244,6 +259,8 @@ func (l *Ledger) saveBlock(ctx context.Context) ([32]byte, error) {
 	if err := l.bc.WriteBlock(ctx, nb); err != nil {
 		return [32]byte{}, err
 	}
+
+	l.blcSub.Publish(nb)
 
 	return nb.Hash, nil
 }

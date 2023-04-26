@@ -1,7 +1,7 @@
 ---
 layout: page
 title: About The Project
-subtitle: ...and a bit about technology.
+subtitle: ...and a bit about the technology.
 ---
 Hi.
 My name is Bartosz Lenart. I build the IoT, Edge and Cloud back-ends and I want to introduce to you “Computantis” solution.
@@ -37,17 +37,17 @@ It is good practice to have many validator nodes held by independent entities.
 1. The programming language Computantis software is written in is the [Go](https://go.dev/). 
 
 The choice of programming language was made based on these arguments:
-   - Well maintained and trusted cryptography library. In Go it is part of the standard library.
-   - Relatively fast language. It is faster than Java and slower (not always) than Rust.
-   - Compiled language on many architectures, no virtual machine. It uses LLVM as a compiler backend allowing for a large spectrum of architectures to be run on.
-   - Language that is pragmatic and easy to maintain. It is C with GC and abstractions. 
-   - Safe language. It has GC, powerful error handling and a great typing system.
-   - Language that scales well and has good support for executing concurrent code. It is known to be the language of the cloud and can run thousands of goroutines without performance issues.
-   - Tests built into the language. It has it in the standard library. 
-   - Paradigm-independent language that will not force OOP or functional programming. Not forcing developers to any style.
-   - Good control over memory layout, you can do things like in C, but you can be safer than in Java.
-   - Good speed of development. It is known for being very efficient to produce software.
-   - Simple and pragmatic composition and packaging system. Great standard library so you do not have to use third-party solutions.
+   - Well maintained and trusted cryptography library - in Go it is part of the standard library.
+   - Relatively fast language - it is faster than Java and slower (not always) than Rust.
+   - Compiled language on many architectures, no virtual machine -  it uses LLVM as a compiler backend allowing for a large spectrum of architectures to be run on.
+   - Language that is pragmatic and easy to maintain - it is C with GC and abstractions. 
+   - Safe language - it has GC, powerful error handling and a great type system.
+   - Language that scales well and has good support for executing concurrent code - it is known to be the language of the cloud and can run thousands of goroutines without performance issues.
+   - Tests built into the language - it has it in the standard library. 
+   - Paradigm-independent language that will not force OOP or functional programming - it isn't forcing developers to any style.
+   - Good control over memory layout - you can do things like in C, but you can be safer than in Java.
+   - Good speed of development - it is known for being very efficient to produce software.
+   - Simple and pragmatic composition and packaging system - has great standard library, so you do not have to use third-party solutions.
 
 
 2. The repository part of the software is abstracted away so any database may be used. Nevertheless, Computantis is using the [MongoDB](https://www.mongodb.com/) database and is optimized for this database usage.
