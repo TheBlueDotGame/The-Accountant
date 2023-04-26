@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/bartossh/Computantis/block"
 	"github.com/bartossh/Computantis/logger"
 	"github.com/bartossh/Computantis/transaction"
 	"github.com/gofiber/fiber/v2"
@@ -65,12 +66,17 @@ type Repository interface {
 	ReadAwaitingTransactionsByReceiver(ctx context.Context, address string) ([]transaction.Transaction, error)
 }
 
+// Verifier provides methods to verify the signature of the message.
+type Verifier interface {
+	VerifySignature(message, signature []byte, hash [32]byte, address string) error
+}
+
 // Bookkeeper abstracts methods of the bookkeeping of a blockchain.
 type Bookkeeper interface {
+	Verifier
 	Run(ctx context.Context)
 	WriteCandidateTransaction(ctx context.Context, tx *transaction.Transaction) error
 	WriteIssuerSignedTransactionForReceiver(ctx context.Context, receiverAddr string, trx *transaction.Transaction) error
-	VerifySignature(message, signature []byte, hash [32]byte, address string) error
 }
 
 // RandomDataProvideValidator provides random binary data for signing to prove identity and
@@ -78,6 +84,11 @@ type Bookkeeper interface {
 type RandomDataProvideValidator interface {
 	ProvideData(address string) []byte
 	ValidateData(address string, data []byte) bool
+}
+
+type ReactiveSubscriberProvider interface {
+	Cancel()
+	Channel() <-chan block.Block
 }
 
 // Config contains configuration of the server.
@@ -91,11 +102,14 @@ type server struct {
 	randDataProv RandomDataProvideValidator
 	hub          *hub
 	log          logger.Logger
+	rx           ReactiveSubscriberProvider
 }
 
 // Run initializes routing and runs the server. To stop the server cancel the context.
 func Run(
-	ctx context.Context, c Config, repo Repository, bookkeeping Bookkeeper, pv RandomDataProvideValidator, log logger.Logger,
+	ctx context.Context, c Config, repo Repository,
+	bookkeeping Bookkeeper, pv RandomDataProvideValidator,
+	log logger.Logger, rx ReactiveSubscriberProvider,
 ) error {
 	var err error
 	ctxx, cancel := context.WithCancel(ctx)
@@ -120,6 +134,7 @@ func Run(
 		randDataProv: pv,
 		hub:          newHub(log),
 		log:          log,
+		rx:           rx,
 	}
 
 	router := fiber.New(fiber.Config{
@@ -161,6 +176,7 @@ func Run(
 		}
 	}()
 	go s.hub.run(ctx)
+	go s.runSubscriber(ctxx)
 
 	<-ctxx.Done()
 
@@ -177,4 +193,22 @@ func validateConfig(c *Config) error {
 	}
 
 	return nil
+}
+
+func (s *server) runSubscriber(ctx context.Context) {
+	defer s.rx.Cancel()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case b := <-s.rx.Channel():
+			m := Message{
+				Command:     CommandNewBlock,
+				Error:       "",
+				Block:       b,
+				Transaction: transaction.Transaction{},
+			}
+			s.hub.broadcast <- &m
+		}
+	}
 }

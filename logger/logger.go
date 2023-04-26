@@ -14,7 +14,7 @@ type Log struct {
 	CreatedAt time.Time          `json:"created_at" bson:"created_at"`
 }
 
-// Logger represents an abstraction that logging helpers should implement.
+// Logger provides logging methods for debug, info, warning, error and fatal.
 type Logger interface {
 	Debug(msg string)
 	Info(msg string)

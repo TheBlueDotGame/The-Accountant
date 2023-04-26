@@ -8,6 +8,7 @@ import (
 
 	"github.com/bartossh/Computantis/block"
 	"github.com/bartossh/Computantis/logger"
+	"github.com/bartossh/Computantis/transaction"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
 )
@@ -22,19 +23,25 @@ const (
 	socketWriteBufferSize           = socketReadBufferSize * 256
 	socketMaxMessageSize            = socketWriteBufferSize * 4
 	clientMessageChannelsBufferSize = 512
+	validatorsCountLimit            = 100
 )
 
 const (
 	echo = "echo"
 )
 
+const (
+	CommandNewBlock       = "command_new_block"
+	CommandNewTransaction = "command_new_transaction"
+)
+
 // Message is the message that is used to exchange information between
 // the server and the client.
 type Message struct {
-	receivers []string
-	Command   string      `json:"command"` // Command is the command that refers to the action handler in websocket protocol.
-	Error     string      `json:"error"`   // Error is the error message that is sent to the client.
-	Block     block.Block `json:"block"`   // Block is the block that is sent to the client.
+	Command     string                  `json:"command"`     // Command is the command that refers to the action handler in websocket protocol.
+	Error       string                  `json:"error"`       // Error is the error message that is sent to the client.
+	Block       block.Block             `json:"block"`       // Block is the block that is sent to the client.
+	Transaction transaction.Transaction `json:"transaction"` // Transaction is the transaction validated by the central server and will be added to the next block.
 }
 
 type socket struct {
@@ -190,6 +197,10 @@ outer:
 	for {
 		select {
 		case client := <-h.register:
+			if len(h.clients) >= validatorsCountLimit {
+				client.conn.WriteMessage(websocket.CloseMessage, []byte{})
+				continue
+			}
 			h.clients[client.address] = client
 		case client := <-h.unregister:
 			delete(h.clients, client.address)
@@ -199,16 +210,8 @@ outer:
 				h.log.Error(fmt.Sprintf("hub failed to marshal message: %s", err.Error()))
 				continue outer
 			}
-			for _, addr := range message.receivers {
-				client, ok := h.clients[addr]
-				if !ok {
-					continue outer
-				}
-				select {
-				case h.clients[addr].send <- raw:
-				default:
-					delete(h.clients, client.address)
-				}
+			for _, client := range h.clients {
+				client.send <- raw
 			}
 		case <-ctx.Done():
 			for _, client := range h.clients {

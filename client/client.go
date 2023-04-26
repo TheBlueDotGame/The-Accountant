@@ -7,8 +7,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/bartossh/Computantis/block"
 	"github.com/bartossh/Computantis/server"
 	"github.com/bartossh/Computantis/transaction"
+	"github.com/bartossh/Computantis/validator"
 	"github.com/bartossh/Computantis/wallet"
 	"github.com/valyala/fasthttp"
 )
@@ -60,9 +62,9 @@ func NewClient(
 }
 
 // ValidateApiVersion makes a call to the API server and validates client and server API versions and header correctness.
-func (r *Client) ValidateApiVersion() error {
+func (c *Client) ValidateApiVersion() error {
 	var alive server.AliveResponse
-	if err := r.makeGet("alive", &alive); err != nil {
+	if err := c.makeGet("alive", &alive); err != nil {
 		return err
 	}
 
@@ -78,8 +80,8 @@ func (r *Client) ValidateApiVersion() error {
 }
 
 // NewWallet creates a new wallet and sends a request to the API server to validate the wallet.
-func (r *Client) NewWallet(token string) error {
-	w, err := r.walletCreator()
+func (c *Client) NewWallet(token string) error {
+	w, err := c.walletCreator()
 	if err != nil {
 		return err
 	}
@@ -94,7 +96,7 @@ func (r *Client) NewWallet(token string) error {
 			fmt.Errorf("version mismatch, expected %d but got %d", version, w.Version()))
 	}
 
-	dataToSign, err := r.DataToSign(w.Address())
+	dataToSign, err := c.DataToSign(w.Address())
 	if err != nil {
 		return errors.Join(ErrRejectedByServer, err)
 	}
@@ -109,7 +111,8 @@ func (r *Client) NewWallet(token string) error {
 		Signature: signature,
 	}
 	var resCreateAddr server.CreateAddressResponse
-	if err := r.makePost(server.CreateAddressURL, reqCreateAddr, &resCreateAddr); err != nil {
+	url := fmt.Sprintf("%s/%s", c.apiRoot, server.CreateAddressURL)
+	if err := c.makePost(url, reqCreateAddr, &resCreateAddr); err != nil {
 		return err
 	}
 
@@ -121,32 +124,32 @@ func (r *Client) NewWallet(token string) error {
 		return errors.Join(ErrServerReturnsInconsistentData, errors.New("failed to create address"))
 	}
 
-	r.w = w
-	r.ready = true
+	c.w = w
+	c.ready = true
 
 	return nil
 }
 
 // Address reads the wallet address.
 // Address is a string representation of wallet public key.
-func (r *Client) Address() (string, error) {
-	if !r.ready {
+func (c *Client) Address() (string, error) {
+	if !c.ready {
 		return "", ErrWalletNotReady
 	}
 
-	return r.w.Address(), nil
+	return c.w.Address(), nil
 }
 
 // ProposeTransaction sends a Transaction proposal to the API server for provided receiver address.
 // Subject describes how to read the data from the transaction. For example, if the subject is "json",
 // then the data can by decoded to map[sting]any, when subject "pdf" than it should be decoded by proper pdf decoder,
 // when "csv" then it should be decoded by proper csv decoder.
-func (r *Client) ProposeTransaction(receiverAddr string, subject string, data []byte) error {
-	if !r.ready {
+func (c *Client) ProposeTransaction(receiverAddr string, subject string, data []byte) error {
+	if !c.ready {
 		return ErrWalletNotReady
 	}
 
-	trx, err := transaction.New(subject, data, &r.w)
+	trx, err := transaction.New(subject, data, &c.w)
 	if err != nil {
 		return errors.Join(ErrSigningFailed, err)
 	}
@@ -156,7 +159,8 @@ func (r *Client) ProposeTransaction(receiverAddr string, subject string, data []
 		Transaction:  trx,
 	}
 	var res server.TransactionConfirmProposeResponse
-	if err := r.makePost(server.ProposeTransactionURL, req, &res); err != nil {
+	url := fmt.Sprintf("%s/%s", c.apiRoot, server.ProposeTransactionURL)
+	if err := c.makePost(url, req, &res); err != nil {
 		return errors.Join(ErrRejectedByServer, err)
 	}
 
@@ -173,17 +177,18 @@ func (r *Client) ProposeTransaction(receiverAddr string, subject string, data []
 
 // ConfirmTransaction confirms transaction by signing it with the wallet
 // and then sending it to the API server.
-func (r *Client) ConfirmTransaction(trx transaction.Transaction) error {
-	if !r.ready {
+func (c *Client) ConfirmTransaction(trx transaction.Transaction) error {
+	if !c.ready {
 		return ErrWalletNotReady
 	}
 
-	if _, err := trx.Sign(&r.w, r.verifier); err != nil {
+	if _, err := trx.Sign(&c.w, c.verifier); err != nil {
 		return errors.Join(ErrSigningFailed, err)
 	}
 
 	var res server.TransactionConfirmProposeResponse
-	if err := r.makePost(server.ConfirmTransactionURL, trx, &res); err != nil {
+	url := fmt.Sprintf("%s/%s", c.apiRoot, server.ConfirmTransactionURL)
+	if err := c.makePost(url, trx, &res); err != nil {
 		return errors.Join(ErrRejectedByServer, err)
 	}
 
@@ -199,25 +204,26 @@ func (r *Client) ConfirmTransaction(trx transaction.Transaction) error {
 }
 
 // ReadWaitingTransactions reads all waiting transactions belonging to current wallet from the API server.
-func (r *Client) ReadWaitingTransactions() ([]transaction.Transaction, error) {
-	if !r.ready {
+func (c *Client) ReadWaitingTransactions() ([]transaction.Transaction, error) {
+	if !c.ready {
 		return nil, ErrWalletNotReady
 	}
 
-	data, err := r.DataToSign(r.w.Address())
+	data, err := c.DataToSign(c.w.Address())
 	if err != nil {
 		return nil, errors.Join(ErrRejectedByServer, err)
 	}
 
-	hash, signature := r.w.Sign(data.Data)
+	hash, signature := c.w.Sign(data.Data)
 	req := server.AwaitedIssuedTransactionRequest{
-		Address:   r.w.Address(),
+		Address:   c.w.Address(),
 		Data:      data.Data,
 		Hash:      hash,
 		Signature: signature,
 	}
 	var res server.AwaitedTransactionResponse
-	if err := r.makePost(server.AwaitedTransactionURL, req, &res); err != nil {
+	url := fmt.Sprintf("%s/%s", c.apiRoot, server.AwaitedTransactionURL)
+	if err := c.makePost(url, req, &res); err != nil {
 		return nil, errors.Join(ErrRejectedByServer, err)
 	}
 	if !res.Success {
@@ -229,25 +235,26 @@ func (r *Client) ReadWaitingTransactions() ([]transaction.Transaction, error) {
 }
 
 // ReadIssuedTransactions reads all issued transactions belonging to current wallet from the API server.
-func (r *Client) ReadIssuedTransactions() ([]transaction.Transaction, error) {
-	if !r.ready {
+func (c *Client) ReadIssuedTransactions() ([]transaction.Transaction, error) {
+	if !c.ready {
 		return nil, ErrWalletNotReady
 	}
 
-	data, err := r.DataToSign(r.w.Address())
+	data, err := c.DataToSign(c.w.Address())
 	if err != nil {
 		return nil, errors.Join(ErrRejectedByServer, err)
 	}
 
-	hash, signature := r.w.Sign(data.Data)
+	hash, signature := c.w.Sign(data.Data)
 	req := server.AwaitedIssuedTransactionRequest{
-		Address:   r.w.Address(),
+		Address:   c.w.Address(),
 		Data:      data.Data,
 		Hash:      hash,
 		Signature: signature,
 	}
 	var res server.IssuedTransactionResponse
-	if err := r.makePost(server.IssuedTransactionURL, req, &res); err != nil {
+	url := fmt.Sprintf("%s/%s", c.apiRoot, server.IssuedTransactionURL)
+	if err := c.makePost(url, req, &res); err != nil {
 		return nil, errors.Join(ErrRejectedByServer, err)
 	}
 	if !res.Success {
@@ -258,60 +265,71 @@ func (r *Client) ReadIssuedTransactions() ([]transaction.Transaction, error) {
 }
 
 // SaveWalletToFile saves the wallet to the file in the path.
-func (r *Client) SaveWalletToFile(path string) error {
-	if !r.ready {
+func (c *Client) SaveWalletToFile(path string) error {
+	if !c.ready {
 		return ErrWalletNotReady
 	}
 
-	return r.wrs.SaveWallet(path, r.w)
+	return c.wrs.SaveWallet(path, c.w)
 }
 
 // ReadWalletFromFile reads the wallet from the file in the path.
-func (r *Client) ReadWalletFromFile(path string) error {
-	w, err := r.wrs.ReadWallet(path)
+func (c *Client) ReadWalletFromFile(path string) error {
+	w, err := c.wrs.ReadWallet(path)
 	if err != nil {
 		return err
 	}
-	r.w = w
-	r.ready = true
+	c.w = w
+	c.ready = true
 	return nil
 }
 
 // DataToSign returns data to sign for the given address.
-func (r *Client) DataToSign(address string) (server.DataToSignResponse, error) {
+func (c *Client) DataToSign(address string) (server.DataToSignResponse, error) {
 	req := server.DataToSignRequest{
 		Address: address,
 	}
 	var resp server.DataToSignResponse
-	if err := r.makePost(server.DataToValidateURL, req, &resp); err != nil {
+	url := fmt.Sprintf("%s/%s", c.apiRoot, server.DataToValidateURL)
+	if err := c.makePost(url, req, &resp); err != nil {
 		return server.DataToSignResponse{}, err
 	}
 	return resp, nil
 }
 
 // Sign signs the given data with the wallet and returns digest and signature or error otherwise.
-func (r *Client) Sign(d []byte) (digest [32]byte, signature []byte, err error) {
-	if !r.ready {
+func (c *Client) Sign(d []byte) (digest [32]byte, signature []byte, err error) {
+	if !c.ready {
 		return digest, signature, ErrWalletNotReady
 	}
-	digest, signature = r.w.Sign(d)
+	digest, signature = c.w.Sign(d)
 	return
+}
+
+// PostBlock posts validator.WebHookNewBlockMessage to given url.
+func (c *Client) PostBlock(url string, token string, block *block.Block) error {
+	req := validator.WebHookNewBlockMessage{
+		Token: token,
+		Block: *block,
+	}
+	res := make(map[string]any)
+	return c.makePost(url, req, &res)
 }
 
 // FlushWalletFromMemory flushes the wallet from the memory.
 // Do it after you have saved the wallet to the file.
 // It is recommended to use this just before logging out from the UI
 // or closing the front end app that.
-func (r *Client) FlushWalletFromMemory() {
-	r.w = wallet.Wallet{}
-	r.ready = false
+func (c *Client) FlushWalletFromMemory() {
+	c.w = wallet.Wallet{}
+	c.ready = false
 }
 
-func (r *Client) makePost(path string, out, in any) error {
+func (c *Client) makePost(path string, out, in any) error {
 	req := fasthttp.AcquireRequest()
 	defer fasthttp.ReleaseRequest(req)
 
-	req.SetRequestURI(fmt.Sprintf("%s/%s", r.apiRoot, path))
+	req.SetRequestURI(path)
 	req.Header.SetMethod("POST")
 	req.Header.SetContentType("application/json")
 	raw, err := json.Marshal(out)
@@ -323,7 +341,7 @@ func (r *Client) makePost(path string, out, in any) error {
 	resp := fasthttp.AcquireResponse()
 	defer fasthttp.ReleaseResponse(resp)
 
-	if err := fasthttp.DoTimeout(req, resp, r.timeout); err != nil {
+	if err := fasthttp.DoTimeout(req, resp, c.timeout); err != nil {
 		return err
 	}
 
@@ -347,17 +365,17 @@ func (r *Client) makePost(path string, out, in any) error {
 	return json.Unmarshal(resp.Body(), in)
 }
 
-func (r *Client) makeGet(path string, out any) error {
+func (c *Client) makeGet(path string, out any) error {
 	req := fasthttp.AcquireRequest()
 	defer fasthttp.ReleaseRequest(req)
 
-	req.SetRequestURI(fmt.Sprintf("%s/%s", r.apiRoot, path))
+	req.SetRequestURI(fmt.Sprintf("%s/%s", c.apiRoot, path))
 	req.Header.SetMethod("GET")
 
 	resp := fasthttp.AcquireResponse()
 	defer fasthttp.ReleaseResponse(resp)
 
-	if err := fasthttp.DoTimeout(req, resp, r.timeout); err != nil {
+	if err := fasthttp.DoTimeout(req, resp, c.timeout); err != nil {
 		return err
 	}
 

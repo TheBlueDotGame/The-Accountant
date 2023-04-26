@@ -5,11 +5,16 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"time"
 
+	"github.com/bartossh/Computantis/client"
 	"github.com/bartossh/Computantis/configuration"
+	"github.com/bartossh/Computantis/fileoperations"
 	"github.com/bartossh/Computantis/logging"
 	"github.com/bartossh/Computantis/repo"
 	"github.com/bartossh/Computantis/validator"
+	"github.com/bartossh/Computantis/wallet"
+	"github.com/bartossh/Computantis/webhooks"
 )
 
 func main() {
@@ -46,7 +51,14 @@ func main() {
 		cancel()
 	}()
 
-	if err := validator.Run(ctx, cfg.Validator, db, log); err != nil {
+	verify := wallet.Helper{}
+	fo := fileoperations.Helper{}
+
+	httpClient := client.NewClient("", time.Second*5, verify, fo, wallet.New)
+
+	wh := webhooks.New(httpClient, log)
+
+	if err := validator.Run(ctx, cfg.Validator, db, log, verify, wh); err != nil {
 		log.Error(err.Error())
 		fmt.Println(err.Error())
 	}
