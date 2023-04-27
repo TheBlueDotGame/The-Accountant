@@ -11,6 +11,7 @@ import (
 )
 
 // ValidatorStatus is a status of each received block by the validator.
+// It keeps track of invalid blocks in case of blockchain corruption.
 type ValidatorStatus struct {
 	ID        primitive.ObjectID `json:"-"          bson:"_id,omitempty"`
 	Index     int64              `json:"index"      bson:"index"`

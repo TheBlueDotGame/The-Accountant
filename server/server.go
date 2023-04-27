@@ -86,6 +86,8 @@ type RandomDataProvideValidator interface {
 	ValidateData(address string, data []byte) bool
 }
 
+// ReactiveSubscriberProvider provides reactive subscription to the blockchain.
+// It allows to listen for the new blocks created by the Ladger.
 type ReactiveSubscriberProvider interface {
 	Cancel()
 	Channel() <-chan block.Block
@@ -106,6 +108,7 @@ type server struct {
 }
 
 // Run initializes routing and runs the server. To stop the server cancel the context.
+// It blocks until the context is canceled.
 func Run(
 	ctx context.Context, c Config, repo Repository,
 	bookkeeping Bookkeeper, pv RandomDataProvideValidator,

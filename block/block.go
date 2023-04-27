@@ -14,6 +14,9 @@ import (
 var separator = []byte{}
 
 // Block holds block information.
+// Block is a part of a blockchain assuring immutability of the data.
+// Block mining difficulty may change if needed and is a part of a hash digest.
+// Block ensures that transactions hashes are valid and match the transactions stored in the repository.
 type Block struct {
 	ID         primitive.ObjectID `json:"-"          bson:"_id"`
 	Index      uint64             `json:"index"      bson:"index"`

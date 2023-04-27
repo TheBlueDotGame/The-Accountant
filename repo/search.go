@@ -9,7 +9,7 @@ import (
 )
 
 // TransactionInBlock stores relation between Transaction and Block to which Transaction was added.
-// It is stored for fast lookup only.
+// It is stored for fast lookup only to allow to find Block hash in which Transaction was added.
 type TransactionInBlock struct {
 	ID              primitive.ObjectID `json:"-" bson:"_id,omitempty"`
 	BlockHash       [32]byte           `json:"-" bson:"block_hash"`
