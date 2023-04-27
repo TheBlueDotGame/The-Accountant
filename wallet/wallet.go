@@ -77,7 +77,7 @@ func (w *Wallet) Address() string {
 	return string(address)
 }
 
-// Signe signs the message with Ed25519 signature.
+// Sign signs the message with Ed25519 signature.
 // Returns digest hash sha256 and signature.
 func (w *Wallet) Sign(message []byte) (digest [32]byte, signature []byte) {
 	digest = sha256.Sum256(message)

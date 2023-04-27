@@ -20,7 +20,7 @@ const (
 	maxBlockWriteTimestamp = time.Hour * 4 // value is picked arbitrary
 
 	minBlockTransactionsSize = 1
-	maxBlockTransactionsSize = 60000 // calculated to be below 16MB of a block size
+	maxBlockTransactionsSize = 60000 // calculated to be below 16MB of a block size, it is a limit of single document in mongodb
 )
 
 var (
@@ -34,6 +34,7 @@ var (
 )
 
 // TrxWriteReadMover provides transactions write, read and move methods.
+// It allows to access temporary, permanent and awaiting transactions.
 type TrxWriteReadMover interface {
 	WriteTemporaryTransaction(ctx context.Context, trx *transaction.Transaction) error
 	WriteIssuerSignedTransactionForReceiver(ctx context.Context, receiverAddr string, trx *transaction.Transaction) error
@@ -44,7 +45,7 @@ type TrxWriteReadMover interface {
 	ReadTemporaryTransactions(ctx context.Context) ([]transaction.Transaction, error)
 }
 
-// BlockReadWriter provides block read and write methods.
+// BlockReader provides block read methods.
 type BlockReader interface {
 	LastBlockHashIndex() ([32]byte, uint64)
 }
@@ -61,6 +62,8 @@ type BlockReadWriter interface {
 }
 
 // AddressChecker provides address existence check method.
+// If you use other repository than addresses repository, you can implement this interface
+// but address should be uniquely indexed in your repository implementation.
 type AddressChecker interface {
 	CheckAddressExists(ctx context.Context, address string) (bool, error)
 }
@@ -70,23 +73,27 @@ type SignatureVerifier interface {
 	Verify(message, signature []byte, hash [32]byte, address string) error
 }
 
-// BlockFinder provides block finder method.
-type BlockFinder interface {
+// BlockFindWriter provides block find and write method.
+type BlockFindWriter interface {
 	WriteTransactionsInBlock(ctx context.Context, blockHash [32]byte, trxHash [][32]byte) error
 	FindTransactionInBlockHash(ctx context.Context, trxHash [32]byte) ([32]byte, error)
 }
 
 // BlockSubscription provides block publishing method.
+// It uses reactive package. It you are using your own implementation of reactive package
+// take care of Publish method to be non-blocking.
 type BlockSubscription interface {
 	Publish(block.Block)
 }
 
+// Config is a configuration of the Ledger.
 type Config struct {
 	Difficulty            uint64 `json:"difficulty"              bson:"difficulty"              yaml:"difficulty"`
 	BlockWriteTimestamp   uint64 `json:"block_write_timestamp"   bson:"block_write_timestamp"   yaml:"block_write_timestamp"`
 	BlockTransactionsSize int    `json:"block_transactions_size" bson:"block_transactions_size" yaml:"block_transactions_size"`
 }
 
+// Validate validates the Ledger configuration.
 func (c Config) Validate() error {
 	if c.Difficulty < minDifficulty || c.Difficulty > maxDifficulty {
 		return ErrDifficultyNotInRange
@@ -105,6 +112,8 @@ func (c Config) Validate() error {
 }
 
 // Ledger is a collection of ledger functionality to perform bookkeeping.
+// It performs all the actions on the transactions and blockchain.
+// Ladger seals all the transaction actions in the blockchain.
 type Ledger struct {
 	config Config
 	hashC  chan [32]byte
@@ -113,7 +122,7 @@ type Ledger struct {
 	bc     BlockReadWriter
 	ac     AddressChecker
 	vr     SignatureVerifier
-	tf     BlockFinder
+	tf     BlockFindWriter
 	log    logger.Logger
 	blcSub BlockSubscription
 }
@@ -125,7 +134,7 @@ func New(
 	tx TrxWriteReadMover,
 	ac AddressChecker,
 	vr SignatureVerifier,
-	tf BlockFinder,
+	tf BlockFindWriter,
 	log logger.Logger,
 	blcSub BlockSubscription,
 ) (*Ledger, error) {
@@ -148,6 +157,7 @@ func New(
 
 // Run runs the Ladger engine that writes blocks to the blockchain repository.
 // Run starts a goroutine and can be stopped by cancelling the context.
+// It is non-blocking and concurrent safe.
 func (l *Ledger) Run(ctx context.Context) {
 	if err := l.forgeTemporaryTrxs(ctx); err != nil {
 		l.log.Fatal(fmt.Sprintf("forging temporary failed: %s", err.Error()))
@@ -195,7 +205,9 @@ func (l *Ledger) WriteIssuerSignedTransactionForReceiver(
 }
 
 // WriteCandidateTransaction validates and writes a transaction to the repository.
-// Transaction is not yet a part of the blockchain.
+// Transaction is not yet a part of the blockchain at this point.
+// Ladger will perform all the necessary checks and validations before writing it to the repository.
+// The candidate needs to be signed by the receiver later in the process  to be placed as a candidate in the blockchain.
 func (l *Ledger) WriteCandidateTransaction(ctx context.Context, trx *transaction.Transaction) error {
 	if err := l.validateFullyTransaction(ctx, trx); err != nil {
 		return err

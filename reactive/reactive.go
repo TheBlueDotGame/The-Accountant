@@ -25,6 +25,7 @@ func (o *subscriber[T]) Channel() <-chan T {
 type Observable[T any] struct {
 	mux         sync.RWMutex
 	subscribers map[*subscriber[T]]struct{}
+	size        int
 }
 
 // New creates Observable container that holds channels for all subscribers.
@@ -32,14 +33,15 @@ type Observable[T any] struct {
 func New[T any](size int) *Observable[T] {
 	return &Observable[T]{
 		mux:         sync.RWMutex{},
-		subscribers: make(map[*subscriber[T]]struct{}, size),
+		subscribers: make(map[*subscriber[T]]struct{}),
+		size:        size,
 	}
 }
 
 // Subscribe subscribes to the container.
 func (o *Observable[T]) Subscribe() *subscriber[T] {
 	obs := &subscriber[T]{
-		c:         make(chan T),
+		c:         make(chan T, o.size),
 		container: o,
 	}
 	o.mux.Lock()

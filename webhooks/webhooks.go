@@ -48,7 +48,7 @@ func New(client HookRequestHTTPPoster, l logger.Logger) *Service {
 	}
 }
 
-// CreateWebhook creates new webhook.
+// CreateWebhook creates new webhook or or updates existing one for given trigger.
 func (s *Service) CreateWebhook(trigger string, h Hook) error {
 	switch trigger {
 	case TriggerNewBlock:
@@ -57,16 +57,6 @@ func (s *Service) CreateWebhook(trigger string, h Hook) error {
 		return ErrorHookNotImplemented
 	}
 	return nil
-}
-
-func (s *Service) insertHook(trigger string, h Hook) {
-	s.mux.Lock()
-	defer s.mux.Unlock()
-	hs, ok := s.buffer[trigger]
-	if !ok {
-		hs = make(hooks)
-	}
-	hs[h.URL] = h
 }
 
 // RemoveWebhook removes webhook for given trigger and Hook URL.
@@ -78,16 +68,6 @@ func (s *Service) RemoveWebhook(trigger string, h Hook) error {
 		return ErrorHookNotImplemented
 	}
 	return nil
-}
-
-func (s *Service) removeHook(trigger string, h Hook) {
-	s.mux.Lock()
-	defer s.mux.Unlock()
-	hs, ok := s.buffer[trigger]
-	if !ok {
-		return
-	}
-	delete(hs, h.URL)
 }
 
 // PostBlock posts block to all webhooks that are subscribed to the new block trigger.
@@ -103,4 +83,24 @@ func (s *Service) PostBlock(blc *block.Block) {
 			s.log.Error(fmt.Sprintf("webhook service error posting block to webhook url: %s, %s", h.URL, err.Error()))
 		}
 	}
+}
+
+func (s *Service) insertHook(trigger string, h Hook) {
+	s.mux.Lock()
+	defer s.mux.Unlock()
+	hs, ok := s.buffer[trigger]
+	if !ok {
+		hs = make(hooks)
+	}
+	hs[h.URL] = h
+}
+
+func (s *Service) removeHook(trigger string, h Hook) {
+	s.mux.Lock()
+	defer s.mux.Unlock()
+	hs, ok := s.buffer[trigger]
+	if !ok {
+		return
+	}
+	delete(hs, h.URL)
 }

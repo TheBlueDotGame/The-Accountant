@@ -9,7 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-const ExpirationTimeInDays = 7
+const ExpirationTimeInDays = 7 // transaction validity expiration time in days. TODO: move to config
 
 var (
 	ErrTransactionHasAFutureTime        = errors.New("transaction has a future time")
@@ -18,19 +18,24 @@ var (
 	ErrSignatureNotValidOrDataCorrupted = errors.New("signature not valid or data are corrupted")
 )
 
-// Signer is an interface for signing transaction.
+// Signer provides signing and address methods.
 type Signer interface {
 	Sign(message []byte) (digest [32]byte, signature []byte)
 	Address() string
 }
 
-// Verifier is an interface for verifying transaction.
+// Verifier provides signature verification method.
 type Verifier interface {
 	Verify(message, signature []byte, hash [32]byte, address string) error
 }
 
 // Transaction contains transaction information, subject type, subject data, signatures and public keys.
 // Transaction is valid for a week from being issued.
+// Subject represents an information how to read the Data and / or how to decode them.
+// Data is not validated by the computantis server, Ladger ior block.
+// What is stored in Data is not important for the whole Computantis system.
+// It is only important that the data are signed by the issuer and the receiver and
+// both parties agreed on them.
 type Transaction struct {
 	ID                primitive.ObjectID `json:"-"                  bson:"_id"`
 	CreatedAt         time.Time          `json:"created_at"         bson:"created_at"`
@@ -43,7 +48,7 @@ type Transaction struct {
 	ReceiverSignature []byte             `json:"receiver_signature" bson:"receiver_signature"`
 }
 
-// New creates new transaction signed by issuer.
+// New creates new transaction signed by the issuer.
 func New(subject string, message []byte, issuer Signer) (Transaction, error) {
 	createdAt := time.Now()
 	b := make([]byte, 8)
@@ -64,7 +69,7 @@ func New(subject string, message []byte, issuer Signer) (Transaction, error) {
 	}, nil
 }
 
-// Sign verifies issuer signature and signs Transaction by receiver.
+// Sign verifies issuer signature and signs Transaction by the receiver.
 func (t *Transaction) Sign(receiver Signer, v Verifier) ([32]byte, error) {
 	now := time.Now()
 

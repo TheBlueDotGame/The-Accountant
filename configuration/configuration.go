@@ -22,7 +22,7 @@ type Configuration struct {
 	Validator    validator.Config    `yaml:"validator"`
 }
 
-// Read reads the configuration  from the file and returns the MainYaml struct.
+// Read reads the configuration from the file and returns the Configuration with set fields according to the yaml setup.
 func Read(path string) (Configuration, error) {
 	buf, err := os.ReadFile(path)
 	if err != nil {

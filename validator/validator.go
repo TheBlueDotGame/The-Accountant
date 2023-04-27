@@ -69,6 +69,7 @@ func (a *app) blocks(c *fiber.Ctx) error {
 
 // Run initializes routing and runs the validator. To stop the validator cancel the context.
 // Validator connects to the central server via websocket and listens for new blocks.
+// It will block until the context is canceled.
 func Run(ctx context.Context, cfg Config, srw StatusReadWriter, log logger.Logger, ver Verifier, wh WebhookCreateRemovePoster) error {
 	header := make(http.Header)
 	header.Add("token", cfg.Token)

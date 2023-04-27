@@ -254,7 +254,8 @@ type CreateAddressRequest struct {
 	Signature []byte   `json:"signature"`
 }
 
-// Response for address creation.
+// Response for address creation request.
+// If Success is true, Address contains created address in base58 format.
 type CreateAddressResponse struct {
 	Success bool   `json:"success"`
 	Address string `json:"address"`
