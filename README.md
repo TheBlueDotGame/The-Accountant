@@ -1,6 +1,5 @@
 # Computantis
 
-[![Go](https://github.com/bartossh/Computantis/actions/workflows/go.yml/badge.svg)](https://github.com/bartossh/Computantis/actions/workflows/go.yml)
 [![CodeQL](https://github.com/bartossh/Computantis/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/bartossh/Computantis/actions/workflows/github-code-scanning/codeql)
 [![pages-build-deployment](https://github.com/bartossh/Computantis/actions/workflows/pages/pages-build-deployment/badge.svg)](https://github.com/bartossh/Computantis/actions/workflows/pages/pages-build-deployment)
 
