@@ -2,9 +2,9 @@
 layout: post
 title: Secured pub - sub.
 subtitle: Take strict control over your publishers and subscribers.
-cover-img: /assets/img/28-04-23.png
+cover-img: /assets/img/28-04-23.jpg
 thumbnail-img: /assets/img/delivery.png
-share-img: /assets/img/28-04-23.png
+share-img: /assets/img/28-04-23.jpg
 tags: [software, cloud, pub-sub, unique, service, order, horeca]
 ---
 
