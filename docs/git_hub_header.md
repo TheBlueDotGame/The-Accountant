@@ -49,3 +49,27 @@ It is good practice to have many validator nodes held by independent entities.
 Directory `stress/` contains central node REST API performance tests.
 Testing performance on MacBook with M2 arm64 chip, 24GB RAM and MongoDB running in docker container with 1CPU and 1GB RAM,
 25 transactions per block, full cycle of creating 1000 transactions took 3.75 sec.
+
+## Package provides webassembly package that expose client API to the front-end applications.
+
+To use client API allowing for creating a wallet and communication with Central Server REST API
+copy `wasm/bin/wallet.wasm` and `wasm/js/wasm_exec.js` to you fronted project and execute as in example below.
+
+```html
+<html>  
+    <head>
+        <meta charset="utf-8"/>
+        <script src="wasm_exec.js"></script>
+        <script>
+            const go = new Go();
+            WebAssembly.instantiateStreaming(fetch("wallet.wasm"), go.importObject).then((result) => {
+                go.run(result.instance);
+            });
+        </script>
+    </head>
+    <body></body>
+</html>  
+```
+
+# GO Documentation
+
