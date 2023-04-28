@@ -384,11 +384,11 @@ import "github.com/bartossh/Computantis/client"
 - [type Client](<#type-client>)
   - [func NewClient(apiRoot string, timeout time.Duration, fw transaction.Verifier, wrs WalletReadSaver, walletCreator NewSignValidatorCreator) *Client](<#func-newclient>)
   - [func (c *Client) Address() (string, error)](<#func-client-address>)
-  - [func (c *Client) ConfirmTransaction(trx transaction.Transaction) error](<#func-client-confirmtransaction>)
+  - [func (c *Client) ConfirmTransaction(trx *transaction.Transaction) error](<#func-client-confirmtransaction>)
   - [func (c *Client) DataToSign(address string) (server.DataToSignResponse, error)](<#func-client-datatosign>)
   - [func (c *Client) FlushWalletFromMemory()](<#func-client-flushwalletfrommemory>)
   - [func (c *Client) NewWallet(token string) error](<#func-client-newwallet>)
-  - [func (c *Client) PostBlock(url string, token string, block *block.Block) error](<#func-client-postblock>)
+  - [func (c *Client) PostWebhookBlock(url string, token string, block *block.Block) error](<#func-client-postwebhookblock>)
   - [func (c *Client) ProposeTransaction(receiverAddr string, subject string, data []byte) error](<#func-client-proposetransaction>)
   - [func (c *Client) ReadIssuedTransactions() ([]transaction.Transaction, error)](<#func-client-readissuedtransactions>)
   - [func (c *Client) ReadWaitingTransactions() ([]transaction.Transaction, error)](<#func-client-readwaitingtransactions>)
@@ -446,7 +446,7 @@ Address reads the wallet address. Address is a string representation of wallet p
 ### func \(\*Client\) [ConfirmTransaction](<https://github.com/bartossh/Computantis/blob/main/client/client.go#L186>)
 
 ```go
-func (c *Client) ConfirmTransaction(trx transaction.Transaction) error
+func (c *Client) ConfirmTransaction(trx *transaction.Transaction) error
 ```
 
 ConfirmTransaction confirms transaction by signing it with the wallet and then sending it to the API server.
@@ -475,13 +475,13 @@ func (c *Client) NewWallet(token string) error
 
 NewWallet creates a new wallet and sends a request to the API server to validate the wallet.
 
-### func \(\*Client\) [PostBlock](<https://github.com/bartossh/Computantis/blob/main/client/client.go#L319>)
+### func \(\*Client\) [PostWebhookBlock](<https://github.com/bartossh/Computantis/blob/main/client/client.go#L319>)
 
 ```go
-func (c *Client) PostBlock(url string, token string, block *block.Block) error
+func (c *Client) PostWebhookBlock(url string, token string, block *block.Block) error
 ```
 
-PostBlock posts validator.WebHookNewBlockMessage to given url.
+PostWebhookBlock posts validator.WebHookNewBlockMessage to given url.
 
 ### func \(\*Client\) [ProposeTransaction](<https://github.com/bartossh/Computantis/blob/main/client/client.go#L153>)
 
@@ -1746,7 +1746,7 @@ WebhookCreateRemovePoster provides methods to create, remove webhooks and post m
 type WebhookCreateRemovePoster interface {
     CreateWebhook(trigger string, h webhooks.Hook) error
     RemoveWebhook(trigger string, h webhooks.Hook) error
-    PostBlock(blc *block.Block)
+    PostWebhookBlock(blc *block.Block)
 }
 ```
 
@@ -1886,7 +1886,7 @@ import "github.com/bartossh/Computantis/webhooks"
 - [type Service](<#type-service>)
   - [func New(client HookRequestHTTPPoster, l logger.Logger) *Service](<#func-new>)
   - [func (s *Service) CreateWebhook(trigger string, h Hook) error](<#func-service-createwebhook>)
-  - [func (s *Service) PostBlock(blc *block.Block)](<#func-service-postblock>)
+  - [func (s *Service) PostWebhookBlock(blc *block.Block)](<#func-service-postwebhookblock>)
   - [func (s *Service) RemoveWebhook(trigger string, h Hook) error](<#func-service-removewebhook>)
 
 
@@ -1919,11 +1919,11 @@ type Hook struct {
 
 ## type [HookRequestHTTPPoster](<https://github.com/bartossh/Computantis/blob/main/webhooks/webhooks.go#L29-L31>)
 
-HookRequestHTTPPoster provides PostBlock method that allows to post new forged block to the webhook url over HTTP protocol.
+HookRequestHTTPPoster provides PostWebhookBlock method that allows to post new forged block to the webhook url over HTTP protocol.
 
 ```go
 type HookRequestHTTPPoster interface {
-    PostBlock(url string, token string, block *block.Block) error
+    PostWebhookBlock(url string, token string, block *block.Block) error
 }
 ```
 
@@ -1953,13 +1953,13 @@ func (s *Service) CreateWebhook(trigger string, h Hook) error
 
 CreateWebhook creates new webhook or or updates existing one for given trigger.
 
-### func \(\*Service\) [PostBlock](<https://github.com/bartossh/Computantis/blob/main/webhooks/webhooks.go#L74>)
+### func \(\*Service\) [PostWebhookBlock](<https://github.com/bartossh/Computantis/blob/main/webhooks/webhooks.go#L74>)
 
 ```go
-func (s *Service) PostBlock(blc *block.Block)
+func (s *Service) PostWebhookBlock(blc *block.Block)
 ```
 
-PostBlock posts block to all webhooks that are subscribed to the new block trigger.
+PostWebhookBlock posts block to all webhooks that are subscribed to the new block trigger.
 
 ### func \(\*Service\) [RemoveWebhook](<https://github.com/bartossh/Computantis/blob/main/webhooks/webhooks.go#L63>)
 

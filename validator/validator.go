@@ -36,7 +36,7 @@ type StatusReadWriter interface {
 type WebhookCreateRemovePoster interface {
 	CreateWebhook(trigger string, h webhooks.Hook) error
 	RemoveWebhook(trigger string, h webhooks.Hook) error
-	PostBlock(blc *block.Block)
+	PostWebhookBlock(blc *block.Block)
 }
 
 // Verifier provides methods to verify the signature of the message.
@@ -209,5 +209,5 @@ func (a app) processBlock(b *block.Block) {
 		a.log.Error(fmt.Sprintf("validator received invalid block, %s", err.Error()))
 	}
 
-	go a.wh.PostBlock(b) // post concurrently
+	go a.wh.PostWebhookBlock(b) // post concurrently
 }
