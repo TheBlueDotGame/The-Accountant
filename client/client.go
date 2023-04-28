@@ -183,7 +183,7 @@ func (c *Client) ProposeTransaction(receiverAddr string, subject string, data []
 
 // ConfirmTransaction confirms transaction by signing it with the wallet
 // and then sending it to the API server.
-func (c *Client) ConfirmTransaction(trx transaction.Transaction) error {
+func (c *Client) ConfirmTransaction(trx *transaction.Transaction) error {
 	if !c.ready {
 		return ErrWalletNotReady
 	}
@@ -315,8 +315,8 @@ func (c *Client) Sign(d []byte) (digest [32]byte, signature []byte, err error) {
 	return
 }
 
-// PostBlock posts validator.WebHookNewBlockMessage to given url.
-func (c *Client) PostBlock(url string, token string, block *block.Block) error {
+// PostWebhookBlock posts validator.WebHookNewBlockMessage to given url.
+func (c *Client) PostWebhookBlock(url string, token string, block *block.Block) error {
 	req := validator.WebHookNewBlockMessage{
 		Token: token,
 		Block: *block,

@@ -25,9 +25,9 @@ type Hook struct {
 
 type hooks map[string]Hook
 
-// HookRequestHTTPPoster provides PostBlock method that allows to post new forged block to the webhook url over HTTP protocol.
+// HookRequestHTTPPoster provides PostWebhookBlock method that allows to post new forged block to the webhook url over HTTP protocol.
 type HookRequestHTTPPoster interface {
-	PostBlock(url string, token string, block *block.Block) error
+	PostWebhookBlock(url string, token string, block *block.Block) error
 }
 
 // Service provide webhook service that is used to create, remove and update webhooks.
@@ -70,8 +70,8 @@ func (s *Service) RemoveWebhook(trigger string, h Hook) error {
 	return nil
 }
 
-// PostBlock posts block to all webhooks that are subscribed to the new block trigger.
-func (s *Service) PostBlock(blc *block.Block) {
+// PostWebhookBlock posts block to all webhooks that are subscribed to the new block trigger.
+func (s *Service) PostWebhookBlock(blc *block.Block) {
 	s.mux.RLock()
 	defer s.mux.RUnlock()
 	hs, ok := s.buffer[TriggerNewBlock]
@@ -79,7 +79,7 @@ func (s *Service) PostBlock(blc *block.Block) {
 		return
 	}
 	for _, h := range hs {
-		if err := s.client.PostBlock(h.URL, h.Token, blc); err != nil {
+		if err := s.client.PostWebhookBlock(h.URL, h.Token, blc); err != nil {
 			s.log.Error(fmt.Sprintf("webhook service error posting block to webhook url: %s, %s", h.URL, err.Error()))
 		}
 	}
