@@ -3,7 +3,7 @@ layout: post
 title: Why a new blockchain technology.
 subtitle: What problem this software is solving.
 cover-img: /assets/img/14-04-23.png
-thumbnail-img: /assets/img/blockchain_block.png
+thumbnail-img: /assets/img/doctor-bag.png
 share-img: /assets/img/14-04-23.png
 tags: [software, motives, description, explanations]
 ---

@@ -3,7 +3,7 @@ layout: post
 title: Give it an edge.
 subtitle: The computantis in the Edge architecture.
 cover-img: /assets/img/25-04-23.jpg
-thumbnail-img: /assets/img/blockchain_comp.png
+thumbnail-img: /assets/img/questions.png
 share-img: /assets/img/25-04-23.jpg
 tags: [software, explanation, edge, cloud, IoT]
 ---
