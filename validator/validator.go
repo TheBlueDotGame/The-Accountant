@@ -11,10 +11,13 @@ import (
 	"github.com/bartossh/Computantis/logger"
 	"github.com/bartossh/Computantis/repo"
 	"github.com/bartossh/Computantis/server"
+	"github.com/bartossh/Computantis/wallet"
 	"github.com/bartossh/Computantis/webhooks"
 	"github.com/fasthttp/websocket"
 	"github.com/gofiber/fiber/v2"
 )
+
+const wsConnectionTimeout = 5 * time.Second
 
 const (
 	Header = "Computantis-Validator"
@@ -47,7 +50,6 @@ type Verifier interface {
 // Config contains configuration of the validator.
 type Config struct {
 	Token      string `yaml:"token"`
-	Address    string `yaml:"address"`
 	Websocket  string `yaml:"websocket"`
 	Port       int    `yaml:"port"`
 	WalletPath string `yaml:"wallet_path"`
@@ -70,11 +72,17 @@ func (a *app) blocks(c *fiber.Ctx) error {
 // Run initializes routing and runs the validator. To stop the validator cancel the context.
 // Validator connects to the central server via websocket and listens for new blocks.
 // It will block until the context is canceled.
-func Run(ctx context.Context, cfg Config, srw StatusReadWriter, log logger.Logger, ver Verifier, wh WebhookCreateRemovePoster) error {
+func Run(ctx context.Context, cfg Config, srw StatusReadWriter, log logger.Logger, ver Verifier, wh WebhookCreateRemovePoster, wallet *wallet.Wallet) error {
+	hash, signature := wallet.Sign([]byte(cfg.Token))
+
 	header := make(http.Header)
-	header.Add("token", cfg.Token)
-	header.Add("address", cfg.Address)
-	c, _, err := websocket.DefaultDialer.DialContext(ctx, cfg.Websocket, header)
+	header.Add("Token", cfg.Token)
+	header.Add("Address", wallet.Address())
+	header.Add("Signature", string(signature[:]))
+	header.Add("Hash", string(hash[:]))
+	ctxTimeout, cancel := context.WithTimeout(ctx, wsConnectionTimeout)
+	c, _, err := websocket.DefaultDialer.DialContext(ctxTimeout, cfg.Websocket, header)
+	cancel()
 	if err != nil {
 		return err
 	}

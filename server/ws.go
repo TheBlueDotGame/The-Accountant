@@ -57,22 +57,57 @@ type socket struct {
 func (s *server) wsWrapper(c *fiber.Ctx) error {
 	h := c.GetReqHeaders()
 
-	token, ok := h["token"]
+	token, ok := h["Token"]
 	if !ok || token == "" {
 		s.log.Error(
-			fmt.Sprintf("websocket server, no token provided from address: %s", c.ClientHelloInfo().Conn.LocalAddr().String()))
+			fmt.Sprintf("websocket server, no token provided from address: %s", c.IP()))
 		return fiber.ErrForbidden
 	}
 
 	if ok, err := s.repo.CheckToken(c.Context(), token); !ok || err != nil {
-		s.log.Error(fmt.Sprintf("failed to check token: %s", err.Error()))
+		if err != nil {
+			s.log.Error(fmt.Sprintf("failed to check token: %s", err.Error()))
+			return fiber.ErrForbidden
+		}
+		s.log.Error(fmt.Sprintf("token: %s provided in request by %s do not exists", token, c.IP()))
 		return fiber.ErrForbidden
 	}
 
-	addr, ok := h["address"]
+	addr, ok := h["Address"]
 	if !ok || addr == "" {
 		s.log.Error(
-			fmt.Sprintf("websocket server, no address provided from address: %s", c.ClientHelloInfo().Conn.LocalAddr().String()))
+			fmt.Sprintf("websocket server, no address provided from address: %s", c.IP()))
+		return fiber.ErrForbidden
+	}
+
+	if ok, err := s.repo.CheckAddressExists(c.Context(), addr); err != nil || !ok {
+		if err != nil {
+			s.log.Error(fmt.Sprintf("failed to check address: %s", err.Error()))
+			return fiber.ErrForbidden
+		}
+		s.log.Error(fmt.Sprintf("address %s does not exist in the repository", addr))
+		return fiber.ErrForbidden
+	}
+
+	signature, ok := h["Signature"]
+	if !ok || signature == "" {
+		s.log.Error(
+			fmt.Sprintf("websocket server, no signature provided from address: %s", c.IP()))
+		return fiber.ErrForbidden
+	}
+
+	hash, ok := h["Hash"]
+	if !ok || hash == "" {
+		s.log.Error(
+			fmt.Sprintf("websocket server, no signature provided from address: %s", c.IP()))
+		return fiber.ErrForbidden
+	}
+
+	var digest [32]byte
+	copy(digest[:], []byte(hash))
+	if err := s.bookkeeping.VerifySignature([]byte(token), []byte(signature), digest, addr); err != nil {
+		s.log.Error(
+			fmt.Sprintf("websocket server, signature validation failed from address: %s", c.IP()))
 		return fiber.ErrForbidden
 	}
 
