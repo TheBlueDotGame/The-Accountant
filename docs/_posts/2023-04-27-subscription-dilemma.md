@@ -3,7 +3,7 @@ layout: post
 title: The shared subscription dilemma.
 subtitle: Sealing money leaks.
 cover-img: /assets/img/27-04-23.png
-thumbnail-img: /assets/img/network.png
+thumbnail-img: /assets/img/subscribe.png
 share-img: /assets/img/27-04-23.png
 tags: [software, cloud, subscription, unique, service, money]
 ---
