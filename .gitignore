@@ -38,3 +38,6 @@ server_settings.yml
 
 # ide
 .vscode
+
+# test wallet
+test_wallet

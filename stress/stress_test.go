@@ -4,7 +4,7 @@
 // - create test database to ensure your data is not polluted,
 // - ensure your database contains valid tokens allowing to create wallets,
 // - run server with: go run cmd/central/main.go.
-// Run test with: `go test -v -run ./stress_test.go -tags stress`
+// Run test with: `go test -v -run=Test ./stress/stress_test.go -tags stress`
 // It is the best to test it when server runs on separate machine.
 
 package stress
@@ -44,7 +44,7 @@ func TestFullClientApiCycle(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, 1, len(awaitedTrx))
 
-		err = receiver.ConfirmTransaction(awaitedTrx[0])
+		err = receiver.ConfirmTransaction(&awaitedTrx[0])
 		assert.Nil(t, err)
 	}
 	fmt.Printf("1000 transactions in %v\n", time.Since(now))

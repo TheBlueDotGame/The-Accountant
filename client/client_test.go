@@ -56,3 +56,14 @@ func TestFullClientApiCycle(t *testing.T) {
 	issuer.FlushWalletFromMemory()
 	receiver.FlushWalletFromMemory()
 }
+
+func TestSaveWallet(t *testing.T) {
+	t.Parallel()
+	c := NewClient("http://localhost:8080", 5*time.Second, wallet.Helper{}, fileoperations.Helper{}, wallet.New)
+	err := c.ValidateApiVersion()
+	assert.Nil(t, err)
+	err = c.NewWallet("80fda91a43989fa81347aa011e0f1e0fdde4eaabb408bf426166a62c80456c30")
+	assert.Nil(t, err)
+	err = c.SaveWalletToFile("test_wallet")
+	assert.Nil(t, err)
+}

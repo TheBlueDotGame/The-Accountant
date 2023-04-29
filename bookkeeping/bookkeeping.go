@@ -238,7 +238,9 @@ func (l *Ledger) forgeTemporaryTrxs(ctx context.Context) error {
 	for _, trx := range trxs {
 		l.hashes = append(l.hashes, trx.Hash)
 	}
-	l.forge(ctx)
+	if len(l.hashes) > 0 {
+		l.forge(ctx)
+	}
 	return nil
 }
 

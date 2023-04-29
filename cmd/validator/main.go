@@ -58,7 +58,13 @@ func main() {
 
 	wh := webhooks.New(httpClient, log)
 
-	if err := validator.Run(ctx, cfg.Validator, db, log, verify, wh); err != nil {
+	wl, err := fo.ReadWallet(cfg.Validator.WalletPath)
+	if err != nil {
+		log.Error(err.Error())
+		fmt.Println(err.Error())
+	}
+
+	if err := validator.Run(ctx, cfg.Validator, db, log, verify, wh, &wl); err != nil {
 		log.Error(err.Error())
 		fmt.Println(err.Error())
 	}
