@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/bartossh/Computantis/aeswrapper"
 	"github.com/bartossh/Computantis/client"
 	"github.com/bartossh/Computantis/configuration"
 	"github.com/bartossh/Computantis/fileoperations"
@@ -51,17 +52,18 @@ func main() {
 		cancel()
 	}()
 
-	verify := wallet.Helper{}
-	fo := fileoperations.Helper{}
+	verify := wallet.NewVerifier()
+
+	seal := aeswrapper.New()
+	fo := fileoperations.New(cfg.FileOperator, seal)
 
 	httpClient := client.NewClient("", time.Second*5, verify, fo, wallet.New)
 
 	wh := webhooks.New(httpClient, log)
 
-	wl, err := fo.ReadWallet(cfg.Validator.WalletPath)
+	wl, err := fo.ReadWallet()
 	if err != nil {
 		log.Error(err.Error())
-		fmt.Println(err.Error())
 	}
 
 	if err := validator.Run(ctx, cfg.Validator, db, log, verify, wh, &wl); err != nil {

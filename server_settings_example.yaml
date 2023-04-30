@@ -15,5 +15,7 @@ dataprovider:
 validator:
   websocket: "ws://localhost:8080/ws"
   port: 9090
-  wallet_path: "./path/to/wallet"
   toke: "some token from the provider"
+file_operator:
+  wallet_path: "path/to/your/wallet"
+  wallet_passwd: "passwd to your wallet"

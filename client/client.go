@@ -35,8 +35,8 @@ var (
 
 // WalletReadSaver allows to read and save the wallet.
 type WalletReadSaver interface {
-	ReadWallet(path string) (wallet.Wallet, error)
-	SaveWallet(path string, w wallet.Wallet) error
+	ReadWallet() (wallet.Wallet, error)
+	SaveWallet(w wallet.Wallet) error
 }
 
 // NewWalletCreator is a function that creates a new SignValidator.
@@ -271,17 +271,17 @@ func (c *Client) ReadIssuedTransactions() ([]transaction.Transaction, error) {
 }
 
 // SaveWalletToFile saves the wallet to the file in the path.
-func (c *Client) SaveWalletToFile(path string) error {
+func (c *Client) SaveWalletToFile() error {
 	if !c.ready {
 		return ErrWalletNotReady
 	}
 
-	return c.wrs.SaveWallet(path, c.w)
+	return c.wrs.SaveWallet(c.w)
 }
 
 // ReadWalletFromFile reads the wallet from the file in the path.
-func (c *Client) ReadWalletFromFile(path string) error {
-	w, err := c.wrs.ReadWallet(path)
+func (c *Client) ReadWalletFromFile(passwd, path string) error {
+	w, err := c.wrs.ReadWallet()
 	if err != nil {
 		return err
 	}

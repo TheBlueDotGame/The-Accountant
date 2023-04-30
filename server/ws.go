@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -89,23 +90,37 @@ func (s *server) wsWrapper(c *fiber.Ctx) error {
 		return fiber.ErrForbidden
 	}
 
-	signature, ok := h["Signature"]
-	if !ok || signature == "" {
+	signatureString, ok := h["Signature"]
+	if !ok || signatureString == "" {
 		s.log.Error(
 			fmt.Sprintf("websocket server, no signature provided from address: %s", c.IP()))
 		return fiber.ErrForbidden
 	}
 
-	hash, ok := h["Hash"]
-	if !ok || hash == "" {
+	hashString, ok := h["Hash"]
+	if !ok || hashString == "" {
 		s.log.Error(
 			fmt.Sprintf("websocket server, no signature provided from address: %s", c.IP()))
+		return fiber.ErrForbidden
+	}
+
+	signature, err := hex.DecodeString(signatureString)
+	if err != nil {
+		s.log.Error(
+			fmt.Sprintf("websocket server, signature not in hex format, provided from address: %s", c.IP()))
+		return fiber.ErrForbidden
+	}
+
+	hash, err := hex.DecodeString(hashString)
+	if err != nil {
+		s.log.Error(
+			fmt.Sprintf("websocket server, hash not in hex format, provided from address: %s", c.IP()))
 		return fiber.ErrForbidden
 	}
 
 	var digest [32]byte
-	copy(digest[:], []byte(hash))
-	if err := s.bookkeeping.VerifySignature([]byte(token), []byte(signature), digest, addr); err != nil {
+	copy(digest[:], hash)
+	if err := s.bookkeeping.VerifySignature([]byte(token), signature, digest, addr); err != nil {
 		s.log.Error(
 			fmt.Sprintf("websocket server, signature validation failed from address: %s", c.IP()))
 		return fiber.ErrForbidden
