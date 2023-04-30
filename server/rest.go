@@ -99,6 +99,11 @@ func (s *server) propose(c *fiber.Ctx) error {
 		return fiber.ErrBadRequest
 	}
 
+	if len(req.Transaction.Data) == 0 || len(req.Transaction.Data) > s.dataSize {
+		s.log.Error(fmt.Sprintf("propose endpoint, invalid transaction data size: %d", len(req.Transaction.Data)))
+		return fiber.ErrBadRequest
+	}
+
 	if err := s.bookkeeping.WriteIssuerSignedTransactionForReceiver(c.Context(), req.ReceiverAddr, &req.Transaction); err != nil {
 		s.log.Error(fmt.Sprintf("propose endpoint, failed to write transaction: %s", err.Error()))
 		return c.JSON(TransactionConfirmProposeResponse{
@@ -117,6 +122,11 @@ func (s *server) confirm(c *fiber.Ctx) error {
 	var trx transaction.Transaction
 	if err := c.BodyParser(&trx); err != nil {
 		s.log.Error(fmt.Sprintf("confirm endpoint, failed to parse request body: %s", err.Error()))
+		return fiber.ErrBadRequest
+	}
+
+	if len(trx.Data) == 0 || len(trx.Data) > s.dataSize {
+		s.log.Error(fmt.Sprintf("propose endpoint, invalid transaction data size: %d", len(trx.Data)))
 		return fiber.ErrBadRequest
 	}
 
