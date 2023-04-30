@@ -10,6 +10,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// TODO: get test vectors for test
+
 func TestBlockCreate(t *testing.T) {
 	difficulty := uint64(1)
 
@@ -214,4 +216,112 @@ func Benchmark1_Block(b *testing.B) {
 
 		New(difficulty, 0, [32]byte{}, [][32]byte{trxHash})
 	}
+}
+
+func BenchmarkDifficulty(b *testing.B) {
+	difficulties := []uint64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
+
+	issuer, err := wallet.New()
+	assert.Nil(b, err)
+	receiver, err := wallet.New()
+	assert.Nil(b, err)
+
+	verifier := wallet.Helper{}
+
+	for _, difficulty := range difficulties {
+		b.Run(fmt.Sprintf("difficulty: %v", difficulty), func(b *testing.B) {
+			for n := 0; n < b.N; n++ {
+				message := []byte("genesis transaction")
+				trx, err := transaction.New("genesis", message, &issuer)
+				assert.Nil(b, err)
+
+				trxHash, err := trx.Sign(&receiver, verifier)
+				assert.Nil(b, err)
+				assert.NotEmpty(b, trxHash)
+
+				New(difficulty, 0, [32]byte{}, [][32]byte{trxHash})
+			}
+		})
+	}
+}
+
+// This tests is has large difficulty and will take a lot of time to run
+// The large difficulty is used to test for validation of small set of nonces that proves the work
+func TestProofOfWorkSuccess(t *testing.T) {
+	var difficulty uint64 = 23
+
+	trxHashes := [][32]byte{{1, 2, 3, 4, 5}, {6, 7, 8, 9, 10}, {11, 12, 13, 14, 15}}
+
+	for _, trxH := range trxHashes {
+		t.Run(fmt.Sprintf("trx hashes %d", trxH[:5]), func(t *testing.T) {
+			blc := Block{
+				Difficulty: difficulty,
+			}
+
+			p := newProof(&blc)
+
+			blc.Nonce, blc.Hash = p.run(trxH)
+
+			ok := p.validate(trxH)
+			assert.True(t, ok)
+		})
+	}
+}
+
+// This test will fail for small difficulty as it is much more possible nonces to be found
+// It tests the case when the nonce is not valid for the given trx hashes and high difficulty
+// It is tuned for difficulty 3, anything less will fail
+func TestProofOfWorkFail(t *testing.T) {
+	var difficulty uint64 = 3
+
+	trxHashes := [][32]byte{{1, 2, 3, 4, 5}, {6, 7, 8, 9, 10}, {11, 12, 13, 14, 15}}
+
+	for _, trxH := range trxHashes {
+		t.Run(fmt.Sprintf("trx hash: %v", trxH[:5]), func(t *testing.T) {
+			blc := Block{
+				Difficulty: difficulty,
+			}
+
+			p := newProof(&blc)
+
+			blc.Nonce, blc.Hash = p.run(trxH)
+
+			trxH[0] = 255
+
+			ok := p.validate(trxH)
+			assert.False(t, ok)
+		})
+
+	}
+}
+
+// Fuzzing will take a long long time to run
+func FuzzProofOfWorkSuccess(f *testing.F) {
+	var difficulty uint64 = 3
+
+	trxHashes := [][]byte{
+		{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32},
+		{6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 7, 8, 9, 10},
+		{11, 12, 13, 14, 15, 1, 2, 3, 4, 5, 6, 7, 8, 9, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 11, 12, 13, 14, 15, 16, 17, 18},
+	}
+
+	for _, trxH := range trxHashes {
+		f.Add(trxH)
+	}
+
+	f.Fuzz(func(t *testing.T, trxH []byte) {
+		blc := Block{
+			Difficulty: difficulty,
+		}
+
+		p := newProof(&blc)
+
+		var h [32]byte
+		copy(h[:], trxH)
+
+		blc.Nonce, blc.Hash = p.run(h)
+
+		ok := p.validate(h)
+		assert.True(t, ok)
+	})
 }

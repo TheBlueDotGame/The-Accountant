@@ -206,7 +206,6 @@ func (pow *proofOfWork) run(trxHash [32]byte) (uint64, [32]byte) {
 	return nonce, hash
 }
 
-// Validate validates proof of work
 func (pow *proofOfWork) validate(trxHash [32]byte) bool {
 	var intHash big.Int
 	data := pow.initData(pow.block.Nonce, trxHash)
