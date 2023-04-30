@@ -41,3 +41,6 @@ server_settings.yml
 
 # test wallet
 test_wallet
+
+# artefacts
+artefacts/

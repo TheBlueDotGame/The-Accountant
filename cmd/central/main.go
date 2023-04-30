@@ -67,7 +67,7 @@ func main() {
 		return
 	}
 
-	verifier := wallet.Helper{}
+	verifier := wallet.NewVerifier()
 	rx := reactive.New[block.Block](rxBufferSize)
 
 	ladger, err := bookkeeping.New(cfg.Bookkeeper, blc, db, db, verifier, db, log, rx)

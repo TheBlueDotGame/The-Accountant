@@ -12,6 +12,11 @@ import (
 // Helper provides wallet helper functionalities without knowing about wallet private and public keys.
 type Helper struct{}
 
+// NewVerifier creates new wallet Helper verifier.
+func NewVerifier() Helper {
+	return Helper{}
+}
+
 // AddressToPubKey creates ED25519 public key from address, or returns error otherwise.
 func (h Helper) AddressToPubKey(address string) (ed25519.PublicKey, error) {
 	pubKey, err := serializer.Base58Decode([]byte(address))

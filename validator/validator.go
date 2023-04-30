@@ -2,6 +2,7 @@ package validator
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -49,10 +50,9 @@ type Verifier interface {
 
 // Config contains configuration of the validator.
 type Config struct {
-	Token      string `yaml:"token"`
-	Websocket  string `yaml:"websocket"`
-	Port       int    `yaml:"port"`
-	WalletPath string `yaml:"wallet_path"`
+	Token     string `yaml:"token"`     // token is used to authenticate validator in the central server
+	Websocket string `yaml:"websocket"` // websocket address of the central server
+	Port      int    `yaml:"port"`      // port on which validator will listen for http requests
 }
 
 type app struct {
@@ -78,8 +78,9 @@ func Run(ctx context.Context, cfg Config, srw StatusReadWriter, log logger.Logge
 	header := make(http.Header)
 	header.Add("Token", cfg.Token)
 	header.Add("Address", wallet.Address())
-	header.Add("Signature", string(signature[:]))
-	header.Add("Hash", string(hash[:]))
+	header.Add("Signature", hex.EncodeToString(signature[:]))
+	header.Add("Hash", hex.EncodeToString(hash[:]))
+
 	ctxTimeout, cancel := context.WithTimeout(ctx, wsConnectionTimeout)
 	c, _, err := websocket.DefaultDialer.DialContext(ctxTimeout, cfg.Websocket, header)
 	cancel()
