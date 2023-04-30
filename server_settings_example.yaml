@@ -4,6 +4,7 @@ bookkeeper:
   block_transactions_size: 25
 server:
   port: 8080
+  data_size_bytes: 15000000
 database:
   conn_str: "mongodb://user:psswd@localhost:27017"
   database_name: "computantis"

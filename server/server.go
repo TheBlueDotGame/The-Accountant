@@ -47,7 +47,10 @@ const (
 
 const queryLimit = 100
 
-var ErrWrongPortSpecified = errors.New("port must be between 1 and 65535")
+var (
+	ErrWrongPortSpecified = errors.New("port must be between 1 and 65535")
+	ErrWrongMessageSize   = errors.New("message size must be between 1024 and 15000000")
+)
 
 // Repository is the interface that wraps the basic CRUD and Search methods.
 // Repository should be properly indexed to allow for transaction and block hash.
@@ -95,10 +98,12 @@ type ReactiveSubscriberProvider interface {
 
 // Config contains configuration of the server.
 type Config struct {
-	Port int `yaml:"port"`
+	Port          int `yaml:"port"`            // Port to listen on.
+	DataSizeBytes int `yaml:"data_size_bytes"` // Size of the data to be stored in the transaction.
 }
 
 type server struct {
+	dataSize     int
 	repo         Repository
 	bookkeeping  Bookkeeper
 	randDataProv RandomDataProvideValidator
@@ -132,6 +137,7 @@ func Run(
 	}
 
 	s := &server{
+		dataSize:     c.DataSizeBytes,
 		repo:         repo,
 		bookkeeping:  bookkeeping,
 		randDataProv: pv,
@@ -193,6 +199,10 @@ func Run(
 func validateConfig(c *Config) error {
 	if c.Port == 0 || c.Port > 65535 {
 		return ErrWrongPortSpecified
+	}
+
+	if c.DataSizeBytes < 1024 || c.DataSizeBytes > 15000000 {
+		return ErrWrongMessageSize
 	}
 
 	return nil

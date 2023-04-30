@@ -1277,10 +1277,13 @@ const (
 ## Variables
 
 ```go
-var ErrWrongPortSpecified = errors.New("port must be between 1 and 65535")
+var (
+    ErrWrongPortSpecified = errors.New("port must be between 1 and 65535")
+    ErrWrongMessageSize   = errors.New("message size must be between 1024 and 15000000")
+)
 ```
 
-## func [Run](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L112-L116>)
+## func [Run](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L117-L121>)
 
 ```go
 func Run(ctx context.Context, c Config, repo Repository, bookkeeping Bookkeeper, pv RandomDataProvideValidator, log logger.Logger, rx ReactiveSubscriberProvider) error
@@ -1300,7 +1303,7 @@ type AliveResponse struct {
 }
 ```
 
-## type [AwaitedIssuedTransactionRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L140-L145>)
+## type [AwaitedIssuedTransactionRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L150-L155>)
 
 AwaitedIssuedTransactionRequest is a request to get awaited or issued transactions for given address. Request contains of Address for which Transactions are requested, Data in binary format, Hash of Data and Signature of the Data to prove that entity doing the request is an Address owner.
 
@@ -1313,7 +1316,7 @@ type AwaitedIssuedTransactionRequest struct {
 }
 ```
 
-## type [AwaitedTransactionResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L148-L151>)
+## type [AwaitedTransactionResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L158-L161>)
 
 AwaitedTransactionResponse is a response for awaited transactions request.
 
@@ -1324,7 +1327,7 @@ type AwaitedTransactionResponse struct {
 }
 ```
 
-## type [Bookkeeper](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L75-L80>)
+## type [Bookkeeper](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L78-L83>)
 
 Bookkeeper abstracts methods of the bookkeeping of a blockchain.
 
@@ -1337,17 +1340,18 @@ type Bookkeeper interface {
 }
 ```
 
-## type [Config](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L97-L99>)
+## type [Config](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L100-L103>)
 
 Config contains configuration of the server.
 
 ```go
 type Config struct {
-    Port int `yaml:"port"`
+    Port          int `yaml:"port"`            // Port to listen on.
+    DataSizeBytes int `yaml:"data_size_bytes"` // Size of the data to be stored in the transaction.
 }
 ```
 
-## type [CreateAddressRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L249-L255>)
+## type [CreateAddressRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L259-L265>)
 
 CreateAddressRequest is a request to create an address.
 
@@ -1361,7 +1365,7 @@ type CreateAddressRequest struct {
 }
 ```
 
-## type [CreateAddressResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L259-L262>)
+## type [CreateAddressResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L269-L272>)
 
 Response for address creation request. If Success is true, Address contains created address in base58 format.
 
@@ -1372,7 +1376,7 @@ type CreateAddressResponse struct {
 }
 ```
 
-## type [DataToSignRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L229-L231>)
+## type [DataToSignRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L239-L241>)
 
 DataToSignRequest is a request to get data to sign for proving identity.
 
@@ -1382,7 +1386,7 @@ type DataToSignRequest struct {
 }
 ```
 
-## type [DataToSignResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L234-L236>)
+## type [DataToSignResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L244-L246>)
 
 DataToSignRequest is a response containing data to sign for proving identity.
 
@@ -1392,7 +1396,7 @@ type DataToSignResponse struct {
 }
 ```
 
-## type [IssuedTransactionResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L189-L192>)
+## type [IssuedTransactionResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L199-L202>)
 
 AwaitedTransactionResponse is a response for issued transactions request.
 
@@ -1416,7 +1420,7 @@ type Message struct {
 }
 ```
 
-## type [RandomDataProvideValidator](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L84-L87>)
+## type [RandomDataProvideValidator](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L87-L90>)
 
 RandomDataProvideValidator provides random binary data for signing to prove identity and the validator of data being valid and not expired.
 
@@ -1427,7 +1431,7 @@ type RandomDataProvideValidator interface {
 }
 ```
 
-## type [ReactiveSubscriberProvider](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L91-L94>)
+## type [ReactiveSubscriberProvider](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L94-L97>)
 
 ReactiveSubscriberProvider provides reactive subscription to the blockchain. It allows to listen for the new blocks created by the Ladger.
 
@@ -1438,7 +1442,7 @@ type ReactiveSubscriberProvider interface {
 }
 ```
 
-## type [Repository](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L56-L67>)
+## type [Repository](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L59-L70>)
 
 Repository is the interface that wraps the basic CRUD and Search methods. Repository should be properly indexed to allow for transaction and block hash. as well as address public keys to be and unique and the hash lookup should be fast. Repository holds the blocks and transaction that are part of the blockchain.
 
@@ -1519,7 +1523,7 @@ type TransactionProposeRequest struct {
 }
 ```
 
-## type [Verifier](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L70-L72>)
+## type [Verifier](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L73-L75>)
 
 Verifier provides methods to verify the signature of the message.
 
