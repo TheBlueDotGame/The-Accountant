@@ -10,7 +10,6 @@ import (
 
 	"github.com/bartossh/Computantis/block"
 	"github.com/bartossh/Computantis/logger"
-	"github.com/bartossh/Computantis/repo"
 	"github.com/bartossh/Computantis/server"
 	"github.com/bartossh/Computantis/wallet"
 	"github.com/bartossh/Computantis/webhooks"
@@ -30,10 +29,20 @@ var (
 	ErrBlockPrevHashIsInvalid = fmt.Errorf("block previous hash is invalid")
 )
 
+// Status is a status of each received block by the validator.
+// It keeps track of invalid blocks in case of blockchain corruption.
+type Status struct {
+	ID        any         `json:"-"          bson:"_id,omitempty" db:"id"`
+	Index     int64       `json:"index"      bson:"index"         db:"index"`
+	Block     block.Block `json:"block"      bson:"block"         db:"-"`
+	Valid     bool        `json:"valid"      bson:"valid"         db:"valid"`
+	CreatedAt time.Time   `json:"created_at" bson:"created_at"    db:"created_at"`
+}
+
 // StatusReadWriter provides methods to bulk read and single write validator status.
 type StatusReadWriter interface {
-	WriteValidatorStatus(ctx context.Context, vs *repo.ValidatorStatus) error
-	ReadLastNValidatorStatuses(ctx context.Context, last int64) ([]repo.ValidatorStatus, error)
+	WriteValidatorStatus(ctx context.Context, vs *Status) error
+	ReadLastNValidatorStatuses(ctx context.Context, last int64) ([]Status, error)
 }
 
 // WebhookCreateRemovePoster provides methods to create, remove webhooks and post messages to webhooks.

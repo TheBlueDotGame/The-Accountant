@@ -18,14 +18,14 @@ var separator = []byte{}
 // Block mining difficulty may change if needed and is a part of a hash digest.
 // Block ensures that transactions hashes are valid and match the transactions stored in the repository.
 type Block struct {
-	ID         primitive.ObjectID `json:"-"          bson:"_id"`
-	Index      uint64             `json:"index"      bson:"index"`
-	Timestamp  uint64             `json:"timestamp"  bson:"timestamp"`
-	Nonce      uint64             `json:"nonce"      bson:"nonce"`
-	Difficulty uint64             `json:"difficulty" bson:"difficulty"`
-	Hash       [32]byte           `json:"hash"       bson:"hash"`
-	PrevHash   [32]byte           `json:"prev_hash"  bson:"prev_hash"`
-	TrxHashes  [][32]byte         `json:"trx_hashes" bson:"trx_hashes"`
+	ID         any        `json:"-"          bson:"_id"        db:"id"`
+	Index      uint64     `json:"index"      bson:"index"      db:"index"`
+	Timestamp  uint64     `json:"timestamp"  bson:"timestamp"  db:"timestamp"`
+	Nonce      uint64     `json:"nonce"      bson:"nonce"      db:"nonce"`
+	Difficulty uint64     `json:"difficulty" bson:"difficulty" db:"difficulty"`
+	Hash       [32]byte   `json:"hash"       bson:"hash"       db:"hash"`
+	PrevHash   [32]byte   `json:"prev_hash"  bson:"prev_hash"  db:"prev_hash"`
+	TrxHashes  [][32]byte `json:"trx_hashes" bson:"trx_hashes" db:"trx_hashes"`
 }
 
 // New creates a new Block hashing it with given difficulty.
