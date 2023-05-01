@@ -1,4 +1,4 @@
-package repo
+package mongorepo
 
 import (
 	"context"
@@ -11,9 +11,9 @@ import (
 // TransactionInBlock stores relation between Transaction and Block to which Transaction was added.
 // It is stored for fast lookup only to allow to find Block hash in which Transaction was added.
 type TransactionInBlock struct {
-	ID              primitive.ObjectID `json:"-" bson:"_id,omitempty"`
-	BlockHash       [32]byte           `json:"-" bson:"block_hash"`
-	TransactionHash [32]byte           `json:"-" bson:"transaction_hash"`
+	ID              any      `json:"-" bson:"_id,omitempty"    db:"id"`
+	BlockHash       [32]byte `json:"-" bson:"block_hash"       db:"block_hash"`
+	TransactionHash [32]byte `json:"-" bson:"transaction_hash" db:"transaction_hash"`
 }
 
 // WriteTransactionsInBlock stores relation between Transaction and Block to which Transaction was added.

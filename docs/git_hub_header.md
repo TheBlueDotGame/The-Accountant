@@ -39,7 +39,7 @@ It is good practice to have many validator nodes held by independent entities.
 
 ## Run for development
 
-0. Run database `docker compose up`.
+0. Run mongo database `docker compose -f docker-compose-mongo.yaml up -d` or postgresql `docker compose -f docker-compose-postgresql.yaml up -d`.
 1. Create `server_settings.yaml` according to `server_settings_example.yaml` in the repo root folder.
 2. Run `make run` or `go run cmd/central/main.go`.
 
