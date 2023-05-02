@@ -12,7 +12,7 @@ import (
 	"github.com/bartossh/Computantis/configuration"
 	"github.com/bartossh/Computantis/fileoperations"
 	"github.com/bartossh/Computantis/logging"
-	"github.com/bartossh/Computantis/mongorepo"
+	"github.com/bartossh/Computantis/repomongo"
 	"github.com/bartossh/Computantis/validator"
 	"github.com/bartossh/Computantis/wallet"
 	"github.com/bartossh/Computantis/webhooks"
@@ -30,7 +30,7 @@ func main() {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 
-	db, err := mongorepo.Connect(ctx, cfg.Database)
+	db, err := repomongo.Connect(ctx, cfg.Database)
 	if err != nil {
 		fmt.Println(err)
 		c <- os.Interrupt

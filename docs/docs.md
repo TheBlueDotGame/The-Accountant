@@ -909,10 +909,10 @@ func (h Helper) Warn(msg string)
 
 Warn writes warning log.
 
-# mongorepo
+# repomongo
 
 ```go
-import "github.com/bartossh/Computantis/mongorepo"
+import "github.com/bartossh/Computantis/repomongo"
 ```
 
 ## Index
@@ -949,7 +949,7 @@ import "github.com/bartossh/Computantis/mongorepo"
 - [type TransactionInBlock](<#type-transactioninblock>)
 
 
-## type [Address](<https://github.com/bartossh/Computantis/blob/main/mongorepo/address.go#L13-L16>)
+## type [Address](<https://github.com/bartossh/Computantis/blob/main/repomongo/address.go#L13-L16>)
 
 Address holds information about unique PublicKey.
 
@@ -960,7 +960,7 @@ type Address struct {
 }
 ```
 
-## type [DataBase](<https://github.com/bartossh/Computantis/blob/main/mongorepo/mongorepo.go#L27-L29>)
+## type [DataBase](<https://github.com/bartossh/Computantis/blob/main/repomongo/repomongo.go#L27-L29>)
 
 Database provides database access for read, write and delete of repository entities.
 
@@ -970,7 +970,7 @@ type DataBase struct {
 }
 ```
 
-### func [Connect](<https://github.com/bartossh/Computantis/blob/main/mongorepo/mongorepo.go#L32>)
+### func [Connect](<https://github.com/bartossh/Computantis/blob/main/repomongo/repomongo.go#L32>)
 
 ```go
 func Connect(ctx context.Context, cfg configuration.DBConfig) (*DataBase, error)
@@ -978,7 +978,7 @@ func Connect(ctx context.Context, cfg configuration.DBConfig) (*DataBase, error)
 
 Connect creates new connection to the repository and returns pointer to the DataBase.
 
-### func \(DataBase\) [CheckAddressExists](<https://github.com/bartossh/Computantis/blob/main/mongorepo/address.go#L37>)
+### func \(DataBase\) [CheckAddressExists](<https://github.com/bartossh/Computantis/blob/main/repomongo/address.go#L37>)
 
 ```go
 func (db DataBase) CheckAddressExists(ctx context.Context, address string) (bool, error)
@@ -986,7 +986,7 @@ func (db DataBase) CheckAddressExists(ctx context.Context, address string) (bool
 
 CheckAddressExists checks if address exists in the database. Returns true if exists and error if database error different from ErrNoDocuments.
 
-### func \(DataBase\) [CheckToken](<https://github.com/bartossh/Computantis/blob/main/mongorepo/token.go#L23>)
+### func \(DataBase\) [CheckToken](<https://github.com/bartossh/Computantis/blob/main/repomongo/token.go#L23>)
 
 ```go
 func (db DataBase) CheckToken(ctx context.Context, token string) (bool, error)
@@ -994,7 +994,7 @@ func (db DataBase) CheckToken(ctx context.Context, token string) (bool, error)
 
 CheckToken checks if token exists in the database is valid and didn't expire.
 
-### func \(DataBase\) [Disconnect](<https://github.com/bartossh/Computantis/blob/main/mongorepo/mongorepo.go#L48>)
+### func \(DataBase\) [Disconnect](<https://github.com/bartossh/Computantis/blob/main/repomongo/repomongo.go#L48>)
 
 ```go
 func (c DataBase) Disconnect(ctx context.Context) error
@@ -1002,7 +1002,7 @@ func (c DataBase) Disconnect(ctx context.Context) error
 
 Disconnect disconnects user from database
 
-### func \(DataBase\) [FindAddress](<https://github.com/bartossh/Computantis/blob/main/mongorepo/search.go#L44>)
+### func \(DataBase\) [FindAddress](<https://github.com/bartossh/Computantis/blob/main/repomongo/search.go#L44>)
 
 ```go
 func (db DataBase) FindAddress(ctx context.Context, search string, limit int) ([]string, error)
@@ -1010,7 +1010,7 @@ func (db DataBase) FindAddress(ctx context.Context, search string, limit int) ([
 
 FindAddress looks for matching address in the addresses repository and returns limited slice of matching addresses. If limit is set to 0 or above the 1000 which is maximum then search is limited to 1000.
 
-### func \(DataBase\) [FindTransactionInBlockHash](<https://github.com/bartossh/Computantis/blob/main/mongorepo/search.go#L34>)
+### func \(DataBase\) [FindTransactionInBlockHash](<https://github.com/bartossh/Computantis/blob/main/repomongo/search.go#L34>)
 
 ```go
 func (db DataBase) FindTransactionInBlockHash(ctx context.Context, trxHash [32]byte) ([32]byte, error)
@@ -1018,7 +1018,7 @@ func (db DataBase) FindTransactionInBlockHash(ctx context.Context, trxHash [32]b
 
 FindTransactionInBlockHash finds Block hash in to which Transaction with given hash was added.
 
-### func \(DataBase\) [InvalidateToken](<https://github.com/bartossh/Computantis/blob/main/mongorepo/token.go#L55>)
+### func \(DataBase\) [InvalidateToken](<https://github.com/bartossh/Computantis/blob/main/repomongo/token.go#L55>)
 
 ```go
 func (db DataBase) InvalidateToken(ctx context.Context, token string) error
@@ -1026,7 +1026,7 @@ func (db DataBase) InvalidateToken(ctx context.Context, token string) error
 
 InvalidateToken invalidates token.
 
-### func \(DataBase\) [LastBlock](<https://github.com/bartossh/Computantis/blob/main/mongorepo/block.go#L14>)
+### func \(DataBase\) [LastBlock](<https://github.com/bartossh/Computantis/blob/main/repomongo/block.go#L14>)
 
 ```go
 func (db DataBase) LastBlock(ctx context.Context) (block.Block, error)
@@ -1034,7 +1034,7 @@ func (db DataBase) LastBlock(ctx context.Context) (block.Block, error)
 
 LastBlock returns last block from the database.
 
-### func \(DataBase\) [MoveTransactionsFromTemporaryToPermanent](<https://github.com/bartossh/Computantis/blob/main/mongorepo/transaction.go#L92>)
+### func \(DataBase\) [MoveTransactionsFromTemporaryToPermanent](<https://github.com/bartossh/Computantis/blob/main/repomongo/transaction.go#L92>)
 
 ```go
 func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context, hash [][32]byte) error
@@ -1042,7 +1042,7 @@ func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context,
 
 MoveTransactionsFromTemporaryToPermanent moves transactions from temporary storage to permanent.
 
-### func \(DataBase\) [ReadAwaitingTransactionsByIssuer](<https://github.com/bartossh/Computantis/blob/main/mongorepo/transaction.go#L73>)
+### func \(DataBase\) [ReadAwaitingTransactionsByIssuer](<https://github.com/bartossh/Computantis/blob/main/repomongo/transaction.go#L73>)
 
 ```go
 func (db DataBase) ReadAwaitingTransactionsByIssuer(ctx context.Context, address string) ([]transaction.Transaction, error)
@@ -1050,7 +1050,7 @@ func (db DataBase) ReadAwaitingTransactionsByIssuer(ctx context.Context, address
 
 ReadAwaitingTransactionsByReceiver reads all transactions paired with given issuer address.
 
-### func \(DataBase\) [ReadAwaitingTransactionsByReceiver](<https://github.com/bartossh/Computantis/blob/main/mongorepo/transaction.go#L54>)
+### func \(DataBase\) [ReadAwaitingTransactionsByReceiver](<https://github.com/bartossh/Computantis/blob/main/repomongo/transaction.go#L54>)
 
 ```go
 func (db DataBase) ReadAwaitingTransactionsByReceiver(ctx context.Context, address string) ([]transaction.Transaction, error)
@@ -1058,7 +1058,7 @@ func (db DataBase) ReadAwaitingTransactionsByReceiver(ctx context.Context, addre
 
 ReadAwaitingTransactionsByReceiver reads all transactions paired with given receiver address.
 
-### func \(DataBase\) [ReadBlockByHash](<https://github.com/bartossh/Computantis/blob/main/mongorepo/block.go#L36>)
+### func \(DataBase\) [ReadBlockByHash](<https://github.com/bartossh/Computantis/blob/main/repomongo/block.go#L36>)
 
 ```go
 func (db DataBase) ReadBlockByHash(ctx context.Context, hash [32]byte) (block.Block, error)
@@ -1066,7 +1066,7 @@ func (db DataBase) ReadBlockByHash(ctx context.Context, hash [32]byte) (block.Bl
 
 ReadBlockByHash returns block with given hash.
 
-### func \(DataBase\) [ReadLastNValidatorStatuses](<https://github.com/bartossh/Computantis/blob/main/mongorepo/validator.go#L18>)
+### func \(DataBase\) [ReadLastNValidatorStatuses](<https://github.com/bartossh/Computantis/blob/main/repomongo/validator.go#L18>)
 
 ```go
 func (db DataBase) ReadLastNValidatorStatuses(ctx context.Context, last int64) ([]validator.Status, error)
@@ -1074,7 +1074,7 @@ func (db DataBase) ReadLastNValidatorStatuses(ctx context.Context, last int64) (
 
 ReadLastNValidatorStatuses reads last validator statuses from the database.
 
-### func \(DataBase\) [ReadTemporaryTransactions](<https://github.com/bartossh/Computantis/blob/main/mongorepo/transaction.go#L123>)
+### func \(DataBase\) [ReadTemporaryTransactions](<https://github.com/bartossh/Computantis/blob/main/repomongo/transaction.go#L123>)
 
 ```go
 func (db DataBase) ReadTemporaryTransactions(ctx context.Context) ([]transaction.Transaction, error)
@@ -1082,7 +1082,7 @@ func (db DataBase) ReadTemporaryTransactions(ctx context.Context) ([]transaction
 
 ReadTemporaryTransactions reads transactions from the temporary storage.
 
-### func \(DataBase\) [RemoveAwaitingTransaction](<https://github.com/bartossh/Computantis/blob/main/mongorepo/transaction.go#L31>)
+### func \(DataBase\) [RemoveAwaitingTransaction](<https://github.com/bartossh/Computantis/blob/main/repomongo/transaction.go#L31>)
 
 ```go
 func (db DataBase) RemoveAwaitingTransaction(ctx context.Context, trxHash [32]byte) error
@@ -1090,7 +1090,7 @@ func (db DataBase) RemoveAwaitingTransaction(ctx context.Context, trxHash [32]by
 
 RemoveAwaitingTransaction removes transaction from the awaiting transaction storage.
 
-### func \(DataBase\) [RunMigration](<https://github.com/bartossh/Computantis/blob/main/mongorepo/migrations.go#L289>)
+### func \(DataBase\) [RunMigration](<https://github.com/bartossh/Computantis/blob/main/repomongo/migrations.go#L289>)
 
 ```go
 func (c DataBase) RunMigration(ctx context.Context) error
@@ -1098,7 +1098,7 @@ func (c DataBase) RunMigration(ctx context.Context) error
 
 RunMigrationUp runs all the migrations
 
-### func \(DataBase\) [Write](<https://github.com/bartossh/Computantis/blob/main/mongorepo/logger.go#L13>)
+### func \(DataBase\) [Write](<https://github.com/bartossh/Computantis/blob/main/repomongo/logger.go#L13>)
 
 ```go
 func (db DataBase) Write(p []byte) (n int, err error)
@@ -1106,7 +1106,7 @@ func (db DataBase) Write(p []byte) (n int, err error)
 
 Write writes log to the database. p is a marshaled logger.Log.
 
-### func \(DataBase\) [WriteAddress](<https://github.com/bartossh/Computantis/blob/main/mongorepo/address.go#L19>)
+### func \(DataBase\) [WriteAddress](<https://github.com/bartossh/Computantis/blob/main/repomongo/address.go#L19>)
 
 ```go
 func (db DataBase) WriteAddress(ctx context.Context, address string) error
@@ -1114,7 +1114,7 @@ func (db DataBase) WriteAddress(ctx context.Context, address string) error
 
 WriteAddress writes unique address to the database.
 
-### func \(DataBase\) [WriteBlock](<https://github.com/bartossh/Computantis/blob/main/mongorepo/block.go#L45>)
+### func \(DataBase\) [WriteBlock](<https://github.com/bartossh/Computantis/blob/main/repomongo/block.go#L45>)
 
 ```go
 func (db DataBase) WriteBlock(ctx context.Context, block block.Block) error
@@ -1122,7 +1122,7 @@ func (db DataBase) WriteBlock(ctx context.Context, block block.Block) error
 
 WriteBlock writes block to the database.
 
-### func \(DataBase\) [WriteIssuerSignedTransactionForReceiver](<https://github.com/bartossh/Computantis/blob/main/mongorepo/transaction.go#L37-L41>)
+### func \(DataBase\) [WriteIssuerSignedTransactionForReceiver](<https://github.com/bartossh/Computantis/blob/main/repomongo/transaction.go#L37-L41>)
 
 ```go
 func (db DataBase) WriteIssuerSignedTransactionForReceiver(ctx context.Context, receiverAddr string, trx *transaction.Transaction) error
@@ -1130,7 +1130,7 @@ func (db DataBase) WriteIssuerSignedTransactionForReceiver(ctx context.Context, 
 
 WriteIssuerSignedTransactionForReceiver writes transaction to the awaiting transaction storage paired with given receiver.
 
-### func \(DataBase\) [WriteTemporaryTransaction](<https://github.com/bartossh/Computantis/blob/main/mongorepo/transaction.go#L24>)
+### func \(DataBase\) [WriteTemporaryTransaction](<https://github.com/bartossh/Computantis/blob/main/repomongo/transaction.go#L24>)
 
 ```go
 func (db DataBase) WriteTemporaryTransaction(ctx context.Context, trx *transaction.Transaction) error
@@ -1138,7 +1138,7 @@ func (db DataBase) WriteTemporaryTransaction(ctx context.Context, trx *transacti
 
 WriteTemporaryTransaction writes transaction to the temporary storage.
 
-### func \(DataBase\) [WriteToken](<https://github.com/bartossh/Computantis/blob/main/mongorepo/token.go#L41>)
+### func \(DataBase\) [WriteToken](<https://github.com/bartossh/Computantis/blob/main/repomongo/token.go#L41>)
 
 ```go
 func (db DataBase) WriteToken(ctx context.Context, token string, expirationDate int64) error
@@ -1146,7 +1146,7 @@ func (db DataBase) WriteToken(ctx context.Context, token string, expirationDate 
 
 WriteToken writes unique token to the database.
 
-### func \(DataBase\) [WriteTransactionsInBlock](<https://github.com/bartossh/Computantis/blob/main/mongorepo/search.go#L20>)
+### func \(DataBase\) [WriteTransactionsInBlock](<https://github.com/bartossh/Computantis/blob/main/repomongo/search.go#L20>)
 
 ```go
 func (db DataBase) WriteTransactionsInBlock(ctx context.Context, blockHash [32]byte, trxHash [][32]byte) error
@@ -1154,7 +1154,7 @@ func (db DataBase) WriteTransactionsInBlock(ctx context.Context, blockHash [32]b
 
 WriteTransactionsInBlock stores relation between Transaction and Block to which Transaction was added.
 
-### func \(DataBase\) [WriteValidatorStatus](<https://github.com/bartossh/Computantis/blob/main/mongorepo/validator.go#L12>)
+### func \(DataBase\) [WriteValidatorStatus](<https://github.com/bartossh/Computantis/blob/main/repomongo/validator.go#L12>)
 
 ```go
 func (db DataBase) WriteValidatorStatus(ctx context.Context, vs *validator.Status) error
@@ -1162,7 +1162,7 @@ func (db DataBase) WriteValidatorStatus(ctx context.Context, vs *validator.Statu
 
 WriteValidatorStatus writes validator status to the database.
 
-## type [Migration](<https://github.com/bartossh/Computantis/blob/main/mongorepo/migrations.go#L24-L26>)
+## type [Migration](<https://github.com/bartossh/Computantis/blob/main/repomongo/migrations.go#L24-L26>)
 
 Migration describes migration that is made in the repository database.
 
@@ -1172,7 +1172,7 @@ type Migration struct {
 }
 ```
 
-## type [Token](<https://github.com/bartossh/Computantis/blob/main/mongorepo/token.go#L15-L20>)
+## type [Token](<https://github.com/bartossh/Computantis/blob/main/repomongo/token.go#L15-L20>)
 
 Token holds information about unique token. Token is a way of proving to the REST API of the central server that the request is valid and comes from the client that is allowed to use the API.
 
@@ -1185,7 +1185,7 @@ type Token struct {
 }
 ```
 
-## type [TransactionAwaitingReceiverSignature](<https://github.com/bartossh/Computantis/blob/main/mongorepo/transaction.go#L15-L21>)
+## type [TransactionAwaitingReceiverSignature](<https://github.com/bartossh/Computantis/blob/main/repomongo/transaction.go#L15-L21>)
 
 TransactionAwaitingReceiverSignature represents transaction awaiting receiver signature. It is as well the entity of all issued transactions that has not been signed by receiver yet.
 
@@ -1199,7 +1199,7 @@ type TransactionAwaitingReceiverSignature struct {
 }
 ```
 
-## type [TransactionInBlock](<https://github.com/bartossh/Computantis/blob/main/mongorepo/search.go#L13-L17>)
+## type [TransactionInBlock](<https://github.com/bartossh/Computantis/blob/main/repomongo/search.go#L13-L17>)
 
 TransactionInBlock stores relation between Transaction and Block to which Transaction was added. It is stored for fast lookup only to allow to find Block hash in which Transaction was added.
 
