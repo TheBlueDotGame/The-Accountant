@@ -10,16 +10,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-// TransactionAwaitingReceiverSignature represents transaction awaiting receiver signature.
-// It is as well the entity of all issued transactions that has not been signed by receiver yet.
-type TransactionAwaitingReceiverSignature struct {
-	ID              any                     `json:"-"                bson:"_id,omitempty"    db:"id"`
-	ReceiverAddress string                  `json:"receiver_address" bson:"receiver_address" db:"receiver_address"`
-	IssuerAddress   string                  `json:"issuer_address"   bson:"issuer_address"   db:"issuer_address"`
-	Transaction     transaction.Transaction `json:"transaction"      bson:"transaction"      db:"-"`
-	TransactionHash [32]byte                `json:"transaction_hash" bson:"transaction_hash" db:"hash"`
-}
-
 // WriteTemporaryTransaction writes transaction to the temporary storage.
 func (db DataBase) WriteTemporaryTransaction(ctx context.Context, trx *transaction.Transaction) error {
 	trx.ID = primitive.NewObjectID()
@@ -39,7 +29,7 @@ func (db DataBase) WriteIssuerSignedTransactionForReceiver(
 	receiverAddr string,
 	trx *transaction.Transaction,
 ) error {
-	awaitingTrx := TransactionAwaitingReceiverSignature{
+	awaitingTrx := transaction.TransactionAwaitingReceiverSignature{
 		ID:              primitive.NilObjectID,
 		ReceiverAddress: receiverAddr,
 		IssuerAddress:   trx.IssuerAddress,
@@ -52,7 +42,7 @@ func (db DataBase) WriteIssuerSignedTransactionForReceiver(
 
 // ReadAwaitingTransactionsByReceiver reads all transactions paired with given receiver address.
 func (db DataBase) ReadAwaitingTransactionsByReceiver(ctx context.Context, address string) ([]transaction.Transaction, error) {
-	var trxsAwaiting []TransactionAwaitingReceiverSignature
+	var trxsAwaiting []transaction.TransactionAwaitingReceiverSignature
 	curs, err := db.inner.Collection(transactionsAwaitingReceiverCollection).Find(ctx, bson.M{"receiver_address": address})
 	if err != nil {
 		return nil, err
@@ -71,7 +61,7 @@ func (db DataBase) ReadAwaitingTransactionsByReceiver(ctx context.Context, addre
 
 // ReadAwaitingTransactionsByReceiver reads all transactions paired with given issuer address.
 func (db DataBase) ReadAwaitingTransactionsByIssuer(ctx context.Context, address string) ([]transaction.Transaction, error) {
-	var awaitTrxs []TransactionAwaitingReceiverSignature
+	var awaitTrxs []transaction.TransactionAwaitingReceiverSignature
 	curs, err := db.inner.Collection(transactionsAwaitingReceiverCollection).Find(ctx, bson.M{"issuer_address": address})
 	if err != nil {
 		return nil, err
