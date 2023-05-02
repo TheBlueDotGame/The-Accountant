@@ -978,6 +978,54 @@ func (h Helper) Warn(msg string)
 
 Warn writes warning log.
 
+# reactive
+
+```go
+import "github.com/bartossh/Computantis/reactive"
+```
+
+## Index
+
+- [type Observable](<#type-observable>)
+  - [func New[T any](size int) *Observable[T]](<#func-new>)
+  - [func (o *Observable[T]) Publish(v T)](<#func-observablet-publish>)
+  - [func (o *Observable[T]) Subscribe() *subscriber[T]](<#func-observablet-subscribe>)
+
+
+## type [Observable](<https://github.com/bartossh/Computantis/blob/main/reactive/reactive.go#L25-L29>)
+
+Observable creates a container for subscribers. This works in single producer multiple consumer pattern.
+
+```go
+type Observable[T any] struct {
+    // contains filtered or unexported fields
+}
+```
+
+### func [New](<https://github.com/bartossh/Computantis/blob/main/reactive/reactive.go#L33>)
+
+```go
+func New[T any](size int) *Observable[T]
+```
+
+New creates Observable container that holds channels for all subscribers. size is the buffer size of each channel.
+
+### func \(\*Observable\[T\]\) [Publish](<https://github.com/bartossh/Computantis/blob/main/reactive/reactive.go#L54>)
+
+```go
+func (o *Observable[T]) Publish(v T)
+```
+
+Publish publishes value to all subscribers.
+
+### func \(\*Observable\[T\]\) [Subscribe](<https://github.com/bartossh/Computantis/blob/main/reactive/reactive.go#L42>)
+
+```go
+func (o *Observable[T]) Subscribe() *subscriber[T]
+```
+
+Subscribe subscribes to the container.
+
 # repomongo
 
 ```go
@@ -1029,7 +1077,7 @@ type Address struct {
 }
 ```
 
-## type [DataBase](<https://github.com/bartossh/Computantis/blob/main/repomongo/repomongo.go#L27-L29>)
+## type [DataBase](<https://github.com/bartossh/Computantis/blob/main/repomongo/mongorepo.go#L27-L29>)
 
 Database provides database access for read, write and delete of repository entities.
 
@@ -1039,7 +1087,7 @@ type DataBase struct {
 }
 ```
 
-### func [Connect](<https://github.com/bartossh/Computantis/blob/main/repomongo/repomongo.go#L32>)
+### func [Connect](<https://github.com/bartossh/Computantis/blob/main/repomongo/mongorepo.go#L32>)
 
 ```go
 func Connect(ctx context.Context, cfg configuration.DBConfig) (*DataBase, error)
@@ -1063,7 +1111,7 @@ func (db DataBase) CheckToken(ctx context.Context, token string) (bool, error)
 
 CheckToken checks if token exists in the database is valid and didn't expire.
 
-### func \(DataBase\) [Disconnect](<https://github.com/bartossh/Computantis/blob/main/repomongo/repomongo.go#L48>)
+### func \(DataBase\) [Disconnect](<https://github.com/bartossh/Computantis/blob/main/repomongo/mongorepo.go#L48>)
 
 ```go
 func (c DataBase) Disconnect(ctx context.Context) error
@@ -1280,54 +1328,6 @@ type TransactionInBlock struct {
 }
 ```
 
-# reactive
-
-```go
-import "github.com/bartossh/Computantis/reactive"
-```
-
-## Index
-
-- [type Observable](<#type-observable>)
-  - [func New[T any](size int) *Observable[T]](<#func-new>)
-  - [func (o *Observable[T]) Publish(v T)](<#func-observablet-publish>)
-  - [func (o *Observable[T]) Subscribe() *subscriber[T]](<#func-observablet-subscribe>)
-
-
-## type [Observable](<https://github.com/bartossh/Computantis/blob/main/reactive/reactive.go#L25-L29>)
-
-Observable creates a container for subscribers. This works in single producer multiple consumer pattern.
-
-```go
-type Observable[T any] struct {
-    // contains filtered or unexported fields
-}
-```
-
-### func [New](<https://github.com/bartossh/Computantis/blob/main/reactive/reactive.go#L33>)
-
-```go
-func New[T any](size int) *Observable[T]
-```
-
-New creates Observable container that holds channels for all subscribers. size is the buffer size of each channel.
-
-### func \(\*Observable\[T\]\) [Publish](<https://github.com/bartossh/Computantis/blob/main/reactive/reactive.go#L54>)
-
-```go
-func (o *Observable[T]) Publish(v T)
-```
-
-Publish publishes value to all subscribers.
-
-### func \(\*Observable\[T\]\) [Subscribe](<https://github.com/bartossh/Computantis/blob/main/reactive/reactive.go#L42>)
-
-```go
-func (o *Observable[T]) Subscribe() *subscriber[T]
-```
-
-Subscribe subscribes to the container.
-
 # repopostgre
 
 ```go
@@ -1336,13 +1336,32 @@ import "github.com/bartossh/Computantis/repopostgre"
 
 ## Index
 
+- [Variables](<#variables>)
 - [type DataBase](<#type-database>)
   - [func Connect(ctx context.Context, cfg configuration.DBConfig) (*DataBase, error)](<#func-connect>)
   - [func (db DataBase) Disconnect(ctx context.Context) error](<#func-database-disconnect>)
+  - [func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context, hash [][32]byte) error](<#func-database-movetransactionsfromtemporarytopermanent>)
   - [func (db DataBase) Ping(ctx context.Context) error](<#func-database-ping>)
+  - [func (db DataBase) ReadAwaitingTransactionsByIssuer(ctx context.Context, address string) ([]transaction.Transaction, error)](<#func-database-readawaitingtransactionsbyissuer>)
+  - [func (db DataBase) ReadAwaitingTransactionsByReceiver(ctx context.Context, address string) ([]transaction.Transaction, error)](<#func-database-readawaitingtransactionsbyreceiver>)
+  - [func (db DataBase) ReadTemporaryTransactions(ctx context.Context) ([]transaction.Transaction, error)](<#func-database-readtemporarytransactions>)
+  - [func (db DataBase) RemoveAwaitingTransaction(ctx context.Context, trxHash [32]byte) error](<#func-database-removeawaitingtransaction>)
+  - [func (db DataBase) WriteIssuerSignedTransactionForReceiver(ctx context.Context, receiverAddr string, trx *transaction.Transaction) error](<#func-database-writeissuersignedtransactionforreceiver>)
+  - [func (db DataBase) WriteTemporaryTransaction(ctx context.Context, trx *transaction.Transaction) error](<#func-database-writetemporarytransaction>)
 
 
-## type [DataBase](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L27-L29>)
+## Variables
+
+```go
+var (
+    ErrInsertFailed = fmt.Errorf("insert failed")
+    ErrRemoveFailed = fmt.Errorf("remove failed")
+    ErrSelectFailed = fmt.Errorf("select failed")
+    ErrMoveFailed   = fmt.Errorf("move failed")
+)
+```
+
+## type [DataBase](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L22-L24>)
 
 Database provides database access for read, write and delete of repository entities.
 
@@ -1352,7 +1371,7 @@ type DataBase struct {
 }
 ```
 
-### func [Connect](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L32>)
+### func [Connect](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L27>)
 
 ```go
 func Connect(ctx context.Context, cfg configuration.DBConfig) (*DataBase, error)
@@ -1360,7 +1379,7 @@ func Connect(ctx context.Context, cfg configuration.DBConfig) (*DataBase, error)
 
 Connect creates new connection to the repository and returns pointer to the DataBase.
 
-### func \(DataBase\) [Disconnect](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L42>)
+### func \(DataBase\) [Disconnect](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L37>)
 
 ```go
 func (db DataBase) Disconnect(ctx context.Context) error
@@ -1368,13 +1387,69 @@ func (db DataBase) Disconnect(ctx context.Context) error
 
 Disconnect disconnects user from database
 
-### func \(DataBase\) [Ping](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L47>)
+### func \(DataBase\) [MoveTransactionsFromTemporaryToPermanent](<https://github.com/bartossh/Computantis/blob/main/repopostgre/transaction.go#L106>)
+
+```go
+func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context, hash [][32]byte) error
+```
+
+MoveTransactionsFromTemporaryToPermanent moves transactions from temporary storage to permanent storage.
+
+### func \(DataBase\) [Ping](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L42>)
 
 ```go
 func (db DataBase) Ping(ctx context.Context) error
 ```
 
 Ping checks if the connection to the database is still alive.
+
+### func \(DataBase\) [ReadAwaitingTransactionsByIssuer](<https://github.com/bartossh/Computantis/blob/main/repopostgre/transaction.go#L82>)
+
+```go
+func (db DataBase) ReadAwaitingTransactionsByIssuer(ctx context.Context, address string) ([]transaction.Transaction, error)
+```
+
+RemoveAwaitingTransaction removes transaction from the awaiting transaction storage.
+
+### func \(DataBase\) [ReadAwaitingTransactionsByReceiver](<https://github.com/bartossh/Computantis/blob/main/repopostgre/transaction.go#L58>)
+
+```go
+func (db DataBase) ReadAwaitingTransactionsByReceiver(ctx context.Context, address string) ([]transaction.Transaction, error)
+```
+
+ReadAwaitingTransactionsByReceiver reads all transactions paired with given receiver address.
+
+### func \(DataBase\) [ReadTemporaryTransactions](<https://github.com/bartossh/Computantis/blob/main/repopostgre/transaction.go#L119>)
+
+```go
+func (db DataBase) ReadTemporaryTransactions(ctx context.Context) ([]transaction.Transaction, error)
+```
+
+ReadTemporaryTransactions reads all transactions from the temporary storage.
+
+### func \(DataBase\) [RemoveAwaitingTransaction](<https://github.com/bartossh/Computantis/blob/main/repopostgre/transaction.go#L28>)
+
+```go
+func (db DataBase) RemoveAwaitingTransaction(ctx context.Context, trxHash [32]byte) error
+```
+
+RemoveAwaitingTransaction removes transaction from the awaiting transaction storage.
+
+### func \(DataBase\) [WriteIssuerSignedTransactionForReceiver](<https://github.com/bartossh/Computantis/blob/main/repopostgre/transaction.go#L37-L41>)
+
+```go
+func (db DataBase) WriteIssuerSignedTransactionForReceiver(ctx context.Context, receiverAddr string, trx *transaction.Transaction) error
+```
+
+WriteIssuerSignedTransactionForReceiver writes transaction to the awaiting transaction storage paired with given receiver.
+
+### func \(DataBase\) [WriteTemporaryTransaction](<https://github.com/bartossh/Computantis/blob/main/repopostgre/transaction.go#L11>)
+
+```go
+func (db DataBase) WriteTemporaryTransaction(ctx context.Context, trx *transaction.Transaction) error
+```
+
+WriteTemporaryTransaction writes transaction to the temporary storage.
 
 # serializer
 
@@ -1791,15 +1866,15 @@ Transaction contains transaction information, subject type, subject data, signat
 
 ```go
 type Transaction struct {
-    ID                any       `json:"-"                  bson:"_id"`
-    CreatedAt         time.Time `json:"created_at"         bson:"created_at"`
-    Hash              [32]byte  `json:"hash"               bson:"hash"`
-    IssuerAddress     string    `json:"issuer_address"     bson:"issuer_address"`
-    ReceiverAddress   string    `json:"receiver_address"   bson:"receiver_address"`
-    Subject           string    `json:"subject"            bson:"subject"`
-    Data              []byte    `json:"data"               bson:"data"`
-    IssuerSignature   []byte    `json:"issuer_signature"   bson:"issuer_signature"`
-    ReceiverSignature []byte    `json:"receiver_signature" bson:"receiver_signature"`
+    ID                any       `json:"-"                  bson:"_id"                db:"id"`
+    CreatedAt         time.Time `json:"created_at"         bson:"created_at"         db:"created_at"`
+    Hash              [32]byte  `json:"hash"               bson:"hash"               db:"hash"`
+    IssuerAddress     string    `json:"issuer_address"     bson:"issuer_address"     db:"issuer_address"`
+    ReceiverAddress   string    `json:"receiver_address"   bson:"receiver_address"   db:"receiver_address"`
+    Subject           string    `json:"subject"            bson:"subject"            db:"subject"`
+    Data              []byte    `json:"data"               bson:"data"               db:"data"`
+    IssuerSignature   []byte    `json:"issuer_signature"   bson:"issuer_signature"   db:"issuer_signature"`
+    ReceiverSignature []byte    `json:"receiver_signature" bson:"receiver_signature" db:"receiver_signature"`
 }
 ```
 
