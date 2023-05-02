@@ -11,16 +11,11 @@ import (
 	_ "github.com/lib/pq"
 )
 
-const (
-	addressesTable                    = "addresses"
-	transactionsPermanentTable        = "transactionsPermanent"
-	transactionsTemporaryTable        = "transactionsTemporary"
-	transactionsAwaitingReceiverTable = "transactionsAwaitingReceiver"
-	blocksTable                       = "blocks"
-	transactionsInBlockTable          = "transactionsInBlock"
-	tokensTable                       = "tokens"
-	logsTable                         = "logs"
-	validatorStatusTable              = "validatorStatus"
+var (
+	ErrInsertFailed = fmt.Errorf("insert failed")
+	ErrRemoveFailed = fmt.Errorf("remove failed")
+	ErrSelectFailed = fmt.Errorf("select failed")
+	ErrMoveFailed   = fmt.Errorf("move failed")
 )
 
 // Database provides database access for read, write and delete of repository entities.

@@ -12,8 +12,8 @@ import (
 	"github.com/bartossh/Computantis/configuration"
 	"github.com/bartossh/Computantis/dataprovider"
 	"github.com/bartossh/Computantis/logging"
-	"github.com/bartossh/Computantis/mongorepo"
 	"github.com/bartossh/Computantis/reactive"
+	"github.com/bartossh/Computantis/repomongo"
 	"github.com/bartossh/Computantis/server"
 	"github.com/bartossh/Computantis/wallet"
 )
@@ -39,7 +39,7 @@ func main() {
 		cancel()
 	}()
 
-	db, err := mongorepo.Connect(ctx, cfg.Database)
+	db, err := repomongo.Connect(ctx, cfg.Database)
 	if err != nil {
 		fmt.Println(err)
 		c <- os.Interrupt

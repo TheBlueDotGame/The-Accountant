@@ -52,10 +52,14 @@ CREATE INDEX transaction_temporary_created_at ON transactionsTemporary USING BTR
 
 CREATE TABLE IF NOT EXISTS transactionsAwaitingReceiver (
    id serial PRIMARY KEY,
+   created_at TIMESTAMP NOT NULL,
    hash BYTEA UNIQUE NOT NULL,
    issuer_address VARCHAR ( 64 ) NOT NULL,
    receiver_address VARCHAR ( 64 ) NOT NULL,
-   FOREIGN KEY (hash) REFERENCES transactionsTemporary (hash)
+   subject VARCHAR ( 100 ) NOT NULL,
+   data BYTEA,
+   issuer_signature BYTEA NOT NULL,
+   receiver_signature BYTEA
 );
 
 CREATE INDEX transaction_awaiting_issuer_address ON transactionsAwaitingReceiver USING HASH (issuer_address);
