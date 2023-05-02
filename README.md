@@ -1322,6 +1322,7 @@ import "github.com/bartossh/Computantis/repopostgre"
   - [func (db DataBase) ReadLastNValidatorStatuses(ctx context.Context, last int64) ([]validator.Status, error)](<#func-database-readlastnvalidatorstatuses>)
   - [func (db DataBase) ReadTemporaryTransactions(ctx context.Context) ([]transaction.Transaction, error)](<#func-database-readtemporarytransactions>)
   - [func (db DataBase) RemoveAwaitingTransaction(ctx context.Context, trxHash [32]byte) error](<#func-database-removeawaitingtransaction>)
+  - [func (db DataBase) Write(p []byte) (n int, err error)](<#func-database-write>)
   - [func (db DataBase) WriteAddress(ctx context.Context, addr string) error](<#func-database-writeaddress>)
   - [func (db DataBase) WriteBlock(ctx context.Context, block block.Block) error](<#func-database-writeblock>)
   - [func (db DataBase) WriteIssuerSignedTransactionForReceiver(ctx context.Context, receiverAddr string, trx *transaction.Transaction) error](<#func-database-writeissuersignedtransactionforreceiver>)
@@ -1335,15 +1336,16 @@ import "github.com/bartossh/Computantis/repopostgre"
 
 ```go
 var (
-    ErrInsertFailed = fmt.Errorf("insert failed")
-    ErrRemoveFailed = fmt.Errorf("remove failed")
-    ErrSelectFailed = fmt.Errorf("select failed")
-    ErrMoveFailed   = fmt.Errorf("move failed")
-    ErrScanFailed   = fmt.Errorf("scan failed")
+    ErrInsertFailed    = fmt.Errorf("insert failed")
+    ErrRemoveFailed    = fmt.Errorf("remove failed")
+    ErrSelectFailed    = fmt.Errorf("select failed")
+    ErrMoveFailed      = fmt.Errorf("move failed")
+    ErrScanFailed      = fmt.Errorf("scan failed")
+    ErrUnmarshalFailed = fmt.Errorf("unmarshal failed")
 )
 ```
 
-## type [DataBase](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L23-L25>)
+## type [DataBase](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L24-L26>)
 
 Database provides database access for read, write and delete of repository entities.
 
@@ -1353,7 +1355,7 @@ type DataBase struct {
 }
 ```
 
-### func [Connect](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L28>)
+### func [Connect](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L29>)
 
 ```go
 func Connect(ctx context.Context, cfg configuration.DBConfig) (*DataBase, error)
@@ -1377,7 +1379,7 @@ func (db DataBase) CheckToken(ctx context.Context, tkn string) (bool, error)
 
 CheckToken checks if token exists in the database is valid and didn't expire.
 
-### func \(DataBase\) [Disconnect](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L38>)
+### func \(DataBase\) [Disconnect](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L39>)
 
 ```go
 func (db DataBase) Disconnect(ctx context.Context) error
@@ -1425,7 +1427,7 @@ func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context,
 
 MoveTransactionsFromTemporaryToPermanent moves transactions from temporary storage to permanent storage.
 
-### func \(DataBase\) [Ping](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L43>)
+### func \(DataBase\) [Ping](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L44>)
 
 ```go
 func (db DataBase) Ping(ctx context.Context) error
@@ -1480,6 +1482,14 @@ func (db DataBase) RemoveAwaitingTransaction(ctx context.Context, trxHash [32]by
 ```
 
 RemoveAwaitingTransaction removes transaction from the awaiting transaction storage.
+
+### func \(DataBase\) [Write](<https://github.com/bartossh/Computantis/blob/main/repopostgre/logger.go#L12>)
+
+```go
+func (db DataBase) Write(p []byte) (n int, err error)
+```
+
+Write writes log to the database. p is a marshaled logger.Log.
 
 ### func \(DataBase\) [WriteAddress](<https://github.com/bartossh/Computantis/blob/main/repopostgre/address.go#L9>)
 
