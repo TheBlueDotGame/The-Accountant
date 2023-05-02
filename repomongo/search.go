@@ -3,6 +3,7 @@ package repomongo
 import (
 	"context"
 
+	"github.com/bartossh/Computantis/address"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -45,7 +46,7 @@ func (db DataBase) FindAddress(ctx context.Context, search string, limit int) ([
 	if limit == 0 || limit > 1000 {
 		limit = 1000
 	}
-	var addresses []Address
+	var addresses []address.Address
 	opts := options.Find().SetLimit(int64(limit))
 	curs, err := db.inner.Collection(addressesCollection).Find(ctx, bson.M{"$text": bson.M{"$search": search}}, opts)
 	if err != nil {
