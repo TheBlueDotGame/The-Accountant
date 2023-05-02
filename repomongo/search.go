@@ -4,24 +4,17 @@ import (
 	"context"
 
 	"github.com/bartossh/Computantis/address"
+	"github.com/bartossh/Computantis/transaction"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-// TransactionInBlock stores relation between Transaction and Block to which Transaction was added.
-// It is stored for fast lookup only to allow to find Block hash in which Transaction was added.
-type TransactionInBlock struct {
-	ID              any      `json:"-" bson:"_id,omitempty"    db:"id"`
-	BlockHash       [32]byte `json:"-" bson:"block_hash"       db:"block_hash"`
-	TransactionHash [32]byte `json:"-" bson:"transaction_hash" db:"transaction_hash"`
-}
-
 // WriteTransactionsInBlock stores relation between Transaction and Block to which Transaction was added.
 func (db DataBase) WriteTransactionsInBlock(ctx context.Context, blockHash [32]byte, trxHash [][32]byte) error {
 	trxsInB := make([]any, 0, len(trxHash))
 	for _, trx := range trxHash {
-		trxsInB = append(trxsInB, TransactionInBlock{
+		trxsInB = append(trxsInB, transaction.TransactionInBlock{
 			ID:              primitive.NewObjectID(),
 			BlockHash:       blockHash,
 			TransactionHash: trx,
@@ -33,7 +26,7 @@ func (db DataBase) WriteTransactionsInBlock(ctx context.Context, blockHash [32]b
 
 // FindTransactionInBlockHash finds Block hash in to which Transaction with given hash was added.
 func (db DataBase) FindTransactionInBlockHash(ctx context.Context, trxHash [32]byte) ([32]byte, error) {
-	var trx TransactionInBlock
+	var trx transaction.TransactionInBlock
 	err := db.inner.Collection(transactionsInBlockCollection).
 		FindOne(ctx, bson.M{"transaction_hash": trxHash}).
 		Decode(&trx)
