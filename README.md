@@ -718,10 +718,9 @@ import "github.com/bartossh/Computantis/configuration"
 
 - [type Configuration](<#type-configuration>)
   - [func Read(path string) (Configuration, error)](<#func-read>)
-- [type DBConfig](<#type-dbconfig>)
 
 
-## type [Configuration](<https://github.com/bartossh/Computantis/blob/main/configuration/configuration.go#L25-L32>)
+## type [Configuration](<https://github.com/bartossh/Computantis/blob/main/configuration/configuration.go#L18-L25>)
 
 Configuration is the main configuration of the application that corresponds to the \*.yaml file that holds the configuration.
 
@@ -729,33 +728,20 @@ Configuration is the main configuration of the application that corresponds to t
 type Configuration struct {
     Bookkeeper   bookkeeping.Config    `yaml:"bookkeeper"`
     Server       server.Config         `yaml:"server"`
-    Database     DBConfig              `yaml:"database"`
+    Database     repohelper.DBConfig   `yaml:"database"`
     DataProvider dataprovider.Config   `yaml:"data_provider"`
     Validator    validator.Config      `yaml:"validator"`
     FileOperator fileoperations.Config `yaml:"file_operator"`
 }
 ```
 
-### func [Read](<https://github.com/bartossh/Computantis/blob/main/configuration/configuration.go#L35>)
+### func [Read](<https://github.com/bartossh/Computantis/blob/main/configuration/configuration.go#L28>)
 
 ```go
 func Read(path string) (Configuration, error)
 ```
 
 Read reads the configuration from the file and returns the Configuration with set fields according to the yaml setup.
-
-## type [DBConfig](<https://github.com/bartossh/Computantis/blob/main/configuration/configuration.go#L16-L21>)
-
-Config contains configuration for the database.
-
-```go
-type DBConfig struct {
-    ConnStr      string `yaml:"conn_str"`         // ConnStr is the connection string to the database.
-    DatabaseName string `yaml:"database_name"`    // DatabaseName is the name of the database.
-    Token        string `yaml:"token"`            // Token is the token that is used to confirm api clients access.
-    TokenExpire  int64  `yaml:"token_expiration"` // TokenExpire is the number of seconds after which token expires.
-}
-```
 
 # dataprovider
 
@@ -1048,6 +1034,158 @@ func (o *Observable[T]) Subscribe() *subscriber[T]
 
 Subscribe subscribes to the container.
 
+# repohelper
+
+```go
+import "github.com/bartossh/Computantis/repohelper"
+```
+
+## Index
+
+- [Variables](<#variables>)
+- [type AddressWriteFindChecker](<#type-addresswritefindchecker>)
+- [type BlockReadWriter](<#type-blockreadwriter>)
+- [type ConnectionCloser](<#type-connectioncloser>)
+- [type DBConfig](<#type-dbconfig>)
+  - [func (cfg DBConfig) Connect(ctx context.Context) (RepositoryProvider, error)](<#func-dbconfig-connect>)
+- [type Migrator](<#type-migrator>)
+- [type RepositoryProvider](<#type-repositoryprovider>)
+- [type TokenWriteCheckInvalidator](<#type-tokenwritecheckinvalidator>)
+- [type TransactionOperator](<#type-transactionoperator>)
+- [type ValidatorStatusReader](<#type-validatorstatusreader>)
+
+
+## Variables
+
+```go
+var (
+    ErrDatabaseNotSupported = fmt.Errorf("database not supported")
+)
+```
+
+## type [AddressWriteFindChecker](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L21-L25>)
+
+AddressWriteFindChecker abstracts address operations.
+
+```go
+type AddressWriteFindChecker interface {
+    WriteAddress(ctx context.Context, addr string) error
+    CheckAddressExists(ctx context.Context, addr string) (bool, error)
+    FindAddress(ctx context.Context, search string, limit int) ([]string, error)
+}
+```
+
+## type [BlockReadWriter](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L28-L32>)
+
+BlockReadWriter abstracts block operations.
+
+```go
+type BlockReadWriter interface {
+    LastBlock(ctx context.Context) (block.Block, error)
+    ReadBlockByHash(ctx context.Context, hash [32]byte) (block.Block, error)
+    WriteBlock(ctx context.Context, block block.Block) error
+}
+```
+
+## type [ConnectionCloser](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L66-L68>)
+
+ConnectionCloser abstracts connection closing operations.
+
+```go
+type ConnectionCloser interface {
+    Disconnect(ctx context.Context) error
+}
+```
+
+## type [DBConfig](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L83-L88>)
+
+Config contains configuration for the database.
+
+```go
+type DBConfig struct {
+    ConnStr      string `yaml:"conn_str"`         // ConnStr is the connection string to the database.
+    DatabaseName string `yaml:"database_name"`    // DatabaseName is the name of the database.
+    Token        string `yaml:"token"`            // Token is the token that is used to confirm api clients access.
+    TokenExpire  int64  `yaml:"token_expiration"` // TokenExpire is the number of seconds after which token expires.
+}
+```
+
+### func \(DBConfig\) [Connect](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L91>)
+
+```go
+func (cfg DBConfig) Connect(ctx context.Context) (RepositoryProvider, error)
+```
+
+Connect connects to the proper database and returns that connection.
+
+## type [Migrator](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L35-L37>)
+
+MigrationRunner abstracts migration operations.
+
+```go
+type Migrator interface {
+    RunMigration(ctx context.Context) error
+}
+```
+
+## type [RepositoryProvider](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L71-L80>)
+
+RepositoryProvider is an interface that ensures that all required methods to run computantis are implemented.
+
+```go
+type RepositoryProvider interface {
+    AddressWriteFindChecker
+    BlockReadWriter
+    io.Writer
+    Migrator
+    TokenWriteCheckInvalidator
+    TransactionOperator
+    ValidatorStatusReader
+    ConnectionCloser
+}
+```
+
+## type [TokenWriteCheckInvalidator](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L40-L44>)
+
+TokenWriteCheckInvalidator abstracts token operations.
+
+```go
+type TokenWriteCheckInvalidator interface {
+    CheckToken(ctx context.Context, tkn string) (bool, error)
+    WriteToken(ctx context.Context, tkn string, expirationDate int64) error
+    InvalidateToken(ctx context.Context, token string) error
+}
+```
+
+## type [TransactionOperator](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L47-L57>)
+
+TransactionOperator abstracts transaction operations.
+
+```go
+type TransactionOperator interface {
+    WriteTransactionsInBlock(ctx context.Context, blockHash [32]byte, trxHash [][32]byte) error
+    FindTransactionInBlockHash(ctx context.Context, trxHash [32]byte) ([32]byte, error)
+    WriteTemporaryTransaction(ctx context.Context, trx *transaction.Transaction) error
+    RemoveAwaitingTransaction(ctx context.Context, trxHash [32]byte) error
+    WriteIssuerSignedTransactionForReceiver(ctx context.Context, receiverAddr string, trx *transaction.Transaction) error
+    ReadAwaitingTransactionsByReceiver(ctx context.Context, address string) ([]transaction.Transaction, error)
+    ReadAwaitingTransactionsByIssuer(ctx context.Context, address string) ([]transaction.Transaction, error)
+    MoveTransactionsFromTemporaryToPermanent(ctx context.Context, hash [][32]byte) error
+    ReadTemporaryTransactions(ctx context.Context) ([]transaction.Transaction, error)
+}
+```
+
+## type [ValidatorStatusReader](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L60-L63>)
+
+ValidatorStatusReader abstracts validator status operations.
+
+```go
+type ValidatorStatusReader interface {
+    ReadLastNValidatorStatuses(ctx context.Context, last int64) ([]validator.Status, error)
+    WriteValidatorStatus(ctx context.Context, vs *validator.Status) error
+}
+```
+
 # repomongo
 
 ```go
@@ -1057,7 +1195,7 @@ import "github.com/bartossh/Computantis/repomongo"
 ## Index
 
 - [type DataBase](<#type-database>)
-  - [func Connect(ctx context.Context, cfg configuration.DBConfig) (*DataBase, error)](<#func-connect>)
+  - [func Connect(ctx context.Context, conn, database string) (*DataBase, error)](<#func-connect>)
   - [func (db DataBase) CheckAddressExists(ctx context.Context, addr string) (bool, error)](<#func-database-checkaddressexists>)
   - [func (db DataBase) CheckToken(ctx context.Context, tkn string) (bool, error)](<#func-database-checktoken>)
   - [func (c DataBase) Disconnect(ctx context.Context) error](<#func-database-disconnect>)
@@ -1084,7 +1222,7 @@ import "github.com/bartossh/Computantis/repomongo"
 - [type Migration](<#type-migration>)
 
 
-## type [DataBase](<https://github.com/bartossh/Computantis/blob/main/repomongo/mongorepo.go#L27-L29>)
+## type [DataBase](<https://github.com/bartossh/Computantis/blob/main/repomongo/mongorepo.go#L26-L28>)
 
 Database provides database access for read, write and delete of repository entities.
 
@@ -1094,10 +1232,10 @@ type DataBase struct {
 }
 ```
 
-### func [Connect](<https://github.com/bartossh/Computantis/blob/main/repomongo/mongorepo.go#L32>)
+### func [Connect](<https://github.com/bartossh/Computantis/blob/main/repomongo/mongorepo.go#L31>)
 
 ```go
-func Connect(ctx context.Context, cfg configuration.DBConfig) (*DataBase, error)
+func Connect(ctx context.Context, conn, database string) (*DataBase, error)
 ```
 
 Connect creates new connection to the repository and returns pointer to the DataBase.
@@ -1118,7 +1256,7 @@ func (db DataBase) CheckToken(ctx context.Context, tkn string) (bool, error)
 
 CheckToken checks if token exists in the database is valid and didn't expire.
 
-### func \(DataBase\) [Disconnect](<https://github.com/bartossh/Computantis/blob/main/repomongo/mongorepo.go#L48>)
+### func \(DataBase\) [Disconnect](<https://github.com/bartossh/Computantis/blob/main/repomongo/mongorepo.go#L47>)
 
 ```go
 func (c DataBase) Disconnect(ctx context.Context) error
@@ -1306,7 +1444,7 @@ import "github.com/bartossh/Computantis/repopostgre"
 
 - [Variables](<#variables>)
 - [type DataBase](<#type-database>)
-  - [func Connect(ctx context.Context, cfg configuration.DBConfig) (*DataBase, error)](<#func-connect>)
+  - [func Connect(ctx context.Context, conn, database string) (*DataBase, error)](<#func-connect>)
   - [func (db DataBase) CheckAddressExists(ctx context.Context, addr string) (bool, error)](<#func-database-checkaddressexists>)
   - [func (db DataBase) CheckToken(ctx context.Context, tkn string) (bool, error)](<#func-database-checktoken>)
   - [func (db DataBase) Disconnect(ctx context.Context) error](<#func-database-disconnect>)
@@ -1322,6 +1460,7 @@ import "github.com/bartossh/Computantis/repopostgre"
   - [func (db DataBase) ReadLastNValidatorStatuses(ctx context.Context, last int64) ([]validator.Status, error)](<#func-database-readlastnvalidatorstatuses>)
   - [func (db DataBase) ReadTemporaryTransactions(ctx context.Context) ([]transaction.Transaction, error)](<#func-database-readtemporarytransactions>)
   - [func (db DataBase) RemoveAwaitingTransaction(ctx context.Context, trxHash [32]byte) error](<#func-database-removeawaitingtransaction>)
+  - [func (DataBase) RunMigration(_ context.Context) error](<#func-database-runmigration>)
   - [func (db DataBase) Write(p []byte) (n int, err error)](<#func-database-write>)
   - [func (db DataBase) WriteAddress(ctx context.Context, addr string) error](<#func-database-writeaddress>)
   - [func (db DataBase) WriteBlock(ctx context.Context, block block.Block) error](<#func-database-writeblock>)
@@ -1345,7 +1484,7 @@ var (
 )
 ```
 
-## type [DataBase](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L24-L26>)
+## type [DataBase](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L22-L24>)
 
 Database provides database access for read, write and delete of repository entities.
 
@@ -1355,10 +1494,10 @@ type DataBase struct {
 }
 ```
 
-### func [Connect](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L29>)
+### func [Connect](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L27>)
 
 ```go
-func Connect(ctx context.Context, cfg configuration.DBConfig) (*DataBase, error)
+func Connect(ctx context.Context, conn, database string) (*DataBase, error)
 ```
 
 Connect creates new connection to the repository and returns pointer to the DataBase.
@@ -1379,7 +1518,7 @@ func (db DataBase) CheckToken(ctx context.Context, tkn string) (bool, error)
 
 CheckToken checks if token exists in the database is valid and didn't expire.
 
-### func \(DataBase\) [Disconnect](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L39>)
+### func \(DataBase\) [Disconnect](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L37>)
 
 ```go
 func (db DataBase) Disconnect(ctx context.Context) error
@@ -1395,7 +1534,7 @@ func (db DataBase) FindAddress(ctx context.Context, search string, limit int) ([
 
 FindAddress finds address in the database.
 
-### func \(DataBase\) [FindTransactionInBlockHash](<https://github.com/bartossh/Computantis/blob/main/repopostgre/search.go#L46>)
+### func \(DataBase\) [FindTransactionInBlockHash](<https://github.com/bartossh/Computantis/blob/main/repopostgre/search.go#L47>)
 
 ```go
 func (db DataBase) FindTransactionInBlockHash(ctx context.Context, trxHash [32]byte) ([32]byte, error)
@@ -1403,7 +1542,7 @@ func (db DataBase) FindTransactionInBlockHash(ctx context.Context, trxHash [32]b
 
 FindTransactionInBlockHash finds Block hash in to which Transaction with given hash was added.
 
-### func \(DataBase\) [InvalidateToken](<https://github.com/bartossh/Computantis/blob/main/repopostgre/token.go#L45>)
+### func \(DataBase\) [InvalidateToken](<https://github.com/bartossh/Computantis/blob/main/repopostgre/token.go#L44>)
 
 ```go
 func (db DataBase) InvalidateToken(ctx context.Context, token string) error
@@ -1411,7 +1550,7 @@ func (db DataBase) InvalidateToken(ctx context.Context, token string) error
 
 InvalidateToken invalidates token.
 
-### func \(DataBase\) [LastBlock](<https://github.com/bartossh/Computantis/blob/main/repopostgre/block.go#L11>)
+### func \(DataBase\) [LastBlock](<https://github.com/bartossh/Computantis/blob/main/repopostgre/block.go#L12>)
 
 ```go
 func (db DataBase) LastBlock(ctx context.Context) (block.Block, error)
@@ -1419,7 +1558,7 @@ func (db DataBase) LastBlock(ctx context.Context) (block.Block, error)
 
 LastBlock returns last block from the database.
 
-### func \(DataBase\) [MoveTransactionsFromTemporaryToPermanent](<https://github.com/bartossh/Computantis/blob/main/repopostgre/transaction.go#L106>)
+### func \(DataBase\) [MoveTransactionsFromTemporaryToPermanent](<https://github.com/bartossh/Computantis/blob/main/repopostgre/transaction.go#L108>)
 
 ```go
 func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context, hash [][32]byte) error
@@ -1427,7 +1566,7 @@ func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context,
 
 MoveTransactionsFromTemporaryToPermanent moves transactions from temporary storage to permanent storage.
 
-### func \(DataBase\) [Ping](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L44>)
+### func \(DataBase\) [Ping](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L42>)
 
 ```go
 func (db DataBase) Ping(ctx context.Context) error
@@ -1435,7 +1574,7 @@ func (db DataBase) Ping(ctx context.Context) error
 
 Ping checks if the connection to the database is still alive.
 
-### func \(DataBase\) [ReadAwaitingTransactionsByIssuer](<https://github.com/bartossh/Computantis/blob/main/repopostgre/transaction.go#L82>)
+### func \(DataBase\) [ReadAwaitingTransactionsByIssuer](<https://github.com/bartossh/Computantis/blob/main/repopostgre/transaction.go#L83>)
 
 ```go
 func (db DataBase) ReadAwaitingTransactionsByIssuer(ctx context.Context, address string) ([]transaction.Transaction, error)
@@ -1451,7 +1590,7 @@ func (db DataBase) ReadAwaitingTransactionsByReceiver(ctx context.Context, addre
 
 ReadAwaitingTransactionsByReceiver reads all transactions paired with given receiver address.
 
-### func \(DataBase\) [ReadBlockByHash](<https://github.com/bartossh/Computantis/blob/main/repopostgre/block.go#L26>)
+### func \(DataBase\) [ReadBlockByHash](<https://github.com/bartossh/Computantis/blob/main/repopostgre/block.go#L41>)
 
 ```go
 func (db DataBase) ReadBlockByHash(ctx context.Context, hash [32]byte) (block.Block, error)
@@ -1467,7 +1606,7 @@ func (db DataBase) ReadLastNValidatorStatuses(ctx context.Context, last int64) (
 
 ReadLastNValidatorStatuses reads last validator statuses from the database.
 
-### func \(DataBase\) [ReadTemporaryTransactions](<https://github.com/bartossh/Computantis/blob/main/repopostgre/transaction.go#L119>)
+### func \(DataBase\) [ReadTemporaryTransactions](<https://github.com/bartossh/Computantis/blob/main/repopostgre/transaction.go#L125>)
 
 ```go
 func (db DataBase) ReadTemporaryTransactions(ctx context.Context) ([]transaction.Transaction, error)
@@ -1482,6 +1621,14 @@ func (db DataBase) RemoveAwaitingTransaction(ctx context.Context, trxHash [32]by
 ```
 
 RemoveAwaitingTransaction removes transaction from the awaiting transaction storage.
+
+### func \(DataBase\) [RunMigration](<https://github.com/bartossh/Computantis/blob/main/repopostgre/migrations.go#L7>)
+
+```go
+func (DataBase) RunMigration(_ context.Context) error
+```
+
+RunMigration satisfies the RepositoryProvider interface as PostgreSQL migrations are run on when database is created in docker\-compose\-postgresql.yml.
 
 ### func \(DataBase\) [Write](<https://github.com/bartossh/Computantis/blob/main/repopostgre/logger.go#L12>)
 
@@ -1499,7 +1646,7 @@ func (db DataBase) WriteAddress(ctx context.Context, addr string) error
 
 WriteAddress writes address to the database.
 
-### func \(DataBase\) [WriteBlock](<https://github.com/bartossh/Computantis/blob/main/repopostgre/block.go#L41>)
+### func \(DataBase\) [WriteBlock](<https://github.com/bartossh/Computantis/blob/main/repopostgre/block.go#L69>)
 
 ```go
 func (db DataBase) WriteBlock(ctx context.Context, block block.Block) error
@@ -1523,7 +1670,7 @@ func (db DataBase) WriteTemporaryTransaction(ctx context.Context, trx *transacti
 
 WriteTemporaryTransaction writes transaction to the temporary storage.
 
-### func \(DataBase\) [WriteToken](<https://github.com/bartossh/Computantis/blob/main/repopostgre/token.go#L35>)
+### func \(DataBase\) [WriteToken](<https://github.com/bartossh/Computantis/blob/main/repopostgre/token.go#L34>)
 
 ```go
 func (db DataBase) WriteToken(ctx context.Context, tkn string, expirationDate int64) error

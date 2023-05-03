@@ -7,9 +7,7 @@ CREATE DATABASE computantis
     TABLESPACE = pg_default
     CONNECTION LIMIT = -1;
 
-CREATE USER computantis WITH PASSWORD 'computantis';
-
-GRANT ALL PRIVILEGES ON DATABASE computantis TO computantis;
+\c computantis
 
 CREATE TABLE IF NOT EXISTS addresses (
    id serial PRIMARY KEY,
@@ -67,8 +65,8 @@ CREATE INDEX transaction_awaiting_receiver_address ON transactionsAwaitingReceiv
 
 CREATE TABLE IF NOT EXISTS blocks (
    id serial PRIMARY KEY,
-   index INTEGER UNIQUE NOT NULL,
-   created_at INTEGER NOT NULL,
+   index BIGINT UNIQUE NOT NULL,
+   timestamp BIGINT NOT NULL,
    nonce INTEGER NOT NULL,
    difficulty INTEGER NOT NULL,
    hash BYTEA UNIQUE NOT NULL,
@@ -79,7 +77,7 @@ CREATE TABLE IF NOT EXISTS blocks (
 CREATE INDEX block_index ON blocks USING HASH (index);
 CREATE INDEX block_hash ON blocks USING HASH (hash);
 CREATE INDEX block_prev_hash ON blocks USING HASH (prev_hash);
-CREATE INDEX block_created_at ON blocks USING BTREE (created_at);
+CREATE INDEX block_created_at ON blocks USING BTREE (timestamp);
 
 CREATE TABLE IF NOT EXISTS transactionsInBlock (
    id serial PRIMARY KEY,
@@ -94,7 +92,7 @@ CREATE TABLE IF NOT EXISTS tokens (
    id serial PRIMARY KEY,
    token VARCHAR (100) UNIQUE NOT NULL,
    valid BOOLEAN NOT NULL,
-   expiration_date INTEGER NOT NULL
+   expiration_date BIGINT NOT NULL
 );
 
 CREATE INDEX token_token ON tokens USING HASH (token);
@@ -119,3 +117,11 @@ CREATE TABLE IF NOT EXISTS validatorStatus (
 
 CREATE INDEX validator_index ON validatorStatus USING HASH (index);
 CREATE INDEX validator_created_at ON validatorStatus USING BTREE (created_at);
+
+
+CREATE USER computantis WITH ENCRYPTED PASSWORD 'computantis';
+
+GRANT ALL PRIVILEGES ON DATABASE computantis TO computantis;
+GRANT ALL PRIVILEGES ON SCHEMA public TO computantis;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO computantis;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO computantis;

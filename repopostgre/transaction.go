@@ -14,7 +14,7 @@ func (db DataBase) WriteTemporaryTransaction(ctx context.Context, trx *transacti
 		`INSERT INTO 
 			transactionsTemporary(
 				created_at, hash, issuer_address, receiver_address, subject, data, issuer_signature, receiver_signature
-			) VALUES(?, ?, ?, ?, ?, ?, ?, ?)`,
+			) VALUES($1, $2, $3, $4, $5, $6, $7, $8)`,
 		trx.CreatedAt, trx.Hash[:], trx.IssuerAddress,
 		trx.ReceiverAddress, trx.Subject, trx.Data,
 		trx.IssuerSignature, trx.ReceiverSignature)
@@ -26,7 +26,7 @@ func (db DataBase) WriteTemporaryTransaction(ctx context.Context, trx *transacti
 
 // RemoveAwaitingTransaction removes transaction from the awaiting transaction storage.
 func (db DataBase) RemoveAwaitingTransaction(ctx context.Context, trxHash [32]byte) error {
-	_, err := db.inner.ExecContext(ctx, `DELETE FROM transactionsAwaitingReceiver WHERE hash = ?`, trxHash[:])
+	_, err := db.inner.ExecContext(ctx, "DELETE FROM transactionsAwaitingReceiver WHERE hash = $1", trxHash[:])
 	if err != nil {
 		errors.Join(ErrRemoveFailed, err)
 	}
@@ -42,31 +42,32 @@ func (db DataBase) WriteIssuerSignedTransactionForReceiver(
 	_, err := db.inner.ExecContext(
 		ctx,
 		`INSERT INTO 
-			transactionsTemporary(
+			transactionsAwaitingReceiver(
 				created_at, hash, issuer_address, receiver_address, subject, data, issuer_signature, receiver_signature
-			) VALUES(?, ?, ?, ?, ?, ?, ?, ?)`,
+			) VALUES($1, $2, $3, $4, $5, $6, $7, $8)`,
 		trx.CreatedAt, trx.Hash[:], trx.IssuerAddress,
 		receiverAddr, trx.Subject, trx.Data,
 		trx.IssuerSignature, trx.ReceiverSignature)
 	if err != nil {
-		errors.Join(ErrInsertFailed, err)
+		return errors.Join(ErrInsertFailed, err)
 	}
 	return nil
 }
 
 // ReadAwaitingTransactionsByReceiver reads all transactions paired with given receiver address.
 func (db DataBase) ReadAwaitingTransactionsByReceiver(ctx context.Context, address string) ([]transaction.Transaction, error) {
-	rows, err := db.inner.QueryContext(ctx, `SELECT * FROM transactionsAwaitingReceiver WHERE receiver_address = ?`, address)
+	rows, err := db.inner.QueryContext(ctx, "SELECT * FROM transactionsAwaitingReceiver WHERE receiver_address = $1", address)
 	if err != nil {
 		return nil, errors.Join(ErrSelectFailed, err)
 	}
 	defer rows.Close()
+
 	var trxsAwaiting []transaction.Transaction
 	for rows.Next() {
 		var trx transaction.Transaction
-		var hash [32]byte
+		hash := make([]byte, 0, 32)
 		err := rows.Scan(
-			&trx.CreatedAt, &hash, &trx.IssuerAddress,
+			&trx.ID, &trx.CreatedAt, &hash, &trx.IssuerAddress,
 			&trx.ReceiverAddress, &trx.Subject, &trx.Data,
 			&trx.IssuerSignature, &trx.ReceiverSignature)
 		if err != nil {
@@ -80,17 +81,18 @@ func (db DataBase) ReadAwaitingTransactionsByReceiver(ctx context.Context, addre
 
 // RemoveAwaitingTransaction removes transaction from the awaiting transaction storage.
 func (db DataBase) ReadAwaitingTransactionsByIssuer(ctx context.Context, address string) ([]transaction.Transaction, error) {
-	rows, err := db.inner.QueryContext(ctx, `SELECT * FROM transactionsAwaitingIssuer WHERE issuer_address = ?`, address)
+	rows, err := db.inner.QueryContext(ctx, "SELECT * FROM transactionsAwaitingReceiver WHERE issuer_address = $1", address)
 	if err != nil {
 		return nil, errors.Join(ErrSelectFailed, err)
 	}
 	defer rows.Close()
+
 	var trxsAwaiting []transaction.Transaction
 	for rows.Next() {
 		var trx transaction.Transaction
-		var hash [32]byte
+		hash := make([]byte, 0, 32)
 		err := rows.Scan(
-			&trx.CreatedAt, &hash, &trx.IssuerAddress,
+			&trx.ID, &trx.CreatedAt, &hash, &trx.IssuerAddress,
 			&trx.ReceiverAddress, &trx.Subject, &trx.Data,
 			&trx.IssuerSignature, &trx.ReceiverSignature)
 		if err != nil {
@@ -104,11 +106,15 @@ func (db DataBase) ReadAwaitingTransactionsByIssuer(ctx context.Context, address
 
 // MoveTransactionsFromTemporaryToPermanent moves transactions from temporary storage to permanent storage.
 func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context, hash [][32]byte) error {
-	_, err := db.inner.ExecContext(ctx, `INSERT INTO transactionsPermanent SELECT * FROM transactionsTemporary WHERE hash = ?`, hash)
+	hs := make([][]byte, 0, len(hash))
+	for _, h := range hash {
+		hs = append(hs, h[:])
+	}
+	_, err := db.inner.ExecContext(ctx, "INSERT INTO transactionsPermanent SELECT * FROM transactionsTemporary WHERE hash = $1", hs)
 	if err != nil {
 		return errors.Join(ErrMoveFailed, err)
 	}
-	_, err = db.inner.ExecContext(ctx, `DELETE FROM transactionsTemporary WHERE hash = ?`, hash)
+	_, err = db.inner.ExecContext(ctx, "DELETE FROM transactionsTemporary WHERE hash = $1", hs)
 	if err != nil {
 		return errors.Join(ErrRemoveFailed, err)
 	}
@@ -117,17 +123,18 @@ func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context,
 
 // ReadTemporaryTransactions reads all transactions from the temporary storage.
 func (db DataBase) ReadTemporaryTransactions(ctx context.Context) ([]transaction.Transaction, error) {
-	rows, err := db.inner.QueryContext(ctx, `SELECT * FROM transactionsTemporary`)
+	rows, err := db.inner.QueryContext(ctx, "SELECT * FROM transactionsTemporary")
 	if err != nil {
 		return nil, errors.Join(ErrSelectFailed, err)
 	}
 	defer rows.Close()
+
 	var trxsAwaiting []transaction.Transaction
 	for rows.Next() {
 		var trx transaction.Transaction
-		var hash [32]byte
+		hash := make([]byte, 0, 32)
 		err := rows.Scan(
-			&trx.CreatedAt, &hash, &trx.IssuerAddress,
+			&trx.ID, &trx.CreatedAt, &hash, &trx.IssuerAddress,
 			&trx.ReceiverAddress, &trx.Subject, &trx.Data,
 			&trx.IssuerSignature, &trx.ReceiverSignature)
 		if err != nil {

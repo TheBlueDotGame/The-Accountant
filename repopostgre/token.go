@@ -14,8 +14,7 @@ import (
 func (db DataBase) CheckToken(ctx context.Context, tkn string) (bool, error) {
 	var t token.Token
 	if err := db.inner.QueryRowContext(ctx,
-		`SELECT token, valid, expiration_date 
-			FROM tokens WHERE token = ?`, tkn).
+		"SELECT token, valid, expiration_date FROM tokens WHERE token = $1", tkn).
 		Scan(&t.Token, &t.Valid, &t.ExpirationDate); err != nil {
 		if err == sql.ErrNoRows {
 			return false, nil
@@ -35,7 +34,7 @@ func (db DataBase) CheckToken(ctx context.Context, tkn string) (bool, error) {
 func (db DataBase) WriteToken(ctx context.Context, tkn string, expirationDate int64) error {
 	if _, err := db.inner.ExecContext(ctx,
 		`INSERT INTO tokens (token, valid, expiration_date) 
-			VALUES (?, ?, ?)`, tkn, true, expirationDate); err != nil {
+			VALUES ($1, $2, $3)`, tkn, true, expirationDate); err != nil {
 		return errors.Join(ErrInsertFailed, err)
 	}
 	return nil
@@ -44,7 +43,7 @@ func (db DataBase) WriteToken(ctx context.Context, tkn string, expirationDate in
 // InvalidateToken invalidates token.
 func (db DataBase) InvalidateToken(ctx context.Context, token string) error {
 	if _, err := db.inner.ExecContext(ctx,
-		`UPDATE tokens SET valid = ? WHERE token = ?`, false, token); err != nil {
+		"UPDATE tokens SET valid = false WHERE token = $1", token); err != nil {
 		return errors.Join(ErrRemoveFailed, err)
 	}
 	return nil

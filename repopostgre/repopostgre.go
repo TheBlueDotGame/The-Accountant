@@ -6,8 +6,6 @@ import (
 
 	"database/sql"
 
-	"github.com/bartossh/Computantis/configuration"
-
 	_ "github.com/lib/pq"
 )
 
@@ -26,8 +24,8 @@ type DataBase struct {
 }
 
 // Connect creates new connection to the repository and returns pointer to the DataBase.
-func Connect(ctx context.Context, cfg configuration.DBConfig) (*DataBase, error) {
-	db, err := sql.Open("postgres", fmt.Sprintf("%s/%s?sslmode=disable", cfg.ConnStr, cfg.DatabaseName))
+func Connect(ctx context.Context, conn, database string) (*DataBase, error) {
+	db, err := sql.Open("postgres", fmt.Sprintf("%s/%s?sslmode=disable", conn, database))
 	if err != nil {
 		return nil, err
 	}
