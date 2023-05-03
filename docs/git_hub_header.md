@@ -46,8 +46,9 @@ It is good practice to have many validator nodes held by independent entities.
 ## Stress test
 
 Directory `stress/` contains central node REST API performance tests.
-Testing performance on MacBook with M2 arm64 chip, 24GB RAM and MongoDB running in docker container with 1CPU and 1GB RAM,
-25 transactions per block, full cycle of creating 1000 transactions took 3.75 sec.
+ - Testing performance on MacBook with M2 arm64 chip, 24GB RAM with central node, validator node and MongoDB running in docker container with 1CPU and 1GB RAM, 25 transactions per block, full cycle of creating 1000 transactions took 3.75 sec.
+ - Testing performance on MacBook with M2 arm64 chip, 24GB RAM with central node, validator node and PostgreSQL running in docker container with 1CPU and 1GB RAM, 25 transactions per block, full cycle of creating 1000 transactions took 3.91 sec.
+  - Testing performance on MacBook with M2 arm64 chip, 24GB RAM with central node, validator node and PostgreSQL running in docker container with 1CPU and 1GB RAM, 25 transactions per block, full cycle of creating 10000 transactions took 37.35 sec. This allows to fully process 267 transactions per second, which means: 267 times per second reding proposed transaction by issuer with proper validation, sending it to receiver, reding signed confirmation from receiver with proper validation, forging blocks by permanently adding transactions and sending blocks to the validator node which validates the forging process.
 
 ## Package provides webassembly package that expose client API to the front-end applications.
 

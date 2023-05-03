@@ -3,16 +3,18 @@ package repopostgre
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/bartossh/Computantis/validator"
 )
 
 // WriteValidatorStatus writes validator status to the database.
 func (db DataBase) WriteValidatorStatus(ctx context.Context, vs *validator.Status) error {
+	timestamp := vs.CreatedAt.UnixMicro()
 	_, err := db.inner.ExecContext(ctx,
 		`INSERT INTO 
 			validator_status (index, valid, created_at) VALUES ($1, $2, $3)`,
-		vs.Index, vs.Valid, vs.CreatedAt)
+		vs.Index, vs.Valid, timestamp)
 	if err != nil {
 		return errors.Join(ErrInsertFailed, err)
 	}
@@ -30,9 +32,11 @@ func (db DataBase) ReadLastNValidatorStatuses(ctx context.Context, last int64) (
 	var results []validator.Status
 	for rows.Next() {
 		var vs validator.Status
-		if err := rows.Scan(&vs.ID, &vs.Index, &vs.Valid, &vs.CreatedAt); err != nil {
+		var timestamp int64
+		if err := rows.Scan(&vs.ID, &vs.Index, &vs.Valid, &timestamp); err != nil {
 			return nil, errors.Join(ErrScanFailed, err)
 		}
+		vs.CreatedAt = time.UnixMicro(timestamp)
 		results = append(results, vs)
 	}
 

@@ -1,6 +1,12 @@
 package repopostgre
 
-import "context"
+import (
+	"context"
+	"database/sql"
+	"errors"
+
+	"github.com/lib/pq"
+)
 
 // FindAddress finds address in the database.
 func (db DataBase) FindAddress(ctx context.Context, search string, limit int) ([]string, error) {
@@ -27,20 +33,35 @@ func (db DataBase) FindAddress(ctx context.Context, search string, limit int) ([
 
 // WriteTransactionsInBlock stores relation between Transaction and Block to which Transaction was added.
 func (db DataBase) WriteTransactionsInBlock(ctx context.Context, blockHash [32]byte, trxHash [][32]byte) error {
-	tx, err := db.inner.BeginTx(ctx, nil)
+	var err error
+	var tx *sql.Tx
+	tx, err = db.inner.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
 
 	for _, trx := range trxHash {
-		if _, err := tx.ExecContext(ctx,
-			"INSERT INTO transactionsInBlock (block_hash, transaction_hash) VALUES ($1, $2)", blockHash[:], trx); err != nil {
+		trxToWrite := make([][]byte, 0, len(trx))
+		for _, b := range trx {
+			trxToWrite = append(trxToWrite, []byte{b})
+		}
+		_, err = tx.ExecContext(ctx,
+			"INSERT INTO transactionsInBlock (block_hash, transaction_hash) VALUES ($1, $2)", blockHash[:], pq.Array(trxToWrite))
+		if err != nil {
 			return err
 		}
 	}
 
-	return tx.Commit()
+	err = tx.Commit()
+	if err != nil {
+		return errors.Join(ErrCommitFailed, err)
+	}
+	return nil
 }
 
 // FindTransactionInBlockHash finds Block hash in to which Transaction with given hash was added.

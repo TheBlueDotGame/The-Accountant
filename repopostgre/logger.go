@@ -14,9 +14,10 @@ func (db DataBase) Write(p []byte) (n int, err error) {
 	if err := json.Unmarshal(p, &l); err != nil {
 		return 0, errors.Join(ErrUnmarshalFailed, err)
 	}
+	timestamp := l.CreatedAt.UnixMicro()
 	_, err = db.inner.Exec(
 		"INSERT INTO logs (level, msg, created_at) VALUES ($1, $2, $3)",
-		l.Level, l.Msg, l.CreatedAt,
+		l.Level, l.Msg, timestamp,
 	)
 	if err != nil {
 		return 0, errors.Join(ErrInsertFailed, err)
