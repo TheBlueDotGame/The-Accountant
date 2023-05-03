@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/bartossh/Computantis/configuration"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -29,19 +28,19 @@ type DataBase struct {
 }
 
 // Connect creates new connection to the repository and returns pointer to the DataBase.
-func Connect(ctx context.Context, cfg configuration.DBConfig) (*DataBase, error) {
-	conn, err := mongo.Connect(ctx, options.Client().ApplyURI(cfg.ConnStr))
+func Connect(ctx context.Context, conn, database string) (*DataBase, error) {
+	cli, err := mongo.Connect(ctx, options.Client().ApplyURI(conn))
 	if err != nil {
 		return nil, err
 	}
 
 	ctxx, cancel := context.WithTimeout(ctx, time.Second*5)
 	defer cancel()
-	if err := conn.Ping(ctxx, readpref.Primary()); err != nil {
+	if err := cli.Ping(ctxx, readpref.Primary()); err != nil {
 		return nil, err
 	}
 
-	return &DataBase{*conn.Database(cfg.DatabaseName)}, nil
+	return &DataBase{*cli.Database(database)}, nil
 }
 
 // Disconnect disconnects user from database

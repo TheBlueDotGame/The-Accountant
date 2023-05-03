@@ -21,15 +21,16 @@ func (db DataBase) WriteValidatorStatus(ctx context.Context, vs *validator.Statu
 
 // ReadLastNValidatorStatuses reads last validator statuses from the database.
 func (db DataBase) ReadLastNValidatorStatuses(ctx context.Context, last int64) ([]validator.Status, error) {
-	res, err := db.inner.QueryContext(ctx, "SELECT * FROM validator_status ORDER BY index DESC LIMIT $1", last)
+	rows, err := db.inner.QueryContext(ctx, "SELECT * FROM validator_status ORDER BY index DESC LIMIT $1", last)
 	if err != nil {
 		return nil, errors.Join(ErrSelectFailed, err)
 	}
+	defer rows.Close()
 
 	var results []validator.Status
-	for res.Next() {
+	for rows.Next() {
 		var vs validator.Status
-		if err := res.Scan(&vs.Index, &vs.Valid, &vs.CreatedAt); err != nil {
+		if err := rows.Scan(&vs.ID, &vs.Index, &vs.Valid, &vs.CreatedAt); err != nil {
 			return nil, errors.Join(ErrScanFailed, err)
 		}
 		results = append(results, vs)
