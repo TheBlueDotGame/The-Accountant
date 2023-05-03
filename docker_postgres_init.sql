@@ -18,7 +18,7 @@ CREATE INDEX address_public_key ON addresses USING HASH (public_key);
 
 CREATE TABLE IF NOT EXISTS transactionsPermanent (
    id serial PRIMARY KEY,
-   created_at TIMESTAMP NOT NULL,
+   created_at BIGINT NOT NULL,
    hash BYTEA UNIQUE NOT NULL,
    issuer_address VARCHAR ( 64 ) NOT NULL,
    receiver_address VARCHAR ( 64 ) NOT NULL,
@@ -35,7 +35,7 @@ CREATE INDEX transaction_permanent_created_at ON transactionsPermanent USING BTR
 
 CREATE TABLE IF NOT EXISTS transactionsTemporary (
    id serial PRIMARY KEY,
-   created_at TIMESTAMP NOT NULL,
+   created_at BIGINT NOT NULL,
    hash BYTEA UNIQUE NOT NULL,
    issuer_address VARCHAR ( 64 ) NOT NULL,
    receiver_address VARCHAR ( 64 ) NOT NULL,
@@ -50,7 +50,7 @@ CREATE INDEX transaction_temporary_created_at ON transactionsTemporary USING BTR
 
 CREATE TABLE IF NOT EXISTS transactionsAwaitingReceiver (
    id serial PRIMARY KEY,
-   created_at TIMESTAMP NOT NULL,
+   created_at BIGINT NOT NULL,
    hash BYTEA UNIQUE NOT NULL,
    issuer_address VARCHAR ( 64 ) NOT NULL,
    receiver_address VARCHAR ( 64 ) NOT NULL,
@@ -102,7 +102,7 @@ CREATE TABLE IF NOT EXISTS logs (
    id serial PRIMARY KEY,
    level VARCHAR ( 10 ) NOT NULL,
    msg VARCHAR ( 256 ) NOT NULL,
-   created_at TIMESTAMP NOT NULL
+   created_at BIGINT NOT NULL
 );
 
 CREATE INDEX logs_created_at ON logs USING BTREE (created_at);
@@ -111,7 +111,7 @@ CREATE TABLE IF NOT EXISTS validatorStatus (
    id serial PRIMARY KEY,
    index INTEGER UNIQUE NOT NULL,
    valid BOOLEAN NOT NULL,
-   created_at TIMESTAMP NOT NULL,
+   created_at BIGINT NOT NULL,
    FOREIGN KEY (index) REFERENCES blocks (index)
 );
 

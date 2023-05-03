@@ -16,6 +16,7 @@ var (
 	ErrMoveFailed      = fmt.Errorf("move failed")
 	ErrScanFailed      = fmt.Errorf("scan failed")
 	ErrUnmarshalFailed = fmt.Errorf("unmarshal failed")
+	ErrCommitFailed    = fmt.Errorf("transaction commit failed")
 )
 
 // Database provides database access for read, write and delete of repository entities.

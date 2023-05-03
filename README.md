@@ -46,8 +46,9 @@ It is good practice to have many validator nodes held by independent entities.
 ## Stress test
 
 Directory `stress/` contains central node REST API performance tests.
-Testing performance on MacBook with M2 arm64 chip, 24GB RAM and MongoDB running in docker container with 1CPU and 1GB RAM,
-25 transactions per block, full cycle of creating 1000 transactions took 3.75 sec.
+ - Testing performance on MacBook with M2 arm64 chip, 24GB RAM with central node, validator node and MongoDB running in docker container with 1CPU and 1GB RAM, 25 transactions per block, full cycle of creating 1000 transactions took 3.75 sec.
+ - Testing performance on MacBook with M2 arm64 chip, 24GB RAM with central node, validator node and PostgreSQL running in docker container with 1CPU and 1GB RAM, 25 transactions per block, full cycle of creating 1000 transactions took 3.91 sec.
+  - Testing performance on MacBook with M2 arm64 chip, 24GB RAM with central node, validator node and PostgreSQL running in docker container with 1CPU and 1GB RAM, 25 transactions per block, full cycle of creating 10000 transactions took 37.35 sec. This allows to fully process 267 transactions per second, which means: 267 times per second reding proposed transaction by issuer with proper validation, sending it to receiver, reding signed confirmation from receiver with proper validation, forging blocks by permanently adding transactions and sending blocks to the validator node which validates the forging process.
 
 ## Package provides webassembly package that expose client API to the front-end applications.
 
@@ -1481,10 +1482,11 @@ var (
     ErrMoveFailed      = fmt.Errorf("move failed")
     ErrScanFailed      = fmt.Errorf("scan failed")
     ErrUnmarshalFailed = fmt.Errorf("unmarshal failed")
+    ErrCommitFailed    = fmt.Errorf("transaction commit failed")
 )
 ```
 
-## type [DataBase](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L22-L24>)
+## type [DataBase](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L23-L25>)
 
 Database provides database access for read, write and delete of repository entities.
 
@@ -1494,7 +1496,7 @@ type DataBase struct {
 }
 ```
 
-### func [Connect](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L27>)
+### func [Connect](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L28>)
 
 ```go
 func Connect(ctx context.Context, conn, database string) (*DataBase, error)
@@ -1518,7 +1520,7 @@ func (db DataBase) CheckToken(ctx context.Context, tkn string) (bool, error)
 
 CheckToken checks if token exists in the database is valid and didn't expire.
 
-### func \(DataBase\) [Disconnect](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L37>)
+### func \(DataBase\) [Disconnect](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L38>)
 
 ```go
 func (db DataBase) Disconnect(ctx context.Context) error
@@ -1526,7 +1528,7 @@ func (db DataBase) Disconnect(ctx context.Context) error
 
 Disconnect disconnects user from database
 
-### func \(DataBase\) [FindAddress](<https://github.com/bartossh/Computantis/blob/main/repopostgre/search.go#L6>)
+### func \(DataBase\) [FindAddress](<https://github.com/bartossh/Computantis/blob/main/repopostgre/search.go#L12>)
 
 ```go
 func (db DataBase) FindAddress(ctx context.Context, search string, limit int) ([]string, error)
@@ -1534,7 +1536,7 @@ func (db DataBase) FindAddress(ctx context.Context, search string, limit int) ([
 
 FindAddress finds address in the database.
 
-### func \(DataBase\) [FindTransactionInBlockHash](<https://github.com/bartossh/Computantis/blob/main/repopostgre/search.go#L47>)
+### func \(DataBase\) [FindTransactionInBlockHash](<https://github.com/bartossh/Computantis/blob/main/repopostgre/search.go#L68>)
 
 ```go
 func (db DataBase) FindTransactionInBlockHash(ctx context.Context, trxHash [32]byte) ([32]byte, error)
@@ -1558,7 +1560,7 @@ func (db DataBase) LastBlock(ctx context.Context) (block.Block, error)
 
 LastBlock returns last block from the database.
 
-### func \(DataBase\) [MoveTransactionsFromTemporaryToPermanent](<https://github.com/bartossh/Computantis/blob/main/repopostgre/transaction.go#L108>)
+### func \(DataBase\) [MoveTransactionsFromTemporaryToPermanent](<https://github.com/bartossh/Computantis/blob/main/repopostgre/transaction.go#L116>)
 
 ```go
 func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context, hash [][32]byte) error
@@ -1566,7 +1568,7 @@ func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context,
 
 MoveTransactionsFromTemporaryToPermanent moves transactions from temporary storage to permanent storage.
 
-### func \(DataBase\) [Ping](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L42>)
+### func \(DataBase\) [Ping](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L43>)
 
 ```go
 func (db DataBase) Ping(ctx context.Context) error
@@ -1574,7 +1576,7 @@ func (db DataBase) Ping(ctx context.Context) error
 
 Ping checks if the connection to the database is still alive.
 
-### func \(DataBase\) [ReadAwaitingTransactionsByIssuer](<https://github.com/bartossh/Computantis/blob/main/repopostgre/transaction.go#L83>)
+### func \(DataBase\) [ReadAwaitingTransactionsByIssuer](<https://github.com/bartossh/Computantis/blob/main/repopostgre/transaction.go#L89>)
 
 ```go
 func (db DataBase) ReadAwaitingTransactionsByIssuer(ctx context.Context, address string) ([]transaction.Transaction, error)
@@ -1582,7 +1584,7 @@ func (db DataBase) ReadAwaitingTransactionsByIssuer(ctx context.Context, address
 
 RemoveAwaitingTransaction removes transaction from the awaiting transaction storage.
 
-### func \(DataBase\) [ReadAwaitingTransactionsByReceiver](<https://github.com/bartossh/Computantis/blob/main/repopostgre/transaction.go#L58>)
+### func \(DataBase\) [ReadAwaitingTransactionsByReceiver](<https://github.com/bartossh/Computantis/blob/main/repopostgre/transaction.go#L62>)
 
 ```go
 func (db DataBase) ReadAwaitingTransactionsByReceiver(ctx context.Context, address string) ([]transaction.Transaction, error)
@@ -1598,7 +1600,7 @@ func (db DataBase) ReadBlockByHash(ctx context.Context, hash [32]byte) (block.Bl
 
 ReadBlockByHash returns block with given hash.
 
-### func \(DataBase\) [ReadLastNValidatorStatuses](<https://github.com/bartossh/Computantis/blob/main/repopostgre/validator.go#L23>)
+### func \(DataBase\) [ReadLastNValidatorStatuses](<https://github.com/bartossh/Computantis/blob/main/repopostgre/validator.go#L25>)
 
 ```go
 func (db DataBase) ReadLastNValidatorStatuses(ctx context.Context, last int64) ([]validator.Status, error)
@@ -1606,7 +1608,7 @@ func (db DataBase) ReadLastNValidatorStatuses(ctx context.Context, last int64) (
 
 ReadLastNValidatorStatuses reads last validator statuses from the database.
 
-### func \(DataBase\) [ReadTemporaryTransactions](<https://github.com/bartossh/Computantis/blob/main/repopostgre/transaction.go#L125>)
+### func \(DataBase\) [ReadTemporaryTransactions](<https://github.com/bartossh/Computantis/blob/main/repopostgre/transaction.go#L167>)
 
 ```go
 func (db DataBase) ReadTemporaryTransactions(ctx context.Context) ([]transaction.Transaction, error)
@@ -1614,7 +1616,7 @@ func (db DataBase) ReadTemporaryTransactions(ctx context.Context) ([]transaction
 
 ReadTemporaryTransactions reads all transactions from the temporary storage.
 
-### func \(DataBase\) [RemoveAwaitingTransaction](<https://github.com/bartossh/Computantis/blob/main/repopostgre/transaction.go#L28>)
+### func \(DataBase\) [RemoveAwaitingTransaction](<https://github.com/bartossh/Computantis/blob/main/repopostgre/transaction.go#L31>)
 
 ```go
 func (db DataBase) RemoveAwaitingTransaction(ctx context.Context, trxHash [32]byte) error
@@ -1654,7 +1656,7 @@ func (db DataBase) WriteBlock(ctx context.Context, block block.Block) error
 
 WriteBlock writes block to the database.
 
-### func \(DataBase\) [WriteIssuerSignedTransactionForReceiver](<https://github.com/bartossh/Computantis/blob/main/repopostgre/transaction.go#L37-L41>)
+### func \(DataBase\) [WriteIssuerSignedTransactionForReceiver](<https://github.com/bartossh/Computantis/blob/main/repopostgre/transaction.go#L40-L44>)
 
 ```go
 func (db DataBase) WriteIssuerSignedTransactionForReceiver(ctx context.Context, receiverAddr string, trx *transaction.Transaction) error
@@ -1662,7 +1664,7 @@ func (db DataBase) WriteIssuerSignedTransactionForReceiver(ctx context.Context, 
 
 WriteIssuerSignedTransactionForReceiver writes transaction to the awaiting transaction storage paired with given receiver.
 
-### func \(DataBase\) [WriteTemporaryTransaction](<https://github.com/bartossh/Computantis/blob/main/repopostgre/transaction.go#L11>)
+### func \(DataBase\) [WriteTemporaryTransaction](<https://github.com/bartossh/Computantis/blob/main/repopostgre/transaction.go#L13>)
 
 ```go
 func (db DataBase) WriteTemporaryTransaction(ctx context.Context, trx *transaction.Transaction) error
@@ -1678,7 +1680,7 @@ func (db DataBase) WriteToken(ctx context.Context, tkn string, expirationDate in
 
 WriteToken writes unique token to the database.
 
-### func \(DataBase\) [WriteTransactionsInBlock](<https://github.com/bartossh/Computantis/blob/main/repopostgre/search.go#L29>)
+### func \(DataBase\) [WriteTransactionsInBlock](<https://github.com/bartossh/Computantis/blob/main/repopostgre/search.go#L35>)
 
 ```go
 func (db DataBase) WriteTransactionsInBlock(ctx context.Context, blockHash [32]byte, trxHash [][32]byte) error
@@ -1686,7 +1688,7 @@ func (db DataBase) WriteTransactionsInBlock(ctx context.Context, blockHash [32]b
 
 WriteTransactionsInBlock stores relation between Transaction and Block to which Transaction was added.
 
-### func \(DataBase\) [WriteValidatorStatus](<https://github.com/bartossh/Computantis/blob/main/repopostgre/validator.go#L11>)
+### func \(DataBase\) [WriteValidatorStatus](<https://github.com/bartossh/Computantis/blob/main/repopostgre/validator.go#L12>)
 
 ```go
 func (db DataBase) WriteValidatorStatus(ctx context.Context, vs *validator.Status) error
