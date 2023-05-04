@@ -118,6 +118,43 @@ CREATE TABLE IF NOT EXISTS validatorStatus (
 CREATE INDEX validator_index ON validatorStatus USING HASH (index);
 CREATE INDEX validator_created_at ON validatorStatus USING BTREE (created_at);
 
+CREATE OR REPLACE FUNCTION notify_event() RETURNS TRIGGER AS $$
+
+    DECLARE 
+        data json;
+        notification json;
+    
+    BEGIN
+    
+        IF (TG_OP = 'DELETE') THEN
+            data = row_to_json(OLD);
+        ELSE
+            data = row_to_json(NEW);
+        END IF;
+
+        notification = json_build_object(
+                          'table',TG_TABLE_NAME,
+                          'action', TG_OP,
+                          'data', data);
+        
+                        
+        PERFORM pg_notify('events',notification::text);
+        
+        RETURN NULL; 
+    END;
+    
+$$ LANGUAGE plpgsql;
+
+CREATE TABLE blockchainLocks (
+    id serial PRIMARY KEY,
+    timestamp BIGINT NOT NULL,
+    locked BOOLEAN NOT NULL
+);
+
+CREATE TRIGGER blockchainLocks_notify_event
+AFTER INSERT OR UPDATE OR DELETE ON blockchainLocks
+    FOR EACH ROW EXECUTE PROCEDURE notify_event();
+
 
 CREATE USER computantis WITH ENCRYPTED PASSWORD 'computantis';
 
@@ -125,3 +162,4 @@ GRANT ALL PRIVILEGES ON DATABASE computantis TO computantis;
 GRANT ALL PRIVILEGES ON SCHEMA public TO computantis;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO computantis;
 GRANT ALL ON ALL TABLES IN SCHEMA public TO computantis;
+GRANT All PRIVILEGES ON FUNCTION notify_event() TO computantis;

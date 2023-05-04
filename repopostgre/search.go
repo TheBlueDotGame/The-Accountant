@@ -37,7 +37,7 @@ func (db DataBase) WriteTransactionsInBlock(ctx context.Context, blockHash [32]b
 	var tx *sql.Tx
 	tx, err = db.inner.BeginTx(ctx, nil)
 	if err != nil {
-		return err
+		return errors.Join(ErrTrxBeginFailed, err)
 	}
 	defer func() {
 		if err != nil {

@@ -118,7 +118,7 @@ func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context,
 	var tx *sql.Tx
 	tx, err = db.inner.BeginTx(ctx, nil)
 	if err != nil {
-		return err
+		return errors.Join(ErrTrxBeginFailed, err)
 	}
 	defer func() {
 		if err != nil {

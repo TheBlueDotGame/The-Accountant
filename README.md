@@ -1443,6 +1443,7 @@ import "github.com/bartossh/Computantis/repopostgre"
 
 ## Index
 
+- [Constants](<#constants>)
 - [Variables](<#variables>)
 - [type DataBase](<#type-database>)
   - [func Connect(ctx context.Context, conn, database string) (*DataBase, error)](<#func-connect>)
@@ -1453,6 +1454,7 @@ import "github.com/bartossh/Computantis/repopostgre"
   - [func (db DataBase) FindTransactionInBlockHash(ctx context.Context, trxHash [32]byte) ([32]byte, error)](<#func-database-findtransactioninblockhash>)
   - [func (db DataBase) InvalidateToken(ctx context.Context, token string) error](<#func-database-invalidatetoken>)
   - [func (db DataBase) LastBlock(ctx context.Context) (block.Block, error)](<#func-database-lastblock>)
+  - [func (db DataBase) LockBlockchain(ctx context.Context) (bool, error)](<#func-database-lockblockchain>)
   - [func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context, hash [][32]byte) error](<#func-database-movetransactionsfromtemporarytopermanent>)
   - [func (db DataBase) Ping(ctx context.Context) error](<#func-database-ping>)
   - [func (db DataBase) ReadAwaitingTransactionsByIssuer(ctx context.Context, address string) ([]transaction.Transaction, error)](<#func-database-readawaitingtransactionsbyissuer>)
@@ -1462,6 +1464,8 @@ import "github.com/bartossh/Computantis/repopostgre"
   - [func (db DataBase) ReadTemporaryTransactions(ctx context.Context) ([]transaction.Transaction, error)](<#func-database-readtemporarytransactions>)
   - [func (db DataBase) RemoveAwaitingTransaction(ctx context.Context, trxHash [32]byte) error](<#func-database-removeawaitingtransaction>)
   - [func (DataBase) RunMigration(_ context.Context) error](<#func-database-runmigration>)
+  - [func (db DataBase) SubscribeToLockBlockchainNotification(ctx context.Context, l *pq.Listener, c chan<- bool)](<#func-database-subscribetolockblockchainnotification>)
+  - [func (db DataBase) UnlockBlockChain(ctx context.Context) (bool, error)](<#func-database-unlockblockchain>)
   - [func (db DataBase) Write(p []byte) (n int, err error)](<#func-database-write>)
   - [func (db DataBase) WriteAddress(ctx context.Context, addr string) error](<#func-database-writeaddress>)
   - [func (db DataBase) WriteBlock(ctx context.Context, block block.Block) error](<#func-database-writeblock>)
@@ -1470,23 +1474,36 @@ import "github.com/bartossh/Computantis/repopostgre"
   - [func (db DataBase) WriteToken(ctx context.Context, tkn string, expirationDate int64) error](<#func-database-writetoken>)
   - [func (db DataBase) WriteTransactionsInBlock(ctx context.Context, blockHash [32]byte, trxHash [][32]byte) error](<#func-database-writetransactionsinblock>)
   - [func (db DataBase) WriteValidatorStatus(ctx context.Context, vs *validator.Status) error](<#func-database-writevalidatorstatus>)
+- [type Notification](<#type-notification>)
 
+
+## Constants
+
+```go
+const (
+    ActionDelete = "DELETE"
+    ActionInsert = "INSERT"
+    ActionUpdate = "UPDATE"
+)
+```
 
 ## Variables
 
 ```go
 var (
-    ErrInsertFailed    = fmt.Errorf("insert failed")
-    ErrRemoveFailed    = fmt.Errorf("remove failed")
-    ErrSelectFailed    = fmt.Errorf("select failed")
-    ErrMoveFailed      = fmt.Errorf("move failed")
-    ErrScanFailed      = fmt.Errorf("scan failed")
-    ErrUnmarshalFailed = fmt.Errorf("unmarshal failed")
-    ErrCommitFailed    = fmt.Errorf("transaction commit failed")
+    ErrInsertFailed            = fmt.Errorf("insert failed")
+    ErrRemoveFailed            = fmt.Errorf("remove failed")
+    ErrSelectFailed            = fmt.Errorf("select failed")
+    ErrMoveFailed              = fmt.Errorf("move failed")
+    ErrScanFailed              = fmt.Errorf("scan failed")
+    ErrUnmarshalFailed         = fmt.Errorf("unmarshal failed")
+    ErrCommitFailed            = fmt.Errorf("transaction commit failed")
+    ErrTrxBeginFailed          = fmt.Errorf("transaction begin failed")
+    ErrLockingBlockChainFailed = fmt.Errorf("locking blockchain failed")
 )
 ```
 
-## type [DataBase](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L23-L25>)
+## type [DataBase](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L25-L27>)
 
 Database provides database access for read, write and delete of repository entities.
 
@@ -1496,7 +1513,7 @@ type DataBase struct {
 }
 ```
 
-### func [Connect](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L28>)
+### func [Connect](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L30>)
 
 ```go
 func Connect(ctx context.Context, conn, database string) (*DataBase, error)
@@ -1520,7 +1537,7 @@ func (db DataBase) CheckToken(ctx context.Context, tkn string) (bool, error)
 
 CheckToken checks if token exists in the database is valid and didn't expire.
 
-### func \(DataBase\) [Disconnect](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L38>)
+### func \(DataBase\) [Disconnect](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L40>)
 
 ```go
 func (db DataBase) Disconnect(ctx context.Context) error
@@ -1560,6 +1577,14 @@ func (db DataBase) LastBlock(ctx context.Context) (block.Block, error)
 
 LastBlock returns last block from the database.
 
+### func \(DataBase\) [LockBlockchain](<https://github.com/bartossh/Computantis/blob/main/repopostgre/notifier.go#L33>)
+
+```go
+func (db DataBase) LockBlockchain(ctx context.Context) (bool, error)
+```
+
+LockBlockchain locks blockchain for writing.
+
 ### func \(DataBase\) [MoveTransactionsFromTemporaryToPermanent](<https://github.com/bartossh/Computantis/blob/main/repopostgre/transaction.go#L116>)
 
 ```go
@@ -1568,7 +1593,7 @@ func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context,
 
 MoveTransactionsFromTemporaryToPermanent moves transactions from temporary storage to permanent storage.
 
-### func \(DataBase\) [Ping](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L43>)
+### func \(DataBase\) [Ping](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L45>)
 
 ```go
 func (db DataBase) Ping(ctx context.Context) error
@@ -1631,6 +1656,22 @@ func (DataBase) RunMigration(_ context.Context) error
 ```
 
 RunMigration satisfies the RepositoryProvider interface as PostgreSQL migrations are run on when database is created in docker\-compose\-postgresql.yml.
+
+### func \(DataBase\) [SubscribeToLockBlockchainNotification](<https://github.com/bartossh/Computantis/blob/main/repopostgre/notifier.go#L109>)
+
+```go
+func (db DataBase) SubscribeToLockBlockchainNotification(ctx context.Context, l *pq.Listener, c chan<- bool)
+```
+
+SubscribeToLockBlockchainNotification listens for blockchain lock. To stop subscription, close channel.
+
+### func \(DataBase\) [UnlockBlockChain](<https://github.com/bartossh/Computantis/blob/main/repopostgre/notifier.go#L78>)
+
+```go
+func (db DataBase) UnlockBlockChain(ctx context.Context) (bool, error)
+```
+
+UnlockBlockchain unlocks blockchain for writing.
 
 ### func \(DataBase\) [Write](<https://github.com/bartossh/Computantis/blob/main/repopostgre/logger.go#L12>)
 
@@ -1695,6 +1736,22 @@ func (db DataBase) WriteValidatorStatus(ctx context.Context, vs *validator.Statu
 ```
 
 WriteValidatorStatus writes validator status to the database.
+
+## type [Notification](<https://github.com/bartossh/Computantis/blob/main/repopostgre/notifier.go#L22-L30>)
+
+Notification represents notification from database.
+
+```go
+type Notification struct {
+    Table  string `json:"table"`
+    Action string `json:"action"`
+    Data   struct {
+        ID        int  `json:"id"`
+        Timestamp int  `json:"timestamp"`
+        Locked    bool `json:"locked"`
+    }   `json:"data"`
+}
+```
 
 # serializer
 
