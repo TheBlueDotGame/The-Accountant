@@ -246,18 +246,24 @@ func (l *Ledger) forgeTemporaryTrxs(ctx context.Context) error {
 
 func (l *Ledger) forge(ctx context.Context) {
 	defer l.cleanHashes()
-	blcHash, err := l.savePublishNewBlock(ctx)
-	if err != nil {
-		log.Fatal(fmt.Sprintf("error while saving block: %s", err.Error()))
-		return
-	}
+	for i := 0; i < len(l.hashes); i += l.config.BlockTransactionsSize {
+		hashes := l.hashes[i:min(i+l.config.BlockTransactionsSize, len(l.hashes))]
+		blcHash, err := l.savePublishNewBlock(ctx)
+		if err != nil {
+			msg := fmt.Sprintf("error while saving block: %s", err.Error())
+			log.Fatal(msg)
+			return
+		}
 
-	if err := l.tf.WriteTransactionsInBlock(ctx, blcHash, l.hashes); err != nil {
-		log.Fatal(fmt.Sprintf("error while writing transactions in block [%v]: %s", blcHash, err.Error()))
-	}
+		if err := l.tf.WriteTransactionsInBlock(ctx, blcHash, hashes); err != nil {
+			msg := fmt.Sprintf("error while writing transactions in block [%v]: %s", blcHash, err.Error())
+			log.Fatal(msg)
+		}
 
-	if err := l.tx.MoveTransactionsFromTemporaryToPermanent(ctx, l.hashes); err != nil {
-		log.Fatal(fmt.Sprintf("error while moving transactions from temporary to permanent: %s", err.Error()))
+		if err := l.tx.MoveTransactionsFromTemporaryToPermanent(ctx, hashes); err != nil {
+			msg := fmt.Sprintf("error while moving transactions from temporary to permanent: %s", err.Error())
+			log.Fatal(msg)
+		}
 	}
 }
 
@@ -328,4 +334,11 @@ func (l *Ledger) validateFullyTransaction(ctx context.Context, trx *transaction.
 	}
 
 	return nil
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
