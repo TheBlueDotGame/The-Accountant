@@ -10,15 +10,18 @@ import (
 )
 
 var (
-	ErrInsertFailed            = fmt.Errorf("insert failed")
-	ErrRemoveFailed            = fmt.Errorf("remove failed")
-	ErrSelectFailed            = fmt.Errorf("select failed")
-	ErrMoveFailed              = fmt.Errorf("move failed")
-	ErrScanFailed              = fmt.Errorf("scan failed")
-	ErrUnmarshalFailed         = fmt.Errorf("unmarshal failed")
-	ErrCommitFailed            = fmt.Errorf("transaction commit failed")
-	ErrTrxBeginFailed          = fmt.Errorf("transaction begin failed")
-	ErrLockingBlockChainFailed = fmt.Errorf("locking blockchain failed")
+	ErrInsertFailed                            = fmt.Errorf("insert failed")
+	ErrRemoveFailed                            = fmt.Errorf("remove failed")
+	ErrSelectFailed                            = fmt.Errorf("select failed")
+	ErrMoveFailed                              = fmt.Errorf("move failed")
+	ErrScanFailed                              = fmt.Errorf("scan failed")
+	ErrUnmarshalFailed                         = fmt.Errorf("unmarshal failed")
+	ErrCommitFailed                            = fmt.Errorf("transaction commit failed")
+	ErrTrxBeginFailed                          = fmt.Errorf("transaction begin failed")
+	ErrAddingToLockQueueBlockChainFailed       = fmt.Errorf("adding to lock blockchain failed")
+	ErrRemovingFromLockQueueBlockChainFailed   = fmt.Errorf("removing from lock blockchain failed")
+	ErrListenFailed                            = fmt.Errorf("listen failed")
+	ErrCheckingIsOnTopOfBlockchainsLocksFailed = fmt.Errorf("checking is on top of blockchains locks failed")
 )
 
 // Database provides database access for read, write and delete of repository entities.

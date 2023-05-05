@@ -3,7 +3,6 @@ package repopostgre
 import (
 	"bytes"
 	"context"
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,9 +12,14 @@ import (
 )
 
 const (
-	ActionDelete = "DELETE"
-	ActionInsert = "INSERT"
-	ActionUpdate = "UPDATE"
+	minReconnectInterval = 5 * time.Second
+	maxReconnectInterval = 30 * time.Second
+)
+
+const (
+	actionDelete = "DELETE"
+	actionInsert = "INSERT"
+	actionUpdate = "UPDATE"
 )
 
 // Notification represents notification from database.
@@ -23,90 +27,31 @@ type Notification struct {
 	Table  string `json:"table"`
 	Action string `json:"action"`
 	Data   struct {
-		ID        int  `json:"id"`
-		Timestamp int  `json:"timestamp"`
-		Locked    bool `json:"locked"`
+		ID        int    `json:"id"`
+		Timestamp int    `json:"timestamp"`
+		Node      string `json:"node"`
 	} `json:"data"`
 }
 
-// LockBlockchain locks blockchain for writing.
-func (db DataBase) LockBlockchain(ctx context.Context) (bool, error) {
-	var err error
-	var tx *sql.Tx
-	tx, err = db.inner.BeginTx(ctx, nil)
-	if err != nil {
-		return false, errors.Join(ErrTrxBeginFailed, err)
-	}
-	defer func() {
-		if err != nil {
-			tx.Rollback()
-		}
-	}()
-
-	_, err = tx.ExecContext(ctx, "LOCK TABLE blockchainLocks IN ACCESS EXCLUSIVE MODE")
-	if err != nil {
-		return false, errors.Join(ErrLockingBlockChainFailed, err)
-	}
-
-	var locked bool
-	err = tx.QueryRowContext(ctx, "SELECT locked FROM blockchainLocks WHERE locked=true").Scan(&locked)
-	if err != nil {
-		switch errors.Is(sql.ErrNoRows, err) {
-		case true:
-		default:
-			return false, errors.Join(ErrLockingBlockChainFailed, err)
-		}
-	}
-	if locked {
-		return false, errors.Join(ErrLockingBlockChainFailed, errors.New("blockchain is locked"))
-	}
-
-	timestamp := time.Now().UTC().UnixMicro()
-	_, err = tx.ExecContext(ctx, "INSERT INTO blockchainLocks(timestamp, locked) VALUES($1, true)", timestamp)
-	if err != nil {
-		return false, errors.Join(ErrLockingBlockChainFailed, err)
-	}
-
-	err = tx.Commit()
-	if err != nil {
-		return false, errors.Join(ErrCommitFailed, err)
-	}
-	return true, nil
+// Listener wraps listener for notifications from database.
+// Provides methods for listening and closing.
+type Listener struct {
+	inner *pq.Listener
 }
 
-// UnlockBlockchain unlocks blockchain for writing.
-func (db DataBase) UnlockBlockChain(ctx context.Context) (bool, error) {
-	var err error
-	var tx *sql.Tx
-	tx, err = db.inner.BeginTx(ctx, nil)
+// Listen creates Listener for notifications from database.
+func Listen(conn string, report func(ev pq.ListenerEventType, err error)) (Listener, error) {
+	listener := pq.NewListener(fmt.Sprintf("%s?sslmode=disable", conn), minReconnectInterval, maxReconnectInterval, report)
+	err := listener.Listen("events")
 	if err != nil {
-		return false, errors.Join(ErrTrxBeginFailed, err)
+		return Listener{}, errors.Join(ErrListenFailed, err)
 	}
-	defer func() {
-		if err != nil {
-			tx.Rollback()
-		}
-	}()
-
-	_, err = tx.ExecContext(ctx, "LOCK TABLE blockchainLocks IN ACCESS EXCLUSIVE MODE")
-	if err != nil {
-		return false, errors.Join(ErrLockingBlockChainFailed, err)
-	}
-
-	_, err = tx.ExecContext(ctx, "DELETE FROM blockchainLocks WHERE locked=true")
-	if err != nil {
-		return false, errors.Join(ErrLockingBlockChainFailed, err)
-	}
-	err = tx.Commit()
-	if err != nil {
-		return false, errors.Join(ErrCommitFailed, err)
-	}
-	return true, nil
+	return Listener{inner: listener}, err
 }
 
 // SubscribeToLockBlockchainNotification listens for blockchain lock.
 // To stop subscription, close channel.
-func (db DataBase) SubscribeToLockBlockchainNotification(ctx context.Context, l *pq.Listener, c chan<- bool) {
+func (l Listener) SubscribeToLockBlockchainNotification(ctx context.Context, c chan<- bool, node string) {
 	go func(ctx context.Context, l *pq.Listener, c chan<- bool) {
 		for {
 			select {
@@ -128,12 +73,20 @@ func (db DataBase) SubscribeToLockBlockchainNotification(ctx context.Context, l 
 					continue
 				}
 				switch notification.Action {
-				case ActionInsert:
-					c <- notification.Data.Locked
-				case ActionDelete:
+				case actionInsert:
+					if notification.Data.Node == node {
+						c <- true
+						continue
+					}
 					c <- false
-				case ActionUpdate:
-					c <- notification.Data.Locked
+				case actionDelete:
+					c <- true // lock is removed, checking if moved in the queue is needed
+				case actionUpdate:
+					if notification.Data.Node == node {
+						c <- true
+						continue
+					}
+					c <- false
 				}
 
 			case <-ctx.Done():
@@ -141,5 +94,42 @@ func (db DataBase) SubscribeToLockBlockchainNotification(ctx context.Context, l 
 				return
 			}
 		}
-	}(ctx, l, c)
+	}(ctx, l.inner, c)
+}
+
+// Close closes listener.
+func (l Listener) Close() {
+	l.inner.Close()
+}
+
+// AddToBlockchainLockQueue adds blockchain lock to queue.
+func (db DataBase) AddToBlockchainLockQueue(ctx context.Context, nodeID string) error {
+	ts := time.Now().UnixMicro()
+	_, err := db.inner.ExecContext(ctx, "INSERT INTO blockchainLocks (timestamp, node) VALUES ($1, $2)", ts, nodeID)
+	if err != nil {
+		return errors.Join(ErrAddingToLockQueueBlockChainFailed, err)
+	}
+	return nil
+}
+
+// RemoveFromBlockchainLocks removes blockchain lock from queue.
+func (db DataBase) RemoveFromBlockchainLocks(ctx context.Context, nodeID string) error {
+	_, err := db.inner.ExecContext(ctx, "DELETE FROM blockchainLocks where node = $1", nodeID)
+	if err != nil {
+		return errors.Join(ErrRemovingFromLockQueueBlockChainFailed, err)
+	}
+	return nil
+}
+
+func (db DataBase) CheckIsOnTopOfBlockchainsLocks(ctx context.Context, nodeID string) (bool, error) {
+	var firstNodeID string
+	err := db.inner.QueryRowContext(ctx, "SELECT node FROM blockchainLocks ORDER BY timestamp ASC LIMIT 1").Scan(&firstNodeID)
+	if err != nil {
+		fmt.Println(err)
+		return false, errors.Join(ErrCheckingIsOnTopOfBlockchainsLocksFailed, err)
+	}
+	if firstNodeID == nodeID {
+		return true, nil
+	}
+	return false, nil
 }
