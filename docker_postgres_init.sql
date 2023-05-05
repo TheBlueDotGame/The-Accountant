@@ -148,8 +148,11 @@ $$ LANGUAGE plpgsql;
 CREATE TABLE blockchainLocks (
     id serial PRIMARY KEY,
     timestamp BIGINT NOT NULL,
-    locked BOOLEAN NOT NULL
+    node VARCHAR ( 100 ) NOT NULL
 );
+
+CREATE INDEX blockchainLocks_timestamp ON blockchainLocks USING BTREE (timestamp);
+CREATE INDEX blockchainLocks_node ON blockchainLocks USING HASH (node);
 
 CREATE TRIGGER blockchainLocks_notify_event
 AFTER INSERT OR UPDATE OR DELETE ON blockchainLocks
