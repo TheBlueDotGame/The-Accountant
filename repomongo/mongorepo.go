@@ -2,6 +2,7 @@ package repomongo
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
@@ -20,6 +21,14 @@ const (
 	tokensCollection                       = "tokens"
 	logsCollection                         = "logs"
 	validatorStatusCollection              = "validatorStatus"
+	eventsCollection                       = "events"
+)
+
+var (
+	ErrAddingToLockQueueBlockChainFailed       = fmt.Errorf("adding to lock blockchain failed")
+	ErrRemovingFromLockQueueBlockChainFailed   = fmt.Errorf("removing from lock blockchain failed")
+	ErrListenFailed                            = fmt.Errorf("listen failed")
+	ErrCheckingIsOnTopOfBlockchainsLocksFailed = fmt.Errorf("checking is on top of blockchains locks failed")
 )
 
 // Database provides database access for read, write and delete of repository entities.
@@ -46,4 +55,8 @@ func Connect(ctx context.Context, conn, database string) (*DataBase, error) {
 // Disconnect disconnects user from database
 func (c DataBase) Disconnect(ctx context.Context) error {
 	return c.inner.Client().Disconnect(ctx)
+}
+
+func (db DataBase) Ping(ctx context.Context) error {
+	return db.inner.Client().Ping(ctx, readpref.Primary())
 }

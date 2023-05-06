@@ -22,8 +22,7 @@ const (
 	actionUpdate = "UPDATE"
 )
 
-// Notification represents notification from database.
-type Notification struct {
+type notification struct {
 	Table  string `json:"table"`
 	Action string `json:"action"`
 	Data   struct {
@@ -62,7 +61,7 @@ func (l Listener) SubscribeToLockBlockchainNotification(ctx context.Context, c c
 					fmt.Printf("failed to indent json: %v\n", err)
 					continue
 				}
-				var notification Notification
+				var notification notification
 				err = json.Unmarshal(prettyJSON.Bytes(), &notification)
 				if err != nil {
 					fmt.Printf("failed to unmarshal json: %v\n", err)
@@ -121,6 +120,7 @@ func (db DataBase) RemoveFromBlockchainLocks(ctx context.Context, nodeID string)
 	return nil
 }
 
+// CheckIsOnTopOfBlockchainsLocks checks if node is on top of blockchain locks queue.
 func (db DataBase) CheckIsOnTopOfBlockchainsLocks(ctx context.Context, nodeID string) (bool, error) {
 	var firstNodeID string
 	err := db.inner.QueryRowContext(ctx, "SELECT node FROM blockchainLocks ORDER BY timestamp ASC LIMIT 1").Scan(&firstNodeID)

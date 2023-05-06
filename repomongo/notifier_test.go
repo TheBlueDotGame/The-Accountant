@@ -1,6 +1,4 @@
-//go:build integration
-
-package repopostgre
+package repomongo
 
 import (
 	"context"
@@ -11,7 +9,6 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
-	"github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -21,27 +18,18 @@ func TestNotifierCycle(t *testing.T) {
 	defer cancel()
 
 	godotenv.Load("../.env")
-	user := os.Getenv("POSTGRES_DB_USER")
-	passwd := os.Getenv("POSTGRES_DB_PASSWORD")
-	dbName := os.Getenv("POSTGRES_DB_NAME")
+	user := os.Getenv("MONGO_DB_USER")
+	passwd := os.Getenv("MONGO_DB_PASSWORD")
+	dbName := os.Getenv("MONGO_DB_NAME")
 
-	db, err := Connect(ctx, fmt.Sprintf("postgres://%s:%s@localhost:5432", user, passwd), dbName)
+	db, err := Connect(ctx, fmt.Sprintf("mongodb://%s:%s@localhost:27017/?authSource=admin&authMechanism=SCRAM-SHA-256&readPreference=primary&&ssl=false&directConnection=true", user, passwd), dbName)
 	assert.Nil(t, err)
 
 	err = db.Ping(ctx)
 	assert.Nil(t, err)
 
-	reportProblem := func(ev pq.ListenerEventType, err error) {
-		if err != nil {
-			t.Error(err)
-		}
-	}
-
-	listener, err := Listen(fmt.Sprintf("postgres://%s:%s@localhost:5432", user, passwd), reportProblem)
-	assert.Nil(t, err)
-
 	c := make(chan bool)
-	listener.SubscribeToLockBlockchainNotification(ctx, c, nodeID)
+	db.SubscribeToLockBlockchainNotification(ctx, c, nodeID)
 
 	err = db.AddToBlockchainLockQueue(ctx, nodeID)
 	assert.Nil(t, err)
@@ -59,7 +47,7 @@ func TestNotifierCycle(t *testing.T) {
 	v = <-c
 	assert.True(t, v)
 
-	listener.Close()
+	db.Disconnect(ctx)
 }
 
 func TestNotifierCycleManySubscribers(t *testing.T) {
@@ -70,27 +58,18 @@ func TestNotifierCycleManySubscribers(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 
 		godotenv.Load("../.env")
-		user := os.Getenv("POSTGRES_DB_USER")
-		passwd := os.Getenv("POSTGRES_DB_PASSWORD")
-		dbName := os.Getenv("POSTGRES_DB_NAME")
+		user := os.Getenv("MONGO_DB_USER")
+		passwd := os.Getenv("MONGO_DB_PASSWORD")
+		dbName := os.Getenv("MONGO_DB_NAME")
 
-		db, err := Connect(ctx, fmt.Sprintf("postgres://%s:%s@localhost:5432", user, passwd), dbName)
+		db, err := Connect(ctx, fmt.Sprintf("mongodb://%s:%s@localhost:27017/?authSource=admin&authMechanism=SCRAM-SHA-256&readPreference=primary&&ssl=false&directConnection=true", user, passwd), dbName)
 		assert.Nil(t, err)
 
 		err = db.Ping(ctx)
 		assert.Nil(t, err)
 
-		reportProblem := func(ev pq.ListenerEventType, err error) {
-			if err != nil {
-				t.Fatal(err)
-			}
-		}
-
-		listener, err := Listen(fmt.Sprintf("postgres://%s:%s@localhost:5432", user, passwd), reportProblem)
-		assert.Nil(t, err)
-
 		c := make(chan bool)
-		listener.SubscribeToLockBlockchainNotification(ctx, c, nodeIDStr)
+		db.SubscribeToLockBlockchainNotification(ctx, c, nodeIDStr)
 
 		err = db.AddToBlockchainLockQueue(ctx, nodeIDStr)
 		assert.Nil(t, err)
@@ -123,7 +102,7 @@ func TestNotifierCycleManySubscribers(t *testing.T) {
 				}
 			}
 			cancel()
-			listener.Close()
+			db.Disconnect(ctx)
 		}()
 	}
 

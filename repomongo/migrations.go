@@ -27,7 +27,7 @@ type Migration struct {
 
 var migrations = []migration{
 	{
-		name: "index_name_migrations",
+		name: "index_migrations",
 		run: func(ctx context.Context, user *mongo.Database) error {
 			_, err := user.Collection(migrationsCollection).
 				Indexes().
@@ -41,7 +41,7 @@ var migrations = []migration{
 		},
 	},
 	{
-		name: "index_public_key_addresses",
+		name: "index_addresses",
 		run: func(ctx context.Context, user *mongo.Database) error {
 			_, err := user.Collection(addressesCollection).
 				Indexes().
@@ -65,7 +65,7 @@ var migrations = []migration{
 		},
 	},
 	{
-		name: "index_hash_transactions_permanent",
+		name: "index_transactions_permanent",
 		run: func(ctx context.Context, user *mongo.Database) error {
 			_, err := user.Collection(transactionsPermanentCollection).
 				Indexes().
@@ -79,7 +79,7 @@ var migrations = []migration{
 		},
 	},
 	{
-		name: "index_hash_transactions_temporary",
+		name: "index_transactions_temporary",
 		run: func(ctx context.Context, user *mongo.Database) error {
 			_, err := user.Collection(transactionsTemporaryCollection).
 				Indexes().
@@ -93,7 +93,7 @@ var migrations = []migration{
 		},
 	},
 	{
-		name: "index_hash_transactions_awaiting",
+		name: "index_transactions_awaiting",
 		run: func(ctx context.Context, user *mongo.Database) error {
 			_, err := user.Collection(transactionsAwaitingReceiverCollection).
 				Indexes().
@@ -129,7 +129,7 @@ var migrations = []migration{
 		},
 	},
 	{
-		name: "index_hash_prev_hash_index_blocks",
+		name: "index_blocks",
 		run: func(ctx context.Context, user *mongo.Database) error {
 			_, err := user.Collection(blocksCollection).
 				Indexes().
@@ -193,7 +193,7 @@ var migrations = []migration{
 		},
 	},
 	{
-		name: "index_logger_level_created_at",
+		name: "index_logger",
 		run: func(ctx context.Context, user *mongo.Database) error {
 			_, err := user.Collection(tokensCollection).
 				Indexes().
@@ -218,13 +218,38 @@ var migrations = []migration{
 		},
 	},
 	{
-		name: "index_validator_status_index",
+		name: "index_validator_status",
 		run: func(ctx context.Context, user *mongo.Database) error {
 			_, err := user.Collection(validatorStatusCollection).
 				Indexes().
 				CreateOne(ctx, mongo.IndexModel{
 					Keys: bson.M{
 						"index": -1,
+					},
+					Options: options.Index().SetUnique(true),
+				})
+			return err
+		},
+	},
+	{
+		name: "index_events",
+		run: func(ctx context.Context, user *mongo.Database) error {
+			_, err := user.Collection(eventsCollection).
+				Indexes().
+				CreateOne(ctx, mongo.IndexModel{
+					Keys: bson.M{
+						"node": 1,
+					},
+					Options: options.Index().SetUnique(true),
+				})
+			if err != nil {
+				return err
+			}
+			_, err = user.Collection(eventsCollection).
+				Indexes().
+				CreateOne(ctx, mongo.IndexModel{
+					Keys: bson.M{
+						"timestamp": 1,
 					},
 					Options: options.Index().SetUnique(true),
 				})
