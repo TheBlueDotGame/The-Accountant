@@ -11,6 +11,7 @@ import (
 	"github.com/bartossh/Computantis/repopostgre"
 	"github.com/bartossh/Computantis/transaction"
 	"github.com/bartossh/Computantis/validator"
+	"github.com/lib/pq"
 )
 
 var (
@@ -62,6 +63,18 @@ type ValidatorStatusReader interface {
 	WriteValidatorStatus(ctx context.Context, vs *validator.Status) error
 }
 
+// Subscriber abstracts blockchain subscription to blockchain locks.
+type Subscriber interface {
+	SubscribeToLockBlockchainNotification(ctx context.Context, c chan<- bool, node string)
+}
+
+// Synchronizer abstracts blockchain synchronization operations.
+type Synchronizer interface {
+	AddToBlockchainLockQueue(ctx context.Context, nodeID string) error
+	RemoveFromBlockchainLocks(ctx context.Context, nodeID string) error
+	CheckIsOnTopOfBlockchainsLocks(ctx context.Context, nodeID string) (bool, error)
+}
+
 // ConnectionCloser abstracts connection closing operations.
 type ConnectionCloser interface {
 	Disconnect(ctx context.Context) error
@@ -76,6 +89,7 @@ type RepositoryProvider interface {
 	TokenWriteCheckInvalidator
 	TransactionOperator
 	ValidatorStatusReader
+	Synchronizer
 	ConnectionCloser
 }
 
@@ -88,13 +102,30 @@ type DBConfig struct {
 }
 
 // Connect connects to the proper database and returns that connection.
-func (cfg DBConfig) Connect(ctx context.Context) (RepositoryProvider, error) {
+func (cfg DBConfig) Connect(ctx context.Context) (RepositoryProvider, Subscriber, error) {
 	switch {
 	case strings.Contains(cfg.ConnStr, "postgres"):
-		return repopostgre.Connect(ctx, cfg.ConnStr, cfg.DatabaseName)
+		db, err := repopostgre.Connect(ctx, cfg.ConnStr, cfg.DatabaseName)
+		if err != nil {
+			return nil, nil, err
+		}
+		f := func(ev pq.ListenerEventType, err error) {
+			if err != nil {
+				panic(err)
+			}
+		}
+		lister, err := repopostgre.Listen(cfg.ConnStr, f)
+		if err != nil {
+			return nil, nil, err
+		}
+		return db, lister, nil
 	case strings.Contains(cfg.ConnStr, "mongodb"):
-		return repomongo.Connect(ctx, cfg.ConnStr, cfg.DatabaseName)
+		db, err := repomongo.Connect(ctx, cfg.ConnStr, cfg.DatabaseName)
+		if err != nil {
+			return nil, nil, err
+		}
+		return db, db, nil
 	}
 
-	return nil, ErrDatabaseNotSupported
+	return nil, nil, ErrDatabaseNotSupported
 }

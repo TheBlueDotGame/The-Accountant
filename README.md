@@ -341,13 +341,16 @@ import "github.com/bartossh/Computantis/bookkeeping"
 - [type BlockWriter](<#type-blockwriter>)
 - [type Config](<#type-config>)
   - [func (c Config) Validate() error](<#func-config-validate>)
+- [type DataBaseProvider](<#type-databaseprovider>)
 - [type Ledger](<#type-ledger>)
-  - [func New(config Config, bc BlockReadWriter, tx TrxWriteReadMover, ac AddressChecker, vr SignatureVerifier, tf BlockFindWriter, log logger.Logger, blcSub BlockSubscription) (*Ledger, error)](<#func-new>)
+  - [func New(config Config, bc BlockReadWriter, db DataBaseProvider, ac AddressChecker, vr SignatureVerifier, tf BlockFindWriter, log logger.Logger, blcSub BlockSubscription, sub Subscriber) (*Ledger, error)](<#func-new>)
   - [func (l *Ledger) Run(ctx context.Context)](<#func-ledger-run>)
   - [func (l *Ledger) VerifySignature(message, signature []byte, hash [32]byte, address string) error](<#func-ledger-verifysignature>)
   - [func (l *Ledger) WriteCandidateTransaction(ctx context.Context, trx *transaction.Transaction) error](<#func-ledger-writecandidatetransaction>)
   - [func (l *Ledger) WriteIssuerSignedTransactionForReceiver(ctx context.Context, receiverAddr string, trx *transaction.Transaction) error](<#func-ledger-writeissuersignedtransactionforreceiver>)
 - [type SignatureVerifier](<#type-signatureverifier>)
+- [type Subscriber](<#type-subscriber>)
+- [type Synchronizer](<#type-synchronizer>)
 - [type TrxWriteReadMover](<#type-trxwritereadmover>)
 
 
@@ -365,7 +368,15 @@ var (
 )
 ```
 
-## type [AddressChecker](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L67-L69>)
+```go
+var (
+    ErrSynchronizerWatchFailure   = errors.New("synchronizer failure")
+    ErrSynchronizerReleaseFailure = errors.New("synchronizer release failure")
+    ErrSynchronizerStopped        = errors.New("synchronizer stopped")
+)
+```
+
+## type [AddressChecker](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L68-L70>)
 
 AddressChecker provides address existence check method. If you use other repository than addresses repository, you can implement this interface but address should be uniquely indexed in your repository implementation.
 
@@ -375,7 +386,7 @@ type AddressChecker interface {
 }
 ```
 
-## type [BlockFindWriter](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L77-L80>)
+## type [BlockFindWriter](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L78-L81>)
 
 BlockFindWriter provides block find and write method.
 
@@ -386,7 +397,7 @@ type BlockFindWriter interface {
 }
 ```
 
-## type [BlockReadWriter](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L59-L62>)
+## type [BlockReadWriter](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L60-L63>)
 
 BlockReadWriter provides block read and write methods.
 
@@ -397,7 +408,7 @@ type BlockReadWriter interface {
 }
 ```
 
-## type [BlockReader](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L49-L51>)
+## type [BlockReader](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L50-L52>)
 
 BlockReader provides block read methods.
 
@@ -407,7 +418,7 @@ type BlockReader interface {
 }
 ```
 
-## type [BlockSubscription](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L85-L87>)
+## type [BlockSubscription](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L92-L94>)
 
 BlockSubscription provides block publishing method. It uses reactive package. It you are using your own implementation of reactive package take care of Publish method to be non\-blocking.
 
@@ -417,7 +428,7 @@ type BlockSubscription interface {
 }
 ```
 
-## type [BlockWriter](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L54-L56>)
+## type [BlockWriter](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L55-L57>)
 
 BlockWriter provides block write methods.
 
@@ -427,7 +438,7 @@ type BlockWriter interface {
 }
 ```
 
-## type [Config](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L90-L94>)
+## type [Config](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L97-L101>)
 
 Config is a configuration of the Ledger.
 
@@ -439,7 +450,7 @@ type Config struct {
 }
 ```
 
-### func \(Config\) [Validate](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L97>)
+### func \(Config\) [Validate](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L104>)
 
 ```go
 func (c Config) Validate() error
@@ -447,7 +458,18 @@ func (c Config) Validate() error
 
 Validate validates the Ledger configuration.
 
-## type [Ledger](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L117-L128>)
+## type [DataBaseProvider](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L84-L87>)
+
+DataBaseProvider abstracts all the methods that are expected from repository.
+
+```go
+type DataBaseProvider interface {
+    Synchronizer
+    TrxWriteReadMover
+}
+```
+
+## type [Ledger](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L124-L137>)
 
 Ledger is a collection of ledger functionality to perform bookkeeping. It performs all the actions on the transactions and blockchain. Ladger seals all the transaction actions in the blockchain.
 
@@ -457,15 +479,15 @@ type Ledger struct {
 }
 ```
 
-### func [New](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L131-L140>)
+### func [New](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L140-L150>)
 
 ```go
-func New(config Config, bc BlockReadWriter, tx TrxWriteReadMover, ac AddressChecker, vr SignatureVerifier, tf BlockFindWriter, log logger.Logger, blcSub BlockSubscription) (*Ledger, error)
+func New(config Config, bc BlockReadWriter, db DataBaseProvider, ac AddressChecker, vr SignatureVerifier, tf BlockFindWriter, log logger.Logger, blcSub BlockSubscription, sub Subscriber) (*Ledger, error)
 ```
 
 New creates new Ledger if config is valid or returns error otherwise.
 
-### func \(\*Ledger\) [Run](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L161>)
+### func \(\*Ledger\) [Run](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L173>)
 
 ```go
 func (l *Ledger) Run(ctx context.Context)
@@ -473,7 +495,7 @@ func (l *Ledger) Run(ctx context.Context)
 
 Run runs the Ladger engine that writes blocks to the blockchain repository. Run starts a goroutine and can be stopped by cancelling the context. It is non\-blocking and concurrent safe.
 
-### func \(\*Ledger\) [VerifySignature](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L229>)
+### func \(\*Ledger\) [VerifySignature](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L243>)
 
 ```go
 func (l *Ledger) VerifySignature(message, signature []byte, hash [32]byte, address string) error
@@ -481,7 +503,7 @@ func (l *Ledger) VerifySignature(message, signature []byte, hash [32]byte, addre
 
 VerifySignature verifies signature of the message.
 
-### func \(\*Ledger\) [WriteCandidateTransaction](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L211>)
+### func \(\*Ledger\) [WriteCandidateTransaction](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L225>)
 
 ```go
 func (l *Ledger) WriteCandidateTransaction(ctx context.Context, trx *transaction.Transaction) error
@@ -489,7 +511,7 @@ func (l *Ledger) WriteCandidateTransaction(ctx context.Context, trx *transaction
 
 WriteCandidateTransaction validates and writes a transaction to the repository. Transaction is not yet a part of the blockchain at this point. Ladger will perform all the necessary checks and validations before writing it to the repository. The candidate needs to be signed by the receiver later in the process  to be placed as a candidate in the blockchain.
 
-### func \(\*Ledger\) [WriteIssuerSignedTransactionForReceiver](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L191-L195>)
+### func \(\*Ledger\) [WriteIssuerSignedTransactionForReceiver](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L205-L209>)
 
 ```go
 func (l *Ledger) WriteIssuerSignedTransactionForReceiver(ctx context.Context, receiverAddr string, trx *transaction.Transaction) error
@@ -497,7 +519,7 @@ func (l *Ledger) WriteIssuerSignedTransactionForReceiver(ctx context.Context, re
 
 WriteIssuerSignedTransactionForReceiver validates issuer signature and writes a transaction to the repository for receiver.
 
-## type [SignatureVerifier](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L72-L74>)
+## type [SignatureVerifier](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L73-L75>)
 
 SignatureVerifier provides signature verification method.
 
@@ -507,7 +529,27 @@ type SignatureVerifier interface {
 }
 ```
 
-## type [TrxWriteReadMover](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L38-L46>)
+## type [Subscriber](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/synch.go#L14-L16>)
+
+```go
+type Subscriber interface {
+    SubscribeToLockBlockchainNotification(ctx context.Context, c chan<- bool, node string)
+}
+```
+
+## type [Synchronizer](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/synch.go#L19-L23>)
+
+Synchronizer abstracts blockchain synchronization operations.
+
+```go
+type Synchronizer interface {
+    AddToBlockchainLockQueue(ctx context.Context, nodeID string) error
+    RemoveFromBlockchainLocks(ctx context.Context, nodeID string) error
+    CheckIsOnTopOfBlockchainsLocks(ctx context.Context, nodeID string) (bool, error)
+}
+```
+
+## type [TrxWriteReadMover](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L39-L47>)
 
 TrxWriteReadMover provides transactions write, read and move methods. It allows to access temporary, permanent and awaiting transactions.
 
@@ -1048,9 +1090,11 @@ import "github.com/bartossh/Computantis/repohelper"
 - [type BlockReadWriter](<#type-blockreadwriter>)
 - [type ConnectionCloser](<#type-connectioncloser>)
 - [type DBConfig](<#type-dbconfig>)
-  - [func (cfg DBConfig) Connect(ctx context.Context) (RepositoryProvider, error)](<#func-dbconfig-connect>)
+  - [func (cfg DBConfig) Connect(ctx context.Context) (RepositoryProvider, Subscriber, error)](<#func-dbconfig-connect>)
 - [type Migrator](<#type-migrator>)
 - [type RepositoryProvider](<#type-repositoryprovider>)
+- [type Subscriber](<#type-subscriber>)
+- [type Synchronizer](<#type-synchronizer>)
 - [type TokenWriteCheckInvalidator](<#type-tokenwritecheckinvalidator>)
 - [type TransactionOperator](<#type-transactionoperator>)
 - [type ValidatorStatusReader](<#type-validatorstatusreader>)
@@ -1064,7 +1108,7 @@ var (
 )
 ```
 
-## type [AddressWriteFindChecker](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L21-L25>)
+## type [AddressWriteFindChecker](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L22-L26>)
 
 AddressWriteFindChecker abstracts address operations.
 
@@ -1076,7 +1120,7 @@ type AddressWriteFindChecker interface {
 }
 ```
 
-## type [BlockReadWriter](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L28-L32>)
+## type [BlockReadWriter](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L29-L33>)
 
 BlockReadWriter abstracts block operations.
 
@@ -1088,7 +1132,7 @@ type BlockReadWriter interface {
 }
 ```
 
-## type [ConnectionCloser](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L66-L68>)
+## type [ConnectionCloser](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L79-L81>)
 
 ConnectionCloser abstracts connection closing operations.
 
@@ -1098,7 +1142,7 @@ type ConnectionCloser interface {
 }
 ```
 
-## type [DBConfig](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L83-L88>)
+## type [DBConfig](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L97-L102>)
 
 Config contains configuration for the database.
 
@@ -1111,15 +1155,15 @@ type DBConfig struct {
 }
 ```
 
-### func \(DBConfig\) [Connect](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L91>)
+### func \(DBConfig\) [Connect](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L105>)
 
 ```go
-func (cfg DBConfig) Connect(ctx context.Context) (RepositoryProvider, error)
+func (cfg DBConfig) Connect(ctx context.Context) (RepositoryProvider, Subscriber, error)
 ```
 
 Connect connects to the proper database and returns that connection.
 
-## type [Migrator](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L35-L37>)
+## type [Migrator](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L36-L38>)
 
 MigrationRunner abstracts migration operations.
 
@@ -1129,7 +1173,7 @@ type Migrator interface {
 }
 ```
 
-## type [RepositoryProvider](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L71-L80>)
+## type [RepositoryProvider](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L84-L94>)
 
 RepositoryProvider is an interface that ensures that all required methods to run computantis are implemented.
 
@@ -1142,11 +1186,34 @@ type RepositoryProvider interface {
     TokenWriteCheckInvalidator
     TransactionOperator
     ValidatorStatusReader
+    Synchronizer
     ConnectionCloser
 }
 ```
 
-## type [TokenWriteCheckInvalidator](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L40-L44>)
+## type [Subscriber](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L67-L69>)
+
+Subscriber abstracts blockchain subscription to blockchain locks.
+
+```go
+type Subscriber interface {
+    SubscribeToLockBlockchainNotification(ctx context.Context, c chan<- bool, node string)
+}
+```
+
+## type [Synchronizer](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L72-L76>)
+
+Synchronizer abstracts blockchain synchronization operations.
+
+```go
+type Synchronizer interface {
+    AddToBlockchainLockQueue(ctx context.Context, nodeID string) error
+    RemoveFromBlockchainLocks(ctx context.Context, nodeID string) error
+    CheckIsOnTopOfBlockchainsLocks(ctx context.Context, nodeID string) (bool, error)
+}
+```
+
+## type [TokenWriteCheckInvalidator](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L41-L45>)
 
 TokenWriteCheckInvalidator abstracts token operations.
 
@@ -1158,7 +1225,7 @@ type TokenWriteCheckInvalidator interface {
 }
 ```
 
-## type [TransactionOperator](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L47-L57>)
+## type [TransactionOperator](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L48-L58>)
 
 TransactionOperator abstracts transaction operations.
 
@@ -1176,7 +1243,7 @@ type TransactionOperator interface {
 }
 ```
 
-## type [ValidatorStatusReader](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L60-L63>)
+## type [ValidatorStatusReader](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L61-L64>)
 
 ValidatorStatusReader abstracts validator status operations.
 

@@ -10,6 +10,7 @@ import (
 	"github.com/bartossh/Computantis/block"
 	"github.com/bartossh/Computantis/logger"
 	"github.com/bartossh/Computantis/transaction"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 const (
@@ -79,6 +80,12 @@ type BlockFindWriter interface {
 	FindTransactionInBlockHash(ctx context.Context, trxHash [32]byte) ([32]byte, error)
 }
 
+// DataBaseProvider abstracts all the methods that are expected from repository.
+type DataBaseProvider interface {
+	Synchronizer
+	TrxWriteReadMover
+}
+
 // BlockSubscription provides block publishing method.
 // It uses reactive package. It you are using your own implementation of reactive package
 // take care of Publish method to be non-blocking.
@@ -115,43 +122,48 @@ func (c Config) Validate() error {
 // It performs all the actions on the transactions and blockchain.
 // Ladger seals all the transaction actions in the blockchain.
 type Ledger struct {
+	id     string
 	config Config
 	hashC  chan [32]byte
 	hashes [][32]byte
-	tx     TrxWriteReadMover
+	db     DataBaseProvider
 	bc     BlockReadWriter
 	ac     AddressChecker
 	vr     SignatureVerifier
 	tf     BlockFindWriter
 	log    logger.Logger
 	blcSub BlockSubscription
+	sub    Subscriber
 }
 
 // New creates new Ledger if config is valid or returns error otherwise.
 func New(
 	config Config,
 	bc BlockReadWriter,
-	tx TrxWriteReadMover,
+	db DataBaseProvider,
 	ac AddressChecker,
 	vr SignatureVerifier,
 	tf BlockFindWriter,
 	log logger.Logger,
 	blcSub BlockSubscription,
+	sub Subscriber,
 ) (*Ledger, error) {
 	if err := config.Validate(); err != nil {
 		return nil, err
 	}
 
 	return &Ledger{
+		id:     primitive.NewObjectID().Hex(),
 		config: config,
 		hashC:  make(chan [32]byte, config.BlockTransactionsSize),
-		tx:     tx,
+		db:     db,
 		bc:     bc,
 		ac:     ac,
 		vr:     vr,
 		tf:     tf,
 		log:    log,
 		blcSub: blcSub,
+		sub:    sub,
 	}, nil
 }
 
@@ -159,6 +171,8 @@ func New(
 // Run starts a goroutine and can be stopped by cancelling the context.
 // It is non-blocking and concurrent safe.
 func (l *Ledger) Run(ctx context.Context) {
+	// TODO: register central node
+	// todo: if only one registered then forge temporary transactions
 	if err := l.forgeTemporaryTrxs(ctx); err != nil {
 		l.log.Fatal(fmt.Sprintf("forging temporary failed: %s", err.Error()))
 	}
@@ -197,7 +211,7 @@ func (l *Ledger) WriteIssuerSignedTransactionForReceiver(
 		return err
 	}
 
-	if err := l.tx.WriteIssuerSignedTransactionForReceiver(ctx, receiverAddr, trx); err != nil {
+	if err := l.db.WriteIssuerSignedTransactionForReceiver(ctx, receiverAddr, trx); err != nil {
 		return err
 	}
 
@@ -212,11 +226,11 @@ func (l *Ledger) WriteCandidateTransaction(ctx context.Context, trx *transaction
 	if err := l.validateFullyTransaction(ctx, trx); err != nil {
 		return err
 	}
-	if err := l.tx.WriteTemporaryTransaction(ctx, trx); err != nil {
+	if err := l.db.WriteTemporaryTransaction(ctx, trx); err != nil {
 		return err
 	}
 
-	if err := l.tx.RemoveAwaitingTransaction(ctx, trx.Hash); err != nil {
+	if err := l.db.RemoveAwaitingTransaction(ctx, trx.Hash); err != nil {
 		return err
 	}
 
@@ -231,7 +245,7 @@ func (l *Ledger) VerifySignature(message, signature []byte, hash [32]byte, addre
 }
 
 func (l *Ledger) forgeTemporaryTrxs(ctx context.Context) error {
-	trxs, err := l.tx.ReadTemporaryTransactions(ctx)
+	trxs, err := l.db.ReadTemporaryTransactions(ctx)
 	if err != nil {
 		return err
 	}
@@ -246,6 +260,11 @@ func (l *Ledger) forgeTemporaryTrxs(ctx context.Context) error {
 
 func (l *Ledger) forge(ctx context.Context) {
 	defer l.cleanHashes()
+	sync := newSync(l.id, l.db, l.sub)
+	if err := sync.waitInQueueForLock(ctx); err != nil {
+		log.Fatal(err.Error())
+		return
+	}
 	for i := 0; i < len(l.hashes); i += l.config.BlockTransactionsSize {
 		hashes := l.hashes[i:min(i+l.config.BlockTransactionsSize, len(l.hashes))]
 		blcHash, err := l.savePublishNewBlock(ctx)
@@ -260,10 +279,13 @@ func (l *Ledger) forge(ctx context.Context) {
 			log.Fatal(msg)
 		}
 
-		if err := l.tx.MoveTransactionsFromTemporaryToPermanent(ctx, hashes); err != nil {
+		if err := l.db.MoveTransactionsFromTemporaryToPermanent(ctx, hashes); err != nil {
 			msg := fmt.Sprintf("error while moving transactions from temporary to permanent: %s", err.Error())
 			log.Fatal(msg)
 		}
+	}
+	if err := sync.releaseLock(ctx); err != nil {
+		log.Fatal(err.Error())
 	}
 }
 

@@ -29,7 +29,7 @@ func main() {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 
-	db, err := cfg.Database.Connect(ctx)
+	db, _, err := cfg.Database.Connect(ctx)
 	if err != nil {
 		fmt.Println(err)
 		c <- os.Interrupt

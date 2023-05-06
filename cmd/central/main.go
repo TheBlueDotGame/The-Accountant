@@ -38,7 +38,7 @@ func main() {
 		cancel()
 	}()
 
-	db, err := cfg.Database.Connect(ctx)
+	db, sub, err := cfg.Database.Connect(ctx)
 	if err != nil {
 		fmt.Println(err)
 		c <- os.Interrupt
@@ -69,7 +69,7 @@ func main() {
 	verifier := wallet.NewVerifier()
 	rx := reactive.New[block.Block](rxBufferSize)
 
-	ladger, err := bookkeeping.New(cfg.Bookkeeper, blc, db, db, verifier, db, log, rx)
+	ladger, err := bookkeeping.New(cfg.Bookkeeper, blc, db, db, verifier, db, log, rx, sub)
 	if err != nil {
 		fmt.Println(err)
 		c <- os.Interrupt
