@@ -1195,9 +1195,12 @@ import "github.com/bartossh/Computantis/repomongo"
 
 ## Index
 
+- [Variables](<#variables>)
 - [type DataBase](<#type-database>)
   - [func Connect(ctx context.Context, conn, database string) (*DataBase, error)](<#func-connect>)
+  - [func (db DataBase) AddToBlockchainLockQueue(ctx context.Context, nodeID string) error](<#func-database-addtoblockchainlockqueue>)
   - [func (db DataBase) CheckAddressExists(ctx context.Context, addr string) (bool, error)](<#func-database-checkaddressexists>)
+  - [func (db DataBase) CheckIsOnTopOfBlockchainsLocks(ctx context.Context, nodeID string) (bool, error)](<#func-database-checkisontopofblockchainslocks>)
   - [func (db DataBase) CheckToken(ctx context.Context, tkn string) (bool, error)](<#func-database-checktoken>)
   - [func (c DataBase) Disconnect(ctx context.Context) error](<#func-database-disconnect>)
   - [func (db DataBase) FindAddress(ctx context.Context, search string, limit int) ([]string, error)](<#func-database-findaddress>)
@@ -1205,13 +1208,16 @@ import "github.com/bartossh/Computantis/repomongo"
   - [func (db DataBase) InvalidateToken(ctx context.Context, token string) error](<#func-database-invalidatetoken>)
   - [func (db DataBase) LastBlock(ctx context.Context) (block.Block, error)](<#func-database-lastblock>)
   - [func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context, hash [][32]byte) error](<#func-database-movetransactionsfromtemporarytopermanent>)
+  - [func (db DataBase) Ping(ctx context.Context) error](<#func-database-ping>)
   - [func (db DataBase) ReadAwaitingTransactionsByIssuer(ctx context.Context, address string) ([]transaction.Transaction, error)](<#func-database-readawaitingtransactionsbyissuer>)
   - [func (db DataBase) ReadAwaitingTransactionsByReceiver(ctx context.Context, address string) ([]transaction.Transaction, error)](<#func-database-readawaitingtransactionsbyreceiver>)
   - [func (db DataBase) ReadBlockByHash(ctx context.Context, hash [32]byte) (block.Block, error)](<#func-database-readblockbyhash>)
   - [func (db DataBase) ReadLastNValidatorStatuses(ctx context.Context, last int64) ([]validator.Status, error)](<#func-database-readlastnvalidatorstatuses>)
   - [func (db DataBase) ReadTemporaryTransactions(ctx context.Context) ([]transaction.Transaction, error)](<#func-database-readtemporarytransactions>)
   - [func (db DataBase) RemoveAwaitingTransaction(ctx context.Context, trxHash [32]byte) error](<#func-database-removeawaitingtransaction>)
+  - [func (db DataBase) RemoveFromBlockchainLocks(ctx context.Context, nodeID string) error](<#func-database-removefromblockchainlocks>)
   - [func (c DataBase) RunMigration(ctx context.Context) error](<#func-database-runmigration>)
+  - [func (db DataBase) SubscribeToLockBlockchainNotification(ctx context.Context, c chan<- bool, node string)](<#func-database-subscribetolockblockchainnotification>)
   - [func (db DataBase) Write(p []byte) (n int, err error)](<#func-database-write>)
   - [func (db DataBase) WriteAddress(ctx context.Context, addr string) error](<#func-database-writeaddress>)
   - [func (db DataBase) WriteBlock(ctx context.Context, block block.Block) error](<#func-database-writeblock>)
@@ -1223,7 +1229,18 @@ import "github.com/bartossh/Computantis/repomongo"
 - [type Migration](<#type-migration>)
 
 
-## type [DataBase](<https://github.com/bartossh/Computantis/blob/main/repomongo/mongorepo.go#L26-L28>)
+## Variables
+
+```go
+var (
+    ErrAddingToLockQueueBlockChainFailed       = fmt.Errorf("adding to lock blockchain failed")
+    ErrRemovingFromLockQueueBlockChainFailed   = fmt.Errorf("removing from lock blockchain failed")
+    ErrListenFailed                            = fmt.Errorf("listen failed")
+    ErrCheckingIsOnTopOfBlockchainsLocksFailed = fmt.Errorf("checking is on top of blockchains locks failed")
+)
+```
+
+## type [DataBase](<https://github.com/bartossh/Computantis/blob/main/repomongo/mongorepo.go#L35-L37>)
 
 Database provides database access for read, write and delete of repository entities.
 
@@ -1233,13 +1250,21 @@ type DataBase struct {
 }
 ```
 
-### func [Connect](<https://github.com/bartossh/Computantis/blob/main/repomongo/mongorepo.go#L31>)
+### func [Connect](<https://github.com/bartossh/Computantis/blob/main/repomongo/mongorepo.go#L40>)
 
 ```go
 func Connect(ctx context.Context, conn, database string) (*DataBase, error)
 ```
 
 Connect creates new connection to the repository and returns pointer to the DataBase.
+
+### func \(DataBase\) [AddToBlockchainLockQueue](<https://github.com/bartossh/Computantis/blob/main/repomongo/notifier.go#L51>)
+
+```go
+func (db DataBase) AddToBlockchainLockQueue(ctx context.Context, nodeID string) error
+```
+
+AddToBlockchainLockQueue adds blockchain lock to queue.
 
 ### func \(DataBase\) [CheckAddressExists](<https://github.com/bartossh/Computantis/blob/main/repomongo/address.go#L32>)
 
@@ -1249,6 +1274,14 @@ func (db DataBase) CheckAddressExists(ctx context.Context, addr string) (bool, e
 
 CheckAddressExists checks if address exists in the database. Returns true if exists and error if database error different from ErrNoDocuments.
 
+### func \(DataBase\) [CheckIsOnTopOfBlockchainsLocks](<https://github.com/bartossh/Computantis/blob/main/repomongo/notifier.go#L67>)
+
+```go
+func (db DataBase) CheckIsOnTopOfBlockchainsLocks(ctx context.Context, nodeID string) (bool, error)
+```
+
+CheckIsOnTopOfBlockchainsLocks checks if node is on top of blockchain locks queue.
+
 ### func \(DataBase\) [CheckToken](<https://github.com/bartossh/Computantis/blob/main/repomongo/token.go#L14>)
 
 ```go
@@ -1257,7 +1290,7 @@ func (db DataBase) CheckToken(ctx context.Context, tkn string) (bool, error)
 
 CheckToken checks if token exists in the database is valid and didn't expire.
 
-### func \(DataBase\) [Disconnect](<https://github.com/bartossh/Computantis/blob/main/repomongo/mongorepo.go#L47>)
+### func \(DataBase\) [Disconnect](<https://github.com/bartossh/Computantis/blob/main/repomongo/mongorepo.go#L56>)
 
 ```go
 func (c DataBase) Disconnect(ctx context.Context) error
@@ -1304,6 +1337,12 @@ func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context,
 ```
 
 MoveTransactionsFromTemporaryToPermanent moves transactions from temporary storage to permanent.
+
+### func \(DataBase\) [Ping](<https://github.com/bartossh/Computantis/blob/main/repomongo/mongorepo.go#L60>)
+
+```go
+func (db DataBase) Ping(ctx context.Context) error
+```
 
 ### func \(DataBase\) [ReadAwaitingTransactionsByIssuer](<https://github.com/bartossh/Computantis/blob/main/repomongo/transaction.go#L63>)
 
@@ -1353,13 +1392,29 @@ func (db DataBase) RemoveAwaitingTransaction(ctx context.Context, trxHash [32]by
 
 RemoveAwaitingTransaction removes transaction from the awaiting transaction storage.
 
-### func \(DataBase\) [RunMigration](<https://github.com/bartossh/Computantis/blob/main/repomongo/migrations.go#L289>)
+### func \(DataBase\) [RemoveFromBlockchainLocks](<https://github.com/bartossh/Computantis/blob/main/repomongo/notifier.go#L59>)
+
+```go
+func (db DataBase) RemoveFromBlockchainLocks(ctx context.Context, nodeID string) error
+```
+
+RemoveFromBlockchainLocks removes blockchain lock from queue.
+
+### func \(DataBase\) [RunMigration](<https://github.com/bartossh/Computantis/blob/main/repomongo/migrations.go#L314>)
 
 ```go
 func (c DataBase) RunMigration(ctx context.Context) error
 ```
 
 RunMigrationUp runs all the migrations
+
+### func \(DataBase\) [SubscribeToLockBlockchainNotification](<https://github.com/bartossh/Computantis/blob/main/repomongo/notifier.go#L22>)
+
+```go
+func (db DataBase) SubscribeToLockBlockchainNotification(ctx context.Context, c chan<- bool, node string)
+```
+
+SubscribeToLockBlockchainNotification listens for blockchain lock. To stop subscription, close channel. This is fake subscriber, it isn't using change watcher as this requires replica set.
 
 ### func \(DataBase\) [Write](<https://github.com/bartossh/Computantis/blob/main/repomongo/logger.go#L13>)
 
@@ -1477,7 +1532,6 @@ import "github.com/bartossh/Computantis/repopostgre"
   - [func Listen(conn string, report func(ev pq.ListenerEventType, err error)) (Listener, error)](<#func-listen>)
   - [func (l Listener) Close()](<#func-listener-close>)
   - [func (l Listener) SubscribeToLockBlockchainNotification(ctx context.Context, c chan<- bool, node string)](<#func-listener-subscribetolockblockchainnotification>)
-- [type Notification](<#type-notification>)
 
 
 ## Variables
@@ -1517,7 +1571,7 @@ func Connect(ctx context.Context, conn, database string) (*DataBase, error)
 
 Connect creates new connection to the repository and returns pointer to the DataBase.
 
-### func \(DataBase\) [AddToBlockchainLockQueue](<https://github.com/bartossh/Computantis/blob/main/repopostgre/notifier.go#L106>)
+### func \(DataBase\) [AddToBlockchainLockQueue](<https://github.com/bartossh/Computantis/blob/main/repopostgre/notifier.go#L105>)
 
 ```go
 func (db DataBase) AddToBlockchainLockQueue(ctx context.Context, nodeID string) error
@@ -1538,6 +1592,8 @@ CheckAddressExists checks if address exists in the database.
 ```go
 func (db DataBase) CheckIsOnTopOfBlockchainsLocks(ctx context.Context, nodeID string) (bool, error)
 ```
+
+CheckIsOnTopOfBlockchainsLocks checks if node is on top of blockchain locks queue.
 
 ### func \(DataBase\) [CheckToken](<https://github.com/bartossh/Computantis/blob/main/repopostgre/token.go#L14>)
 
@@ -1651,7 +1707,7 @@ func (db DataBase) RemoveAwaitingTransaction(ctx context.Context, trxHash [32]by
 
 RemoveAwaitingTransaction removes transaction from the awaiting transaction storage.
 
-### func \(DataBase\) [RemoveFromBlockchainLocks](<https://github.com/bartossh/Computantis/blob/main/repopostgre/notifier.go#L116>)
+### func \(DataBase\) [RemoveFromBlockchainLocks](<https://github.com/bartossh/Computantis/blob/main/repopostgre/notifier.go#L115>)
 
 ```go
 func (db DataBase) RemoveFromBlockchainLocks(ctx context.Context, nodeID string) error
@@ -1731,7 +1787,7 @@ func (db DataBase) WriteValidatorStatus(ctx context.Context, vs *validator.Statu
 
 WriteValidatorStatus writes validator status to the database.
 
-## type [Listener](<https://github.com/bartossh/Computantis/blob/main/repopostgre/notifier.go#L38-L40>)
+## type [Listener](<https://github.com/bartossh/Computantis/blob/main/repopostgre/notifier.go#L37-L39>)
 
 Listener wraps listener for notifications from database. Provides methods for listening and closing.
 
@@ -1741,7 +1797,7 @@ type Listener struct {
 }
 ```
 
-### func [Listen](<https://github.com/bartossh/Computantis/blob/main/repopostgre/notifier.go#L43>)
+### func [Listen](<https://github.com/bartossh/Computantis/blob/main/repopostgre/notifier.go#L42>)
 
 ```go
 func Listen(conn string, report func(ev pq.ListenerEventType, err error)) (Listener, error)
@@ -1749,7 +1805,7 @@ func Listen(conn string, report func(ev pq.ListenerEventType, err error)) (Liste
 
 Listen creates Listener for notifications from database.
 
-### func \(Listener\) [Close](<https://github.com/bartossh/Computantis/blob/main/repopostgre/notifier.go#L101>)
+### func \(Listener\) [Close](<https://github.com/bartossh/Computantis/blob/main/repopostgre/notifier.go#L100>)
 
 ```go
 func (l Listener) Close()
@@ -1757,29 +1813,13 @@ func (l Listener) Close()
 
 Close closes listener.
 
-### func \(Listener\) [SubscribeToLockBlockchainNotification](<https://github.com/bartossh/Computantis/blob/main/repopostgre/notifier.go#L54>)
+### func \(Listener\) [SubscribeToLockBlockchainNotification](<https://github.com/bartossh/Computantis/blob/main/repopostgre/notifier.go#L53>)
 
 ```go
 func (l Listener) SubscribeToLockBlockchainNotification(ctx context.Context, c chan<- bool, node string)
 ```
 
 SubscribeToLockBlockchainNotification listens for blockchain lock. To stop subscription, close channel.
-
-## type [Notification](<https://github.com/bartossh/Computantis/blob/main/repopostgre/notifier.go#L26-L34>)
-
-Notification represents notification from database.
-
-```go
-type Notification struct {
-    Table  string `json:"table"`
-    Action string `json:"action"`
-    Data   struct {
-        ID        int    `json:"id"`
-        Timestamp int    `json:"timestamp"`
-        Node      string `json:"node"`
-    }   `json:"data"`
-}
-```
 
 # serializer
 
