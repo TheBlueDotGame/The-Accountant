@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -60,9 +61,11 @@ func TestNotifierCycle(t *testing.T) {
 }
 
 func TestNotifierCycleManySubscribers(t *testing.T) {
-	run := func(t *testing.T, nodeID string) {
+	nodesNum := 50
+
+	run := func(t *testing.T, nodeID int, infoC chan<- int) {
+		nodeIDStr := fmt.Sprintf("node_%d", nodeID)
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-		defer cancel()
 
 		godotenv.Load("../.env")
 		user := os.Getenv("POSTGRES_DB_USER")
@@ -77,7 +80,7 @@ func TestNotifierCycleManySubscribers(t *testing.T) {
 
 		reportProblem := func(ev pq.ListenerEventType, err error) {
 			if err != nil {
-				t.Error(err)
+				t.Fatal(err)
 			}
 		}
 
@@ -85,43 +88,65 @@ func TestNotifierCycleManySubscribers(t *testing.T) {
 		assert.Nil(t, err)
 
 		c := make(chan bool)
-		listener.SubscribeToLockBlockchainNotification(ctx, c, nodeID)
+		listener.SubscribeToLockBlockchainNotification(ctx, c, nodeIDStr)
 
-		err = db.AddToBlockchainLockQueue(ctx, nodeID)
+		err = db.AddToBlockchainLockQueue(ctx, nodeIDStr)
 		assert.Nil(t, err)
 
-		tc := time.NewTicker(time.Microsecond * 500)
-		defer tc.Stop()
+		time.Sleep(time.Millisecond * 200)
+		go func() {
+			tc := time.NewTicker(time.Second * 10)
+			defer tc.Stop()
 
-		fin := func() {
-			ok, err := db.CheckIsOnTopOfBlockchainsLocks(ctx, nodeID)
-			assert.Nil(t, err)
-			if ok {
-				err = db.RemoveFromBlockchainLocks(ctx, nodeID)
+			fin := func() {
+				ok, err := db.CheckIsOnTopOfBlockchainsLocks(ctx, nodeIDStr)
 				assert.Nil(t, err)
+				if ok {
+					err = db.RemoveFromBlockchainLocks(ctx, nodeIDStr)
+					assert.Nil(t, err)
+				}
+				infoC <- nodeID
 			}
-		}
-	outer:
-		for {
-			select {
-			case <-tc.C:
-				fin()
-				break outer
-			case v := <-c:
-				if v {
-					fin()
-					break outer
+		outer:
+			for {
+				select {
+				case <-tc.C:
+					t.Error("timeout")
+					panic("timeout")
+				case v := <-c:
+					if v {
+						fin()
+						break outer
+					}
 				}
 			}
-		}
-
-		listener.Close()
+			cancel()
+			listener.Close()
+		}()
 	}
 
-	for i := 0; i < 10; i++ {
+	infoC := make(chan int, nodesNum)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		pv := -1
+		for v := range infoC {
+			if v != pv+1 {
+				t.Errorf("wrong order: %d, %d", pv, v)
+			}
+			pv = v
+			if pv == nodesNum-1 {
+				wg.Done()
+				return
+			}
+		}
+	}()
+
+	for i := 0; i < nodesNum; i++ {
 		t.Run(fmt.Sprintf("node_%d", i), func(t *testing.T) {
-			go run(t, fmt.Sprintf("node_%d", i))
+			run(t, i, infoC)
 		})
 	}
 
+	wg.Wait()
 }
