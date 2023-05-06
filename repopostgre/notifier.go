@@ -125,7 +125,6 @@ func (db DataBase) CheckIsOnTopOfBlockchainsLocks(ctx context.Context, nodeID st
 	var firstNodeID string
 	err := db.inner.QueryRowContext(ctx, "SELECT node FROM blockchainLocks ORDER BY timestamp ASC LIMIT 1").Scan(&firstNodeID)
 	if err != nil {
-		fmt.Println(err)
 		return false, errors.Join(ErrCheckingIsOnTopOfBlockchainsLocksFailed, err)
 	}
 	if firstNodeID == nodeID {
