@@ -355,10 +355,11 @@ import "github.com/bartossh/Computantis/bookkeeping"
 - [type DataBaseProvider](<#type-databaseprovider>)
 - [type Ledger](<#type-ledger>)
   - [func New(config Config, bc BlockReadWriter, db DataBaseProvider, ac AddressChecker, vr SignatureVerifier, tf BlockFindWriter, log logger.Logger, blcSub BlockSubscription, sub Subscriber) (*Ledger, error)](<#func-new>)
-  - [func (l *Ledger) Run(ctx context.Context)](<#func-ledger-run>)
+  - [func (l *Ledger) Run(ctx context.Context) <-chan struct{}](<#func-ledger-run>)
   - [func (l *Ledger) VerifySignature(message, signature []byte, hash [32]byte, address string) error](<#func-ledger-verifysignature>)
   - [func (l *Ledger) WriteCandidateTransaction(ctx context.Context, trx *transaction.Transaction) error](<#func-ledger-writecandidatetransaction>)
   - [func (l *Ledger) WriteIssuerSignedTransactionForReceiver(ctx context.Context, receiverAddr string, trx *transaction.Transaction) error](<#func-ledger-writeissuersignedtransactionforreceiver>)
+- [type NodeRegister](<#type-noderegister>)
 - [type SignatureVerifier](<#type-signatureverifier>)
 - [type Subscriber](<#type-subscriber>)
 - [type Synchronizer](<#type-synchronizer>)
@@ -429,7 +430,7 @@ type BlockReader interface {
 }
 ```
 
-## type [BlockSubscription](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L92-L94>)
+## type [BlockSubscription](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L100-L102>)
 
 BlockSubscription provides block publishing method. It uses reactive package. It you are using your own implementation of reactive package take care of Publish method to be non\-blocking.
 
@@ -449,7 +450,7 @@ type BlockWriter interface {
 }
 ```
 
-## type [Config](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L97-L101>)
+## type [Config](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L105-L109>)
 
 Config is a configuration of the Ledger.
 
@@ -461,7 +462,7 @@ type Config struct {
 }
 ```
 
-### func \(Config\) [Validate](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L104>)
+### func \(Config\) [Validate](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L112>)
 
 ```go
 func (c Config) Validate() error
@@ -469,7 +470,7 @@ func (c Config) Validate() error
 
 Validate validates the Ledger configuration.
 
-## type [DataBaseProvider](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L84-L87>)
+## type [DataBaseProvider](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L91-L95>)
 
 DataBaseProvider abstracts all the methods that are expected from repository.
 
@@ -477,10 +478,11 @@ DataBaseProvider abstracts all the methods that are expected from repository.
 type DataBaseProvider interface {
     Synchronizer
     TrxWriteReadMover
+    NodeRegister
 }
 ```
 
-## type [Ledger](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L124-L137>)
+## type [Ledger](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L132-L145>)
 
 Ledger is a collection of ledger functionality to perform bookkeeping. It performs all the actions on the transactions and blockchain. Ladger seals all the transaction actions in the blockchain.
 
@@ -490,7 +492,7 @@ type Ledger struct {
 }
 ```
 
-### func [New](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L140-L150>)
+### func [New](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L148-L158>)
 
 ```go
 func New(config Config, bc BlockReadWriter, db DataBaseProvider, ac AddressChecker, vr SignatureVerifier, tf BlockFindWriter, log logger.Logger, blcSub BlockSubscription, sub Subscriber) (*Ledger, error)
@@ -498,15 +500,15 @@ func New(config Config, bc BlockReadWriter, db DataBaseProvider, ac AddressCheck
 
 New creates new Ledger if config is valid or returns error otherwise.
 
-### func \(\*Ledger\) [Run](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L173>)
+### func \(\*Ledger\) [Run](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L181>)
 
 ```go
-func (l *Ledger) Run(ctx context.Context)
+func (l *Ledger) Run(ctx context.Context) <-chan struct{}
 ```
 
 Run runs the Ladger engine that writes blocks to the blockchain repository. Run starts a goroutine and can be stopped by cancelling the context. It is non\-blocking and concurrent safe.
 
-### func \(\*Ledger\) [VerifySignature](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L243>)
+### func \(\*Ledger\) [VerifySignature](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L272>)
 
 ```go
 func (l *Ledger) VerifySignature(message, signature []byte, hash [32]byte, address string) error
@@ -514,7 +516,7 @@ func (l *Ledger) VerifySignature(message, signature []byte, hash [32]byte, addre
 
 VerifySignature verifies signature of the message.
 
-### func \(\*Ledger\) [WriteCandidateTransaction](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L225>)
+### func \(\*Ledger\) [WriteCandidateTransaction](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L254>)
 
 ```go
 func (l *Ledger) WriteCandidateTransaction(ctx context.Context, trx *transaction.Transaction) error
@@ -522,13 +524,25 @@ func (l *Ledger) WriteCandidateTransaction(ctx context.Context, trx *transaction
 
 WriteCandidateTransaction validates and writes a transaction to the repository. Transaction is not yet a part of the blockchain at this point. Ladger will perform all the necessary checks and validations before writing it to the repository. The candidate needs to be signed by the receiver later in the process  to be placed as a candidate in the blockchain.
 
-### func \(\*Ledger\) [WriteIssuerSignedTransactionForReceiver](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L205-L209>)
+### func \(\*Ledger\) [WriteIssuerSignedTransactionForReceiver](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L234-L238>)
 
 ```go
 func (l *Ledger) WriteIssuerSignedTransactionForReceiver(ctx context.Context, receiverAddr string, trx *transaction.Transaction) error
 ```
 
 WriteIssuerSignedTransactionForReceiver validates issuer signature and writes a transaction to the repository for receiver.
+
+## type [NodeRegister](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L84-L88>)
+
+NodeRegister abstracts node registration operations.
+
+```go
+type NodeRegister interface {
+    RegisterNode(ctx context.Context, n string) error
+    UnregisterNode(ctx context.Context, n string) error
+    CountRegistered(ctx context.Context) (int, error)
+}
+```
 
 ## type [SignatureVerifier](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L73-L75>)
 
@@ -1103,6 +1117,7 @@ import "github.com/bartossh/Computantis/repohelper"
 - [type DBConfig](<#type-dbconfig>)
   - [func (cfg DBConfig) Connect(ctx context.Context) (RepositoryProvider, Subscriber, error)](<#func-dbconfig-connect>)
 - [type Migrator](<#type-migrator>)
+- [type NodeRegister](<#type-noderegister>)
 - [type RepositoryProvider](<#type-repositoryprovider>)
 - [type Subscriber](<#type-subscriber>)
 - [type Synchronizer](<#type-synchronizer>)
@@ -1143,7 +1158,7 @@ type BlockReadWriter interface {
 }
 ```
 
-## type [ConnectionCloser](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L79-L81>)
+## type [ConnectionCloser](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L86-L88>)
 
 ConnectionCloser abstracts connection closing operations.
 
@@ -1153,7 +1168,7 @@ type ConnectionCloser interface {
 }
 ```
 
-## type [DBConfig](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L97-L102>)
+## type [DBConfig](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L105-L110>)
 
 Config contains configuration for the database.
 
@@ -1166,7 +1181,7 @@ type DBConfig struct {
 }
 ```
 
-### func \(DBConfig\) [Connect](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L105>)
+### func \(DBConfig\) [Connect](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L113>)
 
 ```go
 func (cfg DBConfig) Connect(ctx context.Context) (RepositoryProvider, Subscriber, error)
@@ -1184,7 +1199,19 @@ type Migrator interface {
 }
 ```
 
-## type [RepositoryProvider](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L84-L94>)
+## type [NodeRegister](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L79-L83>)
+
+NodeRegister abstracts node registration operations.
+
+```go
+type NodeRegister interface {
+    RegisterNode(ctx context.Context, n string) error
+    UnregisterNode(ctx context.Context, n string) error
+    CountRegistered(ctx context.Context) (int, error)
+}
+```
+
+## type [RepositoryProvider](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L91-L102>)
 
 RepositoryProvider is an interface that ensures that all required methods to run computantis are implemented.
 
@@ -1198,6 +1225,7 @@ type RepositoryProvider interface {
     TransactionOperator
     ValidatorStatusReader
     Synchronizer
+    NodeRegister
     ConnectionCloser
 }
 ```
@@ -1280,6 +1308,7 @@ import "github.com/bartossh/Computantis/repomongo"
   - [func (db DataBase) CheckAddressExists(ctx context.Context, addr string) (bool, error)](<#func-database-checkaddressexists>)
   - [func (db DataBase) CheckIsOnTopOfBlockchainsLocks(ctx context.Context, nodeID string) (bool, error)](<#func-database-checkisontopofblockchainslocks>)
   - [func (db DataBase) CheckToken(ctx context.Context, tkn string) (bool, error)](<#func-database-checktoken>)
+  - [func (db DataBase) CountRegistered(ctx context.Context) (int, error)](<#func-database-countregistered>)
   - [func (c DataBase) Disconnect(ctx context.Context) error](<#func-database-disconnect>)
   - [func (db DataBase) FindAddress(ctx context.Context, search string, limit int) ([]string, error)](<#func-database-findaddress>)
   - [func (db DataBase) FindTransactionInBlockHash(ctx context.Context, trxHash [32]byte) ([32]byte, error)](<#func-database-findtransactioninblockhash>)
@@ -1292,10 +1321,12 @@ import "github.com/bartossh/Computantis/repomongo"
   - [func (db DataBase) ReadBlockByHash(ctx context.Context, hash [32]byte) (block.Block, error)](<#func-database-readblockbyhash>)
   - [func (db DataBase) ReadLastNValidatorStatuses(ctx context.Context, last int64) ([]validator.Status, error)](<#func-database-readlastnvalidatorstatuses>)
   - [func (db DataBase) ReadTemporaryTransactions(ctx context.Context) ([]transaction.Transaction, error)](<#func-database-readtemporarytransactions>)
+  - [func (db DataBase) RegisterNode(ctx context.Context, n string) error](<#func-database-registernode>)
   - [func (db DataBase) RemoveAwaitingTransaction(ctx context.Context, trxHash [32]byte) error](<#func-database-removeawaitingtransaction>)
   - [func (db DataBase) RemoveFromBlockchainLocks(ctx context.Context, nodeID string) error](<#func-database-removefromblockchainlocks>)
   - [func (c DataBase) RunMigration(ctx context.Context) error](<#func-database-runmigration>)
   - [func (db DataBase) SubscribeToLockBlockchainNotification(ctx context.Context, c chan<- bool, node string)](<#func-database-subscribetolockblockchainnotification>)
+  - [func (db DataBase) UnregisterNode(ctx context.Context, n string) error](<#func-database-unregisternode>)
   - [func (db DataBase) Write(p []byte) (n int, err error)](<#func-database-write>)
   - [func (db DataBase) WriteAddress(ctx context.Context, addr string) error](<#func-database-writeaddress>)
   - [func (db DataBase) WriteBlock(ctx context.Context, block block.Block) error](<#func-database-writeblock>)
@@ -1315,10 +1346,13 @@ var (
     ErrRemovingFromLockQueueBlockChainFailed   = fmt.Errorf("removing from lock blockchain failed")
     ErrListenFailed                            = fmt.Errorf("listen failed")
     ErrCheckingIsOnTopOfBlockchainsLocksFailed = fmt.Errorf("checking is on top of blockchains locks failed")
+    ErrNodeRegisterFailed                      = fmt.Errorf("node register failed")
+    ErrNodeUnregisterFailed                    = fmt.Errorf("node unregister failed")
+    ErrNodeLookupFailed                        = fmt.Errorf("node lookup failed")
 )
 ```
 
-## type [DataBase](<https://github.com/bartossh/Computantis/blob/main/repomongo/mongorepo.go#L35-L37>)
+## type [DataBase](<https://github.com/bartossh/Computantis/blob/main/repomongo/mongorepo.go#L39-L41>)
 
 Database provides database access for read, write and delete of repository entities.
 
@@ -1328,7 +1362,7 @@ type DataBase struct {
 }
 ```
 
-### func [Connect](<https://github.com/bartossh/Computantis/blob/main/repomongo/mongorepo.go#L40>)
+### func [Connect](<https://github.com/bartossh/Computantis/blob/main/repomongo/mongorepo.go#L44>)
 
 ```go
 func Connect(ctx context.Context, conn, database string) (*DataBase, error)
@@ -1368,7 +1402,15 @@ func (db DataBase) CheckToken(ctx context.Context, tkn string) (bool, error)
 
 CheckToken checks if token exists in the database is valid and didn't expire.
 
-### func \(DataBase\) [Disconnect](<https://github.com/bartossh/Computantis/blob/main/repomongo/mongorepo.go#L56>)
+### func \(DataBase\) [CountRegistered](<https://github.com/bartossh/Computantis/blob/main/repomongo/node.go#L29>)
+
+```go
+func (db DataBase) CountRegistered(ctx context.Context) (int, error)
+```
+
+CountRegistered counts registered nodes in the database.
+
+### func \(DataBase\) [Disconnect](<https://github.com/bartossh/Computantis/blob/main/repomongo/mongorepo.go#L60>)
 
 ```go
 func (c DataBase) Disconnect(ctx context.Context) error
@@ -1416,7 +1458,7 @@ func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context,
 
 MoveTransactionsFromTemporaryToPermanent moves transactions from temporary storage to permanent.
 
-### func \(DataBase\) [Ping](<https://github.com/bartossh/Computantis/blob/main/repomongo/mongorepo.go#L60>)
+### func \(DataBase\) [Ping](<https://github.com/bartossh/Computantis/blob/main/repomongo/mongorepo.go#L64>)
 
 ```go
 func (db DataBase) Ping(ctx context.Context) error
@@ -1462,6 +1504,14 @@ func (db DataBase) ReadTemporaryTransactions(ctx context.Context) ([]transaction
 
 ReadTemporaryTransactions reads transactions from the temporary storage.
 
+### func \(DataBase\) [RegisterNode](<https://github.com/bartossh/Computantis/blob/main/repomongo/node.go#L11>)
+
+```go
+func (db DataBase) RegisterNode(ctx context.Context, n string) error
+```
+
+RegisterNode registers node in the database.
+
 ### func \(DataBase\) [RemoveAwaitingTransaction](<https://github.com/bartossh/Computantis/blob/main/repomongo/transaction.go#L21>)
 
 ```go
@@ -1478,7 +1528,7 @@ func (db DataBase) RemoveFromBlockchainLocks(ctx context.Context, nodeID string)
 
 RemoveFromBlockchainLocks removes blockchain lock from queue.
 
-### func \(DataBase\) [RunMigration](<https://github.com/bartossh/Computantis/blob/main/repomongo/migrations.go#L314>)
+### func \(DataBase\) [RunMigration](<https://github.com/bartossh/Computantis/blob/main/repomongo/migrations.go#L328>)
 
 ```go
 func (c DataBase) RunMigration(ctx context.Context) error
@@ -1493,6 +1543,14 @@ func (db DataBase) SubscribeToLockBlockchainNotification(ctx context.Context, c 
 ```
 
 SubscribeToLockBlockchainNotification listens for blockchain lock. To stop subscription, close channel. This is fake subscriber, it isn't using change watcher as this requires replica set.
+
+### func \(DataBase\) [UnregisterNode](<https://github.com/bartossh/Computantis/blob/main/repomongo/node.go#L20>)
+
+```go
+func (db DataBase) UnregisterNode(ctx context.Context, n string) error
+```
+
+UnregisterNode unregister node from the database.
 
 ### func \(DataBase\) [Write](<https://github.com/bartossh/Computantis/blob/main/repomongo/logger.go#L13>)
 
@@ -1583,6 +1641,7 @@ import "github.com/bartossh/Computantis/repopostgre"
   - [func (db DataBase) CheckAddressExists(ctx context.Context, addr string) (bool, error)](<#func-database-checkaddressexists>)
   - [func (db DataBase) CheckIsOnTopOfBlockchainsLocks(ctx context.Context, nodeID string) (bool, error)](<#func-database-checkisontopofblockchainslocks>)
   - [func (db DataBase) CheckToken(ctx context.Context, tkn string) (bool, error)](<#func-database-checktoken>)
+  - [func (db DataBase) CountRegistered(ctx context.Context) (int, error)](<#func-database-countregistered>)
   - [func (db DataBase) Disconnect(ctx context.Context) error](<#func-database-disconnect>)
   - [func (db DataBase) FindAddress(ctx context.Context, search string, limit int) ([]string, error)](<#func-database-findaddress>)
   - [func (db DataBase) FindTransactionInBlockHash(ctx context.Context, trxHash [32]byte) ([32]byte, error)](<#func-database-findtransactioninblockhash>)
@@ -1595,9 +1654,11 @@ import "github.com/bartossh/Computantis/repopostgre"
   - [func (db DataBase) ReadBlockByHash(ctx context.Context, hash [32]byte) (block.Block, error)](<#func-database-readblockbyhash>)
   - [func (db DataBase) ReadLastNValidatorStatuses(ctx context.Context, last int64) ([]validator.Status, error)](<#func-database-readlastnvalidatorstatuses>)
   - [func (db DataBase) ReadTemporaryTransactions(ctx context.Context) ([]transaction.Transaction, error)](<#func-database-readtemporarytransactions>)
+  - [func (db DataBase) RegisterNode(ctx context.Context, n string) error](<#func-database-registernode>)
   - [func (db DataBase) RemoveAwaitingTransaction(ctx context.Context, trxHash [32]byte) error](<#func-database-removeawaitingtransaction>)
   - [func (db DataBase) RemoveFromBlockchainLocks(ctx context.Context, nodeID string) error](<#func-database-removefromblockchainlocks>)
   - [func (DataBase) RunMigration(_ context.Context) error](<#func-database-runmigration>)
+  - [func (db DataBase) UnregisterNode(ctx context.Context, n string) error](<#func-database-unregisternode>)
   - [func (db DataBase) Write(p []byte) (n int, err error)](<#func-database-write>)
   - [func (db DataBase) WriteAddress(ctx context.Context, addr string) error](<#func-database-writeaddress>)
   - [func (db DataBase) WriteBlock(ctx context.Context, block block.Block) error](<#func-database-writeblock>)
@@ -1628,10 +1689,13 @@ var (
     ErrRemovingFromLockQueueBlockChainFailed   = fmt.Errorf("removing from lock blockchain failed")
     ErrListenFailed                            = fmt.Errorf("listen failed")
     ErrCheckingIsOnTopOfBlockchainsLocksFailed = fmt.Errorf("checking is on top of blockchains locks failed")
+    ErrNodeRegisterFailed                      = fmt.Errorf("node register failed")
+    ErrNodeUnregisterFailed                    = fmt.Errorf("node unregister failed")
+    ErrNodeLookupFailed                        = fmt.Errorf("node lookup failed")
 )
 ```
 
-## type [DataBase](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L28-L30>)
+## type [DataBase](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L31-L33>)
 
 Database provides database access for read, write and delete of repository entities.
 
@@ -1641,7 +1705,7 @@ type DataBase struct {
 }
 ```
 
-### func [Connect](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L33>)
+### func [Connect](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L36>)
 
 ```go
 func Connect(ctx context.Context, conn, database string) (*DataBase, error)
@@ -1681,7 +1745,15 @@ func (db DataBase) CheckToken(ctx context.Context, tkn string) (bool, error)
 
 CheckToken checks if token exists in the database is valid and didn't expire.
 
-### func \(DataBase\) [Disconnect](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L43>)
+### func \(DataBase\) [CountRegistered](<https://github.com/bartossh/Computantis/blob/main/repopostgre/node.go#L27>)
+
+```go
+func (db DataBase) CountRegistered(ctx context.Context) (int, error)
+```
+
+CountRegistered counts registered nodes in the database.
+
+### func \(DataBase\) [Disconnect](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L46>)
 
 ```go
 func (db DataBase) Disconnect(ctx context.Context) error
@@ -1729,7 +1801,7 @@ func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context,
 
 MoveTransactionsFromTemporaryToPermanent moves transactions from temporary storage to permanent storage.
 
-### func \(DataBase\) [Ping](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L48>)
+### func \(DataBase\) [Ping](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L51>)
 
 ```go
 func (db DataBase) Ping(ctx context.Context) error
@@ -1777,6 +1849,14 @@ func (db DataBase) ReadTemporaryTransactions(ctx context.Context) ([]transaction
 
 ReadTemporaryTransactions reads all transactions from the temporary storage.
 
+### func \(DataBase\) [RegisterNode](<https://github.com/bartossh/Computantis/blob/main/repopostgre/node.go#L9>)
+
+```go
+func (db DataBase) RegisterNode(ctx context.Context, n string) error
+```
+
+RegisterNode registers node in the database.
+
 ### func \(DataBase\) [RemoveAwaitingTransaction](<https://github.com/bartossh/Computantis/blob/main/repopostgre/transaction.go#L31>)
 
 ```go
@@ -1800,6 +1880,14 @@ func (DataBase) RunMigration(_ context.Context) error
 ```
 
 RunMigration satisfies the RepositoryProvider interface as PostgreSQL migrations are run on when database is created in docker\-compose\-postgresql.yml.
+
+### func \(DataBase\) [UnregisterNode](<https://github.com/bartossh/Computantis/blob/main/repopostgre/node.go#L18>)
+
+```go
+func (db DataBase) UnregisterNode(ctx context.Context, n string) error
+```
+
+UnregisterNode unregister node from the database.
 
 ### func \(DataBase\) [Write](<https://github.com/bartossh/Computantis/blob/main/repopostgre/logger.go#L12>)
 
@@ -2052,7 +2140,7 @@ Bookkeeper abstracts methods of the bookkeeping of a blockchain.
 ```go
 type Bookkeeper interface {
     Verifier
-    Run(ctx context.Context)
+    Run(ctx context.Context) <-chan struct{}
     WriteCandidateTransaction(ctx context.Context, tx *transaction.Transaction) error
     WriteIssuerSignedTransactionForReceiver(ctx context.Context, receiverAddr string, trx *transaction.Transaction) error
 }

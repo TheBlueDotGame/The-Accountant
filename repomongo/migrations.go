@@ -256,6 +256,20 @@ var migrations = []migration{
 			return err
 		},
 	},
+	{
+		name: "index_nodes",
+		run: func(ctx context.Context, user *mongo.Database) error {
+			_, err := user.Collection(nodesCollection).
+				Indexes().
+				CreateOne(ctx, mongo.IndexModel{
+					Keys: bson.M{
+						"node": 1,
+					},
+					Options: options.Index().SetUnique(true),
+				})
+			return err
+		},
+	},
 }
 
 func (c DataBase) migrate(ctx context.Context, migrationsCollection []migration) ([]string, error) {

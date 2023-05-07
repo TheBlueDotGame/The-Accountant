@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"time"
 
 	"github.com/bartossh/Computantis/block"
 	"github.com/bartossh/Computantis/blockchain"
@@ -44,6 +45,9 @@ func main() {
 		c <- os.Interrupt
 		return
 	}
+	ctxx, cancelClose := context.WithTimeout(context.Background(), time.Second*1)
+	defer cancelClose()
+	defer db.Disconnect(ctxx)
 
 	callbackOnErr := func(err error) {
 		fmt.Println("error with logger: ", err)

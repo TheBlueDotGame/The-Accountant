@@ -22,6 +22,9 @@ var (
 	ErrRemovingFromLockQueueBlockChainFailed   = fmt.Errorf("removing from lock blockchain failed")
 	ErrListenFailed                            = fmt.Errorf("listen failed")
 	ErrCheckingIsOnTopOfBlockchainsLocksFailed = fmt.Errorf("checking is on top of blockchains locks failed")
+	ErrNodeRegisterFailed                      = fmt.Errorf("node register failed")
+	ErrNodeUnregisterFailed                    = fmt.Errorf("node unregister failed")
+	ErrNodeLookupFailed                        = fmt.Errorf("node lookup failed")
 )
 
 // Database provides database access for read, write and delete of repository entities.

@@ -77,7 +77,7 @@ type Verifier interface {
 // Bookkeeper abstracts methods of the bookkeeping of a blockchain.
 type Bookkeeper interface {
 	Verifier
-	Run(ctx context.Context)
+	Run(ctx context.Context) <-chan struct{}
 	WriteCandidateTransaction(ctx context.Context, tx *transaction.Transaction) error
 	WriteIssuerSignedTransactionForReceiver(ctx context.Context, receiverAddr string, trx *transaction.Transaction) error
 }
@@ -122,11 +122,6 @@ func Run(
 	var err error
 	ctxx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	defer func() {
-		if errx := repo.Disconnect(ctxx); errx != nil {
-			err = errors.Join(err, errx)
-		}
-	}()
 
 	if err := repo.RunMigration(ctxx); err != nil {
 		return err
@@ -177,8 +172,9 @@ func Run(
 
 	router.Group(WsURL, s.wsWrapper)
 
+	var cls <-chan struct{}
 	go func() {
-		bookkeeping.Run(ctxx)
+		cls = bookkeeping.Run(ctxx)
 		err := router.Listen(fmt.Sprintf("0.0.0.0:%v", c.Port))
 		if err != nil {
 			cancel()
@@ -192,6 +188,8 @@ func Run(
 	if errx := router.Shutdown(); errx != nil {
 		err = errors.Join(err, errx)
 	}
+
+	<-cls
 
 	return err
 }

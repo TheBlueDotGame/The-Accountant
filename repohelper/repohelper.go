@@ -75,6 +75,13 @@ type Synchronizer interface {
 	CheckIsOnTopOfBlockchainsLocks(ctx context.Context, nodeID string) (bool, error)
 }
 
+// NodeRegister abstracts node registration operations.
+type NodeRegister interface {
+	RegisterNode(ctx context.Context, n string) error
+	UnregisterNode(ctx context.Context, n string) error
+	CountRegistered(ctx context.Context) (int, error)
+}
+
 // ConnectionCloser abstracts connection closing operations.
 type ConnectionCloser interface {
 	Disconnect(ctx context.Context) error
@@ -90,6 +97,7 @@ type RepositoryProvider interface {
 	TransactionOperator
 	ValidatorStatusReader
 	Synchronizer
+	NodeRegister
 	ConnectionCloser
 }
 
