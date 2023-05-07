@@ -82,8 +82,6 @@ type BlockFindWriter interface {
 
 // NodeRegister abstracts node registration operations.
 type NodeRegister interface {
-	RegisterNode(ctx context.Context, n string) error
-	UnregisterNode(ctx context.Context, n string) error
 	CountRegistered(ctx context.Context) (int, error)
 }
 
@@ -178,13 +176,7 @@ func New(
 // Run runs the Ladger engine that writes blocks to the blockchain repository.
 // Run starts a goroutine and can be stopped by cancelling the context.
 // It is non-blocking and concurrent safe.
-func (l *Ledger) Run(ctx context.Context) <-chan struct{} {
-	cls := make(chan struct{}, 1)
-
-	if err := l.db.RegisterNode(ctx, l.id); err != nil {
-		l.log.Fatal(err.Error())
-	}
-
+func (l *Ledger) Run(ctx context.Context) {
 	count, err := l.db.CountRegistered(ctx)
 	if err != nil {
 		l.log.Fatal(err.Error())
@@ -195,16 +187,7 @@ func (l *Ledger) Run(ctx context.Context) <-chan struct{} {
 		}
 	}
 
-	go func(ctx context.Context, cls chan<- struct{}) {
-		defer func() {
-			ctxx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-			defer cancel()
-			if err := l.db.UnregisterNode(ctxx, l.id); err != nil {
-				l.log.Fatal(err.Error())
-			}
-			close(cls)
-		}()
-
+	go func(ctx context.Context) {
 		ticker := time.NewTicker(time.Duration(l.config.BlockWriteTimestamp) * time.Second)
 		defer ticker.Stop()
 		for {
@@ -225,9 +208,7 @@ func (l *Ledger) Run(ctx context.Context) <-chan struct{} {
 				}
 			}
 		}
-	}(ctx, cls)
-
-	return cls
+	}(ctx)
 }
 
 // WriteIssuerSignedTransactionForReceiver validates issuer signature and writes a transaction to the repository for receiver.

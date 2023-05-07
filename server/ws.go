@@ -28,10 +28,8 @@ const (
 )
 
 const (
-	echo = "echo"
-)
-
-const (
+	CommandEcho           = "echo"
+	CommandSocketList     = "socketlist"
 	CommandNewBlock       = "command_new_block"
 	CommandNewTransaction = "command_new_transaction"
 )
@@ -39,10 +37,11 @@ const (
 // Message is the message that is used to exchange information between
 // the server and the client.
 type Message struct {
-	Command     string                  `json:"command"`     // Command is the command that refers to the action handler in websocket protocol.
-	Error       string                  `json:"error"`       // Error is the error message that is sent to the client.
-	Block       block.Block             `json:"block"`       // Block is the block that is sent to the client.
-	Transaction transaction.Transaction `json:"transaction"` // Transaction is the transaction validated by the central server and will be added to the next block.
+	Command     string                  `json:"command"`               // Command is the command that refers to the action handler in websocket protocol.
+	Error       string                  `json:"error,omitempty"`       // Error is the error message that is sent to the client.
+	Block       block.Block             `json:"block,omitempty"`       // Block is the block that is sent to the client.
+	Transaction transaction.Transaction `json:"transaction,omitempty"` // Transaction is the transaction validated by the central server and will be added to the next block.
+	Sockets     []string                `json:"sockets,omitempty"`     // sockets is the list of central nodes web-sockets addresses.
 }
 
 type socket struct {
@@ -142,6 +141,8 @@ func (s *server) wsWrapper(c *fiber.Ctx) error {
 		go client.writePump()
 		client.readPump()
 	}
+
+	fmt.Println("serving ws", c.IP())
 
 	return websocket.New(serveWs)(c)
 }
@@ -278,8 +279,13 @@ func (c *socket) process(msg *Message) {
 	ctx, cancel := ctxClose(c.close)
 	defer cancel()
 	switch msg.Command {
-	case echo:
+	case CommandEcho:
 		if err := c.echo(ctx, msg); err != nil {
+			c.sendCommand(setCommandError(msg, err))
+		}
+		c.sendCommand(msg)
+	case CommandSocketList:
+		if err := c.socketList(ctx, msg); err != nil {
 			c.sendCommand(setCommandError(msg, err))
 		}
 		c.sendCommand(msg)
@@ -309,5 +315,14 @@ func (c socket) broadcastCommend(msg *Message) {
 }
 
 func (c *socket) echo(_ context.Context, msg *Message) error {
+	return nil
+}
+
+func (c *socket) socketList(ctx context.Context, msg *Message) error {
+	sockets, err := c.repo.ReadRegisteredNodesAddresses(ctx)
+	if err != nil {
+		return err
+	}
+	msg.Sockets = sockets
 	return nil
 }

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/bartossh/Computantis/block"
@@ -65,13 +66,15 @@ type Config struct {
 }
 
 type app struct {
+	mux       sync.RWMutex
 	lastBlock block.Block
 	cfg       Config
 	srw       StatusReadWriter
 	log       logger.Logger
-	conn      *websocket.Conn
+	conns     map[string]*websocket.Conn
 	ver       Verifier
 	wh        WebhookCreateRemovePoster
+	wallet    *wallet.Wallet
 }
 
 func (a *app) blocks(c *fiber.Ctx) error {
@@ -101,12 +104,14 @@ func Run(ctx context.Context, cfg Config, srw StatusReadWriter, log logger.Logge
 	ctxx, cancel := context.WithCancel(ctx)
 
 	a := &app{
-		cfg:  cfg,
-		srw:  srw,
-		log:  log,
-		conn: c,
-		ver:  ver,
-		wh:   wh,
+		mux:    sync.RWMutex{},
+		cfg:    cfg,
+		srw:    srw,
+		log:    log,
+		conns:  map[string]*websocket.Conn{cfg.Websocket: c},
+		ver:    ver,
+		wh:     wh,
+		wallet: wallet,
 	}
 
 	go a.pullPump(ctxx, cancel)
@@ -115,7 +120,7 @@ func Run(ctx context.Context, cfg Config, srw StatusReadWriter, log logger.Logge
 	return a.runServer(ctxx, cancel)
 }
 
-func (a app) pullPump(ctx context.Context, cancel context.CancelFunc) {
+func (a *app) pullPump(ctx context.Context, cancel context.CancelFunc) {
 	ticker := time.NewTicker(time.Millisecond * 100)
 	defer ticker.Stop()
 	defer cancel()
@@ -125,57 +130,102 @@ listener:
 		case <-ctx.Done():
 			break listener
 		case <-ticker.C:
-		}
-		msgType, raw, err := a.conn.ReadMessage()
-		if err != nil {
-			a.log.Error(fmt.Sprintf("validator read msg error, %s", err.Error()))
-			continue
-		}
-		switch msgType {
-		case websocket.PingMessage, websocket.PongMessage:
-			continue
-		default:
-			var msg server.Message
-			if err := json.Unmarshal(raw, &msg); err != nil {
-				a.log.Error(fmt.Sprintf("validator unmarshal msg error, %s", err.Error()))
+			var connect, remove []string
+			for _, conn := range a.conns {
+				msgType, raw, err := conn.ReadMessage()
+				if err != nil {
+					a.log.Error(fmt.Sprintf("validator read msg error, %s", err.Error()))
+					continue
+				}
+				switch msgType {
+				case websocket.PingMessage, websocket.PongMessage:
+					continue
+				case websocket.CloseMessage:
+					remove = append(remove, conn.RemoteAddr().String())
+				default:
+					var msg server.Message
+					if err := json.Unmarshal(raw, &msg); err != nil {
+						a.log.Error(fmt.Sprintf("validator unmarshal msg error, %s", err.Error()))
+						continue
+					}
+					if msg.Error != "" {
+						a.log.Error(fmt.Sprintf("validator msg error, %s", msg.Error))
+						continue
+					}
+					c, r := a.processMessage(&msg)
+					connect = append(connect, c...)
+					remove = append(remove, r...)
+				}
+			}
+			a.mux.Lock()
+			for _, del := range remove {
+				if _, ok := a.conns[del]; ok {
+					a.conns[del].Close()
+					delete(a.conns, del)
+				}
+			}
+			if len(connect) == 0 {
+				a.mux.Unlock()
 				continue
 			}
-			if msg.Error != "" {
-				a.log.Error(fmt.Sprintf("validator msg error, %s", msg.Error))
-				continue
+
+			hash, signature := a.wallet.Sign([]byte(a.cfg.Token))
+			header := make(http.Header)
+			header.Add("Token", a.cfg.Token)
+			header.Add("Address", a.wallet.Address())
+			header.Add("Signature", hex.EncodeToString(signature[:]))
+			header.Add("Hash", hex.EncodeToString(hash[:]))
+			for _, add := range connect {
+				ctxTimeout, cancel := context.WithTimeout(ctx, wsConnectionTimeout)
+				c, _, err := websocket.DefaultDialer.DialContext(ctxTimeout, add, header)
+				cancel()
+				if err != nil {
+					return
+				}
+				a.conns[add] = c
 			}
-			a.processMessage(&msg)
+			a.mux.Unlock()
+
 		}
 	}
 }
 
-func (a app) pushPump(ctx context.Context, cancel context.CancelFunc) {
-	go func() {
-		ticker := time.NewTicker(time.Second * 10)
-		defer ticker.Stop()
-		defer cancel()
-	connectionPingCloser:
-		for {
-			select {
-			case <-ticker.C:
-				err := a.conn.WriteMessage(websocket.PingMessage, nil)
+func (a *app) pushPump(ctx context.Context, cancel context.CancelFunc) {
+	ticker := time.NewTicker(time.Second * 10)
+	defer ticker.Stop()
+	defer cancel()
+connectionPingCloser:
+	for {
+		select {
+		case <-ticker.C:
+			a.mux.RLock()
+			for _, conn := range a.conns {
+				err := conn.WriteMessage(websocket.PingMessage, nil)
 				if err != nil {
 					a.log.Error(fmt.Sprintf("validator write msg error, %s", err.Error()))
 					break connectionPingCloser
 				}
-			case <-ctx.Done():
-				a.log.Info("validator closing connection")
-				err := a.conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+			}
+			a.mux.RUnlock()
+
+		case <-ctx.Done():
+			a.mux.Lock()
+			a.log.Info("validator closing connection")
+			for k, conn := range a.conns {
+				err := conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 				if err != nil {
 					a.log.Error(fmt.Sprintf("validator write closing msg error, %s", err.Error()))
 				}
-				break connectionPingCloser
+				conn.Close()
+				delete(a.conns, k)
 			}
+			a.mux.Unlock()
+			break connectionPingCloser
 		}
-	}()
+	}
 }
 
-func (a app) runServer(ctx context.Context, cancel context.CancelFunc) error {
+func (a *app) runServer(ctx context.Context, cancel context.CancelFunc) error {
 	router := fiber.New(fiber.Config{
 		Prefork:       false,
 		CaseSensitive: true,
@@ -205,17 +255,21 @@ func (a app) runServer(ctx context.Context, cancel context.CancelFunc) error {
 	return nil
 }
 
-func (a app) processMessage(m *server.Message) {
+func (a *app) processMessage(m *server.Message) (connect, remove []string) {
 	switch m.Command {
 	case server.CommandNewBlock:
-		a.processBlock(&m.Block)
+		return a.processBlock(&m.Block)
 	case server.CommandNewTransaction:
+		return
+	case server.CommandSocketList:
+		return a.processSocketList(m.Sockets)
 	default:
 		a.log.Error(fmt.Sprintf("validator received unknown command, %s", m.Command))
+		return
 	}
 }
 
-func (a app) processBlock(b *block.Block) {
+func (a *app) processBlock(b *block.Block) (_, _ []string) {
 	err := a.validateBlock(b)
 
 	switch err {
@@ -228,4 +282,21 @@ func (a app) processBlock(b *block.Block) {
 	}
 
 	go a.wh.PostWebhookBlock(b) // post concurrently
+	return
+}
+
+func (a *app) processSocketList(sockets []string) (connect, remove []string) {
+	uniqueSockets := make(map[string]struct{})
+	for _, socket := range sockets {
+		if _, ok := a.conns[socket]; !ok {
+			connect = append(connect, socket)
+		}
+		uniqueSockets[socket] = struct{}{}
+	}
+	for socket := range a.conns {
+		if _, ok := uniqueSockets[socket]; !ok {
+			remove = append(remove, socket)
+		}
+	}
+	return
 }

@@ -77,9 +77,10 @@ type Synchronizer interface {
 
 // NodeRegister abstracts node registration operations.
 type NodeRegister interface {
-	RegisterNode(ctx context.Context, n string) error
+	RegisterNode(ctx context.Context, n, ws string) error
 	UnregisterNode(ctx context.Context, n string) error
 	CountRegistered(ctx context.Context) (int, error)
+	ReadRegisteredNodesAddresses(ctx context.Context) ([]string, error)
 }
 
 // ConnectionCloser abstracts connection closing operations.

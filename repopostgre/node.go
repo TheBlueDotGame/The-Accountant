@@ -6,8 +6,8 @@ import (
 )
 
 // RegisterNode registers node in the database.
-func (db DataBase) RegisterNode(ctx context.Context, n string) error {
-	_, err := db.inner.ExecContext(ctx, "INSERT INTO nodes (node) VALUES ($1)", n)
+func (db DataBase) RegisterNode(ctx context.Context, n, ws string) error {
+	_, err := db.inner.ExecContext(ctx, "INSERT INTO nodes (node, websocket) VALUES ($1, $2)", n, ws)
 	if err != nil {
 		return errors.Join(ErrNodeRegisterFailed, err)
 	}
@@ -31,4 +31,22 @@ func (db DataBase) CountRegistered(ctx context.Context) (int, error) {
 		return 0, errors.Join(ErrNodeLookupFailed, err)
 	}
 	return count, nil
+}
+
+// ReadAddresses reads registered nodes addresses from the database.
+func (db DataBase) ReadRegisteredNodesAddresses(ctx context.Context) ([]string, error) {
+	var addresses []string
+	rows, err := db.inner.QueryContext(ctx, "SELECT websocket FROM nodes")
+	if err != nil {
+		errors.Join(ErrNodeRegisteredAddressesQueryFailed, err)
+	}
+	for rows.Next() {
+		var address string
+		err := rows.Scan(&address)
+		if err != nil {
+			return nil, errors.Join(ErrScanFailed, err)
+		}
+		addresses = append(addresses, address)
+	}
+	return addresses, nil
 }

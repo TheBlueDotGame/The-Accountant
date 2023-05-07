@@ -5,6 +5,7 @@ bookkeeper:
 server:
   port: 8080
   data_size_bytes: 15000000
+  websocket_address: "ws://localhost:8080/ws"
 database:
   conn_str: "mongodb://computantis:computantis@localhost:27017/?authSource=admin&authMechanism=SCRAM-SHA-256&readPreference=primary&&ssl=false&directConnection=true"
   database_name: "computantis"
