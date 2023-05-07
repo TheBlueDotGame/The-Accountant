@@ -80,10 +80,18 @@ type BlockFindWriter interface {
 	FindTransactionInBlockHash(ctx context.Context, trxHash [32]byte) ([32]byte, error)
 }
 
+// NodeRegister abstracts node registration operations.
+type NodeRegister interface {
+	RegisterNode(ctx context.Context, n string) error
+	UnregisterNode(ctx context.Context, n string) error
+	CountRegistered(ctx context.Context) (int, error)
+}
+
 // DataBaseProvider abstracts all the methods that are expected from repository.
 type DataBaseProvider interface {
 	Synchronizer
 	TrxWriteReadMover
+	NodeRegister
 }
 
 // BlockSubscription provides block publishing method.
@@ -170,22 +178,42 @@ func New(
 // Run runs the Ladger engine that writes blocks to the blockchain repository.
 // Run starts a goroutine and can be stopped by cancelling the context.
 // It is non-blocking and concurrent safe.
-func (l *Ledger) Run(ctx context.Context) {
-	// TODO: register central node
-	// todo: if only one registered then forge temporary transactions
-	if err := l.forgeTemporaryTrxs(ctx); err != nil {
-		l.log.Fatal(fmt.Sprintf("forging temporary failed: %s", err.Error()))
+func (l *Ledger) Run(ctx context.Context) <-chan struct{} {
+	cls := make(chan struct{}, 1)
+
+	if err := l.db.RegisterNode(ctx, l.id); err != nil {
+		l.log.Fatal(err.Error())
 	}
-	go func(ctx context.Context) {
+
+	count, err := l.db.CountRegistered(ctx)
+	if err != nil {
+		l.log.Fatal(err.Error())
+	}
+	if count == 1 {
+		if err := l.forgeTemporaryTrxs(ctx); err != nil {
+			l.log.Fatal(fmt.Sprintf("forging temporary failed: %s", err.Error()))
+		}
+	}
+
+	go func(ctx context.Context, cls chan<- struct{}) {
+		defer func() {
+			ctxx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			defer cancel()
+			if err := l.db.UnregisterNode(ctxx, l.id); err != nil {
+				l.log.Fatal(err.Error())
+			}
+			close(cls)
+		}()
+
 		ticker := time.NewTicker(time.Duration(l.config.BlockWriteTimestamp) * time.Second)
-	outer:
+		defer ticker.Stop()
 		for {
 			select {
 			case <-ctx.Done():
 				if len(l.hashes) > 0 {
 					l.forge(ctx)
 				}
-				break outer
+				return
 			case h := <-l.hashC:
 				l.hashes = append(l.hashes, h)
 				if len(l.hashes) == l.config.BlockTransactionsSize {
@@ -197,8 +225,9 @@ func (l *Ledger) Run(ctx context.Context) {
 				}
 			}
 		}
-		ticker.Stop()
-	}(ctx)
+	}(ctx, cls)
+
+	return cls
 }
 
 // WriteIssuerSignedTransactionForReceiver validates issuer signature and writes a transaction to the repository for receiver.

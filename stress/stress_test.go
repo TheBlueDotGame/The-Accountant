@@ -24,7 +24,7 @@ import (
 // Run two central nodes for this test, one on port 8080 and second on 8088.
 // Create corresponding tokens to be valid in database.
 func TestFullClientApiCycle(t *testing.T) {
-	transactionsCount := 6000
+	transactionsCount := 10000
 	type tesCase struct {
 		port   string
 		tokens []string

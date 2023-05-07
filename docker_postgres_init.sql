@@ -118,6 +118,13 @@ CREATE TABLE IF NOT EXISTS validatorStatus (
 CREATE INDEX validator_index ON validatorStatus USING HASH (index);
 CREATE INDEX validator_created_at ON validatorStatus USING BTREE (created_at);
 
+CREATE TABLE IF NOT EXISTS nodes (
+   id serial PRIMARY KEY,
+   node VARCHAR ( 64 ) UNIQUE NOT NULL,
+);
+
+CREATE INDEX nodes_index ON nodes USING HASH (node);
+
 CREATE OR REPLACE FUNCTION notify_event() RETURNS TRIGGER AS $$
 
     DECLARE 
