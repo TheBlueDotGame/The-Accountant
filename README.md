@@ -46,9 +46,20 @@ It is good practice to have many validator nodes held by independent entities.
 ## Stress test
 
 Directory `stress/` contains central node REST API performance tests.
- - Testing performance on MacBook with M2 arm64 chip, 24GB RAM with central node, validator node and MongoDB running in docker container with 1CPU and 1GB RAM, 25 transactions per block, full cycle of creating 1000 transactions took 3.75 sec.
- - Testing performance on MacBook with M2 arm64 chip, 24GB RAM with central node, validator node and PostgreSQL running in docker container with 1CPU and 1GB RAM, 25 transactions per block, full cycle of creating 1000 transactions took 3.91 sec.
-  - Testing performance on MacBook with M2 arm64 chip, 24GB RAM with central node, validator node and PostgreSQL running in docker container with 1CPU and 1GB RAM, 25 transactions per block, full cycle of creating 10000 transactions took 37.35 sec. This allows to fully process 267 transactions per second, which means: 267 times per second reading proposed transaction by issuer with proper validation, sending it to receiver, reading signed confirmation from receiver with proper validation, forging blocks by permanently adding transactions and sending blocks to the validator node which validates the forging process.
+
+Test conditions:
+- full transaction cycle: 
+    propose by issuer -> central node validation -> query by receiver -> sign by receiver -> 
+    central node validation -> adding to the queue for next block -> forge block -> sending block to validator ->
+    validator validates the block
+- docker on ARM M2 with constraints of single CPU and 2GB RAM running single mongodb instance
+- two central nodes bare metal on shared ARM M2
+- two validators nodes bare metal on shared ARM M2
+- four clients nodes bare metal on shared ARM M2
+
+Test results:
+- full cycle of 1000 transactions takes 1 second. (the bottle neck is on database) scaling database will unlock better performance.
+- long tests when 24000 transactions are send is consistent, taking 24 seconds for the full cycle per transaction.
 
 ## Package provides webassembly package that expose client API to the front-end applications.
 
@@ -217,7 +228,7 @@ import "github.com/bartossh/Computantis/blockchain"
 - [type BlockWriter](<#type-blockwriter>)
 - [type Blockchain](<#type-blockchain>)
   - [func New(ctx context.Context, rw BlockReadWriter) (*Blockchain, error)](<#func-new>)
-  - [func (c *Blockchain) LastBlockHashIndex() ([32]byte, uint64)](<#func-blockchain-lastblockhashindex>)
+  - [func (c *Blockchain) LastBlockHashIndex(ctx context.Context) ([32]byte, uint64, error)](<#func-blockchain-lastblockhashindex>)
   - [func (c *Blockchain) ReadBlocksFromIndex(ctx context.Context, idx uint64) ([]block.Block, error)](<#func-blockchain-readblocksfromindex>)
   - [func (c *Blockchain) ReadLastNBlocks(ctx context.Context, n int) ([]block.Block, error)](<#func-blockchain-readlastnblocks>)
   - [func (c *Blockchain) WriteBlock(ctx context.Context, block block.Block) error](<#func-blockchain-writeblock>)
@@ -234,7 +245,7 @@ var (
 )
 ```
 
-## func [GenesisBlock](<https://github.com/bartossh/Computantis/blob/main/blockchain/blockchain.go#L49>)
+## func [GenesisBlock](<https://github.com/bartossh/Computantis/blob/main/blockchain/blockchain.go#L45>)
 
 ```go
 func GenesisBlock(ctx context.Context, rw BlockReadWriter) error
@@ -242,7 +253,7 @@ func GenesisBlock(ctx context.Context, rw BlockReadWriter) error
 
 GenesisBlock creates a genesis block. It is a first block in the blockchain. The genesis block is created only if there is no other block in the repository. Otherwise returning an error.
 
-## type [BlockReadWriter](<https://github.com/bartossh/Computantis/blob/main/blockchain/blockchain.go#L31-L34>)
+## type [BlockReadWriter](<https://github.com/bartossh/Computantis/blob/main/blockchain/blockchain.go#L30-L33>)
 
 BlockReadWriter provides read and write access to the blockchain repository.
 
@@ -253,7 +264,7 @@ type BlockReadWriter interface {
 }
 ```
 
-## type [BlockReader](<https://github.com/bartossh/Computantis/blob/main/blockchain/blockchain.go#L20-L23>)
+## type [BlockReader](<https://github.com/bartossh/Computantis/blob/main/blockchain/blockchain.go#L19-L22>)
 
 BlockReader provides read access to the blockchain repository.
 
@@ -264,7 +275,7 @@ type BlockReader interface {
 }
 ```
 
-## type [BlockWriter](<https://github.com/bartossh/Computantis/blob/main/blockchain/blockchain.go#L26-L28>)
+## type [BlockWriter](<https://github.com/bartossh/Computantis/blob/main/blockchain/blockchain.go#L25-L27>)
 
 BlockWriter provides write access to the blockchain repository.
 
@@ -274,7 +285,7 @@ type BlockWriter interface {
 }
 ```
 
-## type [Blockchain](<https://github.com/bartossh/Computantis/blob/main/blockchain/blockchain.go#L39-L44>)
+## type [Blockchain](<https://github.com/bartossh/Computantis/blob/main/blockchain/blockchain.go#L38-L40>)
 
 Blockchain keeps track of the blocks creating immutable chain of data. Blockchain is stored in repository as separate blocks that relates to each other based on the hash of the previous block.
 
@@ -284,7 +295,7 @@ type Blockchain struct {
 }
 ```
 
-### func [New](<https://github.com/bartossh/Computantis/blob/main/blockchain/blockchain.go#L62>)
+### func [New](<https://github.com/bartossh/Computantis/blob/main/blockchain/blockchain.go#L58>)
 
 ```go
 func New(ctx context.Context, rw BlockReadWriter) (*Blockchain, error)
@@ -292,15 +303,15 @@ func New(ctx context.Context, rw BlockReadWriter) (*Blockchain, error)
 
 New creates a new Blockchain that has access to the blockchain stored in the repository. The access to the repository is injected via BlockReadWriter interface. You can use any implementation of repository that implements BlockReadWriter interface and ensures unique indexing for Block Hash, PrevHash and Index.
 
-### func \(\*Blockchain\) [LastBlockHashIndex](<https://github.com/bartossh/Computantis/blob/main/blockchain/blockchain.go#L77>)
+### func \(\*Blockchain\) [LastBlockHashIndex](<https://github.com/bartossh/Computantis/blob/main/blockchain/blockchain.go#L65>)
 
 ```go
-func (c *Blockchain) LastBlockHashIndex() ([32]byte, uint64)
+func (c *Blockchain) LastBlockHashIndex(ctx context.Context) ([32]byte, uint64, error)
 ```
 
 LastBlockHashIndex returns last block hash and index.
 
-### func \(\*Blockchain\) [ReadBlocksFromIndex](<https://github.com/bartossh/Computantis/blob/main/blockchain/blockchain.go#L104>)
+### func \(\*Blockchain\) [ReadBlocksFromIndex](<https://github.com/bartossh/Computantis/blob/main/blockchain/blockchain.go#L96>)
 
 ```go
 func (c *Blockchain) ReadBlocksFromIndex(ctx context.Context, idx uint64) ([]block.Block, error)
@@ -308,7 +319,7 @@ func (c *Blockchain) ReadBlocksFromIndex(ctx context.Context, idx uint64) ([]blo
 
 ReadBlocksFromIndex reads all blocks from given index till the current block in consecutive order.
 
-### func \(\*Blockchain\) [ReadLastNBlocks](<https://github.com/bartossh/Computantis/blob/main/blockchain/blockchain.go#L84>)
+### func \(\*Blockchain\) [ReadLastNBlocks](<https://github.com/bartossh/Computantis/blob/main/blockchain/blockchain.go#L74>)
 
 ```go
 func (c *Blockchain) ReadLastNBlocks(ctx context.Context, n int) ([]block.Block, error)
@@ -316,7 +327,7 @@ func (c *Blockchain) ReadLastNBlocks(ctx context.Context, n int) ([]block.Block,
 
 ReadLastNBlocks reads the last n blocks in reverse consecutive order.
 
-### func \(\*Blockchain\) [WriteBlock](<https://github.com/bartossh/Computantis/blob/main/blockchain/blockchain.go#L128>)
+### func \(\*Blockchain\) [WriteBlock](<https://github.com/bartossh/Computantis/blob/main/blockchain/blockchain.go#L122>)
 
 ```go
 func (c *Blockchain) WriteBlock(ctx context.Context, block block.Block) error
@@ -414,7 +425,7 @@ BlockReader provides block read methods.
 
 ```go
 type BlockReader interface {
-    LastBlockHashIndex() ([32]byte, uint64)
+    LastBlockHashIndex(ctx context.Context) ([32]byte, uint64, error)
 }
 ```
 

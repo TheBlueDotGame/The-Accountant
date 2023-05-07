@@ -48,7 +48,7 @@ type TrxWriteReadMover interface {
 
 // BlockReader provides block read methods.
 type BlockReader interface {
-	LastBlockHashIndex() ([32]byte, uint64)
+	LastBlockHashIndex(ctx context.Context) ([32]byte, uint64, error)
 }
 
 // BlockWriter provides block write methods.
@@ -294,7 +294,11 @@ func (l *Ledger) cleanHashes() {
 }
 
 func (l *Ledger) savePublishNewBlock(ctx context.Context) ([32]byte, error) {
-	h, idx := l.bc.LastBlockHashIndex()
+	h, idx, err := l.bc.LastBlockHashIndex(ctx)
+	if err != nil {
+		return [32]byte{}, err
+	}
+
 	idx++
 	nb := block.New(l.config.Difficulty, idx, h, l.hashes)
 

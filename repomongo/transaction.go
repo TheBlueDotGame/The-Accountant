@@ -30,7 +30,7 @@ func (db DataBase) WriteIssuerSignedTransactionForReceiver(
 	trx *transaction.Transaction,
 ) error {
 	awaitingTrx := transaction.TransactionAwaitingReceiverSignature{
-		ID:              primitive.NilObjectID,
+		ID:              primitive.NewObjectID(),
 		ReceiverAddress: receiverAddr,
 		IssuerAddress:   trx.IssuerAddress,
 		Transaction:     *trx,
