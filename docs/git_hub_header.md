@@ -46,9 +46,20 @@ It is good practice to have many validator nodes held by independent entities.
 ## Stress test
 
 Directory `stress/` contains central node REST API performance tests.
- - Testing performance on MacBook with M2 arm64 chip, 24GB RAM with central node, validator node and MongoDB running in docker container with 1CPU and 1GB RAM, 25 transactions per block, full cycle of creating 1000 transactions took 3.75 sec.
- - Testing performance on MacBook with M2 arm64 chip, 24GB RAM with central node, validator node and PostgreSQL running in docker container with 1CPU and 1GB RAM, 25 transactions per block, full cycle of creating 1000 transactions took 3.91 sec.
-  - Testing performance on MacBook with M2 arm64 chip, 24GB RAM with central node, validator node and PostgreSQL running in docker container with 1CPU and 1GB RAM, 25 transactions per block, full cycle of creating 10000 transactions took 37.35 sec. This allows to fully process 267 transactions per second, which means: 267 times per second reading proposed transaction by issuer with proper validation, sending it to receiver, reading signed confirmation from receiver with proper validation, forging blocks by permanently adding transactions and sending blocks to the validator node which validates the forging process.
+
+Test conditions:
+- full transaction cycle: 
+    propose by issuer -> central node validation -> query by receiver -> sign by receiver -> 
+    central node validation -> adding to the queue for next block -> forge block -> sending block to validator ->
+    validator validates the block
+- docker on ARM M2 with constraints of single CPU and 2GB RAM running single mongodb instance
+- two central nodes bare metal on shared ARM M2
+- two validators nodes bare metal on shared ARM M2
+- four clients nodes bare metal on shared ARM M2
+
+Test results:
+- full cycle of 1000 transactions takes 1 second. (the bottle neck is on database) scaling database will unlock better performance.
+- long tests when 24000 transactions are send is consistent, taking 24 seconds for the full cycle per transaction.
 
 ## Package provides webassembly package that expose client API to the front-end applications.
 
