@@ -10,6 +10,11 @@ import (
 	"github.com/bartossh/Computantis/logger"
 	"github.com/bartossh/Computantis/transaction"
 	"github.com/gofiber/fiber/v2"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+)
+
+const (
+	checkForRegisteredNodesInterval = 5 * time.Second
 )
 
 const (
@@ -52,12 +57,20 @@ var (
 	ErrWrongMessageSize   = errors.New("message size must be between 1024 and 15000000")
 )
 
+// Register abstracts node registration operations.
+type Register interface {
+	RegisterNode(ctx context.Context, n, ws string) error
+	UnregisterNode(ctx context.Context, n string) error
+	ReadRegisteredNodesAddresses(ctx context.Context) ([]string, error)
+	CountRegistered(ctx context.Context) (int, error)
+}
+
 // Repository is the interface that wraps the basic CRUD and Search methods.
 // Repository should be properly indexed to allow for transaction and block hash.
 // as well as address public keys to be and unique and the hash lookup should be fast.
 // Repository holds the blocks and transaction that are part of the blockchain.
 type Repository interface {
-	Disconnect(ctx context.Context) error
+	Register
 	RunMigration(ctx context.Context) error
 	FindAddress(ctx context.Context, search string, limit int) ([]string, error)
 	CheckAddressExists(ctx context.Context, address string) (bool, error)
@@ -77,7 +90,7 @@ type Verifier interface {
 // Bookkeeper abstracts methods of the bookkeeping of a blockchain.
 type Bookkeeper interface {
 	Verifier
-	Run(ctx context.Context) <-chan struct{}
+	Run(ctx context.Context)
 	WriteCandidateTransaction(ctx context.Context, tx *transaction.Transaction) error
 	WriteIssuerSignedTransactionForReceiver(ctx context.Context, receiverAddr string, trx *transaction.Transaction) error
 }
@@ -98,8 +111,9 @@ type ReactiveSubscriberProvider interface {
 
 // Config contains configuration of the server.
 type Config struct {
-	Port          int `yaml:"port"`            // Port to listen on.
-	DataSizeBytes int `yaml:"data_size_bytes"` // Size of the data to be stored in the transaction.
+	Port             int    `yaml:"port"`              // Port to listen on.
+	DataSizeBytes    int    `yaml:"data_size_bytes"`   // Size of the data to be stored in the transaction.
+	WebsocketAddress string `yaml:"websocket_address"` // Address of the websocket server.
 }
 
 type server struct {
@@ -130,6 +144,9 @@ func Run(
 	if err := validateConfig(&c); err != nil {
 		return err
 	}
+
+	id := primitive.NewObjectID().Hex()
+	repo.RegisterNode(ctxx, id, c.WebsocketAddress)
 
 	s := &server{
 		dataSize:     c.DataSizeBytes,
@@ -172,16 +189,16 @@ func Run(
 
 	router.Group(WsURL, s.wsWrapper)
 
-	var cls <-chan struct{}
 	go func() {
-		cls = bookkeeping.Run(ctxx)
+		bookkeeping.Run(ctxx)
 		err := router.Listen(fmt.Sprintf("0.0.0.0:%v", c.Port))
 		if err != nil {
 			cancel()
 		}
 	}()
-	go s.hub.run(ctx)
+	go s.hub.run(ctxx)
 	go s.runSubscriber(ctxx)
+	go s.runControlCentralNodes(ctxx)
 
 	<-ctxx.Done()
 
@@ -189,7 +206,11 @@ func Run(
 		err = errors.Join(err, errx)
 	}
 
-	<-cls
+	ctxxx, cancelx := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancelx()
+	if err := repo.UnregisterNode(ctxxx, id); err != nil {
+		log.Fatal(err.Error())
+	}
 
 	return err
 }
@@ -220,6 +241,39 @@ func (s *server) runSubscriber(ctx context.Context) {
 				Transaction: transaction.Transaction{},
 			}
 			s.hub.broadcast <- &m
+		}
+	}
+}
+
+func (s *server) runControlCentralNodes(ctx context.Context) {
+	socketCount := 1
+	tc := time.NewTicker(checkForRegisteredNodesInterval)
+	defer tc.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-tc.C:
+			count, err := s.repo.CountRegistered(ctx)
+			if err != nil {
+				s.log.Error(err.Error())
+				continue
+			}
+			if count != socketCount {
+				sockets, err := s.repo.ReadRegisteredNodesAddresses(ctx)
+				if err != nil {
+					s.log.Error(err.Error())
+					continue
+				}
+				s.hub.broadcast <- &Message{
+					Command:     CommandSocketList,
+					Error:       "",
+					Block:       block.Block{},
+					Transaction: transaction.Transaction{},
+					Sockets:     sockets,
+				}
+			}
+			socketCount = count
 		}
 	}
 }

@@ -33,6 +33,8 @@ var (
 	ErrNodeRegisterFailed                      = fmt.Errorf("node register failed")
 	ErrNodeUnregisterFailed                    = fmt.Errorf("node unregister failed")
 	ErrNodeLookupFailed                        = fmt.Errorf("node lookup failed")
+	ErrNodeRegisteredAddressesQueryFailed      = fmt.Errorf("node registered addresses query failed")
+	ErrCursorFailed                            = fmt.Errorf("cursor failed")
 )
 
 // Database provides database access for read, write and delete of repository entities.

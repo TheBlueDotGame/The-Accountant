@@ -38,7 +38,7 @@ func TestFullClientApiCycle(t *testing.T) {
 			},
 		},
 		{
-			port: "8088",
+			port: "8085",
 			tokens: []string{
 				"G8OH7lHu5qfWVumWom0ySN29lakog8nhzSPEwROMjvhdI6VgZ6GoPcdJmoIo7sF3lxQNJMOTKxpYBr6zF992WN86uB7xTEJZ",
 				"jykkeD6Tr6xikkYwC805kVoFThm8VGEHStTFk1lIU6RgEf7p3vjFpPQFI3VP9SYeARjYh2jecMSYsmgddjZZcy32iySHijJQ",
@@ -52,7 +52,7 @@ func TestFullClientApiCycle(t *testing.T) {
 			},
 		},
 		{
-			port: "8088",
+			port: "8085",
 			tokens: []string{
 				"ZepH88DsFcoPoZUzIE0AI3gRcCrQ8KhDpzESbxoQiyrB77CtKn7MZnjcj9cRla4aucjrgpnTMtM1AtkegwhXnE6iAKRv6hON",
 				"w4NXZ8H5vebzhfgvfanFXzEIaoPwyWeZpZjRheo4LnG8vjWlMQeNVBz9lCMhTiBbj1PjVFWXHiUyZW21P7o6DkTlrx5x3tJ1",
