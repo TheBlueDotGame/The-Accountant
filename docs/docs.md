@@ -2296,6 +2296,30 @@ type Verifier interface {
 }
 ```
 
+# stdoutwriter
+
+```go
+import "github.com/bartossh/Computantis/stdoutwriter"
+```
+
+## Index
+
+- [type Logger](<#type-logger>)
+  - [func (l Logger) Write(p []byte) (n int, err error)](<#func-logger-write>)
+
+
+## type [Logger](<https://github.com/bartossh/Computantis/blob/main/stdoutwriter/stdoutwriter.go#L5>)
+
+```go
+type Logger struct{}
+```
+
+### func \(Logger\) [Write](<https://github.com/bartossh/Computantis/blob/main/stdoutwriter/stdoutwriter.go#L7>)
+
+```go
+func (l Logger) Write(p []byte) (n int, err error)
+```
+
 # stress
 
 ```go
@@ -2487,7 +2511,7 @@ var (
 )
 ```
 
-## func [Run](<https://github.com/bartossh/Computantis/blob/main/validator/validator.go#L87>)
+## func [Run](<https://github.com/bartossh/Computantis/blob/main/validator/validator.go#L89>)
 
 ```go
 func Run(ctx context.Context, cfg Config, srw StatusReadWriter, log logger.Logger, ver Verifier, wh WebhookCreateRemovePoster, wallet *wallet.Wallet) error
@@ -2495,7 +2519,7 @@ func Run(ctx context.Context, cfg Config, srw StatusReadWriter, log logger.Logge
 
 Run initializes routing and runs the validator. To stop the validator cancel the context. Validator connects to the central server via websocket and listens for new blocks. It will block until the context is canceled.
 
-## type [Config](<https://github.com/bartossh/Computantis/blob/main/validator/validator.go#L62-L66>)
+## type [Config](<https://github.com/bartossh/Computantis/blob/main/validator/validator.go#L63-L67>)
 
 Config contains configuration of the validator.
 
@@ -2523,7 +2547,7 @@ type CreateRemoveUpdateHookRequest struct {
 }
 ```
 
-## type [Status](<https://github.com/bartossh/Computantis/blob/main/validator/validator.go#L35-L41>)
+## type [Status](<https://github.com/bartossh/Computantis/blob/main/validator/validator.go#L36-L42>)
 
 Status is a status of each received block by the validator. It keeps track of invalid blocks in case of blockchain corruption.
 
@@ -2537,7 +2561,7 @@ type Status struct {
 }
 ```
 
-## type [StatusReadWriter](<https://github.com/bartossh/Computantis/blob/main/validator/validator.go#L44-L47>)
+## type [StatusReadWriter](<https://github.com/bartossh/Computantis/blob/main/validator/validator.go#L45-L48>)
 
 StatusReadWriter provides methods to bulk read and single write validator status.
 
@@ -2548,7 +2572,7 @@ type StatusReadWriter interface {
 }
 ```
 
-## type [Verifier](<https://github.com/bartossh/Computantis/blob/main/validator/validator.go#L57-L59>)
+## type [Verifier](<https://github.com/bartossh/Computantis/blob/main/validator/validator.go#L58-L60>)
 
 Verifier provides methods to verify the signature of the message.
 
@@ -2570,7 +2594,7 @@ type WebHookNewBlockMessage struct {
 }
 ```
 
-## type [WebhookCreateRemovePoster](<https://github.com/bartossh/Computantis/blob/main/validator/validator.go#L50-L54>)
+## type [WebhookCreateRemovePoster](<https://github.com/bartossh/Computantis/blob/main/validator/validator.go#L51-L55>)
 
 WebhookCreateRemovePoster provides methods to create, remove webhooks and post messages to webhooks.
 

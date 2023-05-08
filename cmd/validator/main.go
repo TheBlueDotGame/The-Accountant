@@ -12,6 +12,7 @@ import (
 	"github.com/bartossh/Computantis/configuration"
 	"github.com/bartossh/Computantis/fileoperations"
 	"github.com/bartossh/Computantis/logging"
+	"github.com/bartossh/Computantis/stdoutwriter"
 	"github.com/bartossh/Computantis/validator"
 	"github.com/bartossh/Computantis/wallet"
 	"github.com/bartossh/Computantis/webhooks"
@@ -40,14 +41,14 @@ func main() {
 	defer db.Disconnect(ctxx)
 
 	callbackOnErr := func(err error) {
-		fmt.Println("error with logger: ", err)
+		fmt.Println("logger error: ", err)
 	}
 
 	callbackOnFatal := func(err error) {
-		panic(fmt.Sprintf("error with logger: %s", err))
+		panic(fmt.Sprintf("fatal error: %s", err))
 	}
 
-	log := logging.New(callbackOnErr, callbackOnFatal, db)
+	log := logging.New(callbackOnErr, callbackOnFatal, db, stdoutwriter.Logger{})
 
 	go func() {
 		<-c
@@ -70,6 +71,5 @@ func main() {
 
 	if err := validator.Run(ctx, cfg.Validator, db, log, verify, wh, &wl); err != nil {
 		log.Error(err.Error())
-		fmt.Println(err.Error())
 	}
 }

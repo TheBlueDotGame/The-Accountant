@@ -15,6 +15,7 @@ import (
 	"github.com/bartossh/Computantis/logging"
 	"github.com/bartossh/Computantis/reactive"
 	"github.com/bartossh/Computantis/server"
+	"github.com/bartossh/Computantis/stdoutwriter"
 	"github.com/bartossh/Computantis/wallet"
 )
 
@@ -57,7 +58,7 @@ func main() {
 		panic(fmt.Sprintf("error with logger: %s", err))
 	}
 
-	log := logging.New(callbackOnErr, callbackOnFatal, db)
+	log := logging.New(callbackOnErr, callbackOnFatal, db, stdoutwriter.Logger{})
 
 	if err := blockchain.GenesisBlock(ctx, db); err != nil {
 		fmt.Println(err)

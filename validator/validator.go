@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"sync"
@@ -71,10 +72,11 @@ type app struct {
 	cfg       Config
 	srw       StatusReadWriter
 	log       logger.Logger
-	conns     map[string]*websocket.Conn
+	conns     map[string]socket
 	ver       Verifier
 	wh        WebhookCreateRemovePoster
 	wallet    *wallet.Wallet
+	cancel    context.CancelFunc
 }
 
 func (a *app) blocks(c *fiber.Ctx) error {
@@ -85,142 +87,147 @@ func (a *app) blocks(c *fiber.Ctx) error {
 // Validator connects to the central server via websocket and listens for new blocks.
 // It will block until the context is canceled.
 func Run(ctx context.Context, cfg Config, srw StatusReadWriter, log logger.Logger, ver Verifier, wh WebhookCreateRemovePoster, wallet *wallet.Wallet) error {
-	hash, signature := wallet.Sign([]byte(cfg.Token))
-
-	header := make(http.Header)
-	header.Add("Token", cfg.Token)
-	header.Add("Address", wallet.Address())
-	header.Add("Signature", hex.EncodeToString(signature[:]))
-	header.Add("Hash", hex.EncodeToString(hash[:]))
-
-	ctxTimeout, cancel := context.WithTimeout(ctx, wsConnectionTimeout)
-	c, _, err := websocket.DefaultDialer.DialContext(ctxTimeout, cfg.Websocket, header)
-	cancel()
-	if err != nil {
-		return err
-	}
-	defer c.Close()
-
 	ctxx, cancel := context.WithCancel(ctx)
-
 	a := &app{
 		mux:    sync.RWMutex{},
 		cfg:    cfg,
 		srw:    srw,
 		log:    log,
-		conns:  map[string]*websocket.Conn{cfg.Websocket: c},
+		conns:  make(map[string]socket),
 		ver:    ver,
 		wh:     wh,
 		wallet: wallet,
+		cancel: cancel,
 	}
-
-	go a.pullPump(ctxx, cancel)
-	go a.pushPump(ctxx, cancel)
-
+	if err := a.connectToSocket(ctxx, cfg.Websocket); err != nil {
+		return err
+	}
 	return a.runServer(ctxx, cancel)
 }
 
-func (a *app) pullPump(ctx context.Context, cancel context.CancelFunc) {
+func (a *app) connectToSocket(ctx context.Context, address string) error {
+	a.mux.RLock()
+	if _, ok := a.conns[address]; ok {
+		a.mux.RUnlock()
+		return nil
+	}
+	a.mux.RUnlock()
+
+	hash, signature := a.wallet.Sign([]byte(a.cfg.Token))
+	header := make(http.Header)
+	header.Add("Token", a.cfg.Token)
+	header.Add("Address", a.wallet.Address())
+	header.Add("Signature", hex.EncodeToString(signature[:]))
+	header.Add("Hash", hex.EncodeToString(hash[:]))
+
+	ctxTimeout, cancelTimeout := context.WithTimeout(ctx, wsConnectionTimeout)
+	defer cancelTimeout()
+	c, _, err := websocket.DefaultDialer.DialContext(ctxTimeout, a.cfg.Websocket, header)
+	if err != nil {
+		return err
+	}
+
+	ctxx, cancelx := context.WithCancel(ctx)
+	a.mux.Lock()
+	defer a.mux.Unlock()
+	a.conns[address] = socket{
+		conn:   c,
+		cancel: cancelx,
+	}
+
+	go a.pullPump(ctxx, c, address)
+	go a.pushPump(ctxx, c, address)
+	a.log.Info(fmt.Sprintf("validator connected to central node on address: %s", address))
+
+	return nil
+}
+
+func (a *app) disconnectFromSocket(address string) error {
+	a.mux.Lock()
+	defer a.mux.Unlock()
+	conn, ok := a.conns[address]
+	if !ok {
+		if len(a.conns) == 0 {
+			a.cancel()
+			return errors.New("no connections left")
+		}
+		return nil
+	}
+	conn.cancel()
+	delete(a.conns, address)
+	if len(a.conns) == 0 {
+		a.cancel()
+		return errors.New("no connections left")
+	}
+	a.log.Info(fmt.Sprintf("disconnected from %s", address))
+
+	return nil
+}
+
+func (a *app) pullPump(ctx context.Context, conn *websocket.Conn, address string) {
 	ticker := time.NewTicker(time.Millisecond * 100)
 	defer ticker.Stop()
-	defer cancel()
-listener:
 	for {
 		select {
 		case <-ctx.Done():
-			break listener
+			err := a.disconnectFromSocket(address)
+			if err != nil {
+				a.log.Error(err.Error())
+			}
+			return
 		case <-ticker.C:
-			var connect, remove []string
-			for _, conn := range a.conns {
-				msgType, raw, err := conn.ReadMessage()
-				if err != nil {
-					a.log.Error(fmt.Sprintf("validator read msg error, %s", err.Error()))
-					continue
-				}
-				switch msgType {
-				case websocket.PingMessage, websocket.PongMessage:
-					continue
-				case websocket.CloseMessage:
-					remove = append(remove, conn.RemoteAddr().String())
-				default:
-					var msg server.Message
-					if err := json.Unmarshal(raw, &msg); err != nil {
-						a.log.Error(fmt.Sprintf("validator unmarshal msg error, %s", err.Error()))
-						continue
-					}
-					if msg.Error != "" {
-						a.log.Error(fmt.Sprintf("validator msg error, %s", msg.Error))
-						continue
-					}
-					c, r := a.processMessage(&msg)
-					connect = append(connect, c...)
-					remove = append(remove, r...)
-				}
-			}
-			a.mux.Lock()
-			for _, del := range remove {
-				if _, ok := a.conns[del]; ok {
-					a.conns[del].Close()
-					delete(a.conns, del)
-				}
-			}
-			if len(connect) == 0 {
-				a.mux.Unlock()
+			msgType, raw, err := conn.ReadMessage()
+			if err != nil {
+				a.log.Error(fmt.Sprintf("validator read msg error, %s", err.Error()))
 				continue
 			}
-
-			hash, signature := a.wallet.Sign([]byte(a.cfg.Token))
-			header := make(http.Header)
-			header.Add("Token", a.cfg.Token)
-			header.Add("Address", a.wallet.Address())
-			header.Add("Signature", hex.EncodeToString(signature[:]))
-			header.Add("Hash", hex.EncodeToString(hash[:]))
-			for _, add := range connect {
-				ctxTimeout, cancel := context.WithTimeout(ctx, wsConnectionTimeout)
-				c, _, err := websocket.DefaultDialer.DialContext(ctxTimeout, add, header)
-				cancel()
-				if err != nil {
-					return
+			switch msgType {
+			case websocket.PingMessage, websocket.PongMessage:
+				continue
+			case websocket.CloseMessage:
+				if err := a.disconnectFromSocket(address); err != nil {
+					a.log.Error(fmt.Sprintf("disconnect on close, %s", err.Error()))
 				}
-				a.conns[add] = c
-			}
-			a.mux.Unlock()
 
+			default:
+				var msg server.Message
+				if err := json.Unmarshal(raw, &msg); err != nil {
+					a.log.Error(fmt.Sprintf("validator unmarshal msg error, %s", err.Error()))
+					continue
+				}
+				if msg.Error != "" {
+					a.log.Error(fmt.Sprintf("validator msg error, %s", msg.Error))
+					continue
+				}
+				a.processMessage(ctx, &msg, conn.RemoteAddr().String())
+			}
 		}
 	}
 }
 
-func (a *app) pushPump(ctx context.Context, cancel context.CancelFunc) {
+func (a *app) pushPump(ctx context.Context, conn *websocket.Conn, address string) {
 	ticker := time.NewTicker(time.Second * 10)
 	defer ticker.Stop()
-	defer cancel()
-connectionPingCloser:
 	for {
 		select {
 		case <-ticker.C:
-			a.mux.RLock()
-			for _, conn := range a.conns {
-				err := conn.WriteMessage(websocket.PingMessage, nil)
-				if err != nil {
-					a.log.Error(fmt.Sprintf("validator write msg error, %s", err.Error()))
-					break connectionPingCloser
+			err := conn.WriteMessage(websocket.PingMessage, nil)
+			if err != nil {
+				a.log.Error(fmt.Sprintf("validator write msg error, %s", err.Error()))
+				if err := a.disconnectFromSocket(address); err != nil {
+					a.log.Error(err.Error())
 				}
+				return
 			}
-			a.mux.RUnlock()
-
 		case <-ctx.Done():
-			a.mux.Lock()
-			a.log.Info("validator closing connection")
-			for k, conn := range a.conns {
-				err := conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
-				if err != nil {
-					a.log.Error(fmt.Sprintf("validator write closing msg error, %s", err.Error()))
-				}
-				conn.Close()
-				delete(a.conns, k)
+			err := conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+			if err != nil {
+				a.log.Error(fmt.Sprintf("validator write closing msg error, %s", err.Error()))
 			}
-			a.mux.Unlock()
-			break connectionPingCloser
+			if err := a.disconnectFromSocket(address); err != nil {
+				a.log.Error(err.Error())
+			}
+			return
 		}
 	}
 }
@@ -255,37 +262,35 @@ func (a *app) runServer(ctx context.Context, cancel context.CancelFunc) error {
 	return nil
 }
 
-func (a *app) processMessage(m *server.Message) (connect, remove []string) {
+func (a *app) processMessage(ctx context.Context, m *server.Message, remoteAddress string) {
 	switch m.Command {
 	case server.CommandNewBlock:
-		return a.processBlock(&m.Block)
+		a.processBlock(ctx, &m.Block, remoteAddress)
 	case server.CommandNewTransaction:
-		return
+		a.log.Warn("not implemented")
 	case server.CommandSocketList:
-		return a.processSocketList(m.Sockets)
+		a.processSocketList(ctx, m.Sockets)
 	default:
 		a.log.Error(fmt.Sprintf("validator received unknown command, %s", m.Command))
-		return
 	}
 }
 
-func (a *app) processBlock(b *block.Block) (_, _ []string) {
+func (a *app) processBlock(_ context.Context, b *block.Block, remoteAddress string) {
+	a.mux.Lock()
+	defer a.mux.Unlock()
 	err := a.validateBlock(b)
-
-	switch err {
-	case nil:
-		a.lastBlock = *b
-	default:
-		// TODO: trigger webhook alert about invalid block
-		// TODO: implement strategy to handle invalid blocks
-		a.log.Error(fmt.Sprintf("validator received invalid block, %s", err.Error()))
+	if err != nil {
+		a.log.Error(fmt.Sprintf("remote address: %s => validator received invalid:  %s ", remoteAddress, err.Error()))
 	}
+	fmt.Printf("remote address: %s => last block idx: %v | new block idx %v \n", remoteAddress, a.lastBlock.Index, b.Index)
+	a.lastBlock = *b
 
 	go a.wh.PostWebhookBlock(b) // post concurrently
-	return
 }
 
-func (a *app) processSocketList(sockets []string) (connect, remove []string) {
+func (a *app) processSocketList(ctx context.Context, sockets []string) {
+	var connect, remove []string
+	a.mux.RLock()
 	uniqueSockets := make(map[string]struct{})
 	for _, socket := range sockets {
 		if _, ok := a.conns[socket]; !ok {
@@ -298,5 +303,12 @@ func (a *app) processSocketList(sockets []string) (connect, remove []string) {
 			remove = append(remove, socket)
 		}
 	}
-	return
+	a.mux.RUnlock()
+
+	for _, socket := range connect {
+		a.connectToSocket(ctx, socket)
+	}
+	for _, socket := range remove {
+		a.disconnectFromSocket(socket)
+	}
 }

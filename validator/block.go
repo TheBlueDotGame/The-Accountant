@@ -1,8 +1,10 @@
 package validator
 
-import "github.com/bartossh/Computantis/block"
+import (
+	"github.com/bartossh/Computantis/block"
+)
 
-func (a app) validateBlock(block *block.Block) error {
+func (a *app) validateBlock(block *block.Block) error {
 	if a.lastBlock.Index != 0 {
 		if block.Index != a.lastBlock.Index+1 {
 			return ErrBlockIndexIsInvalid
@@ -11,7 +13,7 @@ func (a app) validateBlock(block *block.Block) error {
 			return ErrBlockPrevHashIsInvalid
 		}
 	}
-	if !block.Validate(block.TrxHashes) { // TODO: use hashes of received transactions after sending  transactions is implemented
+	if !block.Validate(block.TrxHashes) {
 		return ErrProofBlockIsInvalid
 	}
 	return nil
