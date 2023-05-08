@@ -142,8 +142,6 @@ func (s *server) wsWrapper(c *fiber.Ctx) error {
 		client.readPump()
 	}
 
-	fmt.Println("serving ws", c.IP())
-
 	return websocket.New(serveWs)(c)
 }
 
