@@ -84,11 +84,11 @@ copy `wasm/bin/wallet.wasm` and `wasm/js/wasm_exec.js` to you fronted project an
 
 # Schema
 
-<p background-color='white'>
+<p style="background-color:white;">
     <img src="https://github.com/bartossh/Computantis/blob/main/docs/assets/img/computantis-cloud.drawio.svg">
 </p>
 
-<p background-color='white'>
+<p style="background-color:white;">
     <img src="https://github.com/bartossh/Computantis/blob/main/docs/assets/img/computantis-schema.drawio.svg">
 </p>
 
