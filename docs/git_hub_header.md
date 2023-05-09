@@ -82,5 +82,11 @@ copy `wasm/bin/wallet.wasm` and `wasm/js/wasm_exec.js` to you fronted project an
 </html>  
 ```
 
+# Schema
+
+![Schema cloud](https://github.com/bartossh/Computantis/blob/main/docs/assets/img/computantis-cloud.drawio.svg)
+
+![Schema computantis networking](https://github.com/bartossh/Computantis/blob/main/docs/assets/img/computantis-schema.drawio.svg)
+
 # GO Documentation
 
