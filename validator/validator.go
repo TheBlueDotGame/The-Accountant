@@ -99,9 +99,11 @@ func Run(ctx context.Context, cfg Config, srw StatusReadWriter, log logger.Logge
 		wallet: wallet,
 		cancel: cancel,
 	}
+
 	if err := a.connectToSocket(ctxx, cfg.Websocket); err != nil {
 		return err
 	}
+
 	return a.runServer(ctxx, cancel)
 }
 
@@ -122,14 +124,16 @@ func (a *app) connectToSocket(ctx context.Context, address string) error {
 
 	ctxTimeout, cancelTimeout := context.WithTimeout(ctx, wsConnectionTimeout)
 	defer cancelTimeout()
-	c, _, err := websocket.DefaultDialer.DialContext(ctxTimeout, a.cfg.Websocket, header)
+	c, _, err := websocket.DefaultDialer.DialContext(ctxTimeout, address, header)
 	if err != nil {
 		return err
 	}
 
 	ctxx, cancelx := context.WithCancel(ctx)
+
 	a.mux.Lock()
 	defer a.mux.Unlock()
+
 	a.conns[address] = socket{
 		conn:   c,
 		cancel: cancelx,
@@ -153,6 +157,10 @@ func (a *app) disconnectFromSocket(address string) error {
 		}
 		return nil
 	}
+	err := conn.conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+	if err != nil {
+		a.log.Error(fmt.Sprintf("validator write closing msg error, %s", err.Error()))
+	}
 	conn.cancel()
 	delete(a.conns, address)
 	if len(a.conns) == 0 {
@@ -166,37 +174,36 @@ func (a *app) disconnectFromSocket(address string) error {
 
 func (a *app) pullPump(ctx context.Context, conn *websocket.Conn, address string) {
 	ticker := time.NewTicker(time.Millisecond * 100)
+	defer func() {
+		if err := a.disconnectFromSocket(address); err != nil {
+			a.log.Error(fmt.Sprintf("validator disconnect on close, %s", err.Error()))
+		}
+	}()
 	defer ticker.Stop()
 	for {
 		select {
 		case <-ctx.Done():
-			err := a.disconnectFromSocket(address)
-			if err != nil {
-				a.log.Error(err.Error())
-			}
 			return
 		case <-ticker.C:
 			msgType, raw, err := conn.ReadMessage()
 			if err != nil {
 				a.log.Error(fmt.Sprintf("validator read msg error, %s", err.Error()))
-				continue
+				return
 			}
 			switch msgType {
 			case websocket.PingMessage, websocket.PongMessage:
 				continue
 			case websocket.CloseMessage:
-				if err := a.disconnectFromSocket(address); err != nil {
-					a.log.Error(fmt.Sprintf("disconnect on close, %s", err.Error()))
-				}
+				return
 
 			default:
 				var msg server.Message
 				if err := json.Unmarshal(raw, &msg); err != nil {
 					a.log.Error(fmt.Sprintf("validator unmarshal msg error, %s", err.Error()))
-					continue
+					return
 				}
 				if msg.Error != "" {
-					a.log.Error(fmt.Sprintf("validator msg error, %s", msg.Error))
+					a.log.Info(fmt.Sprintf("validator msg error, %s", msg.Error))
 					continue
 				}
 				a.processMessage(ctx, &msg, conn.RemoteAddr().String())
@@ -207,6 +214,11 @@ func (a *app) pullPump(ctx context.Context, conn *websocket.Conn, address string
 
 func (a *app) pushPump(ctx context.Context, conn *websocket.Conn, address string) {
 	ticker := time.NewTicker(time.Second * 10)
+	defer func() {
+		if err := a.disconnectFromSocket(address); err != nil {
+			a.log.Error(fmt.Sprintf("validator disconnect on close, %s", err.Error()))
+		}
+	}()
 	defer ticker.Stop()
 	for {
 		select {
@@ -214,19 +226,9 @@ func (a *app) pushPump(ctx context.Context, conn *websocket.Conn, address string
 			err := conn.WriteMessage(websocket.PingMessage, nil)
 			if err != nil {
 				a.log.Error(fmt.Sprintf("validator write msg error, %s", err.Error()))
-				if err := a.disconnectFromSocket(address); err != nil {
-					a.log.Error(err.Error())
-				}
 				return
 			}
 		case <-ctx.Done():
-			err := conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
-			if err != nil {
-				a.log.Error(fmt.Sprintf("validator write closing msg error, %s", err.Error()))
-			}
-			if err := a.disconnectFromSocket(address); err != nil {
-				a.log.Error(err.Error())
-			}
 			return
 		}
 	}

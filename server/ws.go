@@ -16,6 +16,7 @@ import (
 
 const (
 	hubInnerChannelsBufferSize      = 100
+	socketTickerInterval            = 100 * time.Millisecond
 	socketContextExp                = 5 * time.Second
 	socketWriteWait                 = 10 * time.Second
 	socketPongWait                  = 20 * time.Second
@@ -50,11 +51,10 @@ type socket struct {
 	conn    *websocket.Conn
 	send    chan []byte
 	repo    Repository
-	close   chan struct{}
 	log     logger.Logger
 }
 
-func (s *server) wsWrapper(c *fiber.Ctx) error {
+func (s *server) wsWrapper(ctx context.Context, c *fiber.Ctx) error {
 	h := c.GetReqHeaders()
 
 	token, ok := h["Token"]
@@ -131,96 +131,88 @@ func (s *server) wsWrapper(c *fiber.Ctx) error {
 		conn:    nil,
 		send:    make(chan []byte, clientMessageChannelsBufferSize),
 		repo:    s.repo,
-		close:   make(chan struct{}, 1),
 		log:     s.log,
 	}
 
+	ctxx, cancel := context.WithCancel(ctx)
 	serveWs := func(conn *websocket.Conn) {
 		client.conn = conn
 		client.hub.register <- client
-		go client.writePump()
-		client.readPump()
+		go client.writePump(ctxx, cancel)
+		client.readPump(ctxx, cancel)
 	}
+	s.log.Info(fmt.Sprintf("websocket server, new connection from address: %s accepted", c.IP()))
 
 	return websocket.New(serveWs)(c)
 }
 
-func (c *socket) readPump() {
-	defer func() {
-		c.hub.unregister <- c
-		c.conn.Close()
-	}()
+func (c *socket) readPump(ctx context.Context, cancel context.CancelFunc) {
 	c.conn.SetReadLimit(socketMaxMessageSize)
 	c.conn.SetReadDeadline(time.Now().Add(socketPongWait))
 	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(socketPongWait)); return nil })
-	for {
-		var msg Message
-		err := c.conn.ReadJSON(&msg)
-		if err != nil {
-			switch {
-			case websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure):
-				c.log.Info(fmt.Sprintf("socket closing connection to the client %s due to unexpected error %s\n", c.address, err))
-			default:
-				c.log.Info(fmt.Sprintf("socket closing connection to the client %s due to error %s\n", c.address, err))
-			}
 
-			close(c.send)
-			break
+	tc := time.NewTicker(socketTickerInterval)
+	defer tc.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-tc.C:
+			var msg Message
+			err := c.conn.ReadJSON(&msg)
+			if err != nil {
+				switch {
+				case websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure):
+					c.log.Info(fmt.Sprintf("socket closing connection to the client %s due to unexpected error %s\n", c.address, err))
+				default:
+					c.log.Info(fmt.Sprintf("socket closing connection to the client %s due to error %s\n", c.address, err))
+				}
+				cancel()
+				return
+			}
+			c.process(ctx, &msg)
 		}
-		c.process(&msg)
 	}
 }
 
-func (c *socket) writePump() {
+func (c *socket) writePump(ctx context.Context, cancel context.CancelFunc) {
 	ticker := time.NewTicker(socketPingPeriod)
 	defer func() {
 		ticker.Stop()
+		c.hub.unregister <- c
+		err := c.conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "central node stopped"))
+		if err != nil {
+			c.log.Error(fmt.Sprintf("central node write closing msg error, %s", err.Error()))
+		}
 		c.conn.Close()
 	}()
+
 	for {
 		select {
+		case <-ctx.Done():
+			return
 		case raw, ok := <-c.send:
 			c.conn.SetWriteDeadline(time.Now().Add(socketWriteWait))
 			if !ok {
 				c.log.Info(fmt.Sprintf("socket closing connection to the client %s due to channel close", c.address))
-				c.hub.unregister <- c
-				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+				cancel()
 				return
 			}
 			if err := c.conn.WriteMessage(websocket.TextMessage, raw); err != nil {
 				c.log.Error(fmt.Sprintf("socket closing connection to the client %s due to %s", c.address, err))
-				c.hub.unregister <- c
-				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+				cancel()
 				return
 			}
-
 		case <-ticker.C:
 			c.conn.SetWriteDeadline(time.Now().Add(socketWriteWait))
 			if err := c.conn.WriteMessage(websocket.PingMessage, []byte(c.address)); err != nil {
 				c.log.Error(fmt.Sprintf("socket closing connection to the client %s due to %s", c.address, err))
-				c.hub.unregister <- c
-				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+				cancel()
 				return
 			}
 		}
 	}
-}
-
-func ctxClose(close <-chan struct{}) (context.Context, context.CancelFunc) {
-	ctx, cancel := context.WithTimeout(context.Background(), socketContextExp)
-	go func() {
-	outer:
-		for {
-			select {
-			case <-close:
-				cancel()
-				break outer
-			case <-ctx.Done():
-				break outer
-			}
-		}
-	}()
-	return ctx, cancel
 }
 
 type hub struct {
@@ -247,7 +239,7 @@ outer:
 		select {
 		case client := <-h.register:
 			if len(h.clients) >= validatorsCountLimit {
-				client.conn.WriteMessage(websocket.CloseMessage, []byte{})
+				client.conn.WriteMessage(websocket.CloseMessage, []byte("Max number of validators reached."))
 				continue
 			}
 			h.clients[client.address] = client
@@ -264,18 +256,14 @@ outer:
 			}
 		case <-ctx.Done():
 			for _, client := range h.clients {
-				client.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				delete(h.clients, client.address)
-				close(client.close)
 			}
 			break outer
 		}
 	}
 }
 
-func (c *socket) process(msg *Message) {
-	ctx, cancel := ctxClose(c.close)
-	defer cancel()
+func (c *socket) process(ctx context.Context, msg *Message) {
 	switch msg.Command {
 	case CommandEcho:
 		if err := c.echo(ctx, msg); err != nil {

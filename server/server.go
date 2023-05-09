@@ -187,7 +187,7 @@ func Run(
 	address := router.Group(addressGroupURL)
 	address.Post(createURL, s.addressCreate)
 
-	router.Group(WsURL, s.wsWrapper)
+	router.Group(WsURL, func(c *fiber.Ctx) error { return s.wsWrapper(ctxx, c) })
 
 	go func() {
 		bookkeeping.Run(ctxx)

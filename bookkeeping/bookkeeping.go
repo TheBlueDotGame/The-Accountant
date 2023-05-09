@@ -185,6 +185,7 @@ func (l *Ledger) Run(ctx context.Context) {
 		if err := l.forgeTemporaryTrxs(ctx); err != nil {
 			l.log.Fatal(fmt.Sprintf("forging temporary failed: %s", err.Error()))
 		}
+		l.log.Info("forging temporary transactions finished")
 	}
 
 	go func(ctx context.Context) {
