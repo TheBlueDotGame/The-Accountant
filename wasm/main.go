@@ -145,8 +145,7 @@ func readIssuedTransactions() js.Func {
 
 func saveWallet() js.Func {
 	return js.FuncOf(func(this js.Value, args []js.Value) any {
-		filePath := args[0].String()
-		if err := helper.SaveWalletToFile(filePath); err != nil {
+		if err := helper.SaveWalletToFile(); err != nil {
 			return err.Error()
 		}
 		return "Ok"
@@ -155,8 +154,7 @@ func saveWallet() js.Func {
 
 func readWallet() js.Func {
 	return js.FuncOf(func(this js.Value, args []js.Value) any {
-		filePath := args[0].String()
-		if err := helper.ReadWalletFromFile(filePath); err != nil {
+		if err := helper.ReadWalletFromFile(); err != nil {
 			return err.Error()
 		}
 		return "Ok"

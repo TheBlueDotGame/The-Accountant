@@ -280,7 +280,7 @@ func (c *Client) SaveWalletToFile() error {
 }
 
 // ReadWalletFromFile reads the wallet from the file in the path.
-func (c *Client) ReadWalletFromFile(passwd, path string) error {
+func (c *Client) ReadWalletFromFile() error {
 	w, err := c.wrs.ReadWallet()
 	if err != nil {
 		return err

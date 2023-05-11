@@ -17,19 +17,21 @@ import (
 type Config struct {
 	Port               string `yaml:"port"`
 	CentralNodeAddress string `yaml:"central_node_address"`
-	Token              string `yaml:"token"`
 }
 
 type app struct {
 	log    logger.Logger
 	client client.Client
-	token  string
 }
 
 const (
-	Alive              = "/alive" // alive URL allows to check if server is alive and if sign service is of the same version.
-	IssueTransaction   = "/issue" // issue URL allows to issue transaction signed by the issuer.
-	ConfirmTransaction = "/sign"  // sign URL allows to sign transaction received by the receiver.
+	Alive                   = "/alive"                 // alive URL allows to check if server is alive and if sign service is of the same version.
+	IssueTransaction        = "/transactions/issue"    // issue URL allows to issue transaction signed by the issuer.
+	ConfirmTransaction      = "/transaction/sign"      // sign URL allows to sign transaction received by the receiver.
+	GetIssuedTransactions   = "/transactions/issued"   // issued URL allows to get issued transactions for the issuer.
+	GetReceivedTransactions = "/transactions/received" // received URL allows to get received transactions for the receiver.
+	CreateWallet            = "/wallet/create"         // create URL allows to create new wallet.
+	ReadWalletPublicAddress = "/wallet/address"        // address URL allows to read public address of the wallet.
 )
 
 // Run runs the service application that exposes the API for creating, validating and signing transactions.
@@ -40,8 +42,13 @@ func Run(ctx context.Context, cfg Config, log logger.Logger, timeout time.Durati
 	defer cancel()
 
 	c := client.NewClient(cfg.CentralNodeAddress, timeout, fw, wrs, walletCreator)
+	defer c.FlushWalletFromMemory()
 
-	s := app{log: log, client: *c, token: cfg.Token}
+	if err := c.ReadWalletFromFile(); err != nil {
+		log.Info(fmt.Sprintf("error with reading wallet from file: %s", err))
+	}
+
+	s := app{log: log, client: *c}
 
 	router := fiber.New(fiber.Config{
 		Prefork:       false,
@@ -56,8 +63,12 @@ func Run(ctx context.Context, cfg Config, log logger.Logger, timeout time.Durati
 
 	router.Get(Alive, s.alive)
 
+	router.Get(GetIssuedTransactions, s.issuedTransactions)
+	router.Get(GetReceivedTransactions, s.receivedTransactions)
 	router.Post(IssueTransaction, s.issueTransaction)
 	router.Post(ConfirmTransaction, s.confirmReceivedTransaction)
+	router.Post(CreateWallet, s.createWallet)
+	router.Get(ReadWalletPublicAddress, s.readWalletPublicAddress)
 
 	var err error
 	go func() {
@@ -143,4 +154,89 @@ func (a *app) confirmReceivedTransaction(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(ConfirmTransactionResponse{Ok: true})
+}
+
+// IssuedTransactionResponse is a response of issued transactions.
+type IssuedTransactionResponse struct {
+	Ok           bool                      `json:"ok"`
+	Err          string                    `json:"err"`
+	Transactions []transaction.Transaction `json:"transactions"`
+}
+
+func (a *app) issuedTransactions(c *fiber.Ctx) error {
+	transactions, err := a.client.ReadIssuedTransactions()
+	if err != nil {
+		err := fmt.Errorf("error getting issued transactions: %v", err)
+		a.log.Error(err.Error())
+		return c.JSON(IssuedTransactionResponse{Ok: false, Err: err.Error()})
+	}
+	return c.JSON(IssuedTransactionResponse{Ok: true, Transactions: transactions})
+}
+
+// ReceivedTransactionResponse is a response of issued transactions.
+type ReceivedTransactionResponse struct {
+	Ok           bool                      `json:"ok"`
+	Err          string                    `json:"err"`
+	Transactions []transaction.Transaction `json:"transactions"`
+}
+
+func (a *app) receivedTransactions(c *fiber.Ctx) error {
+	transactions, err := a.client.ReadWaitingTransactions()
+	if err != nil {
+		err := fmt.Errorf("error getting issued transactions: %v", err)
+		a.log.Error(err.Error())
+		return c.JSON(ReceivedTransactionResponse{Ok: false, Err: err.Error()})
+	}
+	return c.JSON(ReceivedTransactionResponse{Ok: true, Transactions: transactions})
+}
+
+// CreateWalletRequest is a request to create wallet.
+type CreateWalletRequest struct {
+	Token string `json:"token"`
+}
+
+// CreateWalletResponse is response to create wallet.
+type CreateWalletResponse struct {
+	Ok  bool   `json:"ok"`
+	Err string `json:"err"`
+}
+
+func (a *app) createWallet(c *fiber.Ctx) error {
+	var req CreateWalletRequest
+	if err := c.BodyParser(&req); err != nil {
+		err := fmt.Errorf("error reading create wallet request: %v", err)
+		a.log.Error(err.Error())
+		return errors.Join(fiber.ErrBadRequest, err)
+	}
+
+	if err := a.client.NewWallet(req.Token); err != nil {
+		err := fmt.Errorf("error creating wallet: %v", err)
+		a.log.Error(err.Error())
+		return c.JSON(CreateWalletResponse{Ok: false, Err: err.Error()})
+	}
+
+	if err := a.client.SaveWalletToFile(); err != nil {
+		err := fmt.Errorf("error saving wallet to file: %v", err)
+		a.log.Error(err.Error())
+		return c.JSON(CreateWalletResponse{Ok: false, Err: err.Error()})
+	}
+
+	return c.JSON(CreateWalletResponse{Ok: true})
+}
+
+// ReadWalletPublicAddressResponse is a response to read wallet public address.
+type ReadWalletPublicAddressResponse struct {
+	Ok      bool   `json:"ok"`
+	Err     string `json:"err"`
+	Address string `json:"address"`
+}
+
+func (a *app) readWalletPublicAddress(c *fiber.Ctx) error {
+	address, err := a.client.Address()
+	if err != nil {
+		err := fmt.Errorf("error reading wallet address: %v", err)
+		a.log.Error(err.Error())
+		return c.JSON(ReadWalletPublicAddressResponse{Ok: false, Err: err.Error()})
+	}
+	return c.JSON(ReadWalletPublicAddressResponse{Ok: true, Address: address})
 }
