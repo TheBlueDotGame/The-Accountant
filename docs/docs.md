@@ -705,22 +705,23 @@ import "github.com/bartossh/Computantis/configuration"
   - [func Read(path string) (Configuration, error)](<#func-read>)
 
 
-## type [Configuration](<https://github.com/bartossh/Computantis/blob/main/configuration/configuration.go#L18-L25>)
+## type [Configuration](<https://github.com/bartossh/Computantis/blob/main/configuration/configuration.go#L19-L27>)
 
 Configuration is the main configuration of the application that corresponds to the \*.yaml file that holds the configuration.
 
 ```go
 type Configuration struct {
-    Bookkeeper   bookkeeping.Config    `yaml:"bookkeeper"`
-    Server       server.Config         `yaml:"server"`
-    Database     repohelper.DBConfig   `yaml:"database"`
-    DataProvider dataprovider.Config   `yaml:"data_provider"`
-    Validator    validator.Config      `yaml:"validator"`
-    FileOperator fileoperations.Config `yaml:"file_operator"`
+    Bookkeeper    bookkeeping.Config    `yaml:"bookkeeper"`
+    Server        server.Config         `yaml:"server"`
+    Database      repohelper.DBConfig   `yaml:"database"`
+    DataProvider  dataprovider.Config   `yaml:"data_provider"`
+    Validator     validator.Config      `yaml:"validator"`
+    FileOperator  fileoperations.Config `yaml:"file_operator"`
+    SignerService signerservice.Config  `yaml:"signer_service"`
 }
 ```
 
-### func [Read](<https://github.com/bartossh/Computantis/blob/main/configuration/configuration.go#L28>)
+### func [Read](<https://github.com/bartossh/Computantis/blob/main/configuration/configuration.go#L30>)
 
 ```go
 func Read(path string) (Configuration, error)
@@ -2296,6 +2297,97 @@ type Verifier interface {
 }
 ```
 
+# signerservice
+
+```go
+import "github.com/bartossh/Computantis/signerservice"
+```
+
+## Index
+
+- [Constants](<#constants>)
+- [func Run(ctx context.Context, cfg Config, log logger.Logger, timeout time.Duration, fw transaction.Verifier, wrs client.WalletReadSaver, walletCreator client.NewSignValidatorCreator) error](<#func-run>)
+- [type Config](<#type-config>)
+- [type ConfirmTransactionRequest](<#type-confirmtransactionrequest>)
+- [type ConfirmTransactionResponse](<#type-confirmtransactionresponse>)
+- [type IssueTransactionRequest](<#type-issuetransactionrequest>)
+- [type IssueTransactionResponse](<#type-issuetransactionresponse>)
+
+
+## Constants
+
+```go
+const (
+    Alive              = "/alive" // alive URL allows to check if server is alive and if sign service is of the same version.
+    IssueTransaction   = "/issue" // issue URL allows to issue transaction signed by the issuer.
+    ConfirmTransaction = "/sign"  // sign URL allows to sign transaction received by the receiver.
+)
+```
+
+## func [Run](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L37-L38>)
+
+```go
+func Run(ctx context.Context, cfg Config, log logger.Logger, timeout time.Duration, fw transaction.Verifier, wrs client.WalletReadSaver, walletCreator client.NewSignValidatorCreator) error
+```
+
+Run runs the service application that exposes the API for creating, validating and signing transactions. This blocks until the context is canceled.
+
+## type [Config](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L17-L21>)
+
+Config is the configuration for the server
+
+```go
+type Config struct {
+    Port               string `yaml:"port"`
+    CentralNodeAddress string `yaml:"central_node_address"`
+    Token              string `yaml:"token"`
+}
+```
+
+## type [ConfirmTransactionRequest](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L121-L123>)
+
+ValidateTransactionRequest is a request to validate transaction.
+
+```go
+type ConfirmTransactionRequest struct {
+    Transaction transaction.Transaction `json:"transaction"`
+}
+```
+
+## type [ConfirmTransactionResponse](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L126-L129>)
+
+ConfirmTransactionResponse is response to validate transaction.
+
+```go
+type ConfirmTransactionResponse struct {
+    Ok  bool   `json:"ok"`
+    Err string `json:"err"`
+}
+```
+
+## type [IssueTransactionRequest](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L92-L96>)
+
+IssueTransactionRequest is a request message that contains data and subject of the transaction to be issued.
+
+```go
+type IssueTransactionRequest struct {
+    ReceiverAddress string `json:"receiver_address"`
+    Subject         string `json:"subject"`
+    Data            []byte `json:"data"`
+}
+```
+
+## type [IssueTransactionResponse](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L99-L102>)
+
+IssueTransactionResponse is response to issued transaction.
+
+```go
+type IssueTransactionResponse struct {
+    Ok  bool   `json:"ok"`
+    Err string `json:"err"`
+}
+```
+
 # stdoutwriter
 
 ```go
@@ -2848,6 +2940,16 @@ import "github.com/bartossh/Computantis/cmd/central"
 
 ```go
 import "github.com/bartossh/Computantis/cmd/validator"
+```
+
+## Index
+
+
+
+# wallet
+
+```go
+import "github.com/bartossh/Computantis/cmd/wallet"
 ```
 
 ## Index
@@ -3559,22 +3661,23 @@ import "github.com/bartossh/Computantis/configuration"
   - [func Read(path string) (Configuration, error)](<#func-read>)
 
 
-## type [Configuration](<https://github.com/bartossh/Computantis/blob/main/configuration/configuration.go#L18-L25>)
+## type [Configuration](<https://github.com/bartossh/Computantis/blob/main/configuration/configuration.go#L19-L27>)
 
 Configuration is the main configuration of the application that corresponds to the \*.yaml file that holds the configuration.
 
 ```go
 type Configuration struct {
-    Bookkeeper   bookkeeping.Config    `yaml:"bookkeeper"`
-    Server       server.Config         `yaml:"server"`
-    Database     repohelper.DBConfig   `yaml:"database"`
-    DataProvider dataprovider.Config   `yaml:"data_provider"`
-    Validator    validator.Config      `yaml:"validator"`
-    FileOperator fileoperations.Config `yaml:"file_operator"`
+    Bookkeeper    bookkeeping.Config    `yaml:"bookkeeper"`
+    Server        server.Config         `yaml:"server"`
+    Database      repohelper.DBConfig   `yaml:"database"`
+    DataProvider  dataprovider.Config   `yaml:"data_provider"`
+    Validator     validator.Config      `yaml:"validator"`
+    FileOperator  fileoperations.Config `yaml:"file_operator"`
+    SignerService signerservice.Config  `yaml:"signer_service"`
 }
 ```
 
-### func [Read](<https://github.com/bartossh/Computantis/blob/main/configuration/configuration.go#L28>)
+### func [Read](<https://github.com/bartossh/Computantis/blob/main/configuration/configuration.go#L30>)
 
 ```go
 func Read(path string) (Configuration, error)
@@ -5150,6 +5253,97 @@ type Verifier interface {
 }
 ```
 
+# signerservice
+
+```go
+import "github.com/bartossh/Computantis/signerservice"
+```
+
+## Index
+
+- [Constants](<#constants>)
+- [func Run(ctx context.Context, cfg Config, log logger.Logger, timeout time.Duration, fw transaction.Verifier, wrs client.WalletReadSaver, walletCreator client.NewSignValidatorCreator) error](<#func-run>)
+- [type Config](<#type-config>)
+- [type ConfirmTransactionRequest](<#type-confirmtransactionrequest>)
+- [type ConfirmTransactionResponse](<#type-confirmtransactionresponse>)
+- [type IssueTransactionRequest](<#type-issuetransactionrequest>)
+- [type IssueTransactionResponse](<#type-issuetransactionresponse>)
+
+
+## Constants
+
+```go
+const (
+    Alive              = "/alive" // alive URL allows to check if server is alive and if sign service is of the same version.
+    IssueTransaction   = "/issue" // issue URL allows to issue transaction signed by the issuer.
+    ConfirmTransaction = "/sign"  // sign URL allows to sign transaction received by the receiver.
+)
+```
+
+## func [Run](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L37-L38>)
+
+```go
+func Run(ctx context.Context, cfg Config, log logger.Logger, timeout time.Duration, fw transaction.Verifier, wrs client.WalletReadSaver, walletCreator client.NewSignValidatorCreator) error
+```
+
+Run runs the service application that exposes the API for creating, validating and signing transactions. This blocks until the context is canceled.
+
+## type [Config](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L17-L21>)
+
+Config is the configuration for the server
+
+```go
+type Config struct {
+    Port               string `yaml:"port"`
+    CentralNodeAddress string `yaml:"central_node_address"`
+    Token              string `yaml:"token"`
+}
+```
+
+## type [ConfirmTransactionRequest](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L121-L123>)
+
+ValidateTransactionRequest is a request to validate transaction.
+
+```go
+type ConfirmTransactionRequest struct {
+    Transaction transaction.Transaction `json:"transaction"`
+}
+```
+
+## type [ConfirmTransactionResponse](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L126-L129>)
+
+ConfirmTransactionResponse is response to validate transaction.
+
+```go
+type ConfirmTransactionResponse struct {
+    Ok  bool   `json:"ok"`
+    Err string `json:"err"`
+}
+```
+
+## type [IssueTransactionRequest](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L92-L96>)
+
+IssueTransactionRequest is a request message that contains data and subject of the transaction to be issued.
+
+```go
+type IssueTransactionRequest struct {
+    ReceiverAddress string `json:"receiver_address"`
+    Subject         string `json:"subject"`
+    Data            []byte `json:"data"`
+}
+```
+
+## type [IssueTransactionResponse](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L99-L102>)
+
+IssueTransactionResponse is response to issued transaction.
+
+```go
+type IssueTransactionResponse struct {
+    Ok  bool   `json:"ok"`
+    Err string `json:"err"`
+}
+```
+
 # stdoutwriter
 
 ```go
@@ -5702,6 +5896,16 @@ import "github.com/bartossh/Computantis/cmd/central"
 
 ```go
 import "github.com/bartossh/Computantis/cmd/validator"
+```
+
+## Index
+
+
+
+# wallet
+
+```go
+import "github.com/bartossh/Computantis/cmd/wallet"
 ```
 
 ## Index
