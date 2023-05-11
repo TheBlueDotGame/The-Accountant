@@ -634,7 +634,7 @@ import "github.com/bartossh/Computantis/client"
   - [func (c *Client) ProposeTransaction(receiverAddr string, subject string, data []byte) error](<#func-client-proposetransaction>)
   - [func (c *Client) ReadIssuedTransactions() ([]transaction.Transaction, error)](<#func-client-readissuedtransactions>)
   - [func (c *Client) ReadWaitingTransactions() ([]transaction.Transaction, error)](<#func-client-readwaitingtransactions>)
-  - [func (c *Client) ReadWalletFromFile(passwd, path string) error](<#func-client-readwalletfromfile>)
+  - [func (c *Client) ReadWalletFromFile() error](<#func-client-readwalletfromfile>)
   - [func (c *Client) SaveWalletToFile() error](<#func-client-savewallettofile>)
   - [func (c *Client) Sign(d []byte) (digest [32]byte, signature []byte, err error)](<#func-client-sign>)
   - [func (c *Client) ValidateApiVersion() error](<#func-client-validateapiversion>)
@@ -752,7 +752,7 @@ ReadWaitingTransactions reads all waiting transactions belonging to current wall
 ### func \(\*Client\) [ReadWalletFromFile](<https://github.com/bartossh/Computantis/blob/main/client/client.go#L283>)
 
 ```go
-func (c *Client) ReadWalletFromFile(passwd, path string) error
+func (c *Client) ReadWalletFromFile() error
 ```
 
 ReadWalletFromFile reads the wallet from the file in the path.
@@ -2417,21 +2417,30 @@ import "github.com/bartossh/Computantis/signerservice"
 - [type Config](<#type-config>)
 - [type ConfirmTransactionRequest](<#type-confirmtransactionrequest>)
 - [type ConfirmTransactionResponse](<#type-confirmtransactionresponse>)
+- [type CreateWalletRequest](<#type-createwalletrequest>)
+- [type CreateWalletResponse](<#type-createwalletresponse>)
 - [type IssueTransactionRequest](<#type-issuetransactionrequest>)
 - [type IssueTransactionResponse](<#type-issuetransactionresponse>)
+- [type IssuedTransactionResponse](<#type-issuedtransactionresponse>)
+- [type ReadWalletPublicAddressResponse](<#type-readwalletpublicaddressresponse>)
+- [type ReceivedTransactionResponse](<#type-receivedtransactionresponse>)
 
 
 ## Constants
 
 ```go
 const (
-    Alive              = "/alive" // alive URL allows to check if server is alive and if sign service is of the same version.
-    IssueTransaction   = "/issue" // issue URL allows to issue transaction signed by the issuer.
-    ConfirmTransaction = "/sign"  // sign URL allows to sign transaction received by the receiver.
+    Alive                   = "/alive"                 // alive URL allows to check if server is alive and if sign service is of the same version.
+    IssueTransaction        = "/transactions/issue"    // issue URL allows to issue transaction signed by the issuer.
+    ConfirmTransaction      = "/transaction/sign"      // sign URL allows to sign transaction received by the receiver.
+    GetIssuedTransactions   = "/transactions/issued"   // issued URL allows to get issued transactions for the issuer.
+    GetReceivedTransactions = "/transactions/received" // received URL allows to get received transactions for the receiver.
+    CreateWallet            = "/wallet/create"         // create URL allows to create new wallet.
+    ReadWalletPublicAddress = "/wallet/address"        // address URL allows to read public address of the wallet.
 )
 ```
 
-## func [Run](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L37-L38>)
+## func [Run](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L39-L40>)
 
 ```go
 func Run(ctx context.Context, cfg Config, log logger.Logger, timeout time.Duration, fw transaction.Verifier, wrs client.WalletReadSaver, walletCreator client.NewSignValidatorCreator) error
@@ -2439,7 +2448,7 @@ func Run(ctx context.Context, cfg Config, log logger.Logger, timeout time.Durati
 
 Run runs the service application that exposes the API for creating, validating and signing transactions. This blocks until the context is canceled.
 
-## type [Config](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L17-L21>)
+## type [Config](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L17-L20>)
 
 Config is the configuration for the server
 
@@ -2447,11 +2456,10 @@ Config is the configuration for the server
 type Config struct {
     Port               string `yaml:"port"`
     CentralNodeAddress string `yaml:"central_node_address"`
-    Token              string `yaml:"token"`
 }
 ```
 
-## type [ConfirmTransactionRequest](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L121-L123>)
+## type [ConfirmTransactionRequest](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L132-L134>)
 
 ValidateTransactionRequest is a request to validate transaction.
 
@@ -2461,7 +2469,7 @@ type ConfirmTransactionRequest struct {
 }
 ```
 
-## type [ConfirmTransactionResponse](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L126-L129>)
+## type [ConfirmTransactionResponse](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L137-L140>)
 
 ConfirmTransactionResponse is response to validate transaction.
 
@@ -2472,7 +2480,28 @@ type ConfirmTransactionResponse struct {
 }
 ```
 
-## type [IssueTransactionRequest](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L92-L96>)
+## type [CreateWalletRequest](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L194-L196>)
+
+CreateWalletRequest is a request to create wallet.
+
+```go
+type CreateWalletRequest struct {
+    Token string `json:"token"`
+}
+```
+
+## type [CreateWalletResponse](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L199-L202>)
+
+CreateWalletResponse is response to create wallet.
+
+```go
+type CreateWalletResponse struct {
+    Ok  bool   `json:"ok"`
+    Err string `json:"err"`
+}
+```
+
+## type [IssueTransactionRequest](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L103-L107>)
 
 IssueTransactionRequest is a request message that contains data and subject of the transaction to be issued.
 
@@ -2484,7 +2513,7 @@ type IssueTransactionRequest struct {
 }
 ```
 
-## type [IssueTransactionResponse](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L99-L102>)
+## type [IssueTransactionResponse](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L110-L113>)
 
 IssueTransactionResponse is response to issued transaction.
 
@@ -2492,6 +2521,42 @@ IssueTransactionResponse is response to issued transaction.
 type IssueTransactionResponse struct {
     Ok  bool   `json:"ok"`
     Err string `json:"err"`
+}
+```
+
+## type [IssuedTransactionResponse](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L160-L164>)
+
+IssuedTransactionResponse is a response of issued transactions.
+
+```go
+type IssuedTransactionResponse struct {
+    Ok           bool                      `json:"ok"`
+    Err          string                    `json:"err"`
+    Transactions []transaction.Transaction `json:"transactions"`
+}
+```
+
+## type [ReadWalletPublicAddressResponse](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L228-L232>)
+
+ReadWalletPublicAddressResponse is a response to read wallet public address.
+
+```go
+type ReadWalletPublicAddressResponse struct {
+    Ok      bool   `json:"ok"`
+    Err     string `json:"err"`
+    Address string `json:"address"`
+}
+```
+
+## type [ReceivedTransactionResponse](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L177-L181>)
+
+ReceivedTransactionResponse is a response of issued transactions.
+
+```go
+type ReceivedTransactionResponse struct {
+    Ok           bool                      `json:"ok"`
+    Err          string                    `json:"err"`
+    Transactions []transaction.Transaction `json:"transactions"`
 }
 ```
 
