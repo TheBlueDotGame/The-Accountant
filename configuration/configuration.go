@@ -9,6 +9,7 @@ import (
 	"github.com/bartossh/Computantis/fileoperations"
 	"github.com/bartossh/Computantis/repohelper"
 	"github.com/bartossh/Computantis/server"
+	"github.com/bartossh/Computantis/signerservice"
 	"github.com/bartossh/Computantis/validator"
 	"gopkg.in/yaml.v2"
 )
@@ -16,12 +17,13 @@ import (
 // Configuration is the main configuration of the application that corresponds to the *.yaml file
 // that holds the configuration.
 type Configuration struct {
-	Bookkeeper   bookkeeping.Config    `yaml:"bookkeeper"`
-	Server       server.Config         `yaml:"server"`
-	Database     repohelper.DBConfig   `yaml:"database"`
-	DataProvider dataprovider.Config   `yaml:"data_provider"`
-	Validator    validator.Config      `yaml:"validator"`
-	FileOperator fileoperations.Config `yaml:"file_operator"`
+	Bookkeeper    bookkeeping.Config    `yaml:"bookkeeper"`
+	Server        server.Config         `yaml:"server"`
+	Database      repohelper.DBConfig   `yaml:"database"`
+	DataProvider  dataprovider.Config   `yaml:"data_provider"`
+	Validator     validator.Config      `yaml:"validator"`
+	FileOperator  fileoperations.Config `yaml:"file_operator"`
+	SignerService signerservice.Config  `yaml:"signer_service"`
 }
 
 // Read reads the configuration from the file and returns the Configuration with set fields according to the yaml setup.

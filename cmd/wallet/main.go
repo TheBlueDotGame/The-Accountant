@@ -7,21 +7,16 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/bartossh/Computantis/block"
-	"github.com/bartossh/Computantis/blockchain"
-	"github.com/bartossh/Computantis/bookkeeping"
+	"github.com/bartossh/Computantis/aeswrapper"
 	"github.com/bartossh/Computantis/configuration"
-	"github.com/bartossh/Computantis/dataprovider"
+	"github.com/bartossh/Computantis/fileoperations"
 	"github.com/bartossh/Computantis/logging"
-	"github.com/bartossh/Computantis/reactive"
-	"github.com/bartossh/Computantis/server"
+	"github.com/bartossh/Computantis/signerservice"
 	"github.com/bartossh/Computantis/stdoutwriter"
 	"github.com/bartossh/Computantis/wallet"
 )
 
-const (
-	rxBufferSize = 100
-)
+const timeout = time.Second * 5
 
 func main() {
 	cfg, err := configuration.Read("server_settings.yaml")
@@ -40,7 +35,7 @@ func main() {
 		cancel()
 	}()
 
-	db, sub, err := cfg.Database.Connect(ctx)
+	db, _, err := cfg.Database.Connect(ctx)
 	if err != nil {
 		fmt.Println(err)
 		c <- os.Interrupt
@@ -60,30 +55,13 @@ func main() {
 
 	log := logging.New(callbackOnErr, callbackOnFatal, db, stdoutwriter.Logger{})
 
-	if err := blockchain.GenesisBlock(ctx, db); err != nil {
-		fmt.Println(err)
-	}
+	seal := aeswrapper.New()
+	fo := fileoperations.New(cfg.FileOperator, seal)
 
-	blc, err := blockchain.New(ctx, db)
-	if err != nil {
-		log.Error(err.Error())
-		c <- os.Interrupt
-		return
-	}
+	verify := wallet.NewVerifier()
 
-	verifier := wallet.NewVerifier()
-	rx := reactive.New[block.Block](rxBufferSize)
+	err = signerservice.Run(ctx, cfg.SignerService, log, timeout, verify, fo, wallet.New)
 
-	ladger, err := bookkeeping.New(cfg.Bookkeeper, blc, db, db, verifier, db, log, rx, sub)
-	if err != nil {
-		log.Error(err.Error())
-		c <- os.Interrupt
-		return
-	}
-
-	dataProvider := dataprovider.New(ctx, cfg.DataProvider)
-
-	err = server.Run(ctx, cfg.Server, db, ladger, dataProvider, log, rx.Subscribe())
 	if err != nil {
 		log.Error(err.Error())
 	}
