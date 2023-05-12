@@ -17,8 +17,8 @@ func (db DataBase) WriteTemporaryTransaction(ctx context.Context, trx *transacti
 	return err
 }
 
-// RemoveAwaitingTransaction removes transaction from the awaiting transaction storage.
-func (db DataBase) RemoveAwaitingTransaction(ctx context.Context, trxHash [32]byte) error {
+// MoveTransactionsFromAwaitingToTemporary removes transaction from the awaiting transaction storage.
+func (db DataBase) MoveTransactionsFromAwaitingToTemporary(ctx context.Context, trxHash [32]byte) error {
 	_, err := db.inner.Collection(transactionsAwaitingReceiverCollection).DeleteOne(ctx, bson.M{"transaction_hash": trxHash})
 	return err
 }
@@ -26,12 +26,11 @@ func (db DataBase) RemoveAwaitingTransaction(ctx context.Context, trxHash [32]by
 // WriteIssuerSignedTransactionForReceiver writes transaction to the awaiting transaction storage paired with given receiver.
 func (db DataBase) WriteIssuerSignedTransactionForReceiver(
 	ctx context.Context,
-	receiverAddr string,
 	trx *transaction.Transaction,
 ) error {
 	awaitingTrx := transaction.TransactionAwaitingReceiverSignature{
 		ID:              primitive.NewObjectID(),
-		ReceiverAddress: receiverAddr,
+		ReceiverAddress: trx.ReceiverAddress,
 		IssuerAddress:   trx.IssuerAddress,
 		Transaction:     *trx,
 		TransactionHash: trx.Hash,
@@ -79,22 +78,23 @@ func (db DataBase) ReadAwaitingTransactionsByIssuer(ctx context.Context, address
 }
 
 // MoveTransactionsFromTemporaryToPermanent moves transactions from temporary storage to permanent.
-func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context, hash [][32]byte) error {
+func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context, blockHash [32]byte, hashes [][32]byte) error {
 	var err error
 	var curs *mongo.Cursor
-	curs, err = db.inner.Collection(transactionsTemporaryCollection).Find(ctx, bson.M{"hash": bson.M{"$in": hash}})
+	curs, err = db.inner.Collection(transactionsTemporaryCollection).Find(ctx, bson.M{"hash": bson.M{"$in": hashes}})
 	if err != nil {
 		return err
 	}
-	deleteHashes := make([][32]byte, 0, len(hash))
+	deleteHashes := make([][32]byte, 0, len(hashes))
 	for curs.Next(ctx) {
 		var trx transaction.Transaction
-		if err := curs.Decode(&trx); err != nil {
-			return err
+		if er := curs.Decode(&trx); err != nil {
+			err = errors.Join(err, er)
+			continue
 		}
 		trx.ID = primitive.NewObjectID()
 		if _, er := db.inner.Collection(transactionsPermanentCollection).InsertOne(ctx, trx); err != nil {
-			err = errors.Join(er)
+			err = errors.Join(err, er)
 			continue
 		}
 
@@ -103,9 +103,12 @@ func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context,
 
 	if _, er := db.inner.Collection(transactionsTemporaryCollection).
 		DeleteMany(ctx, bson.M{"hash": bson.M{"$in": deleteHashes}}); err != nil {
-		err = errors.Join(er)
+		err = errors.Join(err, er)
 	}
 
+	if er := db.WriteTransactionsInBlock(ctx, blockHash, hashes); err != nil {
+		err = errors.Join(err, er)
+	}
 	return err
 }
 
