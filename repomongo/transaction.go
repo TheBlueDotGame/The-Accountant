@@ -10,13 +10,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-// WriteTemporaryTransaction writes transaction to the temporary storage.
-func (db DataBase) WriteTemporaryTransaction(ctx context.Context, trx *transaction.Transaction) error {
-	trx.ID = primitive.NewObjectID()
-	_, err := db.inner.Collection(transactionsTemporaryCollection).InsertOne(ctx, trx)
-	return err
-}
-
 // MoveTransactionsFromAwaitingToTemporary removes transaction from the awaiting transaction storage.
 func (db DataBase) MoveTransactionsFromAwaitingToTemporary(ctx context.Context, trxHash [32]byte) error {
 	_, err := db.inner.Collection(transactionsAwaitingReceiverCollection).DeleteOne(ctx, bson.M{"transaction_hash": trxHash})

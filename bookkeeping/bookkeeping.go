@@ -37,7 +37,6 @@ var (
 // TrxWriteReadMover provides transactions write, read and move methods.
 // It allows to access temporary, permanent and awaiting transactions.
 type TrxWriteReadMover interface {
-	WriteTemporaryTransaction(ctx context.Context, trx *transaction.Transaction) error
 	WriteIssuerSignedTransactionForReceiver(ctx context.Context, trx *transaction.Transaction) error
 	MoveTransactionsFromTemporaryToPermanent(ctx context.Context, blockHash [32]byte, hashes [][32]byte) error
 	MoveTransactionsFromAwaitingToTemporary(ctx context.Context, trxHash [32]byte) error
@@ -233,9 +232,6 @@ func (l *Ledger) WriteIssuerSignedTransactionForReceiver(
 // The candidate needs to be signed by the receiver later in the process  to be placed as a candidate in the blockchain.
 func (l *Ledger) WriteCandidateTransaction(ctx context.Context, trx *transaction.Transaction) error {
 	if err := l.validateFullyTransaction(ctx, trx); err != nil {
-		return err
-	}
-	if err := l.db.WriteTemporaryTransaction(ctx, trx); err != nil {
 		return err
 	}
 
