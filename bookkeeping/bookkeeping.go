@@ -339,7 +339,7 @@ func (l *Ledger) validatePartiallyTransaction(ctx context.Context, receiverAddr 
 		return ErrAddressNotExists
 	}
 
-	if err := l.vr.Verify(trx.Data, trx.IssuerSignature, trx.Hash, trx.IssuerAddress); err != nil {
+	if err := l.vr.Verify(trx.GeMessage(), trx.IssuerSignature, trx.Hash, trx.IssuerAddress); err != nil {
 		return err
 	}
 	return nil
@@ -362,11 +362,11 @@ func (l *Ledger) validateFullyTransaction(ctx context.Context, trx *transaction.
 		return ErrAddressNotExists
 	}
 
-	if err := l.vr.Verify(trx.Data, trx.IssuerSignature, trx.Hash, trx.IssuerAddress); err != nil {
+	if err := l.vr.Verify(trx.GeMessage(), trx.IssuerSignature, trx.Hash, trx.IssuerAddress); err != nil {
 		return err
 	}
 
-	if err := l.vr.Verify(trx.Data, trx.IssuerSignature, trx.Hash, trx.IssuerAddress); err != nil {
+	if err := l.vr.Verify(trx.GeMessage(), trx.IssuerSignature, trx.Hash, trx.IssuerAddress); err != nil {
 		return err
 	}
 

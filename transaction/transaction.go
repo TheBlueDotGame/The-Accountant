@@ -9,6 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+const minAddressLength = 50
 const ExpirationTimeInDays = 7 // transaction validity expiration time in days. TODO: move to config
 
 var (
@@ -16,6 +17,8 @@ var (
 	ErrExpiredTransaction               = errors.New("transaction has expired")
 	ErrTransactionHashIsInvalid         = errors.New("transaction hash is invalid")
 	ErrSignatureNotValidOrDataCorrupted = errors.New("signature not valid or data are corrupted")
+	ErrSubjectIsEmpty                   = errors.New("subject cannot be empty")
+	ErrAddressIsInvalid                 = errors.New("address is invalid")
 )
 
 // Signer provides signing and address methods.
@@ -26,7 +29,7 @@ type Signer interface {
 
 // Verifier provides signature verification method.
 type Verifier interface {
-	Verify(message, signature []byte, hash [32]byte, address string) error
+	Verify(message, signature []byte, hash [32]byte, issuer string) error
 }
 
 // Transaction contains transaction information, subject type, subject data, signatures and public keys.
@@ -49,8 +52,20 @@ type Transaction struct {
 }
 
 // New creates new transaction signed by the issuer.
-func New(subject string, message []byte, issuer Signer) (Transaction, error) {
+func New(subject string, data []byte, receiverAddress string, issuer Signer) (Transaction, error) {
+	if len(subject) == 0 {
+		return Transaction{}, ErrSubjectIsEmpty
+	}
+
+	if len(receiverAddress) < minAddressLength {
+		return Transaction{}, ErrAddressIsInvalid
+	}
+
 	createdAt := time.Now()
+
+	message := append([]byte(subject), data...)
+	message = append(message, []byte(issuer.Address())...)
+	message = append(message, []byte(receiverAddress)...)
 	b := make([]byte, 8)
 	binary.LittleEndian.PutUint64(b, uint64(createdAt.UnixMicro()))
 	message = append(message, b...)
@@ -61,9 +76,9 @@ func New(subject string, message []byte, issuer Signer) (Transaction, error) {
 		CreatedAt:         createdAt,
 		Hash:              hash,
 		IssuerAddress:     issuer.Address(),
-		ReceiverAddress:   "",
+		ReceiverAddress:   receiverAddress,
 		Subject:           subject,
-		Data:              message,
+		Data:              data,
 		IssuerSignature:   signature,
 		ReceiverSignature: []byte{},
 	}, nil
@@ -81,19 +96,34 @@ func (t *Transaction) Sign(receiver Signer, v Verifier) ([32]byte, error) {
 		return [32]byte{}, ErrExpiredTransaction
 	}
 
-	if err := v.Verify(t.Data, t.IssuerSignature, [32]byte(t.Hash), t.IssuerAddress); err != nil {
-		return [32]byte{}, errors.Join(ErrSignatureNotValidOrDataCorrupted, err)
-	}
-
-	hash, signature := receiver.Sign(t.Data)
+	message := append([]byte(t.Subject), t.Data...)
+	message = append(message, []byte(t.IssuerAddress)...)
+	message = append(message, []byte(receiver.Address())...)
+	b := make([]byte, 8)
+	binary.LittleEndian.PutUint64(b, uint64(t.CreatedAt.UnixMicro()))
+	message = append(message, b...)
+	hash, signature := receiver.Sign(message)
 
 	if !bytes.Equal(hash[:], t.Hash[:]) {
 		return [32]byte{}, ErrTransactionHashIsInvalid
 	}
 
-	t.ReceiverAddress = receiver.Address()
+	if err := v.Verify(message, t.IssuerSignature, [32]byte(t.Hash), t.IssuerAddress); err != nil {
+		return [32]byte{}, errors.Join(ErrSignatureNotValidOrDataCorrupted, err)
+	}
+
 	t.ReceiverSignature = signature
 	return hash, nil
+}
+
+// GeMessage returns message used for signature validation.
+func (t *Transaction) GeMessage() []byte {
+	message := append([]byte(t.Subject), t.Data...)
+	message = append(message, []byte(t.IssuerAddress)...)
+	message = append(message, []byte(t.ReceiverAddress)...)
+	b := make([]byte, 8)
+	binary.LittleEndian.PutUint64(b, uint64(t.CreatedAt.UnixMicro()))
+	return append(message, b...)
 }
 
 func addTime(t time.Time) time.Time {

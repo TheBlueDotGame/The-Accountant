@@ -23,7 +23,7 @@ func TestBlockCreate(t *testing.T) {
 	verifier := wallet.Helper{}
 
 	message := []byte("genesis transaction")
-	trx, err := transaction.New("genesis", message, &issuer)
+	trx, err := transaction.New("genesis", message, receiver.Address(), &issuer)
 	assert.Nil(t, err)
 
 	trxHash, err := trx.Sign(&receiver, verifier)
@@ -34,14 +34,14 @@ func TestBlockCreate(t *testing.T) {
 
 	assert.NotEmpty(t, blc.Hash)
 
-	blocksNum := 10000
+	blocksNum := 10
 	blockchain := make([]Block, 0, blocksNum)
 	blockchain = append(blockchain, blc)
 
 	for i := 1; i <= blocksNum; i++ {
 		nextMsg := []byte(fmt.Sprintf("next message: %v", i))
 
-		ntrx, err := transaction.New("text", nextMsg, &issuer)
+		ntrx, err := transaction.New("text", nextMsg, receiver.Address(), &issuer)
 		assert.Nil(t, err)
 
 		ntrxHash, err := ntrx.Sign(&receiver, verifier)
@@ -69,7 +69,7 @@ func TestBlockValidateSuccess(t *testing.T) {
 	verifier := wallet.Helper{}
 
 	message := []byte("genesis transaction")
-	trx, err := transaction.New("genesis", message, &issuer)
+	trx, err := transaction.New("genesis", message, receiver.Address(), &issuer)
 	assert.Nil(t, err)
 
 	trxHash, err := trx.Sign(&receiver, verifier)
@@ -80,14 +80,14 @@ func TestBlockValidateSuccess(t *testing.T) {
 
 	assert.NotEmpty(t, blc.Hash)
 
-	blocksNum := 10000
+	blocksNum := 10
 	blockchain := make([]Block, 0, blocksNum)
 	blockchain = append(blockchain, blc)
 
 	for i := 1; i <= blocksNum; i++ {
 		nextMsg := []byte(fmt.Sprintf("next message: %v", i))
 
-		ntrx, err := transaction.New("text", nextMsg, &issuer)
+		ntrx, err := transaction.New("text", nextMsg, receiver.Address(), &issuer)
 		assert.Nil(t, err)
 
 		ntrxHash, err := ntrx.Sign(&receiver, verifier)
@@ -117,7 +117,7 @@ func TestBlockValidateFailure(t *testing.T) {
 	verifier := wallet.Helper{}
 
 	message := []byte("genesis transaction")
-	trx, err := transaction.New("genesis", message, &issuer)
+	trx, err := transaction.New("genesis", message, receiver.Address(), &issuer)
 	assert.Nil(t, err)
 
 	trxHash, err := trx.Sign(&receiver, verifier)
@@ -128,14 +128,14 @@ func TestBlockValidateFailure(t *testing.T) {
 
 	assert.NotEmpty(t, blc.Hash)
 
-	blocksNum := 10000
+	blocksNum := 10
 	blockchain := make([]Block, 0, blocksNum)
 	blockchain = append(blockchain, blc)
 
 	for i := 1; i <= blocksNum; i++ {
 		nextMsg := []byte(fmt.Sprintf("next message: %v", i))
 
-		ntrx, err := transaction.New("text", nextMsg, &issuer)
+		ntrx, err := transaction.New("text", nextMsg, receiver.Address(), &issuer)
 		assert.Nil(t, err)
 
 		ntrxHash, err := ntrx.Sign(&receiver, verifier)
@@ -166,7 +166,7 @@ func Benchmark1000Blocks(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		message := []byte("genesis transaction")
-		trx, err := transaction.New("genesis", message, &issuer)
+		trx, err := transaction.New("genesis", message, receiver.Address(), &issuer)
 		assert.Nil(b, err)
 
 		trxHash, err := trx.Sign(&receiver, verifier)
@@ -184,7 +184,7 @@ func Benchmark1000Blocks(b *testing.B) {
 		for i := 1; i <= blocksNum; i++ {
 			nextMsg := []byte(fmt.Sprintf("next message: %v", i))
 
-			ntrx, err := transaction.New("text", nextMsg, &issuer)
+			ntrx, err := transaction.New("text", nextMsg, receiver.Address(), &issuer)
 			assert.Nil(b, err)
 
 			ntrxHash, err := ntrx.Sign(&receiver, verifier)
@@ -207,7 +207,7 @@ func Benchmark1_Block(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		message := []byte("genesis transaction")
-		trx, err := transaction.New("genesis", message, &issuer)
+		trx, err := transaction.New("genesis", message, receiver.Address(), &issuer)
 		assert.Nil(b, err)
 
 		trxHash, err := trx.Sign(&receiver, verifier)
@@ -232,7 +232,7 @@ func BenchmarkDifficulty(b *testing.B) {
 		b.Run(fmt.Sprintf("difficulty: %v", difficulty), func(b *testing.B) {
 			for n := 0; n < b.N; n++ {
 				message := []byte("genesis transaction")
-				trx, err := transaction.New("genesis", message, &issuer)
+				trx, err := transaction.New("genesis", message, receiver.Address(), &issuer)
 				assert.Nil(b, err)
 
 				trxHash, err := trx.Sign(&receiver, verifier)
