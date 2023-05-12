@@ -104,7 +104,7 @@ func (s *server) propose(c *fiber.Ctx) error {
 		return fiber.ErrBadRequest
 	}
 
-	if err := s.bookkeeping.WriteIssuerSignedTransactionForReceiver(c.Context(), req.ReceiverAddr, &req.Transaction); err != nil {
+	if err := s.bookkeeping.WriteIssuerSignedTransactionForReceiver(c.Context(), &req.Transaction); err != nil {
 		s.log.Error(fmt.Sprintf("propose endpoint, failed to write transaction: %s", err.Error()))
 		return c.JSON(TransactionConfirmProposeResponse{
 			Success: false,

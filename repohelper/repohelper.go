@@ -46,14 +46,13 @@ type TokenWriteCheckInvalidator interface {
 
 // TransactionOperator abstracts transaction operations.
 type TransactionOperator interface {
-	WriteTransactionsInBlock(ctx context.Context, blockHash [32]byte, trxHash [][32]byte) error
 	FindTransactionInBlockHash(ctx context.Context, trxHash [32]byte) ([32]byte, error)
 	WriteTemporaryTransaction(ctx context.Context, trx *transaction.Transaction) error
-	RemoveAwaitingTransaction(ctx context.Context, trxHash [32]byte) error
-	WriteIssuerSignedTransactionForReceiver(ctx context.Context, receiverAddr string, trx *transaction.Transaction) error
+	MoveTransactionsFromAwaitingToTemporary(ctx context.Context, trxHash [32]byte) error
+	WriteIssuerSignedTransactionForReceiver(ctx context.Context, trx *transaction.Transaction) error
 	ReadAwaitingTransactionsByReceiver(ctx context.Context, address string) ([]transaction.Transaction, error)
 	ReadAwaitingTransactionsByIssuer(ctx context.Context, address string) ([]transaction.Transaction, error)
-	MoveTransactionsFromTemporaryToPermanent(ctx context.Context, hash [][32]byte) error
+	MoveTransactionsFromTemporaryToPermanent(ctx context.Context, blockHash [32]byte, hashes [][32]byte) error
 	ReadTemporaryTransactions(ctx context.Context) ([]transaction.Transaction, error)
 }
 

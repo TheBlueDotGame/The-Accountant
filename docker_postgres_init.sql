@@ -16,7 +16,8 @@ CREATE TABLE IF NOT EXISTS addresses (
 
 CREATE INDEX address_public_key ON addresses USING HASH (public_key);
 
-CREATE TABLE IF NOT EXISTS transactionsPermanent (
+CREATE TYPE transaction_status AS ENUM ('awaited', 'temporary', 'permanent', 'rejected');
+CREATE TABLE IF NOT EXISTS transactions(
    id serial PRIMARY KEY,
    created_at BIGINT NOT NULL,
    hash BYTEA UNIQUE NOT NULL,
@@ -25,43 +26,17 @@ CREATE TABLE IF NOT EXISTS transactionsPermanent (
    subject VARCHAR ( 100 ) NOT NULL,
    data BYTEA,
    issuer_signature BYTEA NOT NULL,
-   receiver_signature BYTEA NOT NULL
+   receiver_signature BYTEA NOT NULL,
+   status transaction_status NOT NULL,
+   block_hash BYTEA
 );
 
-CREATE INDEX transaction_permanent_hash ON transactionsPermanent USING HASH (hash);
-CREATE INDEX transaction_permanent_issuer_address ON transactionsPermanent USING HASH (issuer_address);
-CREATE INDEX transaction_permanent_receiver_address ON transactionsPermanent USING HASH (receiver_address);
-CREATE INDEX transaction_permanent_created_at ON transactionsPermanent USING BTREE (created_at);
-
-CREATE TABLE IF NOT EXISTS transactionsTemporary (
-   id serial PRIMARY KEY,
-   created_at BIGINT NOT NULL,
-   hash BYTEA UNIQUE NOT NULL,
-   issuer_address VARCHAR ( 64 ) NOT NULL,
-   receiver_address VARCHAR ( 64 ) NOT NULL,
-   subject VARCHAR ( 100 ) NOT NULL,
-   data BYTEA,
-   issuer_signature BYTEA NOT NULL,
-   receiver_signature BYTEA
-);
-
-CREATE INDEX transaction_temporary_hash ON transactionsTemporary USING HASH (hash);
-CREATE INDEX transaction_temporary_created_at ON transactionsTemporary USING BTREE (created_at);
-
-CREATE TABLE IF NOT EXISTS transactionsAwaitingReceiver (
-   id serial PRIMARY KEY,
-   created_at BIGINT NOT NULL,
-   hash BYTEA UNIQUE NOT NULL,
-   issuer_address VARCHAR ( 64 ) NOT NULL,
-   receiver_address VARCHAR ( 64 ) NOT NULL,
-   subject VARCHAR ( 100 ) NOT NULL,
-   data BYTEA,
-   issuer_signature BYTEA NOT NULL,
-   receiver_signature BYTEA
-);
-
-CREATE INDEX transaction_awaiting_issuer_address ON transactionsAwaitingReceiver USING HASH (issuer_address);
-CREATE INDEX transaction_awaiting_receiver_address ON transactionsAwaitingReceiver USING HASH (receiver_address);
+CREATE INDEX transaction_hash ON transactions USING HASH (hash);
+CREATE INDEX transaction_status ON transactions USING HASH (status);
+CREATE INDEX transaction_permanent_issuer_address_state ON transactions USING BTREE (issuer_address, status);
+CREATE INDEX transaction_permanent_receiver_address_state ON transactions USING BTREE (receiver_address, status);
+CREATE INDEX transaction_permanent_issuer_address_created_at ON transactions USING BTREE (issuer_address, created_at);
+CREATE INDEX transaction_permanent_receiver_address_created_at ON transactions USING BTREE (receiver_address, created_at);
 
 CREATE TABLE IF NOT EXISTS blocks (
    id serial PRIMARY KEY,
@@ -78,15 +53,6 @@ CREATE INDEX block_index ON blocks USING HASH (index);
 CREATE INDEX block_hash ON blocks USING HASH (hash);
 CREATE INDEX block_prev_hash ON blocks USING HASH (prev_hash);
 CREATE INDEX block_created_at ON blocks USING BTREE (timestamp);
-
-CREATE TABLE IF NOT EXISTS transactionsInBlock (
-   id serial PRIMARY KEY,
-   block_hash BYTEA NOT NULL,
-   transaction_hash BYTEA UNIQUE NOT NULL,
-   FOREIGN KEY (block_hash) REFERENCES blocks (hash)
-);
-
-CREATE INDEX transaction_hash_in_block ON transactionsInBlock USING HASH (transaction_hash);
 
 CREATE TABLE IF NOT EXISTS tokens (
    id serial PRIMARY KEY,
@@ -106,6 +72,7 @@ CREATE TABLE IF NOT EXISTS logs (
 );
 
 CREATE INDEX logs_created_at ON logs USING BTREE (created_at);
+CREATE INDEX logs_level_created_at ON logs USING BTREE (level, created_at);
 
 CREATE TABLE IF NOT EXISTS validatorStatus (
    id serial PRIMARY KEY,

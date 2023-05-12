@@ -92,7 +92,7 @@ type Bookkeeper interface {
 	Verifier
 	Run(ctx context.Context)
 	WriteCandidateTransaction(ctx context.Context, tx *transaction.Transaction) error
-	WriteIssuerSignedTransactionForReceiver(ctx context.Context, receiverAddr string, trx *transaction.Transaction) error
+	WriteIssuerSignedTransactionForReceiver(ctx context.Context, trx *transaction.Transaction) error
 }
 
 // RandomDataProvideValidator provides random binary data for signing to prove identity and

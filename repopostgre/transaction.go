@@ -9,49 +9,56 @@ import (
 	"github.com/bartossh/Computantis/transaction"
 )
 
+const (
+	awaited   = "awaited"
+	temporary = "temporary"
+	permanent = "permanent"
+	rejected  = "rejected"
+)
+
 // WriteTemporaryTransaction writes transaction to the temporary storage.
 func (db DataBase) WriteTemporaryTransaction(ctx context.Context, trx *transaction.Transaction) error {
 	timestamp := trx.CreatedAt.UnixMicro()
 	_, err := db.inner.ExecContext(
 		ctx,
 		`INSERT INTO 
-			transactionsTemporary(
-				created_at, hash, issuer_address, receiver_address, subject, data, issuer_signature, receiver_signature
-			) VALUES($1, $2, $3, $4, $5, $6, $7, $8)`,
+			transactions(
+				created_at, hash, issuer_address, receiver_address, subject, data, issuer_signature, receiver_signature, status, block_hash
+			) VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
 		timestamp, trx.Hash[:], trx.IssuerAddress,
 		trx.ReceiverAddress, trx.Subject, trx.Data,
-		trx.IssuerSignature, trx.ReceiverSignature)
+		trx.IssuerSignature, trx.ReceiverSignature, temporary, []byte{})
 	if err != nil {
 		errors.Join(ErrInsertFailed, err)
 	}
 	return nil
 }
 
-// RemoveAwaitingTransaction removes transaction from the awaiting transaction storage.
-func (db DataBase) RemoveAwaitingTransaction(ctx context.Context, trxHash [32]byte) error {
-	_, err := db.inner.ExecContext(ctx, "DELETE FROM transactionsAwaitingReceiver WHERE hash = $1", trxHash[:])
+// MoveTransactionsFromAwaitingToTemporary moves awaiting transaction marking it as temporary.
+func (db DataBase) MoveTransactionsFromAwaitingToTemporary(ctx context.Context, trxHash [32]byte) error {
+	_, err := db.inner.ExecContext(ctx, "UPDATE transactions SET status = $1 WHERE hash = $2", temporary, trxHash[:])
 	if err != nil {
 		errors.Join(ErrRemoveFailed, err)
 	}
 	return nil
 }
 
-// WriteIssuerSignedTransactionForReceiver writes transaction to the awaiting transaction storage paired with given receiver.
+// WriteIssuerSignedTransactionForReceiver writes transaction to the storage marking it as awaiting.
 func (db DataBase) WriteIssuerSignedTransactionForReceiver(
 	ctx context.Context,
-	receiverAddr string,
 	trx *transaction.Transaction,
 ) error {
 	timestamp := trx.CreatedAt.UnixMicro()
 	_, err := db.inner.ExecContext(
 		ctx,
 		`INSERT INTO 
-			transactionsAwaitingReceiver(
-				created_at, hash, issuer_address, receiver_address, subject, data, issuer_signature, receiver_signature
-			) VALUES($1, $2, $3, $4, $5, $6, $7, $8)`,
+			transactions(
+				created_at, hash, issuer_address, receiver_address, subject, data, issuer_signature, receiver_signature, status, block_hash
+			) VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
 		timestamp, trx.Hash[:], trx.IssuerAddress,
-		receiverAddr, trx.Subject, trx.Data,
-		trx.IssuerSignature, trx.ReceiverSignature)
+		trx.ReceiverAddress, trx.Subject, trx.Data,
+		trx.IssuerSignature, trx.ReceiverSignature,
+		awaited, []byte{})
 	if err != nil {
 		return errors.Join(ErrInsertFailed, err)
 	}
@@ -60,7 +67,9 @@ func (db DataBase) WriteIssuerSignedTransactionForReceiver(
 
 // ReadAwaitingTransactionsByReceiver reads all transactions paired with given receiver address.
 func (db DataBase) ReadAwaitingTransactionsByReceiver(ctx context.Context, address string) ([]transaction.Transaction, error) {
-	rows, err := db.inner.QueryContext(ctx, "SELECT * FROM transactionsAwaitingReceiver WHERE receiver_address = $1", address)
+	rows, err := db.inner.QueryContext(ctx,
+		`SELECT id, created_at, hash, issuer_address, receiver_address, subject, data, issuer_signature, receiver_signature 
+			FROM transactions WHERE receiver_address = $1 AND status = $2`, address, awaited)
 	if err != nil {
 		return nil, errors.Join(ErrSelectFailed, err)
 	}
@@ -85,9 +94,11 @@ func (db DataBase) ReadAwaitingTransactionsByReceiver(ctx context.Context, addre
 	return trxsAwaiting, nil
 }
 
-// RemoveAwaitingTransaction removes transaction from the awaiting transaction storage.
+// ReadAwaitingTransactionsByIssuer  reads all transactions paired with given issuer address.
 func (db DataBase) ReadAwaitingTransactionsByIssuer(ctx context.Context, address string) ([]transaction.Transaction, error) {
-	rows, err := db.inner.QueryContext(ctx, "SELECT * FROM transactionsAwaitingReceiver WHERE issuer_address = $1", address)
+	rows, err := db.inner.QueryContext(ctx,
+		`SELECT id, created_at, hash, issuer_address, receiver_address, subject, data, issuer_signature, receiver_signature 
+			FROM transactions WHERE issuer_address = $1 AND status = $2`, address, awaited)
 	if err != nil {
 		return nil, errors.Join(ErrSelectFailed, err)
 	}
@@ -112,8 +123,8 @@ func (db DataBase) ReadAwaitingTransactionsByIssuer(ctx context.Context, address
 	return trxsAwaiting, nil
 }
 
-// MoveTransactionsFromTemporaryToPermanent moves transactions from temporary storage to permanent storage.
-func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context, hash [][32]byte) error {
+// MoveTransactionsFromTemporaryToPermanent moves transactions by marking transactions with matching hash to be permanent.
+func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context, blockHash [32]byte, hashes [][32]byte) error {
 	var err error
 	var tx *sql.Tx
 	tx, err = db.inner.BeginTx(ctx, nil)
@@ -126,33 +137,11 @@ func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context,
 		}
 	}()
 
-	for _, h := range hash {
-		var trx transaction.Transaction
-		var timestamp int64
-		trxHash := make([]byte, 0, 32)
-		err = tx.QueryRowContext(ctx, "SELECT * FROM transactionsTemporary WHERE hash = $1", h[:]).
-			Scan(
-				&trx.ID, &timestamp, &trxHash, &trx.IssuerAddress, &trx.ReceiverAddress,
-				&trx.Subject, &trx.Data, &trx.IssuerSignature, &trx.ReceiverSignature,
-			)
-		if err != nil {
-			return errors.Join(ErrSelectFailed, err)
-		}
+	for _, h := range hashes {
 		_, err := tx.ExecContext(
-			ctx,
-			`INSERT INTO 
-				transactionsPermanent(
-					created_at, hash, issuer_address, receiver_address, subject, data, issuer_signature, receiver_signature
-				) VALUES($1, $2, $3, $4, $5, $6, $7, $8)`,
-			timestamp, trxHash, trx.IssuerAddress,
-			trx.ReceiverAddress, trx.Subject, trx.Data,
-			trx.IssuerSignature, trx.ReceiverSignature)
+			ctx, "UPDATE transactions SET status = $1, block_hash = $2 WHERE hash = $3", permanent, blockHash[:], h[:])
 		if err != nil {
 			return errors.Join(ErrInsertFailed, err)
-		}
-		_, err = tx.ExecContext(ctx, "DELETE FROM transactionsTemporary WHERE hash = $1", h[:])
-		if err != nil {
-			errors.Join(ErrRemoveFailed, err)
 		}
 	}
 
@@ -163,9 +152,11 @@ func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context,
 	return nil
 }
 
-// ReadTemporaryTransactions reads all transactions from the temporary storage.
+// ReadTemporaryTransactions reads all transactions that are marked as temporary.
 func (db DataBase) ReadTemporaryTransactions(ctx context.Context) ([]transaction.Transaction, error) {
-	rows, err := db.inner.QueryContext(ctx, "SELECT * FROM transactionsTemporary")
+	rows, err := db.inner.QueryContext(ctx,
+		`SELECT id, created_at, hash, issuer_address, receiver_address, subject, data, issuer_signature, receiver_signature 
+			FROM transactions WHERE status = $1`, temporary)
 	if err != nil {
 		return nil, errors.Join(ErrSelectFailed, err)
 	}
@@ -188,4 +179,17 @@ func (db DataBase) ReadTemporaryTransactions(ctx context.Context) ([]transaction
 		trxsAwaiting = append(trxsAwaiting, trx)
 	}
 	return trxsAwaiting, nil
+}
+
+// FindTransactionInBlockHash returns block hash in to which transaction with given hash was added.
+// If transaction is not yet added to any block, empty hash is returned.
+func (db DataBase) FindTransactionInBlockHash(ctx context.Context, trxHash [32]byte) ([32]byte, error) {
+	blockHash := make([]byte, 0, 32)
+	if err := db.inner.QueryRowContext(ctx, "SELECT block_hash FROM transactions WHERE transaction_hash = $1", trxHash[:]).
+		Scan(&blockHash); err != nil {
+		return [32]byte{}, err
+	}
+	var bh [32]byte
+	copy(bh[:], blockHash)
+	return bh, nil
 }

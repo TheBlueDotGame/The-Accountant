@@ -38,9 +38,9 @@ var (
 // It allows to access temporary, permanent and awaiting transactions.
 type TrxWriteReadMover interface {
 	WriteTemporaryTransaction(ctx context.Context, trx *transaction.Transaction) error
-	WriteIssuerSignedTransactionForReceiver(ctx context.Context, receiverAddr string, trx *transaction.Transaction) error
-	MoveTransactionsFromTemporaryToPermanent(ctx context.Context, hash [][32]byte) error
-	RemoveAwaitingTransaction(ctx context.Context, trxHash [32]byte) error
+	WriteIssuerSignedTransactionForReceiver(ctx context.Context, trx *transaction.Transaction) error
+	MoveTransactionsFromTemporaryToPermanent(ctx context.Context, blockHash [32]byte, hashes [][32]byte) error
+	MoveTransactionsFromAwaitingToTemporary(ctx context.Context, trxHash [32]byte) error
 	ReadAwaitingTransactionsByReceiver(ctx context.Context, address string) ([]transaction.Transaction, error)
 	ReadAwaitingTransactionsByIssuer(ctx context.Context, address string) ([]transaction.Transaction, error)
 	ReadTemporaryTransactions(ctx context.Context) ([]transaction.Transaction, error)
@@ -76,7 +76,6 @@ type SignatureVerifier interface {
 
 // BlockFindWriter provides block find and write method.
 type BlockFindWriter interface {
-	WriteTransactionsInBlock(ctx context.Context, blockHash [32]byte, trxHash [][32]byte) error
 	FindTransactionInBlockHash(ctx context.Context, trxHash [32]byte) ([32]byte, error)
 }
 
@@ -215,14 +214,13 @@ func (l *Ledger) Run(ctx context.Context) {
 // WriteIssuerSignedTransactionForReceiver validates issuer signature and writes a transaction to the repository for receiver.
 func (l *Ledger) WriteIssuerSignedTransactionForReceiver(
 	ctx context.Context,
-	receiverAddr string,
 	trx *transaction.Transaction,
 ) error {
-	if err := l.validatePartiallyTransaction(ctx, receiverAddr, trx); err != nil {
+	if err := l.validatePartiallyTransaction(ctx, trx); err != nil {
 		return err
 	}
 
-	if err := l.db.WriteIssuerSignedTransactionForReceiver(ctx, receiverAddr, trx); err != nil {
+	if err := l.db.WriteIssuerSignedTransactionForReceiver(ctx, trx); err != nil {
 		return err
 	}
 
@@ -241,7 +239,7 @@ func (l *Ledger) WriteCandidateTransaction(ctx context.Context, trx *transaction
 		return err
 	}
 
-	if err := l.db.RemoveAwaitingTransaction(ctx, trx.Hash); err != nil {
+	if err := l.db.MoveTransactionsFromAwaitingToTemporary(ctx, trx.Hash); err != nil {
 		return err
 	}
 
@@ -285,12 +283,7 @@ func (l *Ledger) forge(ctx context.Context) {
 			return
 		}
 
-		if err := l.tf.WriteTransactionsInBlock(ctx, blcHash, hashes); err != nil {
-			msg := fmt.Sprintf("error while writing transactions in block [%v]: %s", blcHash, err.Error())
-			log.Fatal(msg)
-		}
-
-		if err := l.db.MoveTransactionsFromTemporaryToPermanent(ctx, hashes); err != nil {
+		if err := l.db.MoveTransactionsFromTemporaryToPermanent(ctx, blcHash, hashes); err != nil {
 			msg := fmt.Sprintf("error while moving transactions from temporary to permanent: %s", err.Error())
 			log.Fatal(msg)
 		}
@@ -322,7 +315,7 @@ func (l *Ledger) savePublishNewBlock(ctx context.Context) ([32]byte, error) {
 	return nb.Hash, nil
 }
 
-func (l *Ledger) validatePartiallyTransaction(ctx context.Context, receiverAddr string, trx *transaction.Transaction) error {
+func (l *Ledger) validatePartiallyTransaction(ctx context.Context, trx *transaction.Transaction) error {
 	exists, err := l.ac.CheckAddressExists(ctx, trx.IssuerAddress)
 	if err != nil {
 		return err
@@ -331,7 +324,7 @@ func (l *Ledger) validatePartiallyTransaction(ctx context.Context, receiverAddr 
 		return ErrAddressNotExists
 	}
 
-	exists, err = l.ac.CheckAddressExists(ctx, receiverAddr)
+	exists, err = l.ac.CheckAddressExists(ctx, trx.ReceiverAddress)
 	if err != nil {
 		return err
 	}
