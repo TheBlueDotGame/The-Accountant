@@ -16,24 +16,6 @@ const (
 	rejected  = "rejected"
 )
 
-// WriteTemporaryTransaction writes transaction to the temporary storage.
-func (db DataBase) WriteTemporaryTransaction(ctx context.Context, trx *transaction.Transaction) error {
-	timestamp := trx.CreatedAt.UnixMicro()
-	_, err := db.inner.ExecContext(
-		ctx,
-		`INSERT INTO 
-			transactions(
-				created_at, hash, issuer_address, receiver_address, subject, data, issuer_signature, receiver_signature, status, block_hash
-			) VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-		timestamp, trx.Hash[:], trx.IssuerAddress,
-		trx.ReceiverAddress, trx.Subject, trx.Data,
-		trx.IssuerSignature, trx.ReceiverSignature, temporary, []byte{})
-	if err != nil {
-		errors.Join(ErrInsertFailed, err)
-	}
-	return nil
-}
-
 // MoveTransactionsFromAwaitingToTemporary moves awaiting transaction marking it as temporary.
 func (db DataBase) MoveTransactionsFromAwaitingToTemporary(ctx context.Context, trxHash [32]byte) error {
 	_, err := db.inner.ExecContext(ctx, "UPDATE transactions SET status = $1 WHERE hash = $2", temporary, trxHash[:])
@@ -123,7 +105,8 @@ func (db DataBase) ReadAwaitingTransactionsByIssuer(ctx context.Context, address
 	return trxsAwaiting, nil
 }
 
-// MoveTransactionsFromTemporaryToPermanent moves transactions by marking transactions with matching hash to be permanent.
+// MoveTransactionsFromTemporaryToPermanent moves transactions by marking transactions with matching hash to be permanent
+// and sets block hash field to referenced block hash.
 func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context, blockHash [32]byte, hashes [][32]byte) error {
 	var err error
 	var tx *sql.Tx
