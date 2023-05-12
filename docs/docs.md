@@ -2525,7 +2525,8 @@ import "github.com/bartossh/Computantis/transaction"
 - [Variables](<#variables>)
 - [type Signer](<#type-signer>)
 - [type Transaction](<#type-transaction>)
-  - [func New(subject string, message []byte, issuer Signer) (Transaction, error)](<#func-new>)
+  - [func New(subject string, data []byte, receiverAddress string, issuer Signer) (Transaction, error)](<#func-new>)
+  - [func (t *Transaction) GeMessage() []byte](<#func-transaction-gemessage>)
   - [func (t *Transaction) Sign(receiver Signer, v Verifier) ([32]byte, error)](<#func-transaction-sign>)
 - [type TransactionAwaitingReceiverSignature](<#type-transactionawaitingreceiversignature>)
 - [type TransactionInBlock](<#type-transactioninblock>)
@@ -2546,10 +2547,12 @@ var (
     ErrExpiredTransaction               = errors.New("transaction has expired")
     ErrTransactionHashIsInvalid         = errors.New("transaction hash is invalid")
     ErrSignatureNotValidOrDataCorrupted = errors.New("signature not valid or data are corrupted")
+    ErrSubjectIsEmpty                   = errors.New("subject cannot be empty")
+    ErrAddressIsInvalid                 = errors.New("address is invalid")
 )
 ```
 
-## type [Signer](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L22-L25>)
+## type [Signer](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L25-L28>)
 
 Signer provides signing and address methods.
 
@@ -2560,7 +2563,7 @@ type Signer interface {
 }
 ```
 
-## type [Transaction](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L39-L49>)
+## type [Transaction](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L42-L52>)
 
 Transaction contains transaction information, subject type, subject data, signatures and public keys. Transaction is valid for a week from being issued. Subject represents an information how to read the Data and / or how to decode them. Data is not validated by the computantis server, Ladger ior block. What is stored in Data is not important for the whole Computantis system. It is only important that the data are signed by the issuer and the receiver and both parties agreed on them.
 
@@ -2578,15 +2581,23 @@ type Transaction struct {
 }
 ```
 
-### func [New](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L52>)
+### func [New](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L55>)
 
 ```go
-func New(subject string, message []byte, issuer Signer) (Transaction, error)
+func New(subject string, data []byte, receiverAddress string, issuer Signer) (Transaction, error)
 ```
 
 New creates new transaction signed by the issuer.
 
-### func \(\*Transaction\) [Sign](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L73>)
+### func \(\*Transaction\) [GeMessage](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L120>)
+
+```go
+func (t *Transaction) GeMessage() []byte
+```
+
+GeMessage returns message used for signature validation.
+
+### func \(\*Transaction\) [Sign](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L88>)
 
 ```go
 func (t *Transaction) Sign(receiver Signer, v Verifier) ([32]byte, error)
@@ -2620,13 +2631,13 @@ type TransactionInBlock struct {
 }
 ```
 
-## type [Verifier](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L28-L30>)
+## type [Verifier](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L31-L33>)
 
 Verifier provides signature verification method.
 
 ```go
 type Verifier interface {
-    Verify(message, signature []byte, hash [32]byte, address string) error
+    Verify(message, signature []byte, hash [32]byte, issuer string) error
 }
 ```
 
@@ -5546,7 +5557,8 @@ import "github.com/bartossh/Computantis/transaction"
 - [Variables](<#variables>)
 - [type Signer](<#type-signer>)
 - [type Transaction](<#type-transaction>)
-  - [func New(subject string, message []byte, issuer Signer) (Transaction, error)](<#func-new>)
+  - [func New(subject string, data []byte, receiverAddress string, issuer Signer) (Transaction, error)](<#func-new>)
+  - [func (t *Transaction) GeMessage() []byte](<#func-transaction-gemessage>)
   - [func (t *Transaction) Sign(receiver Signer, v Verifier) ([32]byte, error)](<#func-transaction-sign>)
 - [type TransactionAwaitingReceiverSignature](<#type-transactionawaitingreceiversignature>)
 - [type TransactionInBlock](<#type-transactioninblock>)
@@ -5567,10 +5579,12 @@ var (
     ErrExpiredTransaction               = errors.New("transaction has expired")
     ErrTransactionHashIsInvalid         = errors.New("transaction hash is invalid")
     ErrSignatureNotValidOrDataCorrupted = errors.New("signature not valid or data are corrupted")
+    ErrSubjectIsEmpty                   = errors.New("subject cannot be empty")
+    ErrAddressIsInvalid                 = errors.New("address is invalid")
 )
 ```
 
-## type [Signer](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L22-L25>)
+## type [Signer](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L25-L28>)
 
 Signer provides signing and address methods.
 
@@ -5581,7 +5595,7 @@ type Signer interface {
 }
 ```
 
-## type [Transaction](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L39-L49>)
+## type [Transaction](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L42-L52>)
 
 Transaction contains transaction information, subject type, subject data, signatures and public keys. Transaction is valid for a week from being issued. Subject represents an information how to read the Data and / or how to decode them. Data is not validated by the computantis server, Ladger ior block. What is stored in Data is not important for the whole Computantis system. It is only important that the data are signed by the issuer and the receiver and both parties agreed on them.
 
@@ -5599,15 +5613,23 @@ type Transaction struct {
 }
 ```
 
-### func [New](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L52>)
+### func [New](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L55>)
 
 ```go
-func New(subject string, message []byte, issuer Signer) (Transaction, error)
+func New(subject string, data []byte, receiverAddress string, issuer Signer) (Transaction, error)
 ```
 
 New creates new transaction signed by the issuer.
 
-### func \(\*Transaction\) [Sign](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L73>)
+### func \(\*Transaction\) [GeMessage](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L120>)
+
+```go
+func (t *Transaction) GeMessage() []byte
+```
+
+GeMessage returns message used for signature validation.
+
+### func \(\*Transaction\) [Sign](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L88>)
 
 ```go
 func (t *Transaction) Sign(receiver Signer, v Verifier) ([32]byte, error)
@@ -5641,13 +5663,13 @@ type TransactionInBlock struct {
 }
 ```
 
-## type [Verifier](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L28-L30>)
+## type [Verifier](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L31-L33>)
 
 Verifier provides signature verification method.
 
 ```go
 type Verifier interface {
-    Verify(message, signature []byte, hash [32]byte, address string) error
+    Verify(message, signature []byte, hash [32]byte, issuer string) error
 }
 ```
 

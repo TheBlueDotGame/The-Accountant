@@ -155,7 +155,7 @@ func (c *Client) ProposeTransaction(receiverAddr string, subject string, data []
 		return ErrWalletNotReady
 	}
 
-	trx, err := transaction.New(subject, data, &c.w)
+	trx, err := transaction.New(subject, data, receiverAddr, &c.w)
 	if err != nil {
 		return errors.Join(ErrSigningFailed, err)
 	}
