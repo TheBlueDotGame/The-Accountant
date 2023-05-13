@@ -65,16 +65,23 @@ type Register interface {
 	CountRegistered(ctx context.Context) (int, error)
 }
 
+type AddressReaderWriterModifier interface {
+	FindAddress(ctx context.Context, search string, limit int) ([]string, error)
+	CheckAddressExists(ctx context.Context, address string) (bool, error)
+	WriteAddress(ctx context.Context, address string) error
+	IsAddressSuspended(ctx context.Context, addr string) (bool, error)
+	IsAddressStandard(ctx context.Context, addr string) (bool, error)
+	IsAddressTrusted(ctx context.Context, addr string) (bool, error)
+	IsAddressAdmin(ctx context.Context, addr string) (bool, error)
+}
+
 // Repository is the interface that wraps the basic CRUD and Search methods.
 // Repository should be properly indexed to allow for transaction and block hash.
 // as well as address public keys to be and unique and the hash lookup should be fast.
 // Repository holds the blocks and transaction that are part of the blockchain.
 type Repository interface {
 	Register
-	RunMigration(ctx context.Context) error
-	FindAddress(ctx context.Context, search string, limit int) ([]string, error)
-	CheckAddressExists(ctx context.Context, address string) (bool, error)
-	WriteAddress(ctx context.Context, address string) error
+	AddressReaderWriterModifier
 	FindTransactionInBlockHash(ctx context.Context, trxHash [32]byte) ([32]byte, error)
 	CheckToken(ctx context.Context, token string) (bool, error)
 	InvalidateToken(ctx context.Context, token string) error
@@ -136,10 +143,6 @@ func Run(
 	var err error
 	ctxx, cancel := context.WithCancel(ctx)
 	defer cancel()
-
-	if err := repo.RunMigration(ctxx); err != nil {
-		return err
-	}
 
 	if err := validateConfig(&c); err != nil {
 		return err

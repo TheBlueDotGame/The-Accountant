@@ -100,6 +100,8 @@ func Run(ctx context.Context, cfg Config, srw StatusReadWriter, log logger.Logge
 		cancel: cancel,
 	}
 
+	log.Info(fmt.Sprintf("validator [ %s ] is starting on port: %d", a.wallet.Address(), cfg.Port))
+
 	if err := a.connectToSocket(ctxx, cfg.Websocket); err != nil {
 		return err
 	}
