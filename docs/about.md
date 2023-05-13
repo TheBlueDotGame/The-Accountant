@@ -3,9 +3,6 @@ layout: page
 title: About The Project
 subtitle: ...and a bit about the technology.
 ---
-Hi.
-My name is Bartosz Lenart. I build the IoT, Edge and Cloud back-ends and I want to introduce to you “Computantis” solution.
-
 
 The Computantis is a set of services that keeps track of transactions between wallets.
 Transactions are not transferring any tokens between wallets but it might be the case if someone wants to use it this way. Just this set of services isn’t designed to track token exchange. Instead, transactions are entities holding data that the transaction issuer and transaction receiver agreed upon. Each wallet has its own independent history of transactions. There is a set of strict rules allowing for transactions to happen:
@@ -35,27 +32,15 @@ It is good practice to have many validator nodes held by independent entities.
 ### Technology
 
 1. The programming language Computantis software is written in is the [Go](https://go.dev/). 
-
-The choice of programming language was made based on these arguments:
-   - Well maintained and trusted cryptography library - in Go it is part of the standard library.
-   - Relatively fast language - it is faster than Java and slower (not always) than Rust.
-   - Compiled language on many architectures, no virtual machine -  it uses LLVM as a compiler backend allowing for a large spectrum of architectures to be run on.
-   - Language that is pragmatic and easy to maintain - it is C with GC and abstractions. 
-   - Safe language - it has GC, powerful error handling and a great type system.
-   - Language that scales well and has good support for executing concurrent code - it is known to be the language of the cloud and can run thousands of goroutines without performance issues.
-   - Tests built into the language - it has it in the standard library. 
-   - Paradigm-independent language that will not force OOP or functional programming - it isn't forcing developers to any style.
-   - Good control over memory layout - you can do things like in C, but you can be safer than in Java.
-   - Good speed of development - it is known for being very efficient to produce software.
-   - Simple and pragmatic composition and packaging system - has great standard library, so you do not have to use third-party solutions.
-
-
-2. The repository part of the software is abstracted away so any database may be used. Nevertheless, Computantis is using the [MongoDB](https://www.mongodb.com/) database and is optimized for this database usage.
+First it was considered to use [RUST](https://www.rust-lang.org/) programming language, but Go features for servers development,
+and very good cryptographic library (part of standard library), as well as great concurrency model and performance that
+in real life case benchmarks matches the RUST or is not far apart from RUST, convinced me to use the Go language.
+2. The repository part of the software is abstracted away, so any database may be used. Computantis first was using the [MongoDB](https://www.mongodb.com/) database but overtime I moved all the logic to use [PostgreSQL](https://www.postgresql.org/).
+The reason behind this choice is to keep all the transaction ACID even sacrificing the performance a little. 
+Probably the change will be beneficial for blockchain and transaction lookups but I wasn't benchmarking for that so it is a guess.
 3. Networking is a very important part of backend solutions. To maintain a speed of execution and development the [Fiber](https://docs.gofiber.io/) framework is used to build the REST API and WebSocket networking.
-4. The mem cache is used for a caching mechanism to avoid unnecessary network I/O calls and allowing for multithreaded access.
 
 ### Motto
 
 The project motto is the one from a quote by Steve Wozniak: "Wherever smart people work, doors are unlocked."
-
 

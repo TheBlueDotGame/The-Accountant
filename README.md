@@ -39,27 +39,17 @@ It is good practice to have many validator nodes held by independent entities.
 
 ## Run for development
 
-0. Run mongo database `docker compose -f docker-compose-mongo.yaml up -d` or postgresql `docker compose -f docker-compose-postgresql.yaml up -d`.
+0. Run database with `docker compose up -d`.
 1. Create `server_settings.yaml` according to `server_settings_example.yaml` in the repo root folder.
 2. Run `make run` or `go run cmd/central/main.go`.
 
 ## Stress test
 
 Directory `stress/` contains central node REST API performance tests.
-
-Test conditions:
-- full transaction cycle: 
-    propose by issuer -> central node validation -> query by receiver -> sign by receiver -> 
-    central node validation -> adding to the queue for next block -> forge block -> sending block to validator ->
-    validator validates the block
-- docker on ARM M2 with constraints of single CPU and 2GB RAM running single mongodb instance
-- two central nodes bare metal on shared ARM M2
-- two validators nodes bare metal on shared ARM M2
-- four clients nodes bare metal on shared ARM M2
-
-Test results:
-- full cycle of 1000 transactions takes 1 second. (the bottle neck is on database) scaling database will unlock better performance.
-- long tests when 24000 transactions are send is consistent, taking 24 seconds for the full cycle per transaction.
+Bottleneck is on I/O calls, mostly database writes.
+Single PostgreSQL database instance run in docker 1CPU and 2GB RAM allows for 
+full cycle processing of 750 transactions per second. This is rough estimate and 
+I would soon provide more precise benchmarks.
 
 ## Package provides webassembly package that expose client API to the front-end applications.
 
@@ -818,7 +808,7 @@ Configuration is the main configuration of the application that corresponds to t
 type Configuration struct {
     Bookkeeper    bookkeeping.Config    `yaml:"bookkeeper"`
     Server        server.Config         `yaml:"server"`
-    Database      repohelper.DBConfig   `yaml:"database"`
+    Database      repopostgre.DBConfig  `yaml:"database"`
     DataProvider  dataprovider.Config   `yaml:"data_provider"`
     Validator     validator.Config      `yaml:"validator"`
     FileOperator  fileoperations.Config `yaml:"file_operator"`
@@ -1125,531 +1115,6 @@ func (o *Observable[T]) Subscribe() *subscriber[T]
 
 Subscribe subscribes to the container.
 
-# repohelper
-
-```go
-import "github.com/bartossh/Computantis/repohelper"
-```
-
-## Index
-
-- [Variables](<#variables>)
-- [type AddressWriteFindChecker](<#type-addresswritefindchecker>)
-- [type BlockReadWriter](<#type-blockreadwriter>)
-- [type ConnectionCloser](<#type-connectioncloser>)
-- [type DBConfig](<#type-dbconfig>)
-  - [func (cfg DBConfig) Connect(ctx context.Context) (RepositoryProvider, Subscriber, error)](<#func-dbconfig-connect>)
-- [type Migrator](<#type-migrator>)
-- [type NodeRegister](<#type-noderegister>)
-- [type RepositoryProvider](<#type-repositoryprovider>)
-- [type Subscriber](<#type-subscriber>)
-- [type Synchronizer](<#type-synchronizer>)
-- [type TokenWriteCheckInvalidator](<#type-tokenwritecheckinvalidator>)
-- [type TransactionOperator](<#type-transactionoperator>)
-- [type ValidatorStatusReader](<#type-validatorstatusreader>)
-
-
-## Variables
-
-```go
-var (
-    ErrDatabaseNotSupported = fmt.Errorf("database not supported")
-)
-```
-
-## type [AddressWriteFindChecker](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L22-L26>)
-
-AddressWriteFindChecker abstracts address operations.
-
-```go
-type AddressWriteFindChecker interface {
-    WriteAddress(ctx context.Context, addr string) error
-    CheckAddressExists(ctx context.Context, addr string) (bool, error)
-    FindAddress(ctx context.Context, search string, limit int) ([]string, error)
-}
-```
-
-## type [BlockReadWriter](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L29-L33>)
-
-BlockReadWriter abstracts block operations.
-
-```go
-type BlockReadWriter interface {
-    LastBlock(ctx context.Context) (block.Block, error)
-    ReadBlockByHash(ctx context.Context, hash [32]byte) (block.Block, error)
-    WriteBlock(ctx context.Context, block block.Block) error
-}
-```
-
-## type [ConnectionCloser](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L85-L87>)
-
-ConnectionCloser abstracts connection closing operations.
-
-```go
-type ConnectionCloser interface {
-    Disconnect(ctx context.Context) error
-}
-```
-
-## type [DBConfig](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L104-L109>)
-
-Config contains configuration for the database.
-
-```go
-type DBConfig struct {
-    ConnStr      string `yaml:"conn_str"`         // ConnStr is the connection string to the database.
-    DatabaseName string `yaml:"database_name"`    // DatabaseName is the name of the database.
-    Token        string `yaml:"token"`            // Token is the token that is used to confirm api clients access.
-    TokenExpire  int64  `yaml:"token_expiration"` // TokenExpire is the number of seconds after which token expires.
-}
-```
-
-### func \(DBConfig\) [Connect](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L112>)
-
-```go
-func (cfg DBConfig) Connect(ctx context.Context) (RepositoryProvider, Subscriber, error)
-```
-
-Connect connects to the proper database and returns that connection.
-
-## type [Migrator](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L36-L38>)
-
-MigrationRunner abstracts migration operations.
-
-```go
-type Migrator interface {
-    RunMigration(ctx context.Context) error
-}
-```
-
-## type [NodeRegister](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L77-L82>)
-
-NodeRegister abstracts node registration operations.
-
-```go
-type NodeRegister interface {
-    RegisterNode(ctx context.Context, n, ws string) error
-    UnregisterNode(ctx context.Context, n string) error
-    CountRegistered(ctx context.Context) (int, error)
-    ReadRegisteredNodesAddresses(ctx context.Context) ([]string, error)
-}
-```
-
-## type [RepositoryProvider](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L90-L101>)
-
-RepositoryProvider is an interface that ensures that all required methods to run computantis are implemented.
-
-```go
-type RepositoryProvider interface {
-    AddressWriteFindChecker
-    BlockReadWriter
-    io.Writer
-    Migrator
-    TokenWriteCheckInvalidator
-    TransactionOperator
-    ValidatorStatusReader
-    Synchronizer
-    NodeRegister
-    ConnectionCloser
-}
-```
-
-## type [Subscriber](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L65-L67>)
-
-Subscriber abstracts blockchain subscription to blockchain locks.
-
-```go
-type Subscriber interface {
-    SubscribeToLockBlockchainNotification(ctx context.Context, c chan<- bool, node string)
-}
-```
-
-## type [Synchronizer](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L70-L74>)
-
-Synchronizer abstracts blockchain synchronization operations.
-
-```go
-type Synchronizer interface {
-    AddToBlockchainLockQueue(ctx context.Context, nodeID string) error
-    RemoveFromBlockchainLocks(ctx context.Context, nodeID string) error
-    CheckIsOnTopOfBlockchainsLocks(ctx context.Context, nodeID string) (bool, error)
-}
-```
-
-## type [TokenWriteCheckInvalidator](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L41-L45>)
-
-TokenWriteCheckInvalidator abstracts token operations.
-
-```go
-type TokenWriteCheckInvalidator interface {
-    CheckToken(ctx context.Context, tkn string) (bool, error)
-    WriteToken(ctx context.Context, tkn string, expirationDate int64) error
-    InvalidateToken(ctx context.Context, token string) error
-}
-```
-
-## type [TransactionOperator](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L48-L56>)
-
-TransactionOperator abstracts transaction operations.
-
-```go
-type TransactionOperator interface {
-    FindTransactionInBlockHash(ctx context.Context, trxHash [32]byte) ([32]byte, error)
-    MoveTransactionsFromAwaitingToTemporary(ctx context.Context, trxHash [32]byte) error
-    WriteIssuerSignedTransactionForReceiver(ctx context.Context, trx *transaction.Transaction) error
-    ReadAwaitingTransactionsByReceiver(ctx context.Context, address string) ([]transaction.Transaction, error)
-    ReadAwaitingTransactionsByIssuer(ctx context.Context, address string) ([]transaction.Transaction, error)
-    MoveTransactionsFromTemporaryToPermanent(ctx context.Context, blockHash [32]byte, hashes [][32]byte) error
-    ReadTemporaryTransactions(ctx context.Context) ([]transaction.Transaction, error)
-}
-```
-
-## type [ValidatorStatusReader](<https://github.com/bartossh/Computantis/blob/main/repohelper/repohelper.go#L59-L62>)
-
-ValidatorStatusReader abstracts validator status operations.
-
-```go
-type ValidatorStatusReader interface {
-    ReadLastNValidatorStatuses(ctx context.Context, last int64) ([]validator.Status, error)
-    WriteValidatorStatus(ctx context.Context, vs *validator.Status) error
-}
-```
-
-# repomongo
-
-```go
-import "github.com/bartossh/Computantis/repomongo"
-```
-
-## Index
-
-- [Variables](<#variables>)
-- [type DataBase](<#type-database>)
-  - [func Connect(ctx context.Context, conn, database string) (*DataBase, error)](<#func-connect>)
-  - [func (db DataBase) AddToBlockchainLockQueue(ctx context.Context, nodeID string) error](<#func-database-addtoblockchainlockqueue>)
-  - [func (db DataBase) CheckAddressExists(ctx context.Context, addr string) (bool, error)](<#func-database-checkaddressexists>)
-  - [func (db DataBase) CheckIsOnTopOfBlockchainsLocks(ctx context.Context, nodeID string) (bool, error)](<#func-database-checkisontopofblockchainslocks>)
-  - [func (db DataBase) CheckToken(ctx context.Context, tkn string) (bool, error)](<#func-database-checktoken>)
-  - [func (db DataBase) CountRegistered(ctx context.Context) (int, error)](<#func-database-countregistered>)
-  - [func (c DataBase) Disconnect(ctx context.Context) error](<#func-database-disconnect>)
-  - [func (db DataBase) FindAddress(ctx context.Context, search string, limit int) ([]string, error)](<#func-database-findaddress>)
-  - [func (db DataBase) FindTransactionInBlockHash(ctx context.Context, trxHash [32]byte) ([32]byte, error)](<#func-database-findtransactioninblockhash>)
-  - [func (db DataBase) InvalidateToken(ctx context.Context, token string) error](<#func-database-invalidatetoken>)
-  - [func (db DataBase) LastBlock(ctx context.Context) (block.Block, error)](<#func-database-lastblock>)
-  - [func (db DataBase) MoveTransactionsFromAwaitingToTemporary(ctx context.Context, trxHash [32]byte) error](<#func-database-movetransactionsfromawaitingtotemporary>)
-  - [func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context, blockHash [32]byte, hashes [][32]byte) error](<#func-database-movetransactionsfromtemporarytopermanent>)
-  - [func (db DataBase) Ping(ctx context.Context) error](<#func-database-ping>)
-  - [func (db DataBase) ReadAwaitingTransactionsByIssuer(ctx context.Context, address string) ([]transaction.Transaction, error)](<#func-database-readawaitingtransactionsbyissuer>)
-  - [func (db DataBase) ReadAwaitingTransactionsByReceiver(ctx context.Context, address string) ([]transaction.Transaction, error)](<#func-database-readawaitingtransactionsbyreceiver>)
-  - [func (db DataBase) ReadBlockByHash(ctx context.Context, hash [32]byte) (block.Block, error)](<#func-database-readblockbyhash>)
-  - [func (db DataBase) ReadLastNValidatorStatuses(ctx context.Context, last int64) ([]validator.Status, error)](<#func-database-readlastnvalidatorstatuses>)
-  - [func (db DataBase) ReadRegisteredNodesAddresses(ctx context.Context) ([]string, error)](<#func-database-readregisterednodesaddresses>)
-  - [func (db DataBase) ReadTemporaryTransactions(ctx context.Context) ([]transaction.Transaction, error)](<#func-database-readtemporarytransactions>)
-  - [func (db DataBase) RegisterNode(ctx context.Context, n, ws string) error](<#func-database-registernode>)
-  - [func (db DataBase) RemoveFromBlockchainLocks(ctx context.Context, nodeID string) error](<#func-database-removefromblockchainlocks>)
-  - [func (c DataBase) RunMigration(ctx context.Context) error](<#func-database-runmigration>)
-  - [func (db DataBase) SubscribeToLockBlockchainNotification(ctx context.Context, c chan<- bool, node string)](<#func-database-subscribetolockblockchainnotification>)
-  - [func (db DataBase) UnregisterNode(ctx context.Context, n string) error](<#func-database-unregisternode>)
-  - [func (db DataBase) Write(p []byte) (n int, err error)](<#func-database-write>)
-  - [func (db DataBase) WriteAddress(ctx context.Context, addr string) error](<#func-database-writeaddress>)
-  - [func (db DataBase) WriteBlock(ctx context.Context, block block.Block) error](<#func-database-writeblock>)
-  - [func (db DataBase) WriteIssuerSignedTransactionForReceiver(ctx context.Context, trx *transaction.Transaction) error](<#func-database-writeissuersignedtransactionforreceiver>)
-  - [func (db DataBase) WriteToken(ctx context.Context, tkn string, expirationDate int64) error](<#func-database-writetoken>)
-  - [func (db DataBase) WriteTransactionsInBlock(ctx context.Context, blockHash [32]byte, trxHash [][32]byte) error](<#func-database-writetransactionsinblock>)
-  - [func (db DataBase) WriteValidatorStatus(ctx context.Context, vs *validator.Status) error](<#func-database-writevalidatorstatus>)
-- [type Migration](<#type-migration>)
-
-
-## Variables
-
-```go
-var (
-    ErrAddingToLockQueueBlockChainFailed       = fmt.Errorf("adding to lock blockchain failed")
-    ErrRemovingFromLockQueueBlockChainFailed   = fmt.Errorf("removing from lock blockchain failed")
-    ErrListenFailed                            = fmt.Errorf("listen failed")
-    ErrCheckingIsOnTopOfBlockchainsLocksFailed = fmt.Errorf("checking is on top of blockchains locks failed")
-    ErrNodeRegisterFailed                      = fmt.Errorf("node register failed")
-    ErrNodeUnregisterFailed                    = fmt.Errorf("node unregister failed")
-    ErrNodeLookupFailed                        = fmt.Errorf("node lookup failed")
-    ErrNodeRegisteredAddressesQueryFailed      = fmt.Errorf("node registered addresses query failed")
-    ErrCursorFailed                            = fmt.Errorf("cursor failed")
-)
-```
-
-## type [DataBase](<https://github.com/bartossh/Computantis/blob/main/repomongo/mongorepo.go#L41-L43>)
-
-Database provides database access for read, write and delete of repository entities.
-
-```go
-type DataBase struct {
-    // contains filtered or unexported fields
-}
-```
-
-### func [Connect](<https://github.com/bartossh/Computantis/blob/main/repomongo/mongorepo.go#L46>)
-
-```go
-func Connect(ctx context.Context, conn, database string) (*DataBase, error)
-```
-
-Connect creates new connection to the repository and returns pointer to the DataBase.
-
-### func \(DataBase\) [AddToBlockchainLockQueue](<https://github.com/bartossh/Computantis/blob/main/repomongo/notifier.go#L51>)
-
-```go
-func (db DataBase) AddToBlockchainLockQueue(ctx context.Context, nodeID string) error
-```
-
-AddToBlockchainLockQueue adds blockchain lock to queue.
-
-### func \(DataBase\) [CheckAddressExists](<https://github.com/bartossh/Computantis/blob/main/repomongo/address.go#L32>)
-
-```go
-func (db DataBase) CheckAddressExists(ctx context.Context, addr string) (bool, error)
-```
-
-CheckAddressExists checks if address exists in the database. Returns true if exists and error if database error different from ErrNoDocuments.
-
-### func \(DataBase\) [CheckIsOnTopOfBlockchainsLocks](<https://github.com/bartossh/Computantis/blob/main/repomongo/notifier.go#L67>)
-
-```go
-func (db DataBase) CheckIsOnTopOfBlockchainsLocks(ctx context.Context, nodeID string) (bool, error)
-```
-
-CheckIsOnTopOfBlockchainsLocks checks if node is on top of blockchain locks queue.
-
-### func \(DataBase\) [CheckToken](<https://github.com/bartossh/Computantis/blob/main/repomongo/token.go#L14>)
-
-```go
-func (db DataBase) CheckToken(ctx context.Context, tkn string) (bool, error)
-```
-
-CheckToken checks if token exists in the database is valid and didn't expire.
-
-### func \(DataBase\) [CountRegistered](<https://github.com/bartossh/Computantis/blob/main/repomongo/node.go#L29>)
-
-```go
-func (db DataBase) CountRegistered(ctx context.Context) (int, error)
-```
-
-CountRegistered counts registered nodes in the database.
-
-### func \(DataBase\) [Disconnect](<https://github.com/bartossh/Computantis/blob/main/repomongo/mongorepo.go#L62>)
-
-```go
-func (c DataBase) Disconnect(ctx context.Context) error
-```
-
-Disconnect disconnects user from database
-
-### func \(DataBase\) [FindAddress](<https://github.com/bartossh/Computantis/blob/main/repomongo/search.go#L38>)
-
-```go
-func (db DataBase) FindAddress(ctx context.Context, search string, limit int) ([]string, error)
-```
-
-FindAddress looks for matching address in the addresses repository and returns limited slice of matching addresses. If limit is set to 0 or above the 1000 which is maximum then search is limited to 1000.
-
-### func \(DataBase\) [FindTransactionInBlockHash](<https://github.com/bartossh/Computantis/blob/main/repomongo/search.go#L28>)
-
-```go
-func (db DataBase) FindTransactionInBlockHash(ctx context.Context, trxHash [32]byte) ([32]byte, error)
-```
-
-FindTransactionInBlockHash finds Block hash in to which Transaction with given hash was added.
-
-### func \(DataBase\) [InvalidateToken](<https://github.com/bartossh/Computantis/blob/main/repomongo/token.go#L46>)
-
-```go
-func (db DataBase) InvalidateToken(ctx context.Context, token string) error
-```
-
-InvalidateToken invalidates token.
-
-### func \(DataBase\) [LastBlock](<https://github.com/bartossh/Computantis/blob/main/repomongo/block.go#L14>)
-
-```go
-func (db DataBase) LastBlock(ctx context.Context) (block.Block, error)
-```
-
-LastBlock returns last block from the database.
-
-### func \(DataBase\) [MoveTransactionsFromAwaitingToTemporary](<https://github.com/bartossh/Computantis/blob/main/repomongo/transaction.go#L14>)
-
-```go
-func (db DataBase) MoveTransactionsFromAwaitingToTemporary(ctx context.Context, trxHash [32]byte) error
-```
-
-MoveTransactionsFromAwaitingToTemporary removes transaction from the awaiting transaction storage.
-
-### func \(DataBase\) [MoveTransactionsFromTemporaryToPermanent](<https://github.com/bartossh/Computantis/blob/main/repomongo/transaction.go#L74>)
-
-```go
-func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context, blockHash [32]byte, hashes [][32]byte) error
-```
-
-MoveTransactionsFromTemporaryToPermanent moves transactions from temporary storage to permanent.
-
-### func \(DataBase\) [Ping](<https://github.com/bartossh/Computantis/blob/main/repomongo/mongorepo.go#L66>)
-
-```go
-func (db DataBase) Ping(ctx context.Context) error
-```
-
-### func \(DataBase\) [ReadAwaitingTransactionsByIssuer](<https://github.com/bartossh/Computantis/blob/main/repomongo/transaction.go#L55>)
-
-```go
-func (db DataBase) ReadAwaitingTransactionsByIssuer(ctx context.Context, address string) ([]transaction.Transaction, error)
-```
-
-ReadAwaitingTransactionsByReceiver reads all transactions paired with given issuer address.
-
-### func \(DataBase\) [ReadAwaitingTransactionsByReceiver](<https://github.com/bartossh/Computantis/blob/main/repomongo/transaction.go#L36>)
-
-```go
-func (db DataBase) ReadAwaitingTransactionsByReceiver(ctx context.Context, address string) ([]transaction.Transaction, error)
-```
-
-ReadAwaitingTransactionsByReceiver reads all transactions paired with given receiver address.
-
-### func \(DataBase\) [ReadBlockByHash](<https://github.com/bartossh/Computantis/blob/main/repomongo/block.go#L36>)
-
-```go
-func (db DataBase) ReadBlockByHash(ctx context.Context, hash [32]byte) (block.Block, error)
-```
-
-ReadBlockByHash returns block with given hash.
-
-### func \(DataBase\) [ReadLastNValidatorStatuses](<https://github.com/bartossh/Computantis/blob/main/repomongo/validator.go#L18>)
-
-```go
-func (db DataBase) ReadLastNValidatorStatuses(ctx context.Context, last int64) ([]validator.Status, error)
-```
-
-ReadLastNValidatorStatuses reads last validator statuses from the database.
-
-### func \(DataBase\) [ReadRegisteredNodesAddresses](<https://github.com/bartossh/Computantis/blob/main/repomongo/node.go#L38>)
-
-```go
-func (db DataBase) ReadRegisteredNodesAddresses(ctx context.Context) ([]string, error)
-```
-
-ReadAddresses reads registered nodes addresses from the database.
-
-### func \(DataBase\) [ReadTemporaryTransactions](<https://github.com/bartossh/Computantis/blob/main/repomongo/transaction.go#L109>)
-
-```go
-func (db DataBase) ReadTemporaryTransactions(ctx context.Context) ([]transaction.Transaction, error)
-```
-
-ReadTemporaryTransactions reads transactions from the temporary storage.
-
-### func \(DataBase\) [RegisterNode](<https://github.com/bartossh/Computantis/blob/main/repomongo/node.go#L11>)
-
-```go
-func (db DataBase) RegisterNode(ctx context.Context, n, ws string) error
-```
-
-RegisterNode registers node in the database.
-
-### func \(DataBase\) [RemoveFromBlockchainLocks](<https://github.com/bartossh/Computantis/blob/main/repomongo/notifier.go#L59>)
-
-```go
-func (db DataBase) RemoveFromBlockchainLocks(ctx context.Context, nodeID string) error
-```
-
-RemoveFromBlockchainLocks removes blockchain lock from queue.
-
-### func \(DataBase\) [RunMigration](<https://github.com/bartossh/Computantis/blob/main/repomongo/migrations.go#L328>)
-
-```go
-func (c DataBase) RunMigration(ctx context.Context) error
-```
-
-RunMigrationUp runs all the migrations
-
-### func \(DataBase\) [SubscribeToLockBlockchainNotification](<https://github.com/bartossh/Computantis/blob/main/repomongo/notifier.go#L22>)
-
-```go
-func (db DataBase) SubscribeToLockBlockchainNotification(ctx context.Context, c chan<- bool, node string)
-```
-
-SubscribeToLockBlockchainNotification listens for blockchain lock. To stop subscription, close channel. This is fake subscriber, it isn't using change watcher as this requires replica set.
-
-### func \(DataBase\) [UnregisterNode](<https://github.com/bartossh/Computantis/blob/main/repomongo/node.go#L20>)
-
-```go
-func (db DataBase) UnregisterNode(ctx context.Context, n string) error
-```
-
-UnregisterNode unregister node from the database.
-
-### func \(DataBase\) [Write](<https://github.com/bartossh/Computantis/blob/main/repomongo/logger.go#L13>)
-
-```go
-func (db DataBase) Write(p []byte) (n int, err error)
-```
-
-Write writes log to the database. p is a marshaled logger.Log.
-
-### func \(DataBase\) [WriteAddress](<https://github.com/bartossh/Computantis/blob/main/repomongo/address.go#L14>)
-
-```go
-func (db DataBase) WriteAddress(ctx context.Context, addr string) error
-```
-
-WriteAddress writes unique address to the database.
-
-### func \(DataBase\) [WriteBlock](<https://github.com/bartossh/Computantis/blob/main/repomongo/block.go#L45>)
-
-```go
-func (db DataBase) WriteBlock(ctx context.Context, block block.Block) error
-```
-
-WriteBlock writes block to the database.
-
-### func \(DataBase\) [WriteIssuerSignedTransactionForReceiver](<https://github.com/bartossh/Computantis/blob/main/repomongo/transaction.go#L20-L23>)
-
-```go
-func (db DataBase) WriteIssuerSignedTransactionForReceiver(ctx context.Context, trx *transaction.Transaction) error
-```
-
-WriteIssuerSignedTransactionForReceiver writes transaction to the awaiting transaction storage paired with given receiver.
-
-### func \(DataBase\) [WriteToken](<https://github.com/bartossh/Computantis/blob/main/repomongo/token.go#L32>)
-
-```go
-func (db DataBase) WriteToken(ctx context.Context, tkn string, expirationDate int64) error
-```
-
-WriteToken writes unique token to the database.
-
-### func \(DataBase\) [WriteTransactionsInBlock](<https://github.com/bartossh/Computantis/blob/main/repomongo/search.go#L14>)
-
-```go
-func (db DataBase) WriteTransactionsInBlock(ctx context.Context, blockHash [32]byte, trxHash [][32]byte) error
-```
-
-WriteTransactionsInBlock stores relation between Transaction and Block to which Transaction was added.
-
-### func \(DataBase\) [WriteValidatorStatus](<https://github.com/bartossh/Computantis/blob/main/repomongo/validator.go#L12>)
-
-```go
-func (db DataBase) WriteValidatorStatus(ctx context.Context, vs *validator.Status) error
-```
-
-WriteValidatorStatus writes validator status to the database.
-
-## type [Migration](<https://github.com/bartossh/Computantis/blob/main/repomongo/migrations.go#L24-L26>)
-
-Migration describes migration that is made in the repository database.
-
-```go
-type Migration struct {
-    Name string `json:"name" bson:"name"`
-}
-```
-
 # repopostgre
 
 ```go
@@ -1659,8 +1124,9 @@ import "github.com/bartossh/Computantis/repopostgre"
 ## Index
 
 - [Variables](<#variables>)
+- [type DBConfig](<#type-dbconfig>)
 - [type DataBase](<#type-database>)
-  - [func Connect(ctx context.Context, conn, database string) (*DataBase, error)](<#func-connect>)
+  - [func Connect(ctx context.Context, cfg DBConfig) (*DataBase, error)](<#func-connect>)
   - [func (db DataBase) AddToBlockchainLockQueue(ctx context.Context, nodeID string) error](<#func-database-addtoblockchainlockqueue>)
   - [func (db DataBase) CheckAddressExists(ctx context.Context, addr string) (bool, error)](<#func-database-checkaddressexists>)
   - [func (db DataBase) CheckIsOnTopOfBlockchainsLocks(ctx context.Context, nodeID string) (bool, error)](<#func-database-checkisontopofblockchainslocks>)
@@ -1692,6 +1158,7 @@ import "github.com/bartossh/Computantis/repopostgre"
   - [func (db DataBase) WriteValidatorStatus(ctx context.Context, vs *validator.Status) error](<#func-database-writevalidatorstatus>)
 - [type Listener](<#type-listener>)
   - [func Listen(conn string, report func(ev pq.ListenerEventType, err error)) (Listener, error)](<#func-listen>)
+  - [func Subscribe(ctx context.Context, cfg DBConfig) (Listener, error)](<#func-subscribe>)
   - [func (l Listener) Close()](<#func-listener-close>)
   - [func (l Listener) SubscribeToLockBlockchainNotification(ctx context.Context, c chan<- bool, node string)](<#func-listener-subscribetolockblockchainnotification>)
 
@@ -1719,7 +1186,18 @@ var (
 )
 ```
 
-## type [DataBase](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L32-L34>)
+## type [DBConfig](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L33-L36>)
+
+Config contains configuration for the database.
+
+```go
+type DBConfig struct {
+    ConnStr      string `yaml:"conn_str"`      // ConnStr is the connection string to the database.
+    DatabaseName string `yaml:"database_name"` // DatabaseName is the name of the database.
+}
+```
+
+## type [DataBase](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L39-L41>)
 
 Database provides database access for read, write and delete of repository entities.
 
@@ -1729,10 +1207,10 @@ type DataBase struct {
 }
 ```
 
-### func [Connect](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L37>)
+### func [Connect](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L58>)
 
 ```go
-func Connect(ctx context.Context, conn, database string) (*DataBase, error)
+func Connect(ctx context.Context, cfg DBConfig) (*DataBase, error)
 ```
 
 Connect creates new connection to the repository and returns pointer to the DataBase.
@@ -1777,7 +1255,7 @@ func (db DataBase) CountRegistered(ctx context.Context) (int, error)
 
 CountRegistered counts registered nodes in the database.
 
-### func \(DataBase\) [Disconnect](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L47>)
+### func \(DataBase\) [Disconnect](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L68>)
 
 ```go
 func (db DataBase) Disconnect(ctx context.Context) error
@@ -1833,7 +1311,7 @@ func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context,
 
 MoveTransactionsFromTemporaryToPermanent moves transactions by marking transactions with matching hash to be permanent and sets block hash field to referenced block hash.
 
-### func \(DataBase\) [Ping](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L52>)
+### func \(DataBase\) [Ping](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L73>)
 
 ```go
 func (db DataBase) Ping(ctx context.Context) error
@@ -1986,6 +1464,14 @@ func Listen(conn string, report func(ev pq.ListenerEventType, err error)) (Liste
 ```
 
 Listen creates Listener for notifications from database.
+
+### func [Subscribe](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L44>)
+
+```go
+func Subscribe(ctx context.Context, cfg DBConfig) (Listener, error)
+```
+
+Subscribe subscribes to the database events.
 
 ### func \(Listener\) [Close](<https://github.com/bartossh/Computantis/blob/main/repopostgre/notifier.go#L100>)
 

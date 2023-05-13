@@ -7,7 +7,7 @@ import (
 	"github.com/bartossh/Computantis/bookkeeping"
 	"github.com/bartossh/Computantis/dataprovider"
 	"github.com/bartossh/Computantis/fileoperations"
-	"github.com/bartossh/Computantis/repohelper"
+	"github.com/bartossh/Computantis/repopostgre"
 	"github.com/bartossh/Computantis/server"
 	"github.com/bartossh/Computantis/signerservice"
 	"github.com/bartossh/Computantis/validator"
@@ -19,7 +19,7 @@ import (
 type Configuration struct {
 	Bookkeeper    bookkeeping.Config    `yaml:"bookkeeper"`
 	Server        server.Config         `yaml:"server"`
-	Database      repohelper.DBConfig   `yaml:"database"`
+	Database      repopostgre.DBConfig  `yaml:"database"`
 	DataProvider  dataprovider.Config   `yaml:"data_provider"`
 	Validator     validator.Config      `yaml:"validator"`
 	FileOperator  fileoperations.Config `yaml:"file_operator"`

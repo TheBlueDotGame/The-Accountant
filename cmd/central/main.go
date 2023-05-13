@@ -14,6 +14,7 @@ import (
 	"github.com/bartossh/Computantis/dataprovider"
 	"github.com/bartossh/Computantis/logging"
 	"github.com/bartossh/Computantis/reactive"
+	"github.com/bartossh/Computantis/repopostgre"
 	"github.com/bartossh/Computantis/server"
 	"github.com/bartossh/Computantis/stdoutwriter"
 	"github.com/bartossh/Computantis/wallet"
@@ -40,12 +41,19 @@ func main() {
 		cancel()
 	}()
 
-	db, sub, err := cfg.Database.Connect(ctx)
+	db, err := repopostgre.Connect(ctx, cfg.Database)
 	if err != nil {
 		fmt.Println(err)
 		c <- os.Interrupt
 		return
 	}
+	sub, err := repopostgre.Subscribe(ctx, cfg.Database)
+	if err != nil {
+		fmt.Println(err)
+		c <- os.Interrupt
+		return
+	}
+
 	ctxx, cancelClose := context.WithTimeout(context.Background(), time.Second*1)
 	defer cancelClose()
 	defer db.Disconnect(ctxx)
