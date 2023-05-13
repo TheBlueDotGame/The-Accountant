@@ -11,6 +11,7 @@ import (
 	"github.com/bartossh/Computantis/configuration"
 	"github.com/bartossh/Computantis/fileoperations"
 	"github.com/bartossh/Computantis/logging"
+	"github.com/bartossh/Computantis/repopostgre"
 	"github.com/bartossh/Computantis/signerservice"
 	"github.com/bartossh/Computantis/stdoutwriter"
 	"github.com/bartossh/Computantis/wallet"
@@ -35,7 +36,7 @@ func main() {
 		cancel()
 	}()
 
-	db, _, err := cfg.Database.Connect(ctx)
+	db, err := repopostgre.Connect(ctx, cfg.Database)
 	if err != nil {
 		fmt.Println(err)
 		c <- os.Interrupt

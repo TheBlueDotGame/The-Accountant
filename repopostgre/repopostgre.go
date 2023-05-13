@@ -6,6 +6,7 @@ import (
 
 	"database/sql"
 
+	"github.com/lib/pq"
 	_ "github.com/lib/pq"
 )
 
@@ -28,14 +29,34 @@ var (
 	ErrNodeRegisteredAddressesQueryFailed      = fmt.Errorf("node registered addresses query failed")
 )
 
+// Config contains configuration for the database.
+type DBConfig struct {
+	ConnStr      string `yaml:"conn_str"`      // ConnStr is the connection string to the database.
+	DatabaseName string `yaml:"database_name"` // DatabaseName is the name of the database.
+}
+
 // Database provides database access for read, write and delete of repository entities.
 type DataBase struct {
 	inner *sql.DB
 }
 
+// Subscribe subscribes to the database events.
+func Subscribe(ctx context.Context, cfg DBConfig) (Listener, error) {
+	f := func(ev pq.ListenerEventType, err error) {
+		if err != nil {
+			panic(err)
+		}
+	}
+	lister, err := Listen(cfg.ConnStr, f)
+	if err != nil {
+		return Listener{}, err
+	}
+	return lister, nil
+}
+
 // Connect creates new connection to the repository and returns pointer to the DataBase.
-func Connect(ctx context.Context, conn, database string) (*DataBase, error) {
-	db, err := sql.Open("postgres", fmt.Sprintf("%s/%s?sslmode=disable", conn, database))
+func Connect(ctx context.Context, cfg DBConfig) (*DataBase, error) {
+	db, err := sql.Open("postgres", fmt.Sprintf("%s/%s?sslmode=disable", cfg.ConnStr, cfg.DatabaseName)) // TODO: enable sslmode=verify-full
 	if err != nil {
 		return nil, err
 	}

@@ -39,27 +39,17 @@ It is good practice to have many validator nodes held by independent entities.
 
 ## Run for development
 
-0. Run mongo database `docker compose -f docker-compose-mongo.yaml up -d` or postgresql `docker compose -f docker-compose-postgresql.yaml up -d`.
+0. Run database with `docker compose up -d`.
 1. Create `server_settings.yaml` according to `server_settings_example.yaml` in the repo root folder.
 2. Run `make run` or `go run cmd/central/main.go`.
 
 ## Stress test
 
 Directory `stress/` contains central node REST API performance tests.
-
-Test conditions:
-- full transaction cycle: 
-    propose by issuer -> central node validation -> query by receiver -> sign by receiver -> 
-    central node validation -> adding to the queue for next block -> forge block -> sending block to validator ->
-    validator validates the block
-- docker on ARM M2 with constraints of single CPU and 2GB RAM running single mongodb instance
-- two central nodes bare metal on shared ARM M2
-- two validators nodes bare metal on shared ARM M2
-- four clients nodes bare metal on shared ARM M2
-
-Test results:
-- full cycle of 1000 transactions takes 1 second. (the bottle neck is on database) scaling database will unlock better performance.
-- long tests when 24000 transactions are send is consistent, taking 24 seconds for the full cycle per transaction.
+Bottleneck is on I/O calls, mostly database writes.
+Single PostgreSQL database instance run in docker 1CPU and 2GB RAM allows for 
+full cycle processing of 750 transactions per second. This is rough estimate and 
+I would soon provide more precise benchmarks.
 
 ## Package provides webassembly package that expose client API to the front-end applications.
 
