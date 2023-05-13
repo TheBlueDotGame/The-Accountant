@@ -25,6 +25,11 @@ type app struct {
 }
 
 const (
+	day  = time.Hour * 24
+	week = day * 7
+)
+
+const (
 	Alive                   = "/alive"                 // alive URL allows to check if server is alive and if sign service is of the same version.
 	IssueTransaction        = "/transactions/issue"    // issue URL allows to issue transaction signed by the issuer.
 	ConfirmTransaction      = "/transaction/sign"      // sign URL allows to sign transaction received by the receiver.
@@ -32,6 +37,8 @@ const (
 	GetReceivedTransactions = "/transactions/received" // received URL allows to get received transactions for the receiver.
 	CreateWallet            = "/wallet/create"         // create URL allows to create new wallet.
 	ReadWalletPublicAddress = "/wallet/address"        // address URL allows to read public address of the wallet.
+	GetOneDayToken          = "token/day"              // token/day URL allows to get one day token.
+	GetOneWeekToken         = "token/week"             // token/week URL allows to get one week token.
 )
 
 // Run runs the service application that exposes the API for creating, validating and signing transactions.
@@ -69,6 +76,8 @@ func Run(ctx context.Context, cfg Config, log logger.Logger, timeout time.Durati
 	router.Post(ConfirmTransaction, s.confirmReceivedTransaction)
 	router.Post(CreateWallet, s.createWallet)
 	router.Get(ReadWalletPublicAddress, s.readWalletPublicAddress)
+	router.Get(GetOneDayToken, s.getOneDayToken)
+	router.Get(GetOneWeekToken, s.getOneWeekToken)
 
 	var err error
 	go func() {
@@ -239,4 +248,24 @@ func (a *app) readWalletPublicAddress(c *fiber.Ctx) error {
 		return c.JSON(ReadWalletPublicAddressResponse{Ok: false, Err: err.Error()})
 	}
 	return c.JSON(ReadWalletPublicAddressResponse{Ok: true, Address: address})
+}
+
+func (a *app) getOneDayToken(c *fiber.Ctx) error {
+	t := time.Now().Add(day)
+	token, err := a.client.GenerateToken(t)
+	if err != nil {
+		a.log.Error(err.Error())
+		return errors.Join(fiber.ErrBadRequest, err)
+	}
+	return c.JSON(token)
+}
+
+func (a *app) getOneWeekToken(c *fiber.Ctx) error {
+	t := time.Now().Add(week)
+	token, err := a.client.GenerateToken(t)
+	if err != nil {
+		a.log.Error(err.Error())
+		return errors.Join(fiber.ErrBadRequest, err)
+	}
+	return c.JSON(token)
 }

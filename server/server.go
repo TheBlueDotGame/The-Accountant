@@ -27,14 +27,16 @@ const (
 	addressURL          = "/address"
 	blockURL            = "/block"
 	transactionGroupURL = "/transaction"
+	tokenGroupURL       = "/token"
+	validatorGroupURL   = "/validator"
 	proposeURL          = "/propose"
 	confirmURL          = "/confirm"
 	awaitedURL          = "/awaited"
 	issuedURL           = "/issued"
-	validatorGroupURL   = "/validator"
 	dataURL             = "/data"
 	addressGroupURL     = "/address"
 	createURL           = "/create"
+	generateURL         = "/generate"
 )
 
 const (
@@ -47,6 +49,7 @@ const (
 	IssuedTransactionURL  = transactionGroupURL + issuedURL  // URL to get issued transactions for the issuer.
 	DataToValidateURL     = validatorGroupURL + dataURL      // URL to get data to validate address by signing rew message.
 	CreateAddressURL      = addressGroupURL + createURL      // URL to create new address.
+	GenerateTokenURL      = tokenGroupURL + generateURL      // URL to generate new token.
 	WsURL                 = "/ws"                            // URL to connect to websocket.
 )
 
@@ -65,6 +68,7 @@ type Register interface {
 	CountRegistered(ctx context.Context) (int, error)
 }
 
+// AddressReaderWriterModifier abstracts address operations.
 type AddressReaderWriterModifier interface {
 	FindAddress(ctx context.Context, search string, limit int) ([]string, error)
 	CheckAddressExists(ctx context.Context, address string) (bool, error)
@@ -75,6 +79,13 @@ type AddressReaderWriterModifier interface {
 	IsAddressAdmin(ctx context.Context, addr string) (bool, error)
 }
 
+// TokenWriteInvalidateChecker abstracts token operations.
+type TokenWriteInvalidateChecker interface {
+	WriteToken(ctx context.Context, tkn string, expirationDate int64) error
+	CheckToken(ctx context.Context, token string) (bool, error)
+	InvalidateToken(ctx context.Context, token string) error
+}
+
 // Repository is the interface that wraps the basic CRUD and Search methods.
 // Repository should be properly indexed to allow for transaction and block hash.
 // as well as address public keys to be and unique and the hash lookup should be fast.
@@ -82,9 +93,8 @@ type AddressReaderWriterModifier interface {
 type Repository interface {
 	Register
 	AddressReaderWriterModifier
+	TokenWriteInvalidateChecker
 	FindTransactionInBlockHash(ctx context.Context, trxHash [32]byte) ([32]byte, error)
-	CheckToken(ctx context.Context, token string) (bool, error)
-	InvalidateToken(ctx context.Context, token string) error
 	ReadAwaitingTransactionsByIssuer(ctx context.Context, address string) ([]transaction.Transaction, error)
 	ReadAwaitingTransactionsByReceiver(ctx context.Context, address string) ([]transaction.Transaction, error)
 }
@@ -189,6 +199,9 @@ func Run(
 
 	address := router.Group(addressGroupURL)
 	address.Post(createURL, s.addressCreate)
+
+	token := router.Group(tokenGroupURL)
+	token.Post(GenerateTokenURL, s.tokenGenerate)
 
 	router.Group(WsURL, func(c *fiber.Ctx) error { return s.wsWrapper(ctxx, c) })
 
