@@ -1136,6 +1136,10 @@ import "github.com/bartossh/Computantis/repopostgre"
   - [func (db DataBase) FindAddress(ctx context.Context, search string, limit int) ([]string, error)](<#func-database-findaddress>)
   - [func (db DataBase) FindTransactionInBlockHash(ctx context.Context, trxHash [32]byte) ([32]byte, error)](<#func-database-findtransactioninblockhash>)
   - [func (db DataBase) InvalidateToken(ctx context.Context, token string) error](<#func-database-invalidatetoken>)
+  - [func (db DataBase) IsAddressAdmin(ctx context.Context, addr string) (bool, error)](<#func-database-isaddressadmin>)
+  - [func (db DataBase) IsAddressStandard(ctx context.Context, addr string) (bool, error)](<#func-database-isaddressstandard>)
+  - [func (db DataBase) IsAddressSuspended(ctx context.Context, addr string) (bool, error)](<#func-database-isaddresssuspended>)
+  - [func (db DataBase) IsAddressTrusted(ctx context.Context, addr string) (bool, error)](<#func-database-isaddresstrusted>)
   - [func (db DataBase) LastBlock(ctx context.Context) (block.Block, error)](<#func-database-lastblock>)
   - [func (db DataBase) MoveTransactionsFromAwaitingToTemporary(ctx context.Context, trxHash [32]byte) error](<#func-database-movetransactionsfromawaitingtotemporary>)
   - [func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context, blockHash [32]byte, hashes [][32]byte) error](<#func-database-movetransactionsfromtemporarytopermanent>)
@@ -1223,7 +1227,7 @@ func (db DataBase) AddToBlockchainLockQueue(ctx context.Context, nodeID string) 
 
 AddToBlockchainLockQueue adds blockchain lock to queue.
 
-### func \(DataBase\) [CheckAddressExists](<https://github.com/bartossh/Computantis/blob/main/repopostgre/address.go#L18>)
+### func \(DataBase\) [CheckAddressExists](<https://github.com/bartossh/Computantis/blob/main/repopostgre/address.go#L25>)
 
 ```go
 func (db DataBase) CheckAddressExists(ctx context.Context, addr string) (bool, error)
@@ -1263,7 +1267,7 @@ func (db DataBase) Disconnect(ctx context.Context) error
 
 Disconnect disconnects user from database
 
-### func \(DataBase\) [FindAddress](<https://github.com/bartossh/Computantis/blob/main/repopostgre/address.go#L28>)
+### func \(DataBase\) [FindAddress](<https://github.com/bartossh/Computantis/blob/main/repopostgre/address.go#L36>)
 
 ```go
 func (db DataBase) FindAddress(ctx context.Context, search string, limit int) ([]string, error)
@@ -1286,6 +1290,38 @@ func (db DataBase) InvalidateToken(ctx context.Context, token string) error
 ```
 
 InvalidateToken invalidates token.
+
+### func \(DataBase\) [IsAddressAdmin](<https://github.com/bartossh/Computantis/blob/main/repopostgre/address.go#L97>)
+
+```go
+func (db DataBase) IsAddressAdmin(ctx context.Context, addr string) (bool, error)
+```
+
+IsAddressAdmin checks if address has access level admin.
+
+### func \(DataBase\) [IsAddressStandard](<https://github.com/bartossh/Computantis/blob/main/repopostgre/address.go#L79>)
+
+```go
+func (db DataBase) IsAddressStandard(ctx context.Context, addr string) (bool, error)
+```
+
+IsAddressStandard checks if address has access level standard.
+
+### func \(DataBase\) [IsAddressSuspended](<https://github.com/bartossh/Computantis/blob/main/repopostgre/address.go#L70>)
+
+```go
+func (db DataBase) IsAddressSuspended(ctx context.Context, addr string) (bool, error)
+```
+
+IsAddressAdmin checks if address has access level suspended.
+
+### func \(DataBase\) [IsAddressTrusted](<https://github.com/bartossh/Computantis/blob/main/repopostgre/address.go#L88>)
+
+```go
+func (db DataBase) IsAddressTrusted(ctx context.Context, addr string) (bool, error)
+```
+
+IsAddressTrusted checks if address has access level trusted.
 
 ### func \(DataBase\) [LastBlock](<https://github.com/bartossh/Computantis/blob/main/repopostgre/block.go#L12>)
 
@@ -1407,7 +1443,7 @@ func (db DataBase) Write(p []byte) (n int, err error)
 
 Write writes log to the database. p is a marshaled logger.Log.
 
-### func \(DataBase\) [WriteAddress](<https://github.com/bartossh/Computantis/blob/main/repopostgre/address.go#L9>)
+### func \(DataBase\) [WriteAddress](<https://github.com/bartossh/Computantis/blob/main/repopostgre/address.go#L16>)
 
 ```go
 func (db DataBase) WriteAddress(ctx context.Context, addr string) error
@@ -1528,6 +1564,7 @@ import "github.com/bartossh/Computantis/server"
 - [Constants](<#constants>)
 - [Variables](<#variables>)
 - [func Run(ctx context.Context, c Config, repo Repository, bookkeeping Bookkeeper, pv RandomDataProvideValidator, log logger.Logger, rx ReactiveSubscriberProvider) error](<#func-run>)
+- [type AddressReaderWriterModifier](<#type-addressreaderwritermodifier>)
 - [type AliveResponse](<#type-aliveresponse>)
 - [type AwaitedIssuedTransactionRequest](<#type-awaitedissuedtransactionrequest>)
 - [type AwaitedTransactionResponse](<#type-awaitedtransactionresponse>)
@@ -1594,13 +1631,27 @@ var (
 )
 ```
 
-## func [Run](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L131-L135>)
+## func [Run](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L138-L142>)
 
 ```go
 func Run(ctx context.Context, c Config, repo Repository, bookkeeping Bookkeeper, pv RandomDataProvideValidator, log logger.Logger, rx ReactiveSubscriberProvider) error
 ```
 
 Run initializes routing and runs the server. To stop the server cancel the context. It blocks until the context is canceled.
+
+## type [AddressReaderWriterModifier](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L68-L76>)
+
+```go
+type AddressReaderWriterModifier interface {
+    FindAddress(ctx context.Context, search string, limit int) ([]string, error)
+    CheckAddressExists(ctx context.Context, address string) (bool, error)
+    WriteAddress(ctx context.Context, address string) error
+    IsAddressSuspended(ctx context.Context, addr string) (bool, error)
+    IsAddressStandard(ctx context.Context, addr string) (bool, error)
+    IsAddressTrusted(ctx context.Context, addr string) (bool, error)
+    IsAddressAdmin(ctx context.Context, addr string) (bool, error)
+}
+```
 
 ## type [AliveResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L11-L15>)
 
@@ -1614,7 +1665,7 @@ type AliveResponse struct {
 }
 ```
 
-## type [AwaitedIssuedTransactionRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L150-L155>)
+## type [AwaitedIssuedTransactionRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L182-L187>)
 
 AwaitedIssuedTransactionRequest is a request to get awaited or issued transactions for given address. Request contains of Address for which Transactions are requested, Data in binary format, Hash of Data and Signature of the Data to prove that entity doing the request is an Address owner.
 
@@ -1627,7 +1678,7 @@ type AwaitedIssuedTransactionRequest struct {
 }
 ```
 
-## type [AwaitedTransactionResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L158-L161>)
+## type [AwaitedTransactionResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L190-L193>)
 
 AwaitedTransactionResponse is a response for awaited transactions request.
 
@@ -1638,7 +1689,7 @@ type AwaitedTransactionResponse struct {
 }
 ```
 
-## type [Bookkeeper](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L91-L96>)
+## type [Bookkeeper](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L98-L103>)
 
 Bookkeeper abstracts methods of the bookkeeping of a blockchain.
 
@@ -1651,7 +1702,7 @@ type Bookkeeper interface {
 }
 ```
 
-## type [Config](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L113-L117>)
+## type [Config](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L120-L124>)
 
 Config contains configuration of the server.
 
@@ -1663,7 +1714,7 @@ type Config struct {
 }
 ```
 
-## type [CreateAddressRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L259-L265>)
+## type [CreateAddressRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L310-L316>)
 
 CreateAddressRequest is a request to create an address.
 
@@ -1677,7 +1728,7 @@ type CreateAddressRequest struct {
 }
 ```
 
-## type [CreateAddressResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L269-L272>)
+## type [CreateAddressResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L320-L323>)
 
 Response for address creation request. If Success is true, Address contains created address in base58 format.
 
@@ -1688,7 +1739,7 @@ type CreateAddressResponse struct {
 }
 ```
 
-## type [DataToSignRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L239-L241>)
+## type [DataToSignRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L289-L291>)
 
 DataToSignRequest is a request to get data to sign for proving identity.
 
@@ -1698,7 +1749,7 @@ type DataToSignRequest struct {
 }
 ```
 
-## type [DataToSignResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L244-L246>)
+## type [DataToSignResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L294-L296>)
 
 DataToSignRequest is a response containing data to sign for proving identity.
 
@@ -1708,7 +1759,7 @@ type DataToSignResponse struct {
 }
 ```
 
-## type [IssuedTransactionResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L199-L202>)
+## type [IssuedTransactionResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L240-L243>)
 
 AwaitedTransactionResponse is a response for issued transactions request.
 
@@ -1733,7 +1784,7 @@ type Message struct {
 }
 ```
 
-## type [RandomDataProvideValidator](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L100-L103>)
+## type [RandomDataProvideValidator](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L107-L110>)
 
 RandomDataProvideValidator provides random binary data for signing to prove identity and the validator of data being valid and not expired.
 
@@ -1744,7 +1795,7 @@ type RandomDataProvideValidator interface {
 }
 ```
 
-## type [ReactiveSubscriberProvider](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L107-L110>)
+## type [ReactiveSubscriberProvider](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L114-L117>)
 
 ReactiveSubscriberProvider provides reactive subscription to the blockchain. It allows to listen for the new blocks created by the Ladger.
 
@@ -1768,17 +1819,14 @@ type Register interface {
 }
 ```
 
-## type [Repository](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L72-L83>)
+## type [Repository](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L82-L90>)
 
 Repository is the interface that wraps the basic CRUD and Search methods. Repository should be properly indexed to allow for transaction and block hash. as well as address public keys to be and unique and the hash lookup should be fast. Repository holds the blocks and transaction that are part of the blockchain.
 
 ```go
 type Repository interface {
     Register
-    RunMigration(ctx context.Context) error
-    FindAddress(ctx context.Context, search string, limit int) ([]string, error)
-    CheckAddressExists(ctx context.Context, address string) (bool, error)
-    WriteAddress(ctx context.Context, address string) error
+    AddressReaderWriterModifier
     FindTransactionInBlockHash(ctx context.Context, trxHash [32]byte) ([32]byte, error)
     CheckToken(ctx context.Context, token string) (bool, error)
     InvalidateToken(ctx context.Context, token string) error
@@ -1807,17 +1855,18 @@ type SearchAddressResponse struct {
 }
 ```
 
-## type [SearchBlockRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L55-L57>)
+## type [SearchBlockRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L55-L58>)
 
 SearchBlockRequest is a request to search for block.
 
 ```go
 type SearchBlockRequest struct {
+    Address    string   `json:"address"`
     RawTrxHash [32]byte `json:"raw_trx_hash"`
 }
 ```
 
-## type [SearchBlockResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L60-L62>)
+## type [SearchBlockResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L61-L63>)
 
 SearchBlockResponse is a response for block search.
 
@@ -1827,7 +1876,7 @@ type SearchBlockResponse struct {
 }
 ```
 
-## type [TransactionConfirmProposeResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L90-L93>)
+## type [TransactionConfirmProposeResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L100-L103>)
 
 TransactionConfirmProposeResponse is a response for transaction propose.
 
@@ -1838,7 +1887,7 @@ type TransactionConfirmProposeResponse struct {
 }
 ```
 
-## type [TransactionProposeRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L84-L87>)
+## type [TransactionProposeRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L94-L97>)
 
 TransactionProposeRequest is a request to propose a transaction.
 
@@ -1849,7 +1898,7 @@ type TransactionProposeRequest struct {
 }
 ```
 
-## type [Verifier](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L86-L88>)
+## type [Verifier](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L93-L95>)
 
 Verifier provides methods to verify the signature of the message.
 

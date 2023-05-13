@@ -80,7 +80,7 @@ func (s *server) wsWrapper(ctx context.Context, c *fiber.Ctx) error {
 		return fiber.ErrForbidden
 	}
 
-	if ok, err := s.repo.CheckAddressExists(c.Context(), addr); err != nil || !ok {
+	if ok, err := s.repo.IsAddressTrusted(c.Context(), addr); err != nil || !ok {
 		if err != nil {
 			s.log.Error(fmt.Sprintf("failed to check address: %s", err.Error()))
 			return fiber.ErrForbidden

@@ -9,12 +9,16 @@ CREATE DATABASE computantis
 
 \c computantis
 
+CREATE TYPE address_access_level AS ENUM ('suspended', 'standard', 'trusted', 'admin');
+
 CREATE TABLE IF NOT EXISTS addresses (
    id serial PRIMARY KEY,
-   public_key VARCHAR ( 64 ) UNIQUE NOT NULL
+   public_key VARCHAR ( 64 ) UNIQUE NOT NULL,
+   access_level address_access_level NOT NULL
 );
 
 CREATE INDEX address_public_key ON addresses USING HASH (public_key);
+CREATE INDEX address_access_level ON addresses USING HASH (access_level);
 
 CREATE TYPE transaction_status AS ENUM ('awaited', 'temporary', 'permanent', 'rejected');
 CREATE TABLE IF NOT EXISTS transactions(

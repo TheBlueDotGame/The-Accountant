@@ -53,6 +53,7 @@ func (s *server) address(c *fiber.Ctx) error {
 
 // SearchBlockRequest is a request to search for block.
 type SearchBlockRequest struct {
+	Address    string   `json:"address"`
 	RawTrxHash [32]byte `json:"raw_trx_hash"`
 }
 
@@ -67,6 +68,15 @@ func (s *server) trxInBlock(c *fiber.Ctx) error {
 	if err := c.BodyParser(&req); err != nil {
 		s.log.Error(fmt.Sprintf("trx_in_block endpoint, failed to parse request body: %s", err.Error()))
 		return fiber.ErrBadRequest
+	}
+
+	if ok, err := s.repo.IsAddressSuspended(c.Context(), req.Address); err != nil || ok {
+		if err != nil {
+			s.log.Error(fmt.Sprintf("failed to check address: %s", err.Error()))
+			return fiber.ErrForbidden
+		}
+		s.log.Error(fmt.Sprintf("address %s is suspended", req.Address))
+		return fiber.ErrForbidden
 	}
 
 	res, err := s.repo.FindTransactionInBlockHash(c.Context(), req.RawTrxHash)
@@ -104,6 +114,15 @@ func (s *server) propose(c *fiber.Ctx) error {
 		return fiber.ErrBadRequest
 	}
 
+	if ok, err := s.repo.IsAddressSuspended(c.Context(), req.Transaction.IssuerAddress); err != nil || ok {
+		if err != nil {
+			s.log.Error(fmt.Sprintf("failed to check address: %s", err.Error()))
+			return fiber.ErrForbidden
+		}
+		s.log.Error(fmt.Sprintf("issuer address %s is suspended", req.Transaction.IssuerAddress))
+		return fiber.ErrForbidden
+	}
+
 	if err := s.bookkeeping.WriteIssuerSignedTransactionForReceiver(c.Context(), &req.Transaction); err != nil {
 		s.log.Error(fmt.Sprintf("propose endpoint, failed to write transaction: %s", err.Error()))
 		return c.JSON(TransactionConfirmProposeResponse{
@@ -125,9 +144,22 @@ func (s *server) confirm(c *fiber.Ctx) error {
 		return fiber.ErrBadRequest
 	}
 
-	if len(trx.Data) == 0 || len(trx.Data) > s.dataSize {
-		s.log.Error(fmt.Sprintf("propose endpoint, invalid transaction data size: %d", len(trx.Data)))
-		return fiber.ErrBadRequest
+	if ok, err := s.repo.IsAddressSuspended(c.Context(), trx.IssuerAddress); err != nil || ok {
+		if err != nil {
+			s.log.Error(fmt.Sprintf("failed to check address: %s", err.Error()))
+			return fiber.ErrForbidden
+		}
+		s.log.Error(fmt.Sprintf("issuer address %s is suspended", trx.IssuerAddress))
+		return fiber.ErrForbidden
+	}
+
+	if ok, err := s.repo.IsAddressSuspended(c.Context(), trx.ReceiverAddress); err != nil || ok {
+		if err != nil {
+			s.log.Error(fmt.Sprintf("failed to check address: %s", err.Error()))
+			return fiber.ErrForbidden
+		}
+		s.log.Error(fmt.Sprintf("receiver address %s is suspended", trx.ReceiverAddress))
+		return fiber.ErrForbidden
 	}
 
 	if err := s.bookkeeping.WriteCandidateTransaction(c.Context(), &trx); err != nil {
@@ -172,6 +204,15 @@ func (s *server) awaited(c *fiber.Ctx) error {
 		return fiber.ErrForbidden
 	}
 
+	if ok, err := s.repo.IsAddressSuspended(c.Context(), req.Address); err != nil || ok {
+		if err != nil {
+			s.log.Error(fmt.Sprintf("failed to check address: %s", err.Error()))
+			return fiber.ErrForbidden
+		}
+		s.log.Error(fmt.Sprintf("address %s is suspended", req.Address))
+		return fiber.ErrForbidden
+	}
+
 	if err := s.bookkeeping.VerifySignature(req.Data, req.Signature, req.Hash, req.Address); err != nil {
 		s.log.Error(
 			fmt.Sprintf("awaited endpoint, failed to verify signature for address: %s, %s", req.Address, err.Error()))
@@ -213,6 +254,15 @@ func (s *server) issued(c *fiber.Ctx) error {
 		return fiber.ErrForbidden
 	}
 
+	if ok, err := s.repo.IsAddressSuspended(c.Context(), req.Address); err != nil || ok {
+		if err != nil {
+			s.log.Error(fmt.Sprintf("failed to check address: %s", err.Error()))
+			return fiber.ErrForbidden
+		}
+		s.log.Error(fmt.Sprintf("address %s is suspended", req.Address))
+		return fiber.ErrForbidden
+	}
+
 	if err := s.bookkeeping.VerifySignature(req.Data, req.Signature, req.Hash, req.Address); err != nil {
 		s.log.Error(
 			fmt.Sprintf("issued endpoint, failed to verify signature for address: %s, %s", req.Address, err.Error()))
@@ -251,6 +301,7 @@ func (s *server) data(c *fiber.Ctx) error {
 		s.log.Error(fmt.Sprintf("data endpoint, failed to parse request body: %s", err.Error()))
 		return fiber.ErrBadRequest
 	}
+
 	d := s.randDataProv.ProvideData(req.Address)
 	return c.JSON(DataToSignResponse{Data: d})
 }
