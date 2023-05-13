@@ -9,6 +9,7 @@ import (
 
 	"github.com/bartossh/Computantis/block"
 	"github.com/bartossh/Computantis/server"
+	"github.com/bartossh/Computantis/token"
 	"github.com/bartossh/Computantis/transaction"
 	"github.com/bartossh/Computantis/validator"
 	"github.com/bartossh/Computantis/wallet"
@@ -268,6 +269,39 @@ func (c *Client) ReadIssuedTransactions() ([]transaction.Transaction, error) {
 	}
 
 	return res.IssuedTransactions, nil
+}
+
+// GenerateToken generates a token for the given time in the central node repository.
+// It is only permitted to generate a token if wallet has admin permissions in the central node.
+func (c *Client) GenerateToken(t time.Time) (token.Token, error) {
+	if !c.ready {
+		return token.Token{}, ErrWalletNotReady
+	}
+
+	data, err := c.DataToSign(c.w.Address())
+	if err != nil {
+		return token.Token{}, errors.Join(ErrRejectedByServer, err)
+	}
+
+	hash, signature := c.w.Sign(data.Data)
+	req := server.GenerateTokenRequest{
+		Address:    c.w.Address(),
+		Data:       data.Data,
+		Hash:       hash,
+		Signature:  signature,
+		Expiration: t.UnixMicro(),
+	}
+
+	var res server.GenerateTokenResponse
+	url := fmt.Sprintf("%s/%s", c.apiRoot, server.GenerateTokenURL)
+	if err := c.makePost(url, req, &res); err != nil {
+		return token.Token{}, errors.Join(ErrRejectedByServer, err)
+	}
+	if !res.Valid {
+		return token.Token{}, errors.Join(ErrRejectedByServer, errors.New("failed to generate token"))
+	}
+
+	return res, nil
 }
 
 // SaveWalletToFile saves the wallet to the file in the path.

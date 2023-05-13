@@ -24,7 +24,7 @@ func (db DataBase) CheckToken(ctx context.Context, tkn string) (bool, error) {
 	if !t.Valid {
 		return false, nil
 	}
-	if t.ExpirationDate < time.Now().UnixNano() {
+	if t.ExpirationDate < time.Now().UnixMicro() {
 		return false, nil
 	}
 	return true, nil

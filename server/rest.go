@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 
+	"github.com/bartossh/Computantis/token"
 	"github.com/bartossh/Computantis/transaction"
 	"github.com/gofiber/fiber/v2"
 )
@@ -368,4 +369,56 @@ func (s *server) addressCreate(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(&CreateAddressResponse{Success: true, Address: req.Address})
+}
+
+// GenerateTokenRequest is a request for token generation.
+type GenerateTokenRequest struct {
+	Address    string   `json:"address"`
+	Expiration int64    `json:"expiration"`
+	Data       []byte   `json:"data"`
+	Hash       [32]byte `json:"hash"`
+	Signature  []byte   `json:"signature"`
+}
+
+// GenerateTokenResponse is a response containing generated token.
+type GenerateTokenResponse = token.Token
+
+func (s *server) tokenGenerate(c *fiber.Ctx) error {
+	var req GenerateTokenRequest
+	if err := c.BodyParser(&req); err != nil {
+		s.log.Error(fmt.Sprintf("token generate, failed to parse request body: %s", err.Error()))
+		return fiber.ErrBadRequest
+	}
+	if ok := s.randDataProv.ValidateData(req.Address, req.Data); !ok {
+		s.log.Error(fmt.Sprintf("token generate, failed to validate data for address: %s", req.Address))
+		return fiber.ErrForbidden
+	}
+
+	if err := s.bookkeeping.VerifySignature(req.Data, req.Signature, req.Hash, req.Address); err != nil {
+		s.log.Error(fmt.Sprintf("token generate, failed to verify signature for address: %s, %s",
+			req.Address, err.Error()))
+		return fiber.ErrForbidden
+	}
+
+	if ok, err := s.repo.IsAddressAdmin(c.Context(), req.Address); !ok || err != nil {
+		if err != nil {
+			s.log.Error(fmt.Sprintf("token generate, failed to check address: %s,%s", req.Address, err.Error()))
+			return fiber.ErrGone
+		}
+		s.log.Error(fmt.Sprintf("token generate, address is not admin: %s, %s", req.Address, err.Error()))
+		return fiber.ErrForbidden
+	}
+
+	t, err := token.New(req.Expiration)
+	if err != nil {
+		s.log.Error(fmt.Sprintf("token generate, failed to create token: %s", err.Error()))
+		return fiber.ErrInternalServerError
+	}
+
+	if err := s.repo.WriteToken(c.Context(), req.Address, req.Expiration); err != nil {
+		s.log.Error(fmt.Sprintf("token generate, failed to write token: %s, %s", req.Address, err.Error()))
+		return fiber.ErrConflict
+	}
+
+	return c.JSON(t)
 }
