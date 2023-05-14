@@ -817,7 +817,7 @@ Configuration is the main configuration of the application that corresponds to t
 type Configuration struct {
     Bookkeeper    bookkeeping.Config    `yaml:"bookkeeper"`
     Server        server.Config         `yaml:"server"`
-    Database      repopostgre.DBConfig  `yaml:"database"`
+    Database      repository.DBConfig   `yaml:"database"`
     DataProvider  dataprovider.Config   `yaml:"data_provider"`
     Validator     validator.Config      `yaml:"validator"`
     FileOperator  fileoperations.Config `yaml:"file_operator"`
@@ -1124,10 +1124,10 @@ func (o *Observable[T]) Subscribe() *subscriber[T]
 
 Subscribe subscribes to the container.
 
-# repopostgre
+# repository
 
 ```go
-import "github.com/bartossh/Computantis/repopostgre"
+import "github.com/bartossh/Computantis/repository"
 ```
 
 ## Index
@@ -1199,7 +1199,7 @@ var (
 )
 ```
 
-## type [DBConfig](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L33-L36>)
+## type [DBConfig](<https://github.com/bartossh/Computantis/blob/main/repository/repopostgre.go#L33-L36>)
 
 Config contains configuration for the database.
 
@@ -1210,7 +1210,7 @@ type DBConfig struct {
 }
 ```
 
-## type [DataBase](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L39-L41>)
+## type [DataBase](<https://github.com/bartossh/Computantis/blob/main/repository/repopostgre.go#L39-L41>)
 
 Database provides database access for read, write and delete of repository entities.
 
@@ -1220,7 +1220,7 @@ type DataBase struct {
 }
 ```
 
-### func [Connect](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L58>)
+### func [Connect](<https://github.com/bartossh/Computantis/blob/main/repository/repopostgre.go#L58>)
 
 ```go
 func Connect(ctx context.Context, cfg DBConfig) (*DataBase, error)
@@ -1228,7 +1228,7 @@ func Connect(ctx context.Context, cfg DBConfig) (*DataBase, error)
 
 Connect creates new connection to the repository and returns pointer to the DataBase.
 
-### func \(DataBase\) [AddToBlockchainLockQueue](<https://github.com/bartossh/Computantis/blob/main/repopostgre/notifier.go#L105>)
+### func \(DataBase\) [AddToBlockchainLockQueue](<https://github.com/bartossh/Computantis/blob/main/repository/notifier.go#L105>)
 
 ```go
 func (db DataBase) AddToBlockchainLockQueue(ctx context.Context, nodeID string) error
@@ -1236,7 +1236,7 @@ func (db DataBase) AddToBlockchainLockQueue(ctx context.Context, nodeID string) 
 
 AddToBlockchainLockQueue adds blockchain lock to queue.
 
-### func \(DataBase\) [CheckAddressExists](<https://github.com/bartossh/Computantis/blob/main/repopostgre/address.go#L25>)
+### func \(DataBase\) [CheckAddressExists](<https://github.com/bartossh/Computantis/blob/main/repository/address.go#L25>)
 
 ```go
 func (db DataBase) CheckAddressExists(ctx context.Context, addr string) (bool, error)
@@ -1244,7 +1244,7 @@ func (db DataBase) CheckAddressExists(ctx context.Context, addr string) (bool, e
 
 CheckAddressExists checks if address exists in the database.
 
-### func \(DataBase\) [CheckIsOnTopOfBlockchainsLocks](<https://github.com/bartossh/Computantis/blob/main/repopostgre/notifier.go#L124>)
+### func \(DataBase\) [CheckIsOnTopOfBlockchainsLocks](<https://github.com/bartossh/Computantis/blob/main/repository/notifier.go#L124>)
 
 ```go
 func (db DataBase) CheckIsOnTopOfBlockchainsLocks(ctx context.Context, nodeID string) (bool, error)
@@ -1252,7 +1252,7 @@ func (db DataBase) CheckIsOnTopOfBlockchainsLocks(ctx context.Context, nodeID st
 
 CheckIsOnTopOfBlockchainsLocks checks if node is on top of blockchain locks queue.
 
-### func \(DataBase\) [CheckToken](<https://github.com/bartossh/Computantis/blob/main/repopostgre/token.go#L14>)
+### func \(DataBase\) [CheckToken](<https://github.com/bartossh/Computantis/blob/main/repository/token.go#L14>)
 
 ```go
 func (db DataBase) CheckToken(ctx context.Context, tkn string) (bool, error)
@@ -1260,7 +1260,7 @@ func (db DataBase) CheckToken(ctx context.Context, tkn string) (bool, error)
 
 CheckToken checks if token exists in the database is valid and didn't expire.
 
-### func \(DataBase\) [CountRegistered](<https://github.com/bartossh/Computantis/blob/main/repopostgre/node.go#L27>)
+### func \(DataBase\) [CountRegistered](<https://github.com/bartossh/Computantis/blob/main/repository/node.go#L27>)
 
 ```go
 func (db DataBase) CountRegistered(ctx context.Context) (int, error)
@@ -1268,7 +1268,7 @@ func (db DataBase) CountRegistered(ctx context.Context) (int, error)
 
 CountRegistered counts registered nodes in the database.
 
-### func \(DataBase\) [Disconnect](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L68>)
+### func \(DataBase\) [Disconnect](<https://github.com/bartossh/Computantis/blob/main/repository/repopostgre.go#L68>)
 
 ```go
 func (db DataBase) Disconnect(ctx context.Context) error
@@ -1276,7 +1276,7 @@ func (db DataBase) Disconnect(ctx context.Context) error
 
 Disconnect disconnects user from database
 
-### func \(DataBase\) [FindAddress](<https://github.com/bartossh/Computantis/blob/main/repopostgre/address.go#L36>)
+### func \(DataBase\) [FindAddress](<https://github.com/bartossh/Computantis/blob/main/repository/address.go#L36>)
 
 ```go
 func (db DataBase) FindAddress(ctx context.Context, search string, limit int) ([]string, error)
@@ -1284,7 +1284,7 @@ func (db DataBase) FindAddress(ctx context.Context, search string, limit int) ([
 
 FindAddress finds address in the database.
 
-### func \(DataBase\) [FindTransactionInBlockHash](<https://github.com/bartossh/Computantis/blob/main/repopostgre/transaction.go#L169>)
+### func \(DataBase\) [FindTransactionInBlockHash](<https://github.com/bartossh/Computantis/blob/main/repository/transaction.go#L169>)
 
 ```go
 func (db DataBase) FindTransactionInBlockHash(ctx context.Context, trxHash [32]byte) ([32]byte, error)
@@ -1292,7 +1292,7 @@ func (db DataBase) FindTransactionInBlockHash(ctx context.Context, trxHash [32]b
 
 FindTransactionInBlockHash returns block hash in to which transaction with given hash was added. If transaction is not yet added to any block, empty hash is returned.
 
-### func \(DataBase\) [InvalidateToken](<https://github.com/bartossh/Computantis/blob/main/repopostgre/token.go#L44>)
+### func \(DataBase\) [InvalidateToken](<https://github.com/bartossh/Computantis/blob/main/repository/token.go#L44>)
 
 ```go
 func (db DataBase) InvalidateToken(ctx context.Context, token string) error
@@ -1300,7 +1300,7 @@ func (db DataBase) InvalidateToken(ctx context.Context, token string) error
 
 InvalidateToken invalidates token.
 
-### func \(DataBase\) [IsAddressAdmin](<https://github.com/bartossh/Computantis/blob/main/repopostgre/address.go#L97>)
+### func \(DataBase\) [IsAddressAdmin](<https://github.com/bartossh/Computantis/blob/main/repository/address.go#L97>)
 
 ```go
 func (db DataBase) IsAddressAdmin(ctx context.Context, addr string) (bool, error)
@@ -1308,7 +1308,7 @@ func (db DataBase) IsAddressAdmin(ctx context.Context, addr string) (bool, error
 
 IsAddressAdmin checks if address has access level admin.
 
-### func \(DataBase\) [IsAddressStandard](<https://github.com/bartossh/Computantis/blob/main/repopostgre/address.go#L79>)
+### func \(DataBase\) [IsAddressStandard](<https://github.com/bartossh/Computantis/blob/main/repository/address.go#L79>)
 
 ```go
 func (db DataBase) IsAddressStandard(ctx context.Context, addr string) (bool, error)
@@ -1316,7 +1316,7 @@ func (db DataBase) IsAddressStandard(ctx context.Context, addr string) (bool, er
 
 IsAddressStandard checks if address has access level standard.
 
-### func \(DataBase\) [IsAddressSuspended](<https://github.com/bartossh/Computantis/blob/main/repopostgre/address.go#L70>)
+### func \(DataBase\) [IsAddressSuspended](<https://github.com/bartossh/Computantis/blob/main/repository/address.go#L70>)
 
 ```go
 func (db DataBase) IsAddressSuspended(ctx context.Context, addr string) (bool, error)
@@ -1324,7 +1324,7 @@ func (db DataBase) IsAddressSuspended(ctx context.Context, addr string) (bool, e
 
 IsAddressAdmin checks if address has access level suspended.
 
-### func \(DataBase\) [IsAddressTrusted](<https://github.com/bartossh/Computantis/blob/main/repopostgre/address.go#L88>)
+### func \(DataBase\) [IsAddressTrusted](<https://github.com/bartossh/Computantis/blob/main/repository/address.go#L88>)
 
 ```go
 func (db DataBase) IsAddressTrusted(ctx context.Context, addr string) (bool, error)
@@ -1332,7 +1332,7 @@ func (db DataBase) IsAddressTrusted(ctx context.Context, addr string) (bool, err
 
 IsAddressTrusted checks if address has access level trusted.
 
-### func \(DataBase\) [LastBlock](<https://github.com/bartossh/Computantis/blob/main/repopostgre/block.go#L12>)
+### func \(DataBase\) [LastBlock](<https://github.com/bartossh/Computantis/blob/main/repository/block.go#L12>)
 
 ```go
 func (db DataBase) LastBlock(ctx context.Context) (block.Block, error)
@@ -1340,7 +1340,7 @@ func (db DataBase) LastBlock(ctx context.Context) (block.Block, error)
 
 LastBlock returns last block from the database.
 
-### func \(DataBase\) [MoveTransactionsFromAwaitingToTemporary](<https://github.com/bartossh/Computantis/blob/main/repopostgre/transaction.go#L20>)
+### func \(DataBase\) [MoveTransactionsFromAwaitingToTemporary](<https://github.com/bartossh/Computantis/blob/main/repository/transaction.go#L20>)
 
 ```go
 func (db DataBase) MoveTransactionsFromAwaitingToTemporary(ctx context.Context, trxHash [32]byte) error
@@ -1348,7 +1348,7 @@ func (db DataBase) MoveTransactionsFromAwaitingToTemporary(ctx context.Context, 
 
 MoveTransactionsFromAwaitingToTemporary moves awaiting transaction marking it as temporary.
 
-### func \(DataBase\) [MoveTransactionsFromTemporaryToPermanent](<https://github.com/bartossh/Computantis/blob/main/repopostgre/transaction.go#L110>)
+### func \(DataBase\) [MoveTransactionsFromTemporaryToPermanent](<https://github.com/bartossh/Computantis/blob/main/repository/transaction.go#L110>)
 
 ```go
 func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context, blockHash [32]byte, hashes [][32]byte) error
@@ -1356,7 +1356,7 @@ func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context,
 
 MoveTransactionsFromTemporaryToPermanent moves transactions by marking transactions with matching hash to be permanent and sets block hash field to referenced block hash.
 
-### func \(DataBase\) [Ping](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L73>)
+### func \(DataBase\) [Ping](<https://github.com/bartossh/Computantis/blob/main/repository/repopostgre.go#L73>)
 
 ```go
 func (db DataBase) Ping(ctx context.Context) error
@@ -1364,7 +1364,7 @@ func (db DataBase) Ping(ctx context.Context) error
 
 Ping checks if the connection to the database is still alive.
 
-### func \(DataBase\) [ReadAwaitingTransactionsByIssuer](<https://github.com/bartossh/Computantis/blob/main/repopostgre/transaction.go#L80>)
+### func \(DataBase\) [ReadAwaitingTransactionsByIssuer](<https://github.com/bartossh/Computantis/blob/main/repository/transaction.go#L80>)
 
 ```go
 func (db DataBase) ReadAwaitingTransactionsByIssuer(ctx context.Context, address string) ([]transaction.Transaction, error)
@@ -1372,7 +1372,7 @@ func (db DataBase) ReadAwaitingTransactionsByIssuer(ctx context.Context, address
 
 ReadAwaitingTransactionsByIssuer  reads all transactions paired with given issuer address.
 
-### func \(DataBase\) [ReadAwaitingTransactionsByReceiver](<https://github.com/bartossh/Computantis/blob/main/repopostgre/transaction.go#L51>)
+### func \(DataBase\) [ReadAwaitingTransactionsByReceiver](<https://github.com/bartossh/Computantis/blob/main/repository/transaction.go#L51>)
 
 ```go
 func (db DataBase) ReadAwaitingTransactionsByReceiver(ctx context.Context, address string) ([]transaction.Transaction, error)
@@ -1380,7 +1380,7 @@ func (db DataBase) ReadAwaitingTransactionsByReceiver(ctx context.Context, addre
 
 ReadAwaitingTransactionsByReceiver reads all transactions paired with given receiver address.
 
-### func \(DataBase\) [ReadBlockByHash](<https://github.com/bartossh/Computantis/blob/main/repopostgre/block.go#L41>)
+### func \(DataBase\) [ReadBlockByHash](<https://github.com/bartossh/Computantis/blob/main/repository/block.go#L41>)
 
 ```go
 func (db DataBase) ReadBlockByHash(ctx context.Context, hash [32]byte) (block.Block, error)
@@ -1388,7 +1388,7 @@ func (db DataBase) ReadBlockByHash(ctx context.Context, hash [32]byte) (block.Bl
 
 ReadBlockByHash returns block with given hash.
 
-### func \(DataBase\) [ReadLastNValidatorStatuses](<https://github.com/bartossh/Computantis/blob/main/repopostgre/validator.go#L25>)
+### func \(DataBase\) [ReadLastNValidatorStatuses](<https://github.com/bartossh/Computantis/blob/main/repository/validator.go#L25>)
 
 ```go
 func (db DataBase) ReadLastNValidatorStatuses(ctx context.Context, last int64) ([]validator.Status, error)
@@ -1396,7 +1396,7 @@ func (db DataBase) ReadLastNValidatorStatuses(ctx context.Context, last int64) (
 
 ReadLastNValidatorStatuses reads last validator statuses from the database.
 
-### func \(DataBase\) [ReadRegisteredNodesAddresses](<https://github.com/bartossh/Computantis/blob/main/repopostgre/node.go#L37>)
+### func \(DataBase\) [ReadRegisteredNodesAddresses](<https://github.com/bartossh/Computantis/blob/main/repository/node.go#L37>)
 
 ```go
 func (db DataBase) ReadRegisteredNodesAddresses(ctx context.Context) ([]string, error)
@@ -1404,7 +1404,7 @@ func (db DataBase) ReadRegisteredNodesAddresses(ctx context.Context) ([]string, 
 
 ReadAddresses reads registered nodes addresses from the database.
 
-### func \(DataBase\) [ReadTemporaryTransactions](<https://github.com/bartossh/Computantis/blob/main/repopostgre/transaction.go#L139>)
+### func \(DataBase\) [ReadTemporaryTransactions](<https://github.com/bartossh/Computantis/blob/main/repository/transaction.go#L139>)
 
 ```go
 func (db DataBase) ReadTemporaryTransactions(ctx context.Context) ([]transaction.Transaction, error)
@@ -1412,7 +1412,7 @@ func (db DataBase) ReadTemporaryTransactions(ctx context.Context) ([]transaction
 
 ReadTemporaryTransactions reads all transactions that are marked as temporary.
 
-### func \(DataBase\) [RegisterNode](<https://github.com/bartossh/Computantis/blob/main/repopostgre/node.go#L9>)
+### func \(DataBase\) [RegisterNode](<https://github.com/bartossh/Computantis/blob/main/repository/node.go#L9>)
 
 ```go
 func (db DataBase) RegisterNode(ctx context.Context, n, ws string) error
@@ -1420,7 +1420,7 @@ func (db DataBase) RegisterNode(ctx context.Context, n, ws string) error
 
 RegisterNode registers node in the database.
 
-### func \(DataBase\) [RemoveFromBlockchainLocks](<https://github.com/bartossh/Computantis/blob/main/repopostgre/notifier.go#L115>)
+### func \(DataBase\) [RemoveFromBlockchainLocks](<https://github.com/bartossh/Computantis/blob/main/repository/notifier.go#L115>)
 
 ```go
 func (db DataBase) RemoveFromBlockchainLocks(ctx context.Context, nodeID string) error
@@ -1428,7 +1428,7 @@ func (db DataBase) RemoveFromBlockchainLocks(ctx context.Context, nodeID string)
 
 RemoveFromBlockchainLocks removes blockchain lock from queue.
 
-### func \(DataBase\) [RunMigration](<https://github.com/bartossh/Computantis/blob/main/repopostgre/migrations.go#L7>)
+### func \(DataBase\) [RunMigration](<https://github.com/bartossh/Computantis/blob/main/repository/migrations.go#L7>)
 
 ```go
 func (DataBase) RunMigration(_ context.Context) error
@@ -1436,7 +1436,7 @@ func (DataBase) RunMigration(_ context.Context) error
 
 RunMigration satisfies the RepositoryProvider interface as PostgreSQL migrations are run on when database is created in docker\-compose\-postgresql.yml.
 
-### func \(DataBase\) [UnregisterNode](<https://github.com/bartossh/Computantis/blob/main/repopostgre/node.go#L18>)
+### func \(DataBase\) [UnregisterNode](<https://github.com/bartossh/Computantis/blob/main/repository/node.go#L18>)
 
 ```go
 func (db DataBase) UnregisterNode(ctx context.Context, n string) error
@@ -1444,7 +1444,7 @@ func (db DataBase) UnregisterNode(ctx context.Context, n string) error
 
 UnregisterNode unregister node from the database.
 
-### func \(DataBase\) [Write](<https://github.com/bartossh/Computantis/blob/main/repopostgre/logger.go#L12>)
+### func \(DataBase\) [Write](<https://github.com/bartossh/Computantis/blob/main/repository/logger.go#L12>)
 
 ```go
 func (db DataBase) Write(p []byte) (n int, err error)
@@ -1452,7 +1452,7 @@ func (db DataBase) Write(p []byte) (n int, err error)
 
 Write writes log to the database. p is a marshaled logger.Log.
 
-### func \(DataBase\) [WriteAddress](<https://github.com/bartossh/Computantis/blob/main/repopostgre/address.go#L16>)
+### func \(DataBase\) [WriteAddress](<https://github.com/bartossh/Computantis/blob/main/repository/address.go#L16>)
 
 ```go
 func (db DataBase) WriteAddress(ctx context.Context, addr string) error
@@ -1460,7 +1460,7 @@ func (db DataBase) WriteAddress(ctx context.Context, addr string) error
 
 WriteAddress writes address to the database.
 
-### func \(DataBase\) [WriteBlock](<https://github.com/bartossh/Computantis/blob/main/repopostgre/block.go#L69>)
+### func \(DataBase\) [WriteBlock](<https://github.com/bartossh/Computantis/blob/main/repository/block.go#L69>)
 
 ```go
 func (db DataBase) WriteBlock(ctx context.Context, block block.Block) error
@@ -1468,7 +1468,7 @@ func (db DataBase) WriteBlock(ctx context.Context, block block.Block) error
 
 WriteBlock writes block to the database.
 
-### func \(DataBase\) [WriteIssuerSignedTransactionForReceiver](<https://github.com/bartossh/Computantis/blob/main/repopostgre/transaction.go#L29-L32>)
+### func \(DataBase\) [WriteIssuerSignedTransactionForReceiver](<https://github.com/bartossh/Computantis/blob/main/repository/transaction.go#L29-L32>)
 
 ```go
 func (db DataBase) WriteIssuerSignedTransactionForReceiver(ctx context.Context, trx *transaction.Transaction) error
@@ -1476,7 +1476,7 @@ func (db DataBase) WriteIssuerSignedTransactionForReceiver(ctx context.Context, 
 
 WriteIssuerSignedTransactionForReceiver writes transaction to the storage marking it as awaiting.
 
-### func \(DataBase\) [WriteToken](<https://github.com/bartossh/Computantis/blob/main/repopostgre/token.go#L34>)
+### func \(DataBase\) [WriteToken](<https://github.com/bartossh/Computantis/blob/main/repository/token.go#L34>)
 
 ```go
 func (db DataBase) WriteToken(ctx context.Context, tkn string, expirationDate int64) error
@@ -1484,7 +1484,7 @@ func (db DataBase) WriteToken(ctx context.Context, tkn string, expirationDate in
 
 WriteToken writes unique token to the database.
 
-### func \(DataBase\) [WriteValidatorStatus](<https://github.com/bartossh/Computantis/blob/main/repopostgre/validator.go#L12>)
+### func \(DataBase\) [WriteValidatorStatus](<https://github.com/bartossh/Computantis/blob/main/repository/validator.go#L12>)
 
 ```go
 func (db DataBase) WriteValidatorStatus(ctx context.Context, vs *validator.Status) error
@@ -1492,7 +1492,7 @@ func (db DataBase) WriteValidatorStatus(ctx context.Context, vs *validator.Statu
 
 WriteValidatorStatus writes validator status to the database.
 
-## type [Listener](<https://github.com/bartossh/Computantis/blob/main/repopostgre/notifier.go#L37-L39>)
+## type [Listener](<https://github.com/bartossh/Computantis/blob/main/repository/notifier.go#L37-L39>)
 
 Listener wraps listener for notifications from database. Provides methods for listening and closing.
 
@@ -1502,7 +1502,7 @@ type Listener struct {
 }
 ```
 
-### func [Listen](<https://github.com/bartossh/Computantis/blob/main/repopostgre/notifier.go#L42>)
+### func [Listen](<https://github.com/bartossh/Computantis/blob/main/repository/notifier.go#L42>)
 
 ```go
 func Listen(conn string, report func(ev pq.ListenerEventType, err error)) (Listener, error)
@@ -1510,7 +1510,7 @@ func Listen(conn string, report func(ev pq.ListenerEventType, err error)) (Liste
 
 Listen creates Listener for notifications from database.
 
-### func [Subscribe](<https://github.com/bartossh/Computantis/blob/main/repopostgre/repopostgre.go#L44>)
+### func [Subscribe](<https://github.com/bartossh/Computantis/blob/main/repository/repopostgre.go#L44>)
 
 ```go
 func Subscribe(ctx context.Context, cfg DBConfig) (Listener, error)
@@ -1518,7 +1518,7 @@ func Subscribe(ctx context.Context, cfg DBConfig) (Listener, error)
 
 Subscribe subscribes to the database events.
 
-### func \(Listener\) [Close](<https://github.com/bartossh/Computantis/blob/main/repopostgre/notifier.go#L100>)
+### func \(Listener\) [Close](<https://github.com/bartossh/Computantis/blob/main/repository/notifier.go#L100>)
 
 ```go
 func (l Listener) Close()
@@ -1526,7 +1526,7 @@ func (l Listener) Close()
 
 Close closes listener.
 
-### func \(Listener\) [SubscribeToLockBlockchainNotification](<https://github.com/bartossh/Computantis/blob/main/repopostgre/notifier.go#L53>)
+### func \(Listener\) [SubscribeToLockBlockchainNotification](<https://github.com/bartossh/Computantis/blob/main/repository/notifier.go#L53>)
 
 ```go
 func (l Listener) SubscribeToLockBlockchainNotification(ctx context.Context, c chan<- bool, node string)
