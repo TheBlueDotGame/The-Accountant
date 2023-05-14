@@ -33,6 +33,7 @@ var (
 type DBConfig struct {
 	ConnStr      string `yaml:"conn_str"`      // ConnStr is the connection string to the database.
 	DatabaseName string `yaml:"database_name"` // DatabaseName is the name of the database.
+	IsSSL        bool   `yaml:"is_ssl"`        // IsSSL is the flag that indicates if the connection should be encrypted.
 }
 
 // Database provides database access for read, write and delete of repository entities.
@@ -56,7 +57,11 @@ func Subscribe(ctx context.Context, cfg DBConfig) (Listener, error) {
 
 // Connect creates new connection to the repository and returns pointer to the DataBase.
 func Connect(ctx context.Context, cfg DBConfig) (*DataBase, error) {
-	db, err := sql.Open("postgres", fmt.Sprintf("%s/%s?sslmode=disable", cfg.ConnStr, cfg.DatabaseName)) // TODO: enable sslmode=verify-full
+	sslMode := "sslmode=disable"
+	if cfg.IsSSL {
+		sslMode = "sslmode=require"
+	}
+	db, err := sql.Open("postgres", fmt.Sprintf("%s/%s?%s", cfg.ConnStr, cfg.DatabaseName, sslMode))
 	if err != nil {
 		return nil, err
 	}
