@@ -1199,7 +1199,7 @@ var (
 )
 ```
 
-## type [DBConfig](<https://github.com/bartossh/Computantis/blob/main/repository/repopostgre.go#L33-L36>)
+## type [DBConfig](<https://github.com/bartossh/Computantis/blob/main/repository/repopostgre.go#L33-L37>)
 
 Config contains configuration for the database.
 
@@ -1207,10 +1207,11 @@ Config contains configuration for the database.
 type DBConfig struct {
     ConnStr      string `yaml:"conn_str"`      // ConnStr is the connection string to the database.
     DatabaseName string `yaml:"database_name"` // DatabaseName is the name of the database.
+    IsSSL        bool   `yaml:"is_ssl"`        // IsSSL is the flag that indicates if the connection should be encrypted.
 }
 ```
 
-## type [DataBase](<https://github.com/bartossh/Computantis/blob/main/repository/repopostgre.go#L39-L41>)
+## type [DataBase](<https://github.com/bartossh/Computantis/blob/main/repository/repopostgre.go#L40-L42>)
 
 Database provides database access for read, write and delete of repository entities.
 
@@ -1220,7 +1221,7 @@ type DataBase struct {
 }
 ```
 
-### func [Connect](<https://github.com/bartossh/Computantis/blob/main/repository/repopostgre.go#L58>)
+### func [Connect](<https://github.com/bartossh/Computantis/blob/main/repository/repopostgre.go#L59>)
 
 ```go
 func Connect(ctx context.Context, cfg DBConfig) (*DataBase, error)
@@ -1268,7 +1269,7 @@ func (db DataBase) CountRegistered(ctx context.Context) (int, error)
 
 CountRegistered counts registered nodes in the database.
 
-### func \(DataBase\) [Disconnect](<https://github.com/bartossh/Computantis/blob/main/repository/repopostgre.go#L68>)
+### func \(DataBase\) [Disconnect](<https://github.com/bartossh/Computantis/blob/main/repository/repopostgre.go#L73>)
 
 ```go
 func (db DataBase) Disconnect(ctx context.Context) error
@@ -1356,7 +1357,7 @@ func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context,
 
 MoveTransactionsFromTemporaryToPermanent moves transactions by marking transactions with matching hash to be permanent and sets block hash field to referenced block hash.
 
-### func \(DataBase\) [Ping](<https://github.com/bartossh/Computantis/blob/main/repository/repopostgre.go#L73>)
+### func \(DataBase\) [Ping](<https://github.com/bartossh/Computantis/blob/main/repository/repopostgre.go#L78>)
 
 ```go
 func (db DataBase) Ping(ctx context.Context) error
@@ -1510,7 +1511,7 @@ func Listen(conn string, report func(ev pq.ListenerEventType, err error)) (Liste
 
 Listen creates Listener for notifications from database.
 
-### func [Subscribe](<https://github.com/bartossh/Computantis/blob/main/repository/repopostgre.go#L44>)
+### func [Subscribe](<https://github.com/bartossh/Computantis/blob/main/repository/repopostgre.go#L45>)
 
 ```go
 func Subscribe(ctx context.Context, cfg DBConfig) (Listener, error)
