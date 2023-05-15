@@ -1645,7 +1645,7 @@ var (
 )
 ```
 
-## func [Run](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L148-L152>)
+## func [Run](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L149-L153>)
 
 ```go
 func Run(ctx context.Context, c Config, repo Repository, bookkeeping Bookkeeper, pv RandomDataProvideValidator, log logger.Logger, rx ReactiveSubscriberProvider) error
@@ -1653,7 +1653,7 @@ func Run(ctx context.Context, c Config, repo Repository, bookkeeping Bookkeeper,
 
 Run initializes routing and runs the server. To stop the server cancel the context. It blocks until the context is canceled.
 
-## type [AddressReaderWriterModifier](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L72-L80>)
+## type [AddressReaderWriterModifier](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L73-L81>)
 
 AddressReaderWriterModifier abstracts address operations.
 
@@ -1705,7 +1705,7 @@ type AwaitedTransactionResponse struct {
 }
 ```
 
-## type [Bookkeeper](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L108-L113>)
+## type [Bookkeeper](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L109-L114>)
 
 Bookkeeper abstracts methods of the bookkeeping of a blockchain.
 
@@ -1718,7 +1718,7 @@ type Bookkeeper interface {
 }
 ```
 
-## type [Config](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L130-L134>)
+## type [Config](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L131-L135>)
 
 Config contains configuration of the server.
 
@@ -1822,7 +1822,7 @@ type Message struct {
 }
 ```
 
-## type [RandomDataProvideValidator](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L117-L120>)
+## type [RandomDataProvideValidator](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L118-L121>)
 
 RandomDataProvideValidator provides random binary data for signing to prove identity and the validator of data being valid and not expired.
 
@@ -1833,7 +1833,7 @@ type RandomDataProvideValidator interface {
 }
 ```
 
-## type [ReactiveSubscriberProvider](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L124-L127>)
+## type [ReactiveSubscriberProvider](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L125-L128>)
 
 ReactiveSubscriberProvider provides reactive subscription to the blockchain. It allows to listen for the new blocks created by the Ladger.
 
@@ -1844,7 +1844,7 @@ type ReactiveSubscriberProvider interface {
 }
 ```
 
-## type [Register](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L64-L69>)
+## type [Register](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L65-L70>)
 
 Register abstracts node registration operations.
 
@@ -1857,7 +1857,7 @@ type Register interface {
 }
 ```
 
-## type [Repository](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L93-L100>)
+## type [Repository](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L94-L101>)
 
 Repository is the interface that wraps the basic CRUD and Search methods. Repository should be properly indexed to allow for transaction and block hash. as well as address public keys to be and unique and the hash lookup should be fast. Repository holds the blocks and transaction that are part of the blockchain.
 
@@ -1913,7 +1913,7 @@ type SearchBlockResponse struct {
 }
 ```
 
-## type [TokenWriteInvalidateChecker](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L83-L87>)
+## type [TokenWriteInvalidateChecker](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L84-L88>)
 
 TokenWriteInvalidateChecker abstracts token operations.
 
@@ -1947,7 +1947,7 @@ type TransactionProposeRequest struct {
 }
 ```
 
-## type [Verifier](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L103-L105>)
+## type [Verifier](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L104-L106>)
 
 Verifier provides methods to verify the signature of the message.
 
@@ -1995,7 +1995,7 @@ const (
 )
 ```
 
-## func [Run](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L46-L47>)
+## func [Run](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L47-L48>)
 
 ```go
 func Run(ctx context.Context, cfg Config, log logger.Logger, timeout time.Duration, fw transaction.Verifier, wrs client.WalletReadSaver, walletCreator client.NewSignValidatorCreator) error
@@ -2003,7 +2003,7 @@ func Run(ctx context.Context, cfg Config, log logger.Logger, timeout time.Durati
 
 Run runs the service application that exposes the API for creating, validating and signing transactions. This blocks until the context is canceled.
 
-## type [Config](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L17-L20>)
+## type [Config](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L18-L21>)
 
 Config is the configuration for the server
 
@@ -2014,7 +2014,7 @@ type Config struct {
 }
 ```
 
-## type [ConfirmTransactionRequest](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L141-L143>)
+## type [ConfirmTransactionRequest](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L143-L145>)
 
 ValidateTransactionRequest is a request to validate transaction.
 
@@ -2024,7 +2024,7 @@ type ConfirmTransactionRequest struct {
 }
 ```
 
-## type [ConfirmTransactionResponse](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L146-L149>)
+## type [ConfirmTransactionResponse](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L148-L151>)
 
 ConfirmTransactionResponse is response to validate transaction.
 
@@ -2035,7 +2035,7 @@ type ConfirmTransactionResponse struct {
 }
 ```
 
-## type [CreateWalletRequest](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L203-L205>)
+## type [CreateWalletRequest](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L205-L207>)
 
 CreateWalletRequest is a request to create wallet.
 
@@ -2045,7 +2045,7 @@ type CreateWalletRequest struct {
 }
 ```
 
-## type [CreateWalletResponse](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L208-L211>)
+## type [CreateWalletResponse](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L210-L213>)
 
 CreateWalletResponse is response to create wallet.
 
@@ -2056,7 +2056,7 @@ type CreateWalletResponse struct {
 }
 ```
 
-## type [IssueTransactionRequest](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L112-L116>)
+## type [IssueTransactionRequest](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L114-L118>)
 
 IssueTransactionRequest is a request message that contains data and subject of the transaction to be issued.
 
@@ -2068,7 +2068,7 @@ type IssueTransactionRequest struct {
 }
 ```
 
-## type [IssueTransactionResponse](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L119-L122>)
+## type [IssueTransactionResponse](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L121-L124>)
 
 IssueTransactionResponse is response to issued transaction.
 
@@ -2079,7 +2079,7 @@ type IssueTransactionResponse struct {
 }
 ```
 
-## type [IssuedTransactionResponse](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L169-L173>)
+## type [IssuedTransactionResponse](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L171-L175>)
 
 IssuedTransactionResponse is a response of issued transactions.
 
@@ -2091,7 +2091,7 @@ type IssuedTransactionResponse struct {
 }
 ```
 
-## type [ReadWalletPublicAddressResponse](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L237-L241>)
+## type [ReadWalletPublicAddressResponse](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L239-L243>)
 
 ReadWalletPublicAddressResponse is a response to read wallet public address.
 
@@ -2103,7 +2103,7 @@ type ReadWalletPublicAddressResponse struct {
 }
 ```
 
-## type [ReceivedTransactionResponse](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L186-L190>)
+## type [ReceivedTransactionResponse](<https://github.com/bartossh/Computantis/blob/main/signerservice/signservice.go#L188-L192>)
 
 ReceivedTransactionResponse is a response of issued transactions.
 
@@ -2350,7 +2350,7 @@ var (
 )
 ```
 
-## func [Run](<https://github.com/bartossh/Computantis/blob/main/validator/validator.go#L89>)
+## func [Run](<https://github.com/bartossh/Computantis/blob/main/validator/validator.go#L90>)
 
 ```go
 func Run(ctx context.Context, cfg Config, srw StatusReadWriter, log logger.Logger, ver Verifier, wh WebhookCreateRemovePoster, wallet *wallet.Wallet) error
@@ -2358,7 +2358,7 @@ func Run(ctx context.Context, cfg Config, srw StatusReadWriter, log logger.Logge
 
 Run initializes routing and runs the validator. To stop the validator cancel the context. Validator connects to the central server via websocket and listens for new blocks. It will block until the context is canceled.
 
-## type [Config](<https://github.com/bartossh/Computantis/blob/main/validator/validator.go#L63-L67>)
+## type [Config](<https://github.com/bartossh/Computantis/blob/main/validator/validator.go#L64-L68>)
 
 Config contains configuration of the validator.
 
@@ -2386,7 +2386,7 @@ type CreateRemoveUpdateHookRequest struct {
 }
 ```
 
-## type [Status](<https://github.com/bartossh/Computantis/blob/main/validator/validator.go#L36-L42>)
+## type [Status](<https://github.com/bartossh/Computantis/blob/main/validator/validator.go#L37-L43>)
 
 Status is a status of each received block by the validator. It keeps track of invalid blocks in case of blockchain corruption.
 
@@ -2400,7 +2400,7 @@ type Status struct {
 }
 ```
 
-## type [StatusReadWriter](<https://github.com/bartossh/Computantis/blob/main/validator/validator.go#L45-L48>)
+## type [StatusReadWriter](<https://github.com/bartossh/Computantis/blob/main/validator/validator.go#L46-L49>)
 
 StatusReadWriter provides methods to bulk read and single write validator status.
 
@@ -2411,7 +2411,7 @@ type StatusReadWriter interface {
 }
 ```
 
-## type [Verifier](<https://github.com/bartossh/Computantis/blob/main/validator/validator.go#L58-L60>)
+## type [Verifier](<https://github.com/bartossh/Computantis/blob/main/validator/validator.go#L59-L61>)
 
 Verifier provides methods to verify the signature of the message.
 
@@ -2433,7 +2433,7 @@ type WebHookNewBlockMessage struct {
 }
 ```
 
-## type [WebhookCreateRemovePoster](<https://github.com/bartossh/Computantis/blob/main/validator/validator.go#L51-L55>)
+## type [WebhookCreateRemovePoster](<https://github.com/bartossh/Computantis/blob/main/validator/validator.go#L52-L56>)
 
 WebhookCreateRemovePoster provides methods to create, remove webhooks and post messages to webhooks.
 

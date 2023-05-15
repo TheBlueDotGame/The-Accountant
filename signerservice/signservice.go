@@ -11,6 +11,7 @@ import (
 	"github.com/bartossh/Computantis/server"
 	"github.com/bartossh/Computantis/transaction"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/recover"
 )
 
 // Config is the configuration for the server
@@ -67,6 +68,7 @@ func Run(ctx context.Context, cfg Config, log logger.Logger, timeout time.Durati
 		AppName:       server.ApiVersion,
 		Concurrency:   1024,
 	})
+	router.Use(recover.New())
 
 	router.Get(Alive, s.alive)
 
