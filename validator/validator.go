@@ -17,6 +17,7 @@ import (
 	"github.com/bartossh/Computantis/webhooks"
 	"github.com/fasthttp/websocket"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/recover"
 )
 
 const wsConnectionTimeout = 5 * time.Second
@@ -247,6 +248,7 @@ func (a *app) runServer(ctx context.Context, cancel context.CancelFunc) error {
 		AppName:       server.ApiVersion,
 		Concurrency:   4096,
 	})
+	router.Use(recover.New())
 
 	router.Get("/blocks", a.blocks)
 

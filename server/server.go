@@ -10,6 +10,7 @@ import (
 	"github.com/bartossh/Computantis/logger"
 	"github.com/bartossh/Computantis/transaction"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/recover"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -181,6 +182,7 @@ func Run(
 		AppName:       ApiVersion,
 		Concurrency:   4096,
 	})
+	router.Use(recover.New())
 
 	router.Get(AliveURL, s.alive)
 
