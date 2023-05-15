@@ -9,6 +9,7 @@ server:
 database:
   conn_str: "postgres://computantis:computantis@localhost:5432"
   database_name: "computantis"
+  is_ssl: false
 dataprovider:
   longevity: 300
 validator:
