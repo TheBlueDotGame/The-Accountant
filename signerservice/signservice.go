@@ -98,12 +98,15 @@ func Run(ctx context.Context, cfg Config, log logger.Logger, timeout time.Durati
 	return err
 }
 
+// AliveResponse is containing server alive data such as ApiVersion and APIHeader.
+type AliveResponse server.AliveResponse
+
 func (a *app) alive(c *fiber.Ctx) error {
 	if err := a.client.ValidateApiVersion(); err != nil {
 		return errors.Join(fiber.ErrConflict, err)
 	}
 	return c.JSON(
-		server.AliveResponse{
+		AliveResponse{
 			Alive:      true,
 			APIVersion: server.ApiVersion,
 			APIHeader:  server.Header,
