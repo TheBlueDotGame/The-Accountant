@@ -350,11 +350,23 @@ func (c *Client) Sign(d []byte) (digest [32]byte, signature []byte, err error) {
 }
 
 // PostWebhookBlock posts validator.WebHookNewBlockMessage to given url.
-func (c *Client) PostWebhookBlock(url string, token string, block *block.Block) error {
+func (c *Client) PostWebhookBlock(url, token string, block *block.Block) error {
 	req := validator.WebHookNewBlockMessage{
 		Token: token,
 		Block: *block,
 	}
+	res := make(map[string]any)
+	return c.makePost(url, req, &res)
+}
+
+// PostWebhookNewTransaction posts validator.WebHookNewTransaction to given url.
+func (c *Client) PostWebhookNewTransaction(url, token string) error {
+	req := validator.NewTransactionMessage{
+		State: validator.StateIssued,
+		Time:  time.Now(),
+		Token: token,
+	}
+
 	res := make(map[string]any)
 	return c.makePost(url, req, &res)
 }

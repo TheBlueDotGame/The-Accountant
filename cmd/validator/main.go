@@ -10,6 +10,7 @@ import (
 	"github.com/bartossh/Computantis/aeswrapper"
 	"github.com/bartossh/Computantis/client"
 	"github.com/bartossh/Computantis/configuration"
+	"github.com/bartossh/Computantis/dataprovider"
 	"github.com/bartossh/Computantis/fileoperations"
 	"github.com/bartossh/Computantis/logging"
 	"github.com/bartossh/Computantis/repository"
@@ -70,7 +71,9 @@ func main() {
 		log.Error(err.Error())
 	}
 
-	if err := validator.Run(ctx, cfg.Validator, db, log, verify, wh, &wl); err != nil {
+	dataProvider := dataprovider.New(ctx, cfg.DataProvider)
+
+	if err := validator.Run(ctx, cfg.Validator, db, log, verify, wh, &wl, dataProvider); err != nil {
 		log.Error(err.Error())
 	}
 }
