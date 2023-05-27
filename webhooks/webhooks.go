@@ -10,7 +10,8 @@ import (
 )
 
 const (
-	TriggerNewBlock = "trigger_new_block" // TriggerNewBlock is the trigger for new block. It is triggered when a new block is forged.
+	TriggerNewBlock       byte = iota // TriggerNewBlock is the trigger for new block. It is triggered when a new block is forged.
+	TriggerNewTransaction             // TriggerNewTransaction is a trigger for new transaction. It is triggered when a new transaction is received.
 )
 
 var (
@@ -28,12 +29,13 @@ type hooks map[string]Hook
 // HookRequestHTTPPoster provides PostWebhookBlock method that allows to post new forged block to the webhook url over HTTP protocol.
 type HookRequestHTTPPoster interface {
 	PostWebhookBlock(url string, token string, block *block.Block) error
+	PostWebhookNewTransaction(url string, token string) error
 }
 
 // Service provide webhook service that is used to create, remove and update webhooks.
 type Service struct {
 	mux    sync.RWMutex
-	buffer map[string]hooks
+	buffer map[byte]hooks
 	client HookRequestHTTPPoster
 	log    logger.Logger
 }
@@ -42,17 +44,17 @@ type Service struct {
 func New(client HookRequestHTTPPoster, l logger.Logger) *Service {
 	return &Service{
 		mux:    sync.RWMutex{},
-		buffer: make(map[string]hooks),
+		buffer: make(map[byte]hooks),
 		client: client,
 		log:    l,
 	}
 }
 
 // CreateWebhook creates new webhook or or updates existing one for given trigger.
-func (s *Service) CreateWebhook(trigger string, h Hook) error {
+func (s *Service) CreateWebhook(trigger byte, publicAddress string, h Hook) error {
 	switch trigger {
-	case TriggerNewBlock:
-		s.insertHook(TriggerNewBlock, h)
+	case TriggerNewBlock, TriggerNewTransaction:
+		s.insertHook(trigger, publicAddress, h)
 	default:
 		return ErrorHookNotImplemented
 	}
@@ -60,10 +62,10 @@ func (s *Service) CreateWebhook(trigger string, h Hook) error {
 }
 
 // RemoveWebhook removes webhook for given trigger and Hook URL.
-func (s *Service) RemoveWebhook(trigger string, h Hook) error {
+func (s *Service) RemoveWebhook(trigger byte, publicAddress string, h Hook) error {
 	switch trigger {
-	case TriggerNewBlock:
-		s.removeHook(TriggerNewBlock, h)
+	case TriggerNewBlock, TriggerNewTransaction:
+		s.removeHook(trigger, publicAddress, h)
 	default:
 		return ErrorHookNotImplemented
 	}
@@ -85,22 +87,37 @@ func (s *Service) PostWebhookBlock(blc *block.Block) {
 	}
 }
 
-func (s *Service) insertHook(trigger string, h Hook) {
+// PostWebhookNewTransaction posts information to the coresponding public address hook url with information about new waiting transaction.
+func (s *Service) PostWebhookNewTransaction(url string, token string) {
+	s.mux.RLock()
+	defer s.mux.RUnlock()
+	hs, ok := s.buffer[TriggerNewBlock]
+	if !ok {
+		return
+	}
+	for _, h := range hs {
+		if err := s.client.PostWebhookNewTransaction(h.URL, h.Token); err != nil {
+			s.log.Error(fmt.Sprintf("webhook service error posting block to webhook url: %s, %s", h.URL, err.Error()))
+		}
+	}
+}
+
+func (s *Service) insertHook(trigger byte, publicAddress string, h Hook) {
 	s.mux.Lock()
 	defer s.mux.Unlock()
 	hs, ok := s.buffer[trigger]
 	if !ok {
 		hs = make(hooks)
 	}
-	hs[h.URL] = h
+	hs[publicAddress] = h
 }
 
-func (s *Service) removeHook(trigger string, h Hook) {
+func (s *Service) removeHook(trigger byte, publicAddress string, h Hook) {
 	s.mux.Lock()
 	defer s.mux.Unlock()
 	hs, ok := s.buffer[trigger]
 	if !ok {
 		return
 	}
-	delete(hs, h.URL)
+	delete(hs, publicAddress)
 }

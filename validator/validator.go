@@ -26,6 +26,12 @@ const (
 	Header = "Computantis-Validator"
 )
 
+const (
+	DataEdnpoint               = "/data"
+	BlockEndpointHook          = "/block"
+	NewTransactionEndpointHook = "/transaction/new"
+)
+
 var (
 	ErrProofBlockIsInvalid    = fmt.Errorf("block proof is invalid")
 	ErrBlockIndexIsInvalid    = fmt.Errorf("block index is invalid")
@@ -50,8 +56,8 @@ type StatusReadWriter interface {
 
 // WebhookCreateRemovePoster provides methods to create, remove webhooks and post messages to webhooks.
 type WebhookCreateRemovePoster interface {
-	CreateWebhook(trigger string, h webhooks.Hook) error
-	RemoveWebhook(trigger string, h webhooks.Hook) error
+	CreateWebhook(trigger byte, address string, h webhooks.Hook) error
+	RemoveWebhook(trigger byte, address string, h webhooks.Hook) error
 	PostWebhookBlock(blc *block.Block)
 }
 
@@ -68,37 +74,86 @@ type Config struct {
 }
 
 type app struct {
-	mux       sync.RWMutex
-	lastBlock block.Block
-	cfg       Config
-	srw       StatusReadWriter
-	log       logger.Logger
-	conns     map[string]socket
-	ver       Verifier
-	wh        WebhookCreateRemovePoster
-	wallet    *wallet.Wallet
-	cancel    context.CancelFunc
+	mux          sync.RWMutex
+	lastBlock    block.Block
+	cfg          Config
+	srw          StatusReadWriter
+	log          logger.Logger
+	conns        map[string]socket
+	ver          Verifier
+	wh           WebhookCreateRemovePoster
+	wallet       *wallet.Wallet
+	randDataProv server.RandomDataProvideValidator
+	cancel       context.CancelFunc
+}
+
+func (a *app) data(c *fiber.Ctx) error {
+	var req server.DataToSignRequest
+	if err := c.BodyParser(&req); err != nil {
+		a.log.Error(fmt.Sprintf("/data endpoint, failed to parse request body: %s", err.Error()))
+		return fiber.ErrBadRequest
+	}
+
+	d := a.randDataProv.ProvideData(req.Address)
+	return c.JSON(server.DataToSignResponse{Data: d})
 }
 
 func (a *app) blocks(c *fiber.Ctx) error {
 	return nil
 }
 
+func (a *app) transactions(c *fiber.Ctx) error {
+	var req CreateRemoveUpdateHookRequest
+	if err := c.BodyParser(&req); err != nil {
+		a.log.Error(fmt.Sprintf("/transaction/new endpoint, failed to parse request body: %s", err.Error()))
+		return fiber.ErrBadRequest
+	}
+
+	if ok := a.randDataProv.ValidateData(req.Address, req.Data); !ok {
+		a.log.Error("/transaction/new endpoint, corrupted data")
+		return fiber.ErrForbidden
+	}
+
+	buf := make([]byte, 0, len(req.Data)+len(req.URL))
+	buf = append(buf, append(req.Data, []byte(req.URL)...)...)
+
+	if err := a.ver.Verify(buf, req.Signature, [32]byte(req.Digest), req.Address); err != nil {
+		a.log.Error(fmt.Sprintf("/transaction/new endpoint, invalid signature: %s", err.Error()))
+		return fiber.ErrForbidden
+	}
+
+	h := webhooks.Hook{
+		URL:   req.URL,
+		Token: string(req.Data),
+	}
+	if err := a.wh.CreateWebhook(webhooks.TriggerNewTransaction, req.Address, h); err != nil {
+		a.log.Error(fmt.Sprintf("/transaction/new endpoint, failed to create webhook: %s", err.Error()))
+		return c.JSON(CreateRemoveUpdateHookResponse{Ok: false, Err: err.Error()})
+	}
+
+	return c.JSON(CreateRemoveUpdateHookResponse{Ok: true})
+}
+
 // Run initializes routing and runs the validator. To stop the validator cancel the context.
 // Validator connects to the central server via websocket and listens for new blocks.
 // It will block until the context is canceled.
-func Run(ctx context.Context, cfg Config, srw StatusReadWriter, log logger.Logger, ver Verifier, wh WebhookCreateRemovePoster, wallet *wallet.Wallet) error {
+func Run(
+	ctx context.Context, cfg Config,
+	srw StatusReadWriter, log logger.Logger,
+	ver Verifier, wh WebhookCreateRemovePoster,
+	wallet *wallet.Wallet, rdp server.RandomDataProvideValidator) error {
 	ctxx, cancel := context.WithCancel(ctx)
 	a := &app{
-		mux:    sync.RWMutex{},
-		cfg:    cfg,
-		srw:    srw,
-		log:    log,
-		conns:  make(map[string]socket),
-		ver:    ver,
-		wh:     wh,
-		wallet: wallet,
-		cancel: cancel,
+		mux:          sync.RWMutex{},
+		cfg:          cfg,
+		srw:          srw,
+		log:          log,
+		conns:        make(map[string]socket),
+		ver:          ver,
+		wh:           wh,
+		wallet:       wallet,
+		randDataProv: rdp,
+		cancel:       cancel,
 	}
 
 	log.Info(fmt.Sprintf("validator [ %s ] is starting on port: %d", a.wallet.Address(), cfg.Port))
@@ -250,7 +305,9 @@ func (a *app) runServer(ctx context.Context, cancel context.CancelFunc) error {
 	})
 	router.Use(recover.New())
 
-	router.Get("/blocks", a.blocks)
+	router.Post(DataEdnpoint, a.data)
+	router.Post(BlockEndpointHook, a.blocks)
+	router.Post(NewTransactionEndpointHook, a.transactions)
 
 	go func() {
 		err := router.Listen(fmt.Sprintf("0.0.0.0:%v", a.cfg.Port))

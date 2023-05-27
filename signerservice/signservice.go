@@ -32,11 +32,13 @@ const (
 
 const (
 	Alive                   = "/alive"                 // alive URL allows to check if server is alive and if sign service is of the same version.
+	Address                 = "/address"               // address URL allows to check wallet public address
 	IssueTransaction        = "/transactions/issue"    // issue URL allows to issue transaction signed by the issuer.
 	ConfirmTransaction      = "/transaction/sign"      // sign URL allows to sign transaction received by the receiver.
 	GetIssuedTransactions   = "/transactions/issued"   // issued URL allows to get issued transactions for the issuer.
 	GetReceivedTransactions = "/transactions/received" // received URL allows to get received transactions for the receiver.
 	CreateWallet            = "/wallet/create"         // create URL allows to create new wallet.
+	SignData                = "/data/sign"             // data signs URL allows to sign data
 	ReadWalletPublicAddress = "/wallet/address"        // address URL allows to read public address of the wallet.
 	GetOneDayToken          = "token/day"              // token/day URL allows to get one day token.
 	GetOneWeekToken         = "token/week"             // token/week URL allows to get one week token.
@@ -71,12 +73,14 @@ func Run(ctx context.Context, cfg Config, log logger.Logger, timeout time.Durati
 	router.Use(recover.New())
 
 	router.Get(Alive, s.alive)
+	router.Get(Address, s.address)
 
 	router.Get(GetIssuedTransactions, s.issuedTransactions)
 	router.Get(GetReceivedTransactions, s.receivedTransactions)
 	router.Post(IssueTransaction, s.issueTransaction)
 	router.Post(ConfirmTransaction, s.confirmReceivedTransaction)
 	router.Post(CreateWallet, s.createWallet)
+	router.Post(SignData, s.signData)
 	router.Get(ReadWalletPublicAddress, s.readWalletPublicAddress)
 	router.Get(GetOneDayToken, s.getOneDayToken)
 	router.Get(GetOneWeekToken, s.getOneWeekToken)
@@ -110,6 +114,26 @@ func (a *app) alive(c *fiber.Ctx) error {
 			Alive:      true,
 			APIVersion: server.ApiVersion,
 			APIHeader:  server.Header,
+		})
+}
+
+// AddressResponse is wallet public address response.
+type AddressResponse struct {
+	Address string `json:"address"`
+}
+
+func (a *app) address(c *fiber.Ctx) error {
+	if err := a.client.ValidateApiVersion(); err != nil {
+		return errors.Join(fiber.ErrConflict, err)
+	}
+
+	addr, err := a.client.Address()
+	if err != nil {
+		return errors.Join(fiber.ErrNotFound, err)
+	}
+	return c.JSON(
+		AddressResponse{
+			Address: addr,
 		})
 }
 
@@ -236,6 +260,41 @@ func (a *app) createWallet(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(CreateWalletResponse{Ok: true})
+}
+
+// SignDataRequest is request with any data.
+type SignDataRequest struct {
+	Data []byte `json:"data"`
+}
+
+// SingDataResponse is response containing data signature.
+type SignDataResponse struct {
+	Data      []byte   `json:"data"`
+	Signature []byte   `json:"signature"`
+	Digest    [32]byte `json:"digest"`
+}
+
+func (a *app) signData(c *fiber.Ctx) error {
+	var req SignDataRequest
+	if err := c.BodyParser(&req); err != nil {
+		err := fmt.Errorf("error reading data: %v", err)
+		a.log.Error(err.Error())
+		return errors.Join(fiber.ErrBadRequest, err)
+	}
+
+	digest, signature, err := a.client.Sign(req.Data)
+
+	if err != nil {
+		err := fmt.Errorf("error reading data: %v", err)
+		a.log.Error(err.Error())
+		return errors.Join(fiber.ErrBadRequest, err)
+	}
+
+	return c.JSON(SignDataResponse{
+		Data:      req.Data,
+		Signature: signature,
+		Digest:    digest,
+	})
 }
 
 // ReadWalletPublicAddressResponse is a response to read wallet public address.
