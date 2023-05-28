@@ -2,7 +2,11 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"github.com/bartossh/Computantis/logo"
+	"github.com/pterm/pterm"
+	"github.com/urfave/cli/v2"
 	"os"
 	"os/signal"
 	"time"
@@ -24,13 +28,53 @@ const (
 	rxBufferSize = 100
 )
 
+const usage = `The Central Computantis API server is responsible for validating, storing transactions and
+forging blocks in immutable blockchain history. The Central Computantis Node is a heart of the whole Computantis system.`
+
 func main() {
-	cfg, err := configuration.Read("server_settings.yaml")
-	if err != nil {
-		fmt.Println(err)
-		return
+	logo.Display()
+
+	var file string
+	configurator := func() (configuration.Configuration, error) {
+		if file == "" {
+			return configuration.Configuration{}, errors.New("please specify configuration file path with -c <path to file>")
+		}
+
+		cfg, err := configuration.Read(file)
+		if err != nil {
+			return cfg, err
+		}
+
+		return cfg, nil
 	}
 
+	app := &cli.App{
+		Name:  "computantis",
+		Usage: usage,
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:        "config",
+				Aliases:     []string{"c"},
+				Usage:       "Load configuration from `FILE`",
+				Destination: &file,
+			},
+		},
+		Action: func(cCtx *cli.Context) error {
+			cfg, err := configurator()
+			if err != nil {
+				return err
+			}
+			run(cfg)
+			return nil
+		},
+	}
+
+	if err := app.Run(os.Args); err != nil {
+		pterm.Error.Println(err.Error())
+	}
+}
+
+func run(cfg configuration.Configuration) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	c := make(chan os.Signal, 1)

@@ -2,7 +2,10 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"github.com/pterm/pterm"
+	"github.com/urfave/cli/v2"
 	"os"
 	"os/signal"
 	"time"
@@ -11,21 +14,62 @@ import (
 	"github.com/bartossh/Computantis/configuration"
 	"github.com/bartossh/Computantis/fileoperations"
 	"github.com/bartossh/Computantis/logging"
+	"github.com/bartossh/Computantis/logo"
 	"github.com/bartossh/Computantis/repository"
 	"github.com/bartossh/Computantis/signerservice"
 	"github.com/bartossh/Computantis/stdoutwriter"
 	"github.com/bartossh/Computantis/wallet"
 )
 
+const usage = `Wallet runs wallet API service that serves as a middleware between your application and central node.
+Wallet has cryptographic capabilities and uses GOB encoded and EAS encrypted wallet.`
+
 const timeout = time.Second * 5
 
 func main() {
-	cfg, err := configuration.Read("server_settings.yaml")
-	if err != nil {
-		fmt.Println(err)
-		return
+	logo.Display()
+
+	var file string
+	configurator := func() (configuration.Configuration, error) {
+		if file == "" {
+			return configuration.Configuration{}, errors.New("please specify configuration file path with -c <path to file>")
+		}
+
+		cfg, err := configuration.Read(file)
+		if err != nil {
+			return cfg, err
+		}
+
+		return cfg, nil
 	}
 
+	app := &cli.App{
+		Name:  "wallet",
+		Usage: usage,
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:        "config",
+				Aliases:     []string{"c"},
+				Usage:       "Load configuration from `FILE`",
+				Destination: &file,
+			},
+		},
+		Action: func(cCtx *cli.Context) error {
+			cfg, err := configurator()
+			if err != nil {
+				return err
+			}
+			run(cfg)
+			return nil
+		},
+	}
+
+	if err := app.Run(os.Args); err != nil {
+		pterm.Error.Println(err.Error())
+	}
+}
+
+func run(cfg configuration.Configuration) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	c := make(chan os.Signal, 1)
@@ -48,6 +92,7 @@ func main() {
 
 	callbackOnErr := func(err error) {
 		fmt.Println("error with logger: ", err)
+		return
 	}
 
 	callbackOnFatal := func(err error) {

@@ -16,8 +16,8 @@ import (
 
 // Config is the configuration for the server
 type Config struct {
-	Port               string `yaml:"port"`
-	CentralNodeAddress string `yaml:"central_node_address"`
+	Port           string `yaml:"port"`
+	CentralNodeURL string `yaml:"central_node_url"`
 }
 
 type app struct {
@@ -51,7 +51,7 @@ func Run(ctx context.Context, cfg Config, log logger.Logger, timeout time.Durati
 	ctxx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	c := client.NewClient(cfg.CentralNodeAddress, timeout, fw, wrs, walletCreator)
+	c := client.NewClient(cfg.CentralNodeURL, timeout, fw, wrs, walletCreator)
 	defer c.FlushWalletFromMemory()
 
 	if err := c.ReadWalletFromFile(); err != nil {

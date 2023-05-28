@@ -19,3 +19,14 @@ validator:
 file_operator:
   wallet_path: "path/to/your/wallet"
   wallet_passwd: "passwd to your wallet"
+signer_service:
+  port: 8095
+  central_node_url: "http://localhost:8080"
+emulator:
+  timeout_seconds: 5
+  tick_seconds: 5
+  random: false
+  signer_service_url: "http://localhost:7777"
+  validator_create_hook_endpoit: "http://localhost:8090"
+  port: "9999"
+  issuer_wallet_public_address: "ykkeD6Tr6xikkYwC805kVoFThm8VGEHStTFk1lIU6RgEf7p3vjFpPQFI3VP9SYeARjYh2jecMSYsmgddjZZcy32iySHijJQ"

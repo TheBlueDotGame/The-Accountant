@@ -6,6 +6,7 @@ import (
 
 	"github.com/bartossh/Computantis/bookkeeping"
 	"github.com/bartossh/Computantis/dataprovider"
+	"github.com/bartossh/Computantis/emulator"
 	"github.com/bartossh/Computantis/fileoperations"
 	"github.com/bartossh/Computantis/repository"
 	"github.com/bartossh/Computantis/server"
@@ -24,6 +25,7 @@ type Configuration struct {
 	Validator     validator.Config      `yaml:"validator"`
 	FileOperator  fileoperations.Config `yaml:"file_operator"`
 	SignerService signerservice.Config  `yaml:"signer_service"`
+	Emulator      emulator.Config       `yaml:"emulator"`
 }
 
 // Read reads the configuration from the file and returns the Configuration with set fields according to the yaml setup.
