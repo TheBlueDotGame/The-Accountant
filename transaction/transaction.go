@@ -102,14 +102,15 @@ func (t *Transaction) Sign(receiver Signer, v Verifier) ([32]byte, error) {
 	b := make([]byte, 8)
 	binary.LittleEndian.PutUint64(b, uint64(t.CreatedAt.UnixMicro()))
 	message = append(message, b...)
+
+	if err := v.Verify(message, t.IssuerSignature, [32]byte(t.Hash), t.IssuerAddress); err != nil {
+		return [32]byte{}, errors.Join(ErrSignatureNotValidOrDataCorrupted, err)
+	}
+
 	hash, signature := receiver.Sign(message)
 
 	if !bytes.Equal(hash[:], t.Hash[:]) {
 		return [32]byte{}, ErrTransactionHashIsInvalid
-	}
-
-	if err := v.Verify(message, t.IssuerSignature, [32]byte(t.Hash), t.IssuerAddress); err != nil {
-		return [32]byte{}, errors.Join(ErrSignatureNotValidOrDataCorrupted, err)
 	}
 
 	t.ReceiverSignature = signature
