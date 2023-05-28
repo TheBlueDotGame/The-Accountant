@@ -2,7 +2,11 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"github.com/bartossh/Computantis/logo"
+	"github.com/pterm/pterm"
+	"github.com/urfave/cli/v2"
 	"os"
 	"os/signal"
 	"time"
@@ -20,15 +24,56 @@ import (
 	"github.com/bartossh/Computantis/webhooks"
 )
 
+const usage = `The Validator Computantis API server validates transactions and blocks. In additions Validator offers
+webhook endpoint where any application with valid address can register to listen for new blocks or transactions for 
+given wallet public address.`
+
 func main() {
-	cfg, err := configuration.Read("server_settings.yaml")
-	if err != nil {
-		fmt.Println(err)
-		return
+	logo.Display()
+
+	var file string
+	configurator := func() (configuration.Configuration, error) {
+		if file == "" {
+			return configuration.Configuration{}, errors.New("please specify configuration file path with -c <path to file>")
+		}
+
+		cfg, err := configuration.Read(file)
+		if err != nil {
+			return cfg, err
+		}
+
+		return cfg, nil
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	app := &cli.App{
+		Name:  "validator",
+		Usage: usage,
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:        "config",
+				Aliases:     []string{"c"},
+				Usage:       "Load configuration from `FILE`",
+				Destination: &file,
+			},
+		},
+		Action: func(cCtx *cli.Context) error {
+			cfg, err := configurator()
+			if err != nil {
+				return err
+			}
+			run(cfg)
+			return nil
+		},
+	}
 
+	if err := app.Run(os.Args); err != nil {
+		pterm.Error.Println(err.Error())
+	}
+}
+
+func run(cfg configuration.Configuration) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 
