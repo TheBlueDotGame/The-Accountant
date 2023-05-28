@@ -4,14 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync"
-	"time"
-
 	"github.com/bartossh/Computantis/server"
 	"github.com/bartossh/Computantis/signerservice"
 	"github.com/bartossh/Computantis/validator"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/pterm/pterm"
+	"sync"
+	"time"
 )
 
 const (
@@ -195,29 +195,47 @@ func (sub *subscriber) actOnTransactions() {
 		return
 	}
 
+	var counter int
+	p, _ := pterm.DefaultProgressbar.
+		WithTotal(len(resReceivedTransactions.Transactions)).
+		WithTitle(fmt.Sprintf("Signing [ %v ] transactions\n", len(resReceivedTransactions.Transactions))).
+		Start()
 	var confirmRes signerservice.ConfirmTransactionResponse
+
 	for _, transaction := range resReceivedTransactions.Transactions {
 		confirmReq := signerservice.ConfirmTransactionRequest{
 			Transaction: transaction,
 		}
+		p.UpdateTitle(
+			fmt.Sprintf(
+				"Signing transaction [ %s ] crated [ %s ]\n",
+				transaction.Subject, transaction.CreatedAt.String(),
+			))
 
 		if transaction.IssuerAddress != sub.allowedIssuerAddress {
-			// TODO: log
+			pterm.Error.Printf("Issuer address [ %s ] isn't allowed!\n", transaction.IssuerAddress)
 			continue
 		}
 		if err := sub.pub.makePost(signerservice.ConfirmTransaction, confirmReq, &confirmRes); err != nil {
-			// TODO: log
+			pterm.Error.Printf("Transaction cannot be signed, %s\n", err)
 			continue
 		}
 
 		if !confirmRes.Ok {
 			if confirmRes.Err != "" {
-				// TODO: log err
+				pterm.Error.Printf("Transaction cannot be signed, %s\n", confirmRes.Err)
+				continue
 			}
-			// TODO: log
+			pterm.Error.Println("Transaction cannot be signed.")
 			continue
 		}
-
-		// TODO: log and do something with data inside
+		counter++
+		p.Increment()
 	}
+
+	if counter == len(resReceivedTransactions.Transactions) {
+		pterm.Info.Printf("Signed all of [ %v ] received transactions\n", counter)
+		return
+	}
+	pterm.Warning.Printf("Signed [ %v ] of [ %v ] received transactions\n", counter, len(resReceivedTransactions.Transactions))
 }
