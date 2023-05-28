@@ -153,8 +153,8 @@ func (sub *subscriber) hook(ctx *fiber.Ctx) error {
 
 	var res validator.NewTransactionMessage
 	if err := ctx.BodyParser(&res); err != nil {
-        pterm.Error.Println(err.Error()
-        hookRes["ack"] = false
+		pterm.Error.Println(err.Error())
+		hookRes["ack"] = false
 		hookRes["ok"] = false
 		return ctx.JSON(hookRes)
 	}
@@ -163,7 +163,7 @@ func (sub *subscriber) hook(ctx *fiber.Ctx) error {
 	defer sub.mux.Unlock()
 
 	if res.Time.Before(sub.lastTransactionTime) {
-        pterm.Error.Println(err.Error()
+		pterm.Error.Println("time is corrupted")
 		hookRes["ack"] = true
 		hookRes["ok"] = false
 		return ctx.JSON(hookRes)
@@ -184,13 +184,13 @@ func (sub *subscriber) actOnTransactions() {
 
 	var resReceivedTransactions signerservice.ReceivedTransactionResponse
 	if err := sub.pub.makeGet(signerservice.GetReceivedTransactions, &resReceivedTransactions); err != nil {
-		// TODO: log
+		pterm.Error.Println(err.Error())
 		return
 	}
 
 	if !resReceivedTransactions.Ok {
 		if resReceivedTransactions.Err != "" {
-			// TODO: log err
+			pterm.Error.Println(resReceivedTransactions.Err)
 		}
 		return
 	}
