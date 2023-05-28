@@ -11,6 +11,7 @@ import (
 
 	"github.com/bartossh/Computantis/server"
 	"github.com/bartossh/Computantis/signerservice"
+	"github.com/pterm/pterm"
 	"github.com/valyala/fasthttp"
 )
 
@@ -55,14 +56,19 @@ func RunPublisher(ctx context.Context, config Config, data [][]byte) error {
 
 	t := time.NewTicker(time.Duration(config.TickSeconds) * time.Second)
 	defer t.Stop()
+	spinner, _ := pterm.DefaultSpinner.Start("Emulating transaction publisher...")
+	defer spinner.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
 		case <-t.C:
+			spinner, _ = pterm.DefaultSpinner.Start(fmt.Sprintf("Making [ %d ] transaction emulation.\n", p.position+1))
 			if err := p.emulate(ctx, addr.Address, data); err != nil {
+				spinner.Warning()
 				return err
 			}
+			spinner.Success()
 		}
 	}
 }
