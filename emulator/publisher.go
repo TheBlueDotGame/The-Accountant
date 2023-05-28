@@ -15,10 +15,10 @@ import (
 )
 
 type publisher struct {
-	timeout  time.Duration
-	apiRoot  string
-	random   bool
-	position int
+	timeout       time.Duration
+	signerAPIRoot string
+	random        bool
+	position      int
 }
 
 // RunPublisher runs publisher emulator that emulates data in a buffer.
@@ -33,9 +33,9 @@ func RunPublisher(ctx context.Context, config Config, data [][]byte) error {
 	}
 
 	p := publisher{
-		timeout: time.Second * time.Duration(config.TimeoutSeconds),
-		apiRoot: config.SignerServiceAddress,
-		random:  config.Random,
+		timeout:       time.Second * time.Duration(config.TimeoutSeconds),
+		signerAPIRoot: config.SignerServiceURL,
+		random:        config.Random,
 	}
 
 	var alive signerservice.AliveResponse
@@ -154,7 +154,7 @@ func (p *publisher) makeGet(path string, out any) error {
 	req := fasthttp.AcquireRequest()
 	defer fasthttp.ReleaseRequest(req)
 
-	req.SetRequestURI(fmt.Sprintf("%s/%s", p.apiRoot, path))
+	req.SetRequestURI(fmt.Sprintf("%s/%s", p.signerAPIRoot, path))
 	req.Header.SetMethod("GET")
 
 	resp := fasthttp.AcquireResponse()

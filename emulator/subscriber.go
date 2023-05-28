@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/bartossh/Computantis/server"
@@ -25,7 +26,10 @@ var (
 )
 
 type subscriber struct {
-	timeout time.Duration
+	mux                  sync.Mutex
+	pub                  publisher
+	lastTransactionTime  time.Time
+	allowedIssuerAddress string
 }
 
 // RunSubscriber runs subscriber emulator.
@@ -37,8 +41,16 @@ func RunSubscriber(ctx context.Context, cancel context.CancelFunc, config Config
 		return fmt.Errorf("wrong timeout_seconds parameter, expected value between 1 and 20 inclusive")
 	}
 
+	p := publisher{
+		timeout:       time.Second * time.Duration(config.TimeoutSeconds),
+		signerAPIRoot: config.SignerServiceURL,
+		random:        config.Random,
+	}
+
 	s := subscriber{
-		timeout: time.Second * time.Duration(config.TimeoutSeconds),
+		mux:                 sync.Mutex{},
+		pub:                 p,
+		lastTransactionTime: time.Now(),
 	}
 
 	router := fiber.New(fiber.Config{
@@ -78,12 +90,6 @@ func RunSubscriber(ctx context.Context, cancel context.CancelFunc, config Config
 		return err
 	}
 
-	p := publisher{
-		timeout: time.Second * time.Duration(config.TimeoutSeconds),
-		apiRoot: config.SignerServiceAddress,
-		random:  config.Random,
-	}
-
 	var resAddress signerservice.AddressResponse
 
 	err = p.makeGet(signerservice.Address, &resAddress)
@@ -102,8 +108,8 @@ func RunSubscriber(ctx context.Context, cancel context.CancelFunc, config Config
 		return err
 	}
 
-	buf := make([]byte, 0, len(resData.Data)+len(config.SignerServiceAddress)+len(WebHookEndpoint))
-	buf = append(resData.Data, append([]byte(config.SignerServiceAddress), []byte(WebHookEndpoint)...)...)
+	buf := make([]byte, 0, len(resData.Data)+len(config.SignerServiceURL)+len(WebHookEndpoint))
+	buf = append(resData.Data, append([]byte(config.SignerServiceURL), []byte(WebHookEndpoint)...)...)
 	var resSign signerservice.SignDataResponse
 	reqSign := signerservice.SignDataRequest{
 		Data: buf,
@@ -116,7 +122,7 @@ func RunSubscriber(ctx context.Context, cancel context.CancelFunc, config Config
 
 	var resHook validator.CreateRemoveUpdateHookResponse
 	reqHook := validator.CreateRemoveUpdateHookRequest{
-		URL:       config.SignerServiceAddress + WebHookEndpoint,
+		URL:       config.SignerServiceURL + WebHookEndpoint,
 		Address:   reqData.Address,
 		Data:      resSign.Data,
 		Signature: resSign.Signature,
@@ -143,6 +149,75 @@ func RunSubscriber(ctx context.Context, cancel context.CancelFunc, config Config
 }
 
 func (sub *subscriber) hook(ctx *fiber.Ctx) error {
-    
-	return nil
+	hookRes := make(map[string]bool)
+
+	var res validator.NewTransactionMessage
+	if err := ctx.BodyParser(&res); err != nil {
+		// TODO: log
+		hookRes["ack"] = false
+		hookRes["ok"] = false
+		return ctx.JSON(hookRes)
+	}
+
+	sub.mux.Lock()
+	defer sub.mux.Unlock()
+
+	if res.Time.Before(sub.lastTransactionTime) {
+		// TODO: log
+		hookRes["ack"] = true
+		hookRes["ok"] = false
+		return ctx.JSON(hookRes)
+	}
+
+	sub.lastTransactionTime = res.Time
+
+	go sub.actOnTransactions() // make actions concurrently
+
+	hookRes["ack"] = true
+	hookRes["ok"] = true
+	return ctx.JSON(hookRes)
+}
+
+func (sub *subscriber) actOnTransactions() {
+	sub.mux.Lock()
+	defer sub.mux.Unlock()
+
+	var resReceivedTransactions signerservice.ReceivedTransactionResponse
+	if err := sub.pub.makeGet(signerservice.GetReceivedTransactions, &resReceivedTransactions); err != nil {
+		// TODO: log
+		return
+	}
+
+	if !resReceivedTransactions.Ok {
+		if resReceivedTransactions.Err != "" {
+			// TODO: log err
+		}
+		return
+	}
+
+	var confirmRes signerservice.ConfirmTransactionResponse
+	for _, transaction := range resReceivedTransactions.Transactions {
+		confirmReq := signerservice.ConfirmTransactionRequest{
+			Transaction: transaction,
+		}
+
+		if transaction.IssuerAddress != sub.allowedIssuerAddress {
+			// TODO: log
+			continue
+		}
+		if err := sub.pub.makePost(signerservice.ConfirmTransaction, confirmReq, &confirmRes); err != nil {
+			// TODO: log
+			continue
+		}
+
+		if !confirmRes.Ok {
+			if confirmRes.Err != "" {
+				// TODO: log err
+			}
+			// TODO: log
+			continue
+		}
+
+		// TODO: log and do something with data inside
+	}
 }
