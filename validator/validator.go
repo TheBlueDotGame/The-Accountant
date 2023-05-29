@@ -27,7 +27,7 @@ const (
 )
 
 const (
-	DataEdnpoint               = "/data"
+	DataEndpoint               = "/data"
 	BlockEndpointHook          = "/block"
 	NewTransactionEndpointHook = "/transaction/new"
 )
@@ -305,7 +305,7 @@ func (a *app) runServer(ctx context.Context, cancel context.CancelFunc) error {
 	})
 	router.Use(recover.New())
 
-	router.Post(DataEdnpoint, a.data)
+	router.Post(DataEndpoint, a.data)
 	router.Post(BlockEndpointHook, a.blocks)
 	router.Post(NewTransactionEndpointHook, a.transactions)
 

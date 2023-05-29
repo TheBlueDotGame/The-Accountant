@@ -61,6 +61,8 @@ func main() {
 			if err != nil {
 				return err
 			}
+			spinnerInfo, _ := pterm.DefaultSpinner.Start("<[ RUNNING VALIDATOR NODE ]>")
+			defer spinnerInfo.Stop()
 			run(cfg)
 			return nil
 		},

@@ -24,7 +24,8 @@ type publisher struct {
 
 // RunPublisher runs publisher emulator that emulates data in a buffer.
 // Running emmulator is stopped by canceling context.
-func RunPublisher(ctx context.Context, config Config, data [][]byte) error {
+func RunPublisher(ctx context.Context, cancel context.CancelFunc, config Config, data [][]byte) error {
+	defer cancel()
 	if config.TimeoutSeconds < 1 || config.TimeoutSeconds > 20 {
 		return fmt.Errorf("wrong timeout_seconds parameter, expected value between 1 and 20 inclusive")
 	}
