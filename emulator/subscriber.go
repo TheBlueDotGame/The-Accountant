@@ -102,7 +102,8 @@ func RunSubscriber(ctx context.Context, cancel context.CancelFunc, config Config
 	reqData := server.DataToSignRequest{
 		Address: resAddress.Address,
 	}
-	err = p.makePost(validator.DataEdnpoint, reqData, &resData)
+
+	err = p.makePost(validator.DataEndpoint, reqData, &resData)
 	if err != nil {
 		err = errors.Join(ErrFailedHook, err)
 		return err
@@ -120,16 +121,22 @@ func RunSubscriber(ctx context.Context, cancel context.CancelFunc, config Config
 		return err
 	}
 
+	pubHook := publisher{
+		timeout:       time.Second * time.Duration(config.TimeoutSeconds),
+		signerAPIRoot: config.ValidatorCreateHookEndpoint,
+		random:        config.Random,
+	}
+
 	var resHook validator.CreateRemoveUpdateHookResponse
 	reqHook := validator.CreateRemoveUpdateHookRequest{
-		URL:       config.SignerServiceURL + WebHookEndpoint,
+		URL:       fmt.Sprintf("http://localhost:%s%s", config.Port, WebHookEndpoint),
 		Address:   reqData.Address,
 		Data:      resSign.Data,
 		Signature: resSign.Signature,
 		Digest:    resSign.Digest,
 	}
 
-	err = p.makePost(validator.NewTransactionEndpointHook, reqHook, &resHook)
+	err = pubHook.makePost(validator.NewTransactionEndpointHook, reqHook, &resHook)
 	if err != nil {
 		err = errors.Join(ErrFailedHook, err)
 		return err

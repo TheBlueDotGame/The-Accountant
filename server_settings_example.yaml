@@ -15,10 +15,10 @@ dataprovider:
 validator:
   websocket: "ws://localhost:8080/ws"
   port: 9090
-  toke: "some token from the provider"
+  token: "jykkeD6Tr6xikkYwC805kVoFThm8VGEHStTFk1lIU6RgEf7p3vjFpPQFI3VP9SYeARjYh2jecMSYsmgddjZZcy32iySHijJQ"
 file_operator:
-  wallet_path: "path/to/your/wallet"
-  wallet_passwd: "passwd to your wallet"
+  wallet_path: "test_wallet"
+  wallet_passwd: "dc6b5b1635453e0eb57344ffb6cb293e8300fc4001fad3518e721d548459c09d"
 signer_service:
   port: 8095
   central_node_url: "http://localhost:8080"
@@ -26,7 +26,7 @@ emulator:
   timeout_seconds: 5
   tick_seconds: 5
   random: false
-  signer_service_url: "http://localhost:7777"
-  validator_create_hook_endpoit: "http://localhost:8090"
-  port: "9999"
-  issuer_wallet_public_address: "ykkeD6Tr6xikkYwC805kVoFThm8VGEHStTFk1lIU6RgEf7p3vjFpPQFI3VP9SYeARjYh2jecMSYsmgddjZZcy32iySHijJQ"
+  signer_service_url: "http://localhost:8095"
+  validator_create_hook_endpoit: "http://localhost:9090"
+  port: "8060"
+  issuer_wallet_public_address: "1AGb92ohiRtHFzrsVbMswxwARe5KeLBYkUzVgq9fTgUsAnmpyh"
