@@ -64,8 +64,6 @@ func main() {
 			if err != nil {
 				return err
 			}
-			spinnerInfo, _ := pterm.DefaultSpinner.Start("<[ RUNNING CENTRAL NODE ]>")
-			defer spinnerInfo.Stop()
 			run(cfg)
 			return nil
 		},

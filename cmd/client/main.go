@@ -21,7 +21,7 @@ import (
 	"github.com/bartossh/Computantis/wallet"
 )
 
-const usage = `Wallet runs wallet API service that serves as a middleware between your application and central node.
+const usage = `Client runs wallet API service that serves as a middleware between your application and central node.
 Wallet has cryptographic capabilities and uses GOB encoded and EAS encrypted wallet.`
 
 const timeout = time.Second * 5
@@ -44,7 +44,7 @@ func main() {
 	}
 
 	app := &cli.App{
-		Name:  "wallet",
+		Name:  "client",
 		Usage: usage,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -59,8 +59,6 @@ func main() {
 			if err != nil {
 				return err
 			}
-			spinnerInfo, _ := pterm.DefaultSpinner.Start("<[ RUNNING WALLET NODE ]>")
-			defer spinnerInfo.Stop()
 			run(cfg)
 			return nil
 		},

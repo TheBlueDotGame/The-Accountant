@@ -3,9 +3,9 @@ bookkeeper:
   block_write_timestamp: 300
   block_transactions_size: 1000
 server:
-  port: 8080
+  port: 8085
   data_size_bytes: 15000000
-  websocket_address: "ws://localhost:8080/ws"
+  websocket_address: "ws://localhost:8085/ws"
 database:
   conn_str: "postgres://computantis:computantis@localhost:5432"
   database_name: "computantis"
@@ -22,11 +22,11 @@ file_operator:
 signer_service:
   port: 8095
   central_node_url: "http://localhost:8080"
+  validator_node_url: "http://localhost:9090"
 emulator:
   timeout_seconds: 5
   tick_seconds: 5
   random: false
-  signer_service_url: "http://localhost:8095"
-  validator_create_hook_endpoit: "http://localhost:9090"
+  client_url: "http://localhost:8095"
   port: "8060"
-  issuer_wallet_public_address: "1AGb92ohiRtHFzrsVbMswxwARe5KeLBYkUzVgq9fTgUsAnmpyh"
+  public_url: "http://localhost:8060"

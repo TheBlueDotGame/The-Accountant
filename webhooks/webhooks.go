@@ -4,8 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/bartossh/Computantis/block"
+	"github.com/bartossh/Computantis/httpclient"
 	"github.com/bartossh/Computantis/logger"
 )
 
@@ -18,6 +20,25 @@ var (
 	ErrorHookNotImplemented = errors.New("hook not implemented")
 )
 
+// WebHookNewBlockMessage is the message send to the webhook url about new forged block.
+type WebHookNewBlockMessage struct {
+	Token string      `json:"token"` // Token given to the webhook by the webhooks creator to validate the message source.
+	Block block.Block `json:"block"` // Block is the block that was mined.
+	Valid bool        `json:"valid"` // Valid is the flag that indicates if the block is valid.
+}
+
+const (
+	StateIssued      byte = 0 // StateIssued is state of the transaction meaning it is only signed by the issuer.
+	StateAcknowleged          // StateAcknowledged is a state ot the transaction meaning it is acknowledged and signed by the receiver.
+)
+
+// NewTransactionMessage is the message send to the webhook url about new transaction for given wallet address.
+type NewTransactionMessage struct {
+	State byte      `json:"state"`
+	Time  time.Time `json:"time"`
+	Token string    `json:"token"`
+}
+
 // Hook is the hook that is used to trigger the webhook.
 type Hook struct {
 	URL   string `json:"address"` // URL is a url  of the webhook.
@@ -26,26 +47,18 @@ type Hook struct {
 
 type hooks map[string]Hook
 
-// HookRequestHTTPPoster provides PostWebhookBlock method that allows to post new forged block to the webhook url over HTTP protocol.
-type HookRequestHTTPPoster interface {
-	PostWebhookBlock(url string, token string, block *block.Block) error
-	PostWebhookNewTransaction(url string, token string) error
-}
-
 // Service provide webhook service that is used to create, remove and update webhooks.
 type Service struct {
 	mux    sync.RWMutex
 	buffer map[byte]hooks
-	client HookRequestHTTPPoster
 	log    logger.Logger
 }
 
 // New creates new instance of the webhook service.
-func New(client HookRequestHTTPPoster, l logger.Logger) *Service {
+func New(l logger.Logger) *Service {
 	return &Service{
 		mux:    sync.RWMutex{},
 		buffer: make(map[byte]hooks),
-		client: client,
 		log:    l,
 	}
 }
@@ -80,8 +93,15 @@ func (s *Service) PostWebhookBlock(blc *block.Block) {
 	if !ok {
 		return
 	}
+
+	in := make(map[string]interface{})
 	for _, h := range hs {
-		if err := s.client.PostWebhookBlock(h.URL, h.Token, blc); err != nil {
+		blcMsg := WebHookNewBlockMessage{
+			Token: h.Token,
+			Block: *blc,
+			Valid: true,
+		}
+		if err := httpclient.MakePost(time.Second*5, h.URL, blcMsg, &in); err != nil {
 			s.log.Error(fmt.Sprintf("webhook service error posting block to webhook url: %s, %s", h.URL, err.Error()))
 		}
 	}
@@ -95,8 +115,14 @@ func (s *Service) PostWebhookNewTransaction(url string, token string) {
 	if !ok {
 		return
 	}
+	in := make(map[string]interface{})
 	for _, h := range hs {
-		if err := s.client.PostWebhookNewTransaction(h.URL, h.Token); err != nil {
+		transactionMsg := NewTransactionMessage{
+			State: StateIssued,
+			Time:  time.Now(),
+			Token: h.Token,
+		}
+		if err := httpclient.MakePost(time.Second*5, h.URL, transactionMsg, &in); err != nil {
 			s.log.Error(fmt.Sprintf("webhook service error posting block to webhook url: %s, %s", h.URL, err.Error()))
 		}
 	}
