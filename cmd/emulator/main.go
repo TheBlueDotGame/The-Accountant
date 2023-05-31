@@ -96,9 +96,6 @@ func main() {
 					if err != nil {
 						return err
 					}
-					spinnerInfo, _ := pterm.DefaultSpinner.Start("<[ RUNNING PUBLISHER EMULATOR ]>")
-					defer spinnerInfo.Stop()
-
 					ctx, cancel := closerContext()
 					if err := emulator.RunPublisher(ctx, cancel, cfg.Emulator, data); err != nil {
 						return err
@@ -115,9 +112,6 @@ func main() {
 					if err != nil {
 						return err
 					}
-					spinnerInfo, _ := pterm.DefaultSpinner.Start("<[ RUNNING SUBSCRIBER EMULATOR ]>")
-					defer spinnerInfo.Stop()
-
 					ctx, cancel := closerContext()
 					if err := emulator.RunSubscriber(ctx, cancel, cfg.Emulator); err != nil {
 						return err

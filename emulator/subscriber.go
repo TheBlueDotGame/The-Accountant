@@ -4,14 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/bartossh/Computantis/server"
+	"sync"
+	"time"
+
+	"github.com/bartossh/Computantis/httpclient"
 	"github.com/bartossh/Computantis/signerservice"
-	"github.com/bartossh/Computantis/validator"
+	"github.com/bartossh/Computantis/webhooks"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/pterm/pterm"
-	"sync"
-	"time"
 )
 
 const (
@@ -42,9 +43,9 @@ func RunSubscriber(ctx context.Context, cancel context.CancelFunc, config Config
 	}
 
 	p := publisher{
-		timeout:       time.Second * time.Duration(config.TimeoutSeconds),
-		signerAPIRoot: config.SignerServiceURL,
-		random:        config.Random,
+		timeout:   time.Second * time.Duration(config.TimeoutSeconds),
+		clientURL: config.ClientURL,
+		random:    config.Random,
 	}
 
 	s := subscriber{
@@ -90,65 +91,20 @@ func RunSubscriber(ctx context.Context, cancel context.CancelFunc, config Config
 		return err
 	}
 
-	var resAddress signerservice.AddressResponse
-
-	err = p.makeGet(signerservice.Address, &resAddress)
-	if err != nil {
-		err = errors.Join(ErrFailedHook, err)
+	var res signerservice.CreateWebhookResponse
+	req := signerservice.CreateWebHookRequest{
+		URL: fmt.Sprintf("%s%s", config.PublicURL, WebHookEndpoint),
+	}
+	url := fmt.Sprintf("%s%s", s.pub.clientURL, signerservice.CreateUpdateWebhook)
+	if err := httpclient.MakePost(s.pub.timeout, url, req, &res); err != nil {
 		return err
 	}
 
-	var resData server.DataToSignResponse
-	reqData := server.DataToSignRequest{
-		Address: resAddress.Address,
-	}
-
-	err = p.makePost(validator.DataEndpoint, reqData, &resData)
-	if err != nil {
-		err = errors.Join(ErrFailedHook, err)
-		return err
-	}
-
-	buf := make([]byte, 0, len(resData.Data)+len(config.SignerServiceURL)+len(WebHookEndpoint))
-	buf = append(resData.Data, append([]byte(config.SignerServiceURL), []byte(WebHookEndpoint)...)...)
-	var resSign signerservice.SignDataResponse
-	reqSign := signerservice.SignDataRequest{
-		Data: buf,
-	}
-
-	if err := p.makePost(signerservice.SignData, reqSign, &resSign); err != nil {
-		err = errors.Join(ErrFailedHook, err)
-		return err
-	}
-
-	pubHook := publisher{
-		timeout:       time.Second * time.Duration(config.TimeoutSeconds),
-		signerAPIRoot: config.ValidatorCreateHookEndpoint,
-		random:        config.Random,
-	}
-
-	var resHook validator.CreateRemoveUpdateHookResponse
-	reqHook := validator.CreateRemoveUpdateHookRequest{
-		URL:       fmt.Sprintf("http://localhost:%s%s", config.Port, WebHookEndpoint),
-		Address:   reqData.Address,
-		Data:      resSign.Data,
-		Signature: resSign.Signature,
-		Digest:    resSign.Digest,
-	}
-
-	err = pubHook.makePost(validator.NewTransactionEndpointHook, reqHook, &resHook)
-	if err != nil {
-		err = errors.Join(ErrFailedHook, err)
-		return err
-	}
-
-	if !resHook.Ok {
-		if resHook.Err != "" {
-			err = errors.Join(ErrFailedHook, errors.New(resHook.Err))
-			return err
+	if !res.Ok {
+		if res.Err != "" {
+			return errors.New(res.Err)
 		}
-		err = ErrFailedHook
-		return err
+		return errors.New("unexpected error when creating the webkhook")
 	}
 
 	<-ctx.Done()
@@ -158,7 +114,7 @@ func RunSubscriber(ctx context.Context, cancel context.CancelFunc, config Config
 func (sub *subscriber) hook(ctx *fiber.Ctx) error {
 	hookRes := make(map[string]bool)
 
-	var res validator.NewTransactionMessage
+	var res webhooks.NewTransactionMessage
 	if err := ctx.BodyParser(&res); err != nil {
 		pterm.Error.Println(err.Error())
 		hookRes["ack"] = false
@@ -190,7 +146,8 @@ func (sub *subscriber) actOnTransactions() {
 	defer sub.mux.Unlock()
 
 	var resReceivedTransactions signerservice.ReceivedTransactionResponse
-	if err := sub.pub.makeGet(signerservice.GetReceivedTransactions, &resReceivedTransactions); err != nil {
+	url := fmt.Sprintf("%s%s", sub.pub.clientURL, signerservice.GetReceivedTransactions)
+	if err := httpclient.MakeGet(sub.pub.timeout, url, &resReceivedTransactions); err != nil {
 		pterm.Error.Println(err.Error())
 		return
 	}
@@ -223,7 +180,9 @@ func (sub *subscriber) actOnTransactions() {
 			pterm.Error.Printf("Issuer address [ %s ] isn't allowed!\n", transaction.IssuerAddress)
 			continue
 		}
-		if err := sub.pub.makePost(signerservice.ConfirmTransaction, confirmReq, &confirmRes); err != nil {
+
+		url := fmt.Sprintf("%s%s", sub.pub.clientURL, signerservice.ConfirmTransaction)
+		if err := httpclient.MakePost(sub.pub.timeout, url, confirmReq, &confirmRes); err != nil {
 			pterm.Error.Printf("Transaction cannot be signed, %s\n", err)
 			continue
 		}

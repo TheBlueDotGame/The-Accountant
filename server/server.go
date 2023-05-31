@@ -10,6 +10,7 @@ import (
 	"github.com/bartossh/Computantis/logger"
 	"github.com/bartossh/Computantis/transaction"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/monitor"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -24,6 +25,7 @@ const (
 )
 
 const (
+	metrics             = "/metrics"
 	searchGroupURL      = "/search"
 	addressURL          = "/address"
 	blockURL            = "/block"
@@ -183,7 +185,7 @@ func Run(
 		Concurrency:   4096,
 	})
 	router.Use(recover.New())
-
+	router.Get(metrics, monitor.New(monitor.Config{Title: fmt.Sprintf("Central Node %s", id)}))
 	router.Get(AliveURL, s.alive)
 
 	search := router.Group(searchGroupURL)

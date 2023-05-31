@@ -17,6 +17,7 @@ import (
 	"github.com/bartossh/Computantis/webhooks"
 	"github.com/fasthttp/websocket"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/monitor"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 )
 
@@ -27,8 +28,9 @@ const (
 )
 
 const (
+	metrics                    = "/metrics"
 	DataEndpoint               = "/data"
-	BlockEndpointHook          = "/block"
+	NewBlockEndpointHook       = "/block/new"
 	NewTransactionEndpointHook = "/transaction/new"
 )
 
@@ -304,9 +306,10 @@ func (a *app) runServer(ctx context.Context, cancel context.CancelFunc) error {
 		Concurrency:   4096,
 	})
 	router.Use(recover.New())
+	router.Get(metrics, monitor.New(monitor.Config{Title: "Validator Node"}))
 
 	router.Post(DataEndpoint, a.data)
-	router.Post(BlockEndpointHook, a.blocks)
+	router.Post(NewBlockEndpointHook, a.blocks)
 	router.Post(NewTransactionEndpointHook, a.transactions)
 
 	go func() {

@@ -4,15 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/bartossh/Computantis/logo"
-	"github.com/pterm/pterm"
-	"github.com/urfave/cli/v2"
 	"os"
 	"os/signal"
 	"time"
 
+	"github.com/bartossh/Computantis/logo"
+	"github.com/pterm/pterm"
+	"github.com/urfave/cli/v2"
+
 	"github.com/bartossh/Computantis/aeswrapper"
-	"github.com/bartossh/Computantis/client"
 	"github.com/bartossh/Computantis/configuration"
 	"github.com/bartossh/Computantis/dataprovider"
 	"github.com/bartossh/Computantis/fileoperations"
@@ -61,8 +61,6 @@ func main() {
 			if err != nil {
 				return err
 			}
-			spinnerInfo, _ := pterm.DefaultSpinner.Start("<[ RUNNING VALIDATOR NODE ]>")
-			defer spinnerInfo.Stop()
 			run(cfg)
 			return nil
 		},
@@ -109,9 +107,7 @@ func run(cfg configuration.Configuration) {
 	seal := aeswrapper.New()
 	fo := fileoperations.New(cfg.FileOperator, seal)
 
-	httpClient := client.NewClient("", time.Second*5, verify, fo, wallet.New)
-
-	wh := webhooks.New(httpClient, log)
+	wh := webhooks.New(log)
 
 	wl, err := fo.ReadWallet()
 	if err != nil {

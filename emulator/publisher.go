@@ -1,25 +1,23 @@
 package emulator
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math/rand"
 	"time"
 
+	"github.com/bartossh/Computantis/httpclient"
 	"github.com/bartossh/Computantis/server"
 	"github.com/bartossh/Computantis/signerservice"
 	"github.com/pterm/pterm"
-	"github.com/valyala/fasthttp"
 )
 
 type publisher struct {
-	timeout       time.Duration
-	signerAPIRoot string
-	random        bool
-	position      int
+	timeout   time.Duration
+	clientURL string
+	random    bool
+	position  int
 }
 
 // RunPublisher runs publisher emulator that emulates data in a buffer.
@@ -35,13 +33,14 @@ func RunPublisher(ctx context.Context, cancel context.CancelFunc, config Config,
 	}
 
 	p := publisher{
-		timeout:       time.Second * time.Duration(config.TimeoutSeconds),
-		signerAPIRoot: config.SignerServiceURL,
-		random:        config.Random,
+		timeout:   time.Second * time.Duration(config.TimeoutSeconds),
+		clientURL: config.ClientURL,
+		random:    config.Random,
 	}
 
 	var alive signerservice.AliveResponse
-	if err := p.makeGet(signerservice.Alive, &alive); err != nil {
+	url := fmt.Sprintf("%s%s", p.clientURL, signerservice.Alive)
+	if err := httpclient.MakeGet(p.timeout, url, &alive); err != nil {
 		return err
 	}
 	if alive.APIVersion != server.ApiVersion || alive.APIHeader != server.Header {
@@ -51,7 +50,8 @@ func RunPublisher(ctx context.Context, cancel context.CancelFunc, config Config,
 	}
 
 	var addr signerservice.AddressResponse
-	if err := p.makeGet(signerservice.Address, &addr); err != nil {
+	url = fmt.Sprintf("%s%s", p.clientURL, signerservice.Address)
+	if err := httpclient.MakeGet(p.timeout, url, &addr); err != nil {
 		return fmt.Errorf("cannot read public address, %s", err)
 	}
 
@@ -101,7 +101,8 @@ func (p *publisher) emulate(ctx context.Context, receiver string, data [][]byte)
 			Data:            data[p.position],
 		}
 		var resp signerservice.IssueTransactionResponse
-		err = p.makePost(signerservice.IssueTransaction, req, &resp)
+		url := fmt.Sprintf("%s%s", p.clientURL, signerservice.IssueTransaction)
+		err = httpclient.MakePost(p.timeout, url, req, &resp)
 		if resp.Err != "" {
 			err = errors.New(resp.Err)
 			return
@@ -119,70 +120,4 @@ func (p *publisher) emulate(ctx context.Context, receiver string, data [][]byte)
 	case <-t.C:
 		return errors.New("timeout")
 	}
-}
-
-func (p *publisher) makePost(path string, out, in any) error {
-	req := fasthttp.AcquireRequest()
-	defer fasthttp.ReleaseRequest(req)
-
-	req.SetRequestURI(path)
-	req.Header.SetMethod("POST")
-	req.Header.SetContentType("application/json")
-	raw, err := json.Marshal(out)
-	if err != nil {
-		return err
-	}
-	req.SetBody(raw)
-
-	resp := fasthttp.AcquireResponse()
-	defer fasthttp.ReleaseResponse(resp)
-
-	if err := fasthttp.DoTimeout(req, resp, p.timeout); err != nil {
-		return err
-	}
-
-	switch resp.StatusCode() {
-	case fasthttp.StatusOK, fasthttp.StatusCreated, fasthttp.StatusAccepted:
-	case fasthttp.StatusNoContent:
-		return nil
-	default:
-		return fmt.Errorf("expected status code %d but got %d", fasthttp.StatusOK, resp.StatusCode())
-	}
-
-	contentType := resp.Header.Peek("Content-Type")
-	if bytes.Index(contentType, []byte("application/json")) != 0 {
-		return fmt.Errorf("expected content type application/json but got %s", contentType)
-	}
-
-	return json.Unmarshal(resp.Body(), in)
-}
-
-func (p *publisher) makeGet(path string, out any) error {
-	req := fasthttp.AcquireRequest()
-	defer fasthttp.ReleaseRequest(req)
-
-	req.SetRequestURI(fmt.Sprintf("%s/%s", p.signerAPIRoot, path))
-	req.Header.SetMethod("GET")
-
-	resp := fasthttp.AcquireResponse()
-	defer fasthttp.ReleaseResponse(resp)
-
-	if err := fasthttp.DoTimeout(req, resp, p.timeout); err != nil {
-		return err
-	}
-
-	switch resp.StatusCode() {
-	case fasthttp.StatusOK:
-	case fasthttp.StatusNoContent:
-		return nil
-	default:
-		return fmt.Errorf("expected status code %d but got %d", fasthttp.StatusOK, resp.StatusCode())
-	}
-
-	contentType := resp.Header.Peek("Content-Type")
-	if bytes.Index(contentType, []byte("application/json")) != 0 {
-		return fmt.Errorf("expected content type application/json but got %s", contentType)
-	}
-
-	return json.Unmarshal(resp.Body(), out)
 }
