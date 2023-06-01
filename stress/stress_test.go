@@ -4,7 +4,7 @@
 // - create test database to ensure your data is not polluted,
 // - ensure your database contains valid tokens allowing to create wallets,
 // - run server with: go run cmd/central/main.go.
-// Run test with: `go test -v -run=Test ./stress/stress_test.go -tags stress`
+// Run test with: `go test -v ./stress/... -tags stress`
 // It is the best to test it when server runs on separate machine.
 
 package stress
@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bartossh/Computantis/client"
+	"github.com/bartossh/Computantis/walletmiddleware"
 	"github.com/bartossh/Computantis/fileoperations"
 	"github.com/bartossh/Computantis/wallet"
 	"github.com/stretchr/testify/assert"
@@ -66,13 +66,13 @@ func TestFullClientApiCycle(t *testing.T) {
 		wg.Add(1)
 		go func(c tesCase) {
 			addr := fmt.Sprintf("http://localhost:%s", c.port)
-			issuer := client.NewClient(addr, 5*time.Second, wallet.Helper{}, fileoperations.Helper{}, wallet.New)
+			issuer := walletmiddleware.NewClient(addr, 5*time.Second, wallet.Helper{}, fileoperations.Helper{}, wallet.New)
 			err := issuer.ValidateApiVersion()
 			assert.Nil(t, err)
 			err = issuer.NewWallet(c.tokens[0])
 			assert.Nil(t, err)
 
-			receiver := client.NewClient(addr, 5*time.Second, wallet.Helper{}, fileoperations.Helper{}, wallet.New)
+			receiver := walletmiddleware.NewClient(addr, 5*time.Second, wallet.Helper{}, fileoperations.Helper{}, wallet.New)
 			err = receiver.ValidateApiVersion()
 			assert.Nil(t, err)
 			err = receiver.NewWallet(c.tokens[1])

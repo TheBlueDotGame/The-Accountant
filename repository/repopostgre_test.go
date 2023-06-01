@@ -1,6 +1,6 @@
 //go:build integration
 
-package repopostgre
+package repopository
 
 import (
 	"context"
@@ -8,7 +8,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/bartossh/Computantis/repohelper"
 	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/assert"
 )
