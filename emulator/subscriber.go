@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/bartossh/Computantis/httpclient"
-	"github.com/bartossh/Computantis/signerservice"
+	"github.com/bartossh/Computantis/walletapi"
 	"github.com/bartossh/Computantis/webhooks"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/recover"
@@ -91,11 +91,11 @@ func RunSubscriber(ctx context.Context, cancel context.CancelFunc, config Config
 		return err
 	}
 
-	var res signerservice.CreateWebhookResponse
-	req := signerservice.CreateWebHookRequest{
+	var res walletapi.CreateWebhookResponse
+	req := walletapi.CreateWebHookRequest{
 		URL: fmt.Sprintf("%s%s", config.PublicURL, WebHookEndpoint),
 	}
-	url := fmt.Sprintf("%s%s", s.pub.clientURL, signerservice.CreateUpdateWebhook)
+	url := fmt.Sprintf("%s%s", s.pub.clientURL, walletapi.CreateUpdateWebhook)
 	if err := httpclient.MakePost(s.pub.timeout, url, req, &res); err != nil {
 		return err
 	}
@@ -145,8 +145,8 @@ func (sub *subscriber) actOnTransactions() {
 	sub.mux.Lock()
 	defer sub.mux.Unlock()
 
-	var resReceivedTransactions signerservice.ReceivedTransactionResponse
-	url := fmt.Sprintf("%s%s", sub.pub.clientURL, signerservice.GetReceivedTransactions)
+	var resReceivedTransactions walletapi.ReceivedTransactionResponse
+	url := fmt.Sprintf("%s%s", sub.pub.clientURL, walletapi.GetReceivedTransactions)
 	if err := httpclient.MakeGet(sub.pub.timeout, url, &resReceivedTransactions); err != nil {
 		pterm.Error.Println(err.Error())
 		return
@@ -164,10 +164,10 @@ func (sub *subscriber) actOnTransactions() {
 		WithTotal(len(resReceivedTransactions.Transactions)).
 		WithTitle(fmt.Sprintf("Signing [ %v ] transactions\n", len(resReceivedTransactions.Transactions))).
 		Start()
-	var confirmRes signerservice.ConfirmTransactionResponse
+	var confirmRes walletapi.ConfirmTransactionResponse
 
 	for _, transaction := range resReceivedTransactions.Transactions {
-		confirmReq := signerservice.ConfirmTransactionRequest{
+		confirmReq := walletapi.ConfirmTransactionRequest{
 			Transaction: transaction,
 		}
 		p.UpdateTitle(
@@ -181,7 +181,7 @@ func (sub *subscriber) actOnTransactions() {
 			continue
 		}
 
-		url := fmt.Sprintf("%s%s", sub.pub.clientURL, signerservice.ConfirmTransaction)
+		url := fmt.Sprintf("%s%s", sub.pub.clientURL, walletapi.ConfirmTransaction)
 		if err := httpclient.MakePost(sub.pub.timeout, url, confirmReq, &confirmRes); err != nil {
 			pterm.Error.Printf("Transaction cannot be signed, %s\n", err)
 			continue

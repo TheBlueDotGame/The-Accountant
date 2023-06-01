@@ -346,7 +346,10 @@ func (c *Client) CreateWebhook(webHookURL string) error {
 		return err
 	}
 
-	digest, signature, err := c.Sign(data.Data)
+	buf := make([]byte, 0, len(data.Data)+len(webHookURL))
+	buf = append(buf, append(data.Data, []byte(webHookURL)...)...)
+
+	digest, signature, err := c.Sign(buf)
 	if err != nil {
 		return err
 	}
@@ -366,7 +369,7 @@ func (c *Client) CreateWebhook(webHookURL string) error {
 
 	var res validator.CreateRemoveUpdateHookResponse
 
-	url := fmt.Sprintf("%s%s", c.apiRoot, validator.NewTransactionEndpointHook)
+	url := fmt.Sprintf("%s%s", c.apiRoot, validator.TransactionHookURL)
 	if err := httpclient.MakePost(c.timeout, url, req, &res); err != nil {
 		return err
 	}

@@ -28,10 +28,11 @@ const (
 )
 
 const (
-	metrics                    = "/metrics"
-	DataEndpoint               = "/data"
-	NewBlockEndpointHook       = "/block/new"
-	NewTransactionEndpointHook = "/transaction/new"
+	AliveURL           = server.AliveURL          // URL to check is service alive
+	MetricsURL         = server.MetricsURL        // URL to serve service metrics over http.
+	DataEndpointURL    = server.DataToValidateURL // URL to serve data to sign to prove identity.
+	BloclHookURL       = "/block/new"             // URL allows to create block hook.
+	TransactionHookURL = "/transaction/new"       // URL allows to create transaction hook.
 )
 
 var (
@@ -89,6 +90,15 @@ type app struct {
 	cancel       context.CancelFunc
 }
 
+func (s *app) alive(c *fiber.Ctx) error {
+	return c.JSON(
+		server.AliveResponse{
+			Alive:      true,
+			APIVersion: server.ApiVersion,
+			APIHeader:  server.Header,
+		})
+}
+
 func (a *app) data(c *fiber.Ctx) error {
 	var req server.DataToSignRequest
 	if err := c.BodyParser(&req); err != nil {
@@ -107,12 +117,12 @@ func (a *app) blocks(c *fiber.Ctx) error {
 func (a *app) transactions(c *fiber.Ctx) error {
 	var req CreateRemoveUpdateHookRequest
 	if err := c.BodyParser(&req); err != nil {
-		a.log.Error(fmt.Sprintf("/transaction/new endpoint, failed to parse request body: %s", err.Error()))
+		a.log.Error(fmt.Sprintf("%s endpoint, failed to parse request body: %s", TransactionHookURL, err.Error()))
 		return fiber.ErrBadRequest
 	}
 
 	if ok := a.randDataProv.ValidateData(req.Address, req.Data); !ok {
-		a.log.Error("/transaction/new endpoint, corrupted data")
+		a.log.Error("%s endpoint, corrupted data")
 		return fiber.ErrForbidden
 	}
 
@@ -120,7 +130,7 @@ func (a *app) transactions(c *fiber.Ctx) error {
 	buf = append(buf, append(req.Data, []byte(req.URL)...)...)
 
 	if err := a.ver.Verify(buf, req.Signature, [32]byte(req.Digest), req.Address); err != nil {
-		a.log.Error(fmt.Sprintf("/transaction/new endpoint, invalid signature: %s", err.Error()))
+		a.log.Error(fmt.Sprintf("%s endpoint, invalid signature: %s", TransactionHookURL, err.Error()))
 		return fiber.ErrForbidden
 	}
 
@@ -129,7 +139,7 @@ func (a *app) transactions(c *fiber.Ctx) error {
 		Token: string(req.Data),
 	}
 	if err := a.wh.CreateWebhook(webhooks.TriggerNewTransaction, req.Address, h); err != nil {
-		a.log.Error(fmt.Sprintf("/transaction/new endpoint, failed to create webhook: %s", err.Error()))
+		a.log.Error(fmt.Sprintf("%s failed to create webhook: %s", TransactionHookURL, err.Error()))
 		return c.JSON(CreateRemoveUpdateHookResponse{Ok: false, Err: err.Error()})
 	}
 
@@ -306,11 +316,12 @@ func (a *app) runServer(ctx context.Context, cancel context.CancelFunc) error {
 		Concurrency:   4096,
 	})
 	router.Use(recover.New())
-	router.Get(metrics, monitor.New(monitor.Config{Title: "Validator Node"}))
+	router.Get(MetricsURL, monitor.New(monitor.Config{Title: "Validator Node"}))
+	router.Get(AliveURL, a.alive)
 
-	router.Post(DataEndpoint, a.data)
-	router.Post(NewBlockEndpointHook, a.blocks)
-	router.Post(NewTransactionEndpointHook, a.transactions)
+	router.Post(DataEndpointURL, a.data)
+	router.Post(BloclHookURL, a.blocks)
+	router.Post(TransactionHookURL, a.transactions)
 
 	go func() {
 		err := router.Listen(fmt.Sprintf("0.0.0.0:%v", a.cfg.Port))

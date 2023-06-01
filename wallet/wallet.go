@@ -89,7 +89,7 @@ func (w *Wallet) Sign(message []byte) (digest [32]byte, signature []byte) {
 // Uses hashing sha256.
 func (w *Wallet) Verify(message, signature []byte, hash [32]byte) bool {
 	digest := sha256.Sum256(message)
-	if hash != digest {
+	if !bytes.Equal(hash[:], digest[:]) {
 		return false
 	}
 	return ed25519.Verify(w.Public, digest[:], signature)
