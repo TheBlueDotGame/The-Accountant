@@ -29,18 +29,18 @@ import (
 	"syscall/js"
 	"time"
 
-	"github.com/bartossh/Computantis/client"
 	"github.com/bartossh/Computantis/fileoperations"
 	"github.com/bartossh/Computantis/transaction"
 	"github.com/bartossh/Computantis/wallet"
+	"github.com/bartossh/Computantis/walletmiddleware"
 )
 
-var helper *client.Client
+var helper *walletmiddleware.Client
 
 func new() js.Func {
 	return js.FuncOf(func(this js.Value, args []js.Value) any {
 		serverAddress := args[0].String()
-		helper = client.NewClient(serverAddress, 5*time.Second, wallet.Helper{}, fileoperations.Helper{}, wallet.New)
+		helper = walletmiddleware.NewClient(serverAddress, 5*time.Second, wallet.Helper{}, fileoperations.Helper{}, wallet.New)
 		return nil
 	})
 }

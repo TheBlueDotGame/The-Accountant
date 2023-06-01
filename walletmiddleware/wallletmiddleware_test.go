@@ -21,7 +21,7 @@ func TestAlive(t *testing.T) {
 		5*time.Second,
 		wallet.Helper{},
 		fileoperations.New(fileoperations.Config{
-			WalletPath:   "../artefacts/test_wallet",
+			WalletPath:   "../test_wallet",
 			WalletPasswd: "dc6b5b1635453e0eb57344ffb6cb293e8300fc4001fad3518e721d548459c09d",
 		}, s),
 		wallet.New)
@@ -36,7 +36,7 @@ func BenchmarkAlive(b *testing.B) {
 		5*time.Second,
 		wallet.Helper{},
 		fileoperations.New(fileoperations.Config{
-			WalletPath:   "../artefacts/test_wallet",
+			WalletPath:   "../test_wallet",
 			WalletPasswd: "dc6b5b1635453e0eb57344ffb6cb293e8300fc4001fad3518e721d548459c09d",
 		}, s),
 		wallet.New)
@@ -52,7 +52,7 @@ func TestFullClientApiCycle(t *testing.T) {
 		5*time.Second,
 		wallet.Helper{},
 		fileoperations.New(fileoperations.Config{
-			WalletPath:   "../artefacts/test_wallet",
+			WalletPath:   "../test_wallet",
 			WalletPasswd: "dc6b5b1635453e0eb57344ffb6cb293e8300fc4001fad3518e721d548459c09d",
 		}, s),
 		wallet.New)
@@ -66,7 +66,7 @@ func TestFullClientApiCycle(t *testing.T) {
 		5*time.Second,
 		wallet.Helper{},
 		fileoperations.New(fileoperations.Config{
-			WalletPath:   "../artefacts/test_wallet",
+			WalletPath:   "../test_wallet",
 			WalletPasswd: "dc6b5b1635453e0eb57344ffb6cb293e8300fc4001fad3518e721d548459c09d",
 		}, s),
 		wallet.New)
@@ -105,7 +105,7 @@ func TestSaveWallet(t *testing.T) {
 		5*time.Second,
 		wallet.Helper{},
 		fileoperations.New(fileoperations.Config{
-			WalletPath:   "../artefacts/test_wallet",
+			WalletPath:   "../test_wallet",
 			WalletPasswd: "dc6b5b1635453e0eb57344ffb6cb293e8300fc4001fad3518e721d548459c09d",
 		}, s),
 		wallet.New)
