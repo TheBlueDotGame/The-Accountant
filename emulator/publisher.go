@@ -9,7 +9,7 @@ import (
 
 	"github.com/bartossh/Computantis/httpclient"
 	"github.com/bartossh/Computantis/server"
-	"github.com/bartossh/Computantis/signerservice"
+	"github.com/bartossh/Computantis/walletapi"
 	"github.com/pterm/pterm"
 )
 
@@ -38,8 +38,8 @@ func RunPublisher(ctx context.Context, cancel context.CancelFunc, config Config,
 		random:    config.Random,
 	}
 
-	var alive signerservice.AliveResponse
-	url := fmt.Sprintf("%s%s", p.clientURL, signerservice.Alive)
+	var alive walletapi.AliveResponse
+	url := fmt.Sprintf("%s%s", p.clientURL, walletapi.Alive)
 	if err := httpclient.MakeGet(p.timeout, url, &alive); err != nil {
 		return err
 	}
@@ -49,8 +49,8 @@ func RunPublisher(ctx context.Context, cancel context.CancelFunc, config Config,
 			server.Header, server.ApiVersion, alive.APIHeader, alive.APIVersion)
 	}
 
-	var addr signerservice.AddressResponse
-	url = fmt.Sprintf("%s%s", p.clientURL, signerservice.Address)
+	var addr walletapi.AddressResponse
+	url = fmt.Sprintf("%s%s", p.clientURL, walletapi.Address)
 	if err := httpclient.MakeGet(p.timeout, url, &addr); err != nil {
 		return fmt.Errorf("cannot read public address, %s", err)
 	}
@@ -95,13 +95,13 @@ func (p *publisher) emulate(ctx context.Context, receiver string, data [][]byte)
 		defer func() {
 			d <- struct{}{}
 		}()
-		req := signerservice.IssueTransactionRequest{
+		req := walletapi.IssueTransactionRequest{
 			ReceiverAddress: receiver,
 			Subject:         "emulator-test",
 			Data:            data[p.position],
 		}
-		var resp signerservice.IssueTransactionResponse
-		url := fmt.Sprintf("%s%s", p.clientURL, signerservice.IssueTransaction)
+		var resp walletapi.IssueTransactionResponse
+		url := fmt.Sprintf("%s%s", p.clientURL, walletapi.IssueTransaction)
 		err = httpclient.MakePost(p.timeout, url, req, &resp)
 		if resp.Err != "" {
 			err = errors.New(resp.Err)

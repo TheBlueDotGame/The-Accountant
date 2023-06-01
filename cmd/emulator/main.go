@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"os/signal"
 
@@ -32,7 +33,7 @@ func readLines(file string) ([][]byte, error) {
 	defer readFile.Close()
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("reading %s failed, %s", file, err)
 	}
 	fileScanner := bufio.NewScanner(readFile)
 

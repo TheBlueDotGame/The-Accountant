@@ -25,7 +25,6 @@ const (
 )
 
 const (
-	metrics             = "/metrics"
 	searchGroupURL      = "/search"
 	addressURL          = "/address"
 	blockURL            = "/block"
@@ -43,6 +42,7 @@ const (
 )
 
 const (
+	MetricsURL            = "/metrics"                       // URL to check service metrics
 	AliveURL              = "/alive"                         // URL to check if server is alive and version.
 	SearchAddressURL      = searchGroupURL + addressURL      // URL to search for address.
 	SearchBlockURL        = searchGroupURL + blockURL        // URL to search for block that contains transaction hash.
@@ -185,7 +185,7 @@ func Run(
 		Concurrency:   4096,
 	})
 	router.Use(recover.New())
-	router.Get(metrics, monitor.New(monitor.Config{Title: fmt.Sprintf("Central Node %s", id)}))
+	router.Get(MetricsURL, monitor.New(monitor.Config{Title: fmt.Sprintf("Central Node %s", id)}))
 	router.Get(AliveURL, s.alive)
 
 	search := router.Group(searchGroupURL)

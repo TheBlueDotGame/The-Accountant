@@ -1,4 +1,4 @@
-package signerservice
+package walletapi
 
 import (
 	"context"
@@ -12,6 +12,7 @@ import (
 	"github.com/bartossh/Computantis/validator"
 	"github.com/bartossh/Computantis/walletmiddleware"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/monitor"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 )
 
@@ -34,17 +35,18 @@ const (
 )
 
 const (
-	Alive                   = "/alive"                 // alive URL allows to check if server is alive and if sign service is of the same version.
-	Address                 = "/address"               // address URL allows to check wallet public address
-	IssueTransaction        = "/transactions/issue"    // issue URL allows to issue transaction signed by the issuer.
-	ConfirmTransaction      = "/transaction/sign"      // sign URL allows to sign transaction received by the receiver.
-	GetIssuedTransactions   = "/transactions/issued"   // issued URL allows to get issued transactions for the issuer.
-	GetReceivedTransactions = "/transactions/received" // received URL allows to get received transactions for the receiver.
-	CreateWallet            = "/wallet/create"         // create URL allows to create new wallet.
-	CreateUpdateWebhook     = "/webhook/create"        // webhook create and update URL
-	ReadWalletPublicAddress = "/wallet/address"        // address URL allows to read public address of the wallet.
-	GetOneDayToken          = "token/day"              // token/day URL allows to get one day token.
-	GetOneWeekToken         = "token/week"             // token/week URL allows to get one week token.
+	MetricsURL              = server.MetricsURL        // URL serves service metrics.
+	Alive                   = server.AliveURL          // URL allows to check if server is alive and if sign service is of the same version.
+	Address                 = "/address"               // URL allows to check wallet public address
+	IssueTransaction        = "/transactions/issue"    // URL allows to issue transaction signed by the issuer.
+	ConfirmTransaction      = "/transaction/sign"      // URL allows to sign transaction received by the receiver.
+	GetIssuedTransactions   = "/transactions/issued"   // URL allows to get issued transactions for the issuer.
+	GetReceivedTransactions = "/transactions/received" // URL allows to get received transactions for the receiver.
+	CreateWallet            = "/wallet/create"         // URL allows to create new wallet.
+	CreateUpdateWebhook     = "/webhook/create"        // URL allows to creatre webhook
+	ReadWalletPublicAddress = "/wallet/address"        // URL allows to read public address of the wallet.
+	GetOneDayToken          = "token/day"              // URL allows to get one day token.
+	GetOneWeekToken         = "token/week"             // URL allows to get one week token.
 )
 
 // Run runs the service application that exposes the API for creating, validating and signing transactions.
@@ -81,6 +83,7 @@ func Run(ctx context.Context, cfg Config, log logger.Logger, timeout time.Durati
 		Concurrency:   1024,
 	})
 	router.Use(recover.New())
+	router.Get(MetricsURL, monitor.New(monitor.Config{Title: "Wallet API Node"}))
 
 	router.Get(Alive, s.alive)
 	router.Get(Address, s.address)

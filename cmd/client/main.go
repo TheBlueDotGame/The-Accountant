@@ -16,9 +16,9 @@ import (
 	"github.com/bartossh/Computantis/logging"
 	"github.com/bartossh/Computantis/logo"
 	"github.com/bartossh/Computantis/repository"
-	"github.com/bartossh/Computantis/signerservice"
 	"github.com/bartossh/Computantis/stdoutwriter"
 	"github.com/bartossh/Computantis/wallet"
+	"github.com/bartossh/Computantis/walletapi"
 )
 
 const usage = `Client runs wallet API service that serves as a middleware between your application and central node.
@@ -106,7 +106,7 @@ func run(cfg configuration.Configuration) {
 
 	verify := wallet.NewVerifier()
 
-	err = signerservice.Run(ctx, cfg.SignerService, log, timeout, verify, fo, wallet.New)
+	err = walletapi.Run(ctx, cfg.Client, log, timeout, verify, fo, wallet.New)
 
 	if err != nil {
 		log.Error(err.Error())
