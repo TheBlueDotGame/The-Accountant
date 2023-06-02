@@ -142,6 +142,7 @@ func (s *Service) insertHook(trigger byte, publicAddress string, h Hook) {
 		hs = make(hooks)
 	}
 	hs[publicAddress] = h
+	s.buffer[trigger] = hs
 }
 
 func (s *Service) removeHook(trigger byte, publicAddress string, h Hook) {
