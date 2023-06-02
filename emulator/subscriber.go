@@ -160,25 +160,14 @@ func (sub *subscriber) actOnTransactions() {
 	}
 
 	var counter int
-	p, _ := pterm.DefaultProgressbar.
-		WithTotal(len(resReceivedTransactions.Transactions)).
-		WithTitle(fmt.Sprintf("Signing [ %v ] transactions\n", len(resReceivedTransactions.Transactions))).
-		Start()
 	var confirmRes walletapi.ConfirmTransactionResponse
 
 	for _, transaction := range resReceivedTransactions.Transactions {
+
+		pterm.Info.Printf("Trx data: [ %s ]\n", string(transaction.Data))
+
 		confirmReq := walletapi.ConfirmTransactionRequest{
 			Transaction: transaction,
-		}
-		p.UpdateTitle(
-			fmt.Sprintf(
-				"Signing transaction [ %s ] crated [ %s ]\n",
-				transaction.Subject, transaction.CreatedAt.String(),
-			))
-
-		if transaction.IssuerAddress != sub.allowedIssuerAddress {
-			pterm.Error.Printf("Issuer address [ %s ] isn't allowed!\n", transaction.IssuerAddress)
-			continue
 		}
 
 		url := fmt.Sprintf("%s%s", sub.pub.clientURL, walletapi.ConfirmTransaction)
@@ -196,7 +185,6 @@ func (sub *subscriber) actOnTransactions() {
 			continue
 		}
 		counter++
-		p.Increment()
 	}
 
 	if counter == len(resReceivedTransactions.Transactions) {
