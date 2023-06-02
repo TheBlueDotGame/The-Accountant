@@ -107,16 +107,22 @@ func (s *Service) PostWebhookBlock(blc *block.Block) {
 	}
 }
 
-// PostWebhookNewTransaction posts information to the coresponding public address hook url with information about new waiting transaction.
-func (s *Service) PostWebhookNewTransaction(url string, token string) {
+// PostWebhookNewTransaction posts information to the corresponding public address.
+func (s *Service) PostWebhookNewTransaction(publicAddresses []string) {
 	s.mux.RLock()
 	defer s.mux.RUnlock()
-	hs, ok := s.buffer[TriggerNewBlock]
+	hs, ok := s.buffer[TriggerNewTransaction]
 	if !ok {
 		return
 	}
+
 	in := make(map[string]interface{})
-	for _, h := range hs {
+	for _, addr := range publicAddresses {
+		h, ok := hs[addr]
+		if !ok {
+			continue
+		}
+
 		transactionMsg := NewTransactionMessage{
 			State: StateIssued,
 			Time:  time.Now(),
