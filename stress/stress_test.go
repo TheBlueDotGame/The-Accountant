@@ -15,9 +15,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bartossh/Computantis/walletmiddleware"
 	"github.com/bartossh/Computantis/fileoperations"
 	"github.com/bartossh/Computantis/wallet"
+	"github.com/bartossh/Computantis/walletmiddleware"
 	"github.com/stretchr/testify/assert"
 )
 

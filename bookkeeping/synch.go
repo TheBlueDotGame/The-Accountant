@@ -11,7 +11,7 @@ var (
 	ErrSynchronizerStopped        = errors.New("synchronizer stopped")
 )
 
-type Subscriber interface {
+type BlockchainLockSubscriber interface {
 	SubscribeToLockBlockchainNotification(ctx context.Context, c chan<- bool, node string)
 }
 
@@ -25,11 +25,11 @@ type Synchronizer interface {
 type sync struct {
 	id        string
 	synchro   Synchronizer
-	subscribe Subscriber
+	subscribe BlockchainLockSubscriber
 }
 
 // newSync creates new sync.
-func newSync(id string, synchro Synchronizer, subscribe Subscriber) sync {
+func newSync(id string, synchro Synchronizer, subscribe BlockchainLockSubscriber) sync {
 	return sync{id: id, synchro: synchro, subscribe: subscribe}
 }
 

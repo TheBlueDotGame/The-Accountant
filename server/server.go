@@ -97,7 +97,7 @@ type Repository interface {
 	Register
 	AddressReaderWriterModifier
 	TokenWriteInvalidateChecker
-	FindTransactionInBlockHash(ctx context.Context, trxHash [32]byte) ([32]byte, error)
+	FindTransactionInBlockHash(ctx context.Context, trxBlockHash [32]byte) ([32]byte, error)
 	ReadAwaitingTransactionsByIssuer(ctx context.Context, address string) ([]transaction.Transaction, error)
 	ReadAwaitingTransactionsByReceiver(ctx context.Context, address string) ([]transaction.Transaction, error)
 }
@@ -112,7 +112,7 @@ type Bookkeeper interface {
 	Verifier
 	Run(ctx context.Context)
 	WriteCandidateTransaction(ctx context.Context, tx *transaction.Transaction) error
-	WriteIssuerSignedTransactionForReceiver(ctx context.Context, trx *transaction.Transaction) error
+	WriteIssuerSignedTransactionForReceiver(ctx context.Context, trxBlock *transaction.Transaction) error
 }
 
 // RandomDataProvideValidator provides random binary data for signing to prove identity and
@@ -122,11 +122,18 @@ type RandomDataProvideValidator interface {
 	ValidateData(address string, data []byte) bool
 }
 
-// ReactiveSubscriberProvider provides reactive subscription to the blockchain.
+// ReactiveBlock provides reactive subscription to the blockchain.
 // It allows to listen for the new blocks created by the Ladger.
-type ReactiveSubscriberProvider interface {
+type ReactiveBlock interface {
 	Cancel()
 	Channel() <-chan block.Block
+}
+
+// ReactiveTrxIssued provides reactive subscription to the issuer address.
+// It allows to listen for the new blocks created by the Ladger.
+type ReactiveTrxIssued interface {
+	Cancel()
+	Channel() <-chan string
 }
 
 // Config contains configuration of the server.
@@ -143,7 +150,8 @@ type server struct {
 	randDataProv RandomDataProvideValidator
 	hub          *hub
 	log          logger.Logger
-	rx           ReactiveSubscriberProvider
+	rxBlock      ReactiveBlock
+	rxTrxIssued  ReactiveTrxIssued
 }
 
 // Run initializes routing and runs the server. To stop the server cancel the context.
@@ -151,7 +159,7 @@ type server struct {
 func Run(
 	ctx context.Context, c Config, repo Repository,
 	bookkeeping Bookkeeper, pv RandomDataProvideValidator,
-	log logger.Logger, rx ReactiveSubscriberProvider,
+	log logger.Logger, rxBlock ReactiveBlock, rxTrxIssued ReactiveTrxIssued,
 ) error {
 	var err error
 	ctxx, cancel := context.WithCancel(ctx)
@@ -171,7 +179,8 @@ func Run(
 		randDataProv: pv,
 		hub:          newHub(log),
 		log:          log,
-		rx:           rx,
+		rxBlock:      rxBlock,
+		rxTrxIssued:  rxTrxIssued,
 	}
 
 	router := fiber.New(fiber.Config{
@@ -248,19 +257,47 @@ func validateConfig(c *Config) error {
 }
 
 func (s *server) runSubscriber(ctx context.Context) {
-	defer s.rx.Cancel()
+	defer s.rxBlock.Cancel()
+	defer s.rxTrxIssued.Cancel()
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+
+	receiverAddrSet := make(map[string]struct{}, 100)
+
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case b := <-s.rx.Channel():
+		case b := <-s.rxBlock.Channel():
 			m := Message{
-				Command:     CommandNewBlock,
-				Error:       "",
-				Block:       b,
-				Transaction: transaction.Transaction{},
+				Command:               CommandNewBlock,
+				Error:                 "",
+				Block:                 b,
+				IssuedTrxForAddresses: []string{},
 			}
 			s.hub.broadcast <- &m
+		case recAddr := <-s.rxTrxIssued.Channel():
+			receiverAddrSet[recAddr] = struct{}{}
+		case <-ticker.C:
+			if len(receiverAddrSet) == 0 {
+				continue
+			}
+
+			addresses := make([]string, 0, len(receiverAddrSet))
+			for addr := range receiverAddrSet {
+				addresses = append(addresses, addr)
+			}
+
+			m := Message{
+				Command:               CommandNewTrxIssued,
+				Error:                 "",
+				Block:                 block.Block{},
+				IssuedTrxForAddresses: addresses,
+			}
+
+			s.hub.broadcast <- &m
+
+			receiverAddrSet = make(map[string]struct{}, 100)
 		}
 	}
 }
@@ -286,11 +323,11 @@ func (s *server) runControlCentralNodes(ctx context.Context) {
 					continue
 				}
 				s.hub.broadcast <- &Message{
-					Command:     CommandSocketList,
-					Error:       "",
-					Block:       block.Block{},
-					Transaction: transaction.Transaction{},
-					Sockets:     sockets,
+					Command:               CommandSocketList,
+					Error:                 "",
+					Block:                 block.Block{},
+					IssuedTrxForAddresses: []string{},
+					Sockets:               sockets,
 				}
 			}
 			socketCount = count

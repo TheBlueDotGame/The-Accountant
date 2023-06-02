@@ -90,11 +90,18 @@ type DataBaseProvider interface {
 	NodeRegister
 }
 
-// BlockSubscription provides block publishing method.
+// BlockReactivePublisher provides block publishing method.
 // It uses reactive package. It you are using your own implementation of reactive package
 // take care of Publish method to be non-blocking.
-type BlockSubscription interface {
+type BlockReactivePublisher interface {
 	Publish(block.Block)
+}
+
+// IssuerTrxSubscription provides trx issuer address publishing method.
+// It uses reactive package. It you are using your own implementation of reactive package
+// take care of Publish method to be non-blocking.
+type TrxIssuedReactivePunlisher interface {
+	Publish(string)
 }
 
 // Config is a configuration of the Ledger.
@@ -126,18 +133,19 @@ func (c Config) Validate() error {
 // It performs all the actions on the transactions and blockchain.
 // Ladger seals all the transaction actions in the blockchain.
 type Ledger struct {
-	id     string
-	config Config
-	hashC  chan [32]byte
-	hashes [][32]byte
-	db     DataBaseProvider
-	bc     BlockReadWriter
-	ac     AddressChecker
-	vr     SignatureVerifier
-	tf     BlockFindWriter
-	log    logger.Logger
-	blcSub BlockSubscription
-	sub    Subscriber
+	id           string
+	config       Config
+	hashC        chan [32]byte
+	hashes       [][32]byte
+	db           DataBaseProvider
+	bc           BlockReadWriter
+	ac           AddressChecker
+	vr           SignatureVerifier
+	tf           BlockFindWriter
+	log          logger.Logger
+	blcPub       BlockReactivePublisher
+	trxIssuedPub TrxIssuedReactivePunlisher
+	sub          BlockchainLockSubscriber
 }
 
 // New creates new Ledger if config is valid or returns error otherwise.
@@ -149,25 +157,27 @@ func New(
 	vr SignatureVerifier,
 	tf BlockFindWriter,
 	log logger.Logger,
-	blcSub BlockSubscription,
-	sub Subscriber,
+	blcPub BlockReactivePublisher,
+	trxIssuedPub TrxIssuedReactivePunlisher,
+	sub BlockchainLockSubscriber,
 ) (*Ledger, error) {
 	if err := config.Validate(); err != nil {
 		return nil, err
 	}
 
 	return &Ledger{
-		id:     primitive.NewObjectID().Hex(),
-		config: config,
-		hashC:  make(chan [32]byte, config.BlockTransactionsSize),
-		db:     db,
-		bc:     bc,
-		ac:     ac,
-		vr:     vr,
-		tf:     tf,
-		log:    log,
-		blcSub: blcSub,
-		sub:    sub,
+		id:           primitive.NewObjectID().Hex(),
+		config:       config,
+		hashC:        make(chan [32]byte, config.BlockTransactionsSize),
+		db:           db,
+		bc:           bc,
+		ac:           ac,
+		vr:           vr,
+		tf:           tf,
+		log:          log,
+		blcPub:       blcPub,
+		trxIssuedPub: trxIssuedPub,
+		sub:          sub,
 	}, nil
 }
 
@@ -222,6 +232,8 @@ func (l *Ledger) WriteIssuerSignedTransactionForReceiver(
 	if err := l.db.WriteIssuerSignedTransactionForReceiver(ctx, trx); err != nil {
 		return err
 	}
+
+	l.trxIssuedPub.Publish(trx.ReceiverAddress)
 
 	return nil
 }
@@ -306,7 +318,7 @@ func (l *Ledger) savePublishNewBlock(ctx context.Context) ([32]byte, error) {
 		return [32]byte{}, err
 	}
 
-	l.blcSub.Publish(nb)
+	l.blcPub.Publish(nb)
 
 	return nb.Hash, nil
 }

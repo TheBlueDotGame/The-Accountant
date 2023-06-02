@@ -9,7 +9,6 @@ import (
 
 	"github.com/bartossh/Computantis/block"
 	"github.com/bartossh/Computantis/logger"
-	"github.com/bartossh/Computantis/transaction"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
 )
@@ -29,20 +28,20 @@ const (
 )
 
 const (
-	CommandEcho           = "echo"
-	CommandSocketList     = "socketlist"
-	CommandNewBlock       = "command_new_block"
-	CommandNewTransaction = "command_new_transaction"
+	CommandEcho         = "echo"
+	CommandSocketList   = "socketlist"
+	CommandNewBlock     = "command_new_block"
+	CommandNewTrxIssued = "command_new_trx_issued"
 )
 
 // Message is the message that is used to exchange information between
 // the server and the client.
 type Message struct {
-	Command     string                  `json:"command"`               // Command is the command that refers to the action handler in websocket protocol.
-	Error       string                  `json:"error,omitempty"`       // Error is the error message that is sent to the client.
-	Block       block.Block             `json:"block,omitempty"`       // Block is the block that is sent to the client.
-	Transaction transaction.Transaction `json:"transaction,omitempty"` // Transaction is the transaction validated by the central server and will be added to the next block.
-	Sockets     []string                `json:"sockets,omitempty"`     // sockets is the list of central nodes web-sockets addresses.
+	Command               string      `json:"command"`                            // Command is the command that refers to the action handler in websocket protocol.
+	Error                 string      `json:"error,omitempty"`                    // Error is the error message that is sent to the client.
+	Block                 block.Block `json:"block,omitempty"`                    // Block is the block that is sent to the client.
+	IssuedTrxForAddresses []string    `json:"issued_trx_for_addresses,omitempty"` // IssuedTrxForAddresses is the list of addresses that have issued transactions for.
+	Sockets               []string    `json:"sockets,omitempty"`                  // sockets is the list of central nodes web-sockets addresses.
 }
 
 type socket struct {
@@ -294,10 +293,6 @@ func (c socket) sendCommand(msg *Message) {
 		return
 	}
 	c.send <- raw
-}
-
-func (c socket) broadcastCommend(msg *Message) {
-	c.hub.broadcast <- msg
 }
 
 func (c *socket) echo(_ context.Context, msg *Message) error {

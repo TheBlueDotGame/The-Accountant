@@ -124,9 +124,10 @@ func run(cfg configuration.Configuration) {
 	}
 
 	verifier := wallet.NewVerifier()
-	rx := reactive.New[block.Block](rxBufferSize)
+	rxBlock := reactive.New[block.Block](rxBufferSize)
+	rxTrxIssuer := reactive.New[string](rxBufferSize)
 
-	ladger, err := bookkeeping.New(cfg.Bookkeeper, blc, db, db, verifier, db, log, rx, sub)
+	ladger, err := bookkeeping.New(cfg.Bookkeeper, blc, db, db, verifier, db, log, rxBlock, rxTrxIssuer, sub)
 	if err != nil {
 		log.Error(err.Error())
 		c <- os.Interrupt
@@ -135,7 +136,7 @@ func run(cfg configuration.Configuration) {
 
 	dataProvider := dataprovider.New(ctx, cfg.DataProvider)
 
-	err = server.Run(ctx, cfg.Server, db, ladger, dataProvider, log, rx.Subscribe())
+	err = server.Run(ctx, cfg.Server, db, ladger, dataProvider, log, rxBlock.Subscribe(), rxTrxIssuer.Subscribe())
 	if err != nil {
 		log.Error(err.Error())
 	}

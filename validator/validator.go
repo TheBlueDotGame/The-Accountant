@@ -62,6 +62,7 @@ type WebhookCreateRemovePoster interface {
 	CreateWebhook(trigger byte, address string, h webhooks.Hook) error
 	RemoveWebhook(trigger byte, address string, h webhooks.Hook) error
 	PostWebhookBlock(blc *block.Block)
+	PostWebhookNewTransaction(publicAddresses []string)
 }
 
 // Verifier provides methods to verify the signature of the message.
@@ -88,62 +89,6 @@ type app struct {
 	wallet       *wallet.Wallet
 	randDataProv server.RandomDataProvideValidator
 	cancel       context.CancelFunc
-}
-
-func (s *app) alive(c *fiber.Ctx) error {
-	return c.JSON(
-		server.AliveResponse{
-			Alive:      true,
-			APIVersion: server.ApiVersion,
-			APIHeader:  server.Header,
-		})
-}
-
-func (a *app) data(c *fiber.Ctx) error {
-	var req server.DataToSignRequest
-	if err := c.BodyParser(&req); err != nil {
-		a.log.Error(fmt.Sprintf("/data endpoint, failed to parse request body: %s", err.Error()))
-		return fiber.ErrBadRequest
-	}
-
-	d := a.randDataProv.ProvideData(req.Address)
-	return c.JSON(server.DataToSignResponse{Data: d})
-}
-
-func (a *app) blocks(c *fiber.Ctx) error {
-	return nil
-}
-
-func (a *app) transactions(c *fiber.Ctx) error {
-	var req CreateRemoveUpdateHookRequest
-	if err := c.BodyParser(&req); err != nil {
-		a.log.Error(fmt.Sprintf("%s endpoint, failed to parse request body: %s", TransactionHookURL, err.Error()))
-		return fiber.ErrBadRequest
-	}
-
-	if ok := a.randDataProv.ValidateData(req.Address, req.Data); !ok {
-		a.log.Error("%s endpoint, corrupted data")
-		return fiber.ErrForbidden
-	}
-
-	buf := make([]byte, 0, len(req.Data)+len(req.URL))
-	buf = append(buf, append(req.Data, []byte(req.URL)...)...)
-
-	if err := a.ver.Verify(buf, req.Signature, [32]byte(req.Digest), req.Address); err != nil {
-		a.log.Error(fmt.Sprintf("%s endpoint, invalid signature: %s", TransactionHookURL, err.Error()))
-		return fiber.ErrForbidden
-	}
-
-	h := webhooks.Hook{
-		URL:   req.URL,
-		Token: string(req.Data),
-	}
-	if err := a.wh.CreateWebhook(webhooks.TriggerNewTransaction, req.Address, h); err != nil {
-		a.log.Error(fmt.Sprintf("%s failed to create webhook: %s", TransactionHookURL, err.Error()))
-		return c.JSON(CreateRemoveUpdateHookResponse{Ok: false, Err: err.Error()})
-	}
-
-	return c.JSON(CreateRemoveUpdateHookResponse{Ok: true})
 }
 
 // Run initializes routing and runs the validator. To stop the validator cancel the context.
@@ -343,8 +288,8 @@ func (a *app) processMessage(ctx context.Context, m *server.Message, remoteAddre
 	switch m.Command {
 	case server.CommandNewBlock:
 		a.processBlock(ctx, &m.Block, remoteAddress)
-	case server.CommandNewTransaction:
-		a.log.Warn("not implemented")
+	case server.CommandNewTrxIssued:
+		a.processNewTrxIssued(ctx, m.IssuedTrxForAddresses)
 	case server.CommandSocketList:
 		a.processSocketList(ctx, m.Sockets)
 	default:
@@ -363,6 +308,10 @@ func (a *app) processBlock(_ context.Context, b *block.Block, remoteAddress stri
 	a.lastBlock = *b
 
 	go a.wh.PostWebhookBlock(b) // post concurrently
+}
+
+func (a *app) processNewTrxIssued(_ context.Context, receivers []string) {
+	go a.wh.PostWebhookNewTransaction(receivers) // post concurrently
 }
 
 func (a *app) processSocketList(ctx context.Context, sockets []string) {
@@ -388,4 +337,60 @@ func (a *app) processSocketList(ctx context.Context, sockets []string) {
 	for _, socket := range remove {
 		a.disconnectFromSocket(socket)
 	}
+}
+
+func (s *app) alive(c *fiber.Ctx) error {
+	return c.JSON(
+		server.AliveResponse{
+			Alive:      true,
+			APIVersion: server.ApiVersion,
+			APIHeader:  server.Header,
+		})
+}
+
+func (a *app) data(c *fiber.Ctx) error {
+	var req server.DataToSignRequest
+	if err := c.BodyParser(&req); err != nil {
+		a.log.Error(fmt.Sprintf("/data endpoint, failed to parse request body: %s", err.Error()))
+		return fiber.ErrBadRequest
+	}
+
+	d := a.randDataProv.ProvideData(req.Address)
+	return c.JSON(server.DataToSignResponse{Data: d})
+}
+
+func (a *app) blocks(c *fiber.Ctx) error {
+	return nil
+}
+
+func (a *app) transactions(c *fiber.Ctx) error {
+	var req CreateRemoveUpdateHookRequest
+	if err := c.BodyParser(&req); err != nil {
+		a.log.Error(fmt.Sprintf("%s endpoint, failed to parse request body: %s", TransactionHookURL, err.Error()))
+		return fiber.ErrBadRequest
+	}
+
+	if ok := a.randDataProv.ValidateData(req.Address, req.Data); !ok {
+		a.log.Error("%s endpoint, corrupted data")
+		return fiber.ErrForbidden
+	}
+
+	buf := make([]byte, 0, len(req.Data)+len(req.URL))
+	buf = append(buf, append(req.Data, []byte(req.URL)...)...)
+
+	if err := a.ver.Verify(buf, req.Signature, [32]byte(req.Digest), req.Address); err != nil {
+		a.log.Error(fmt.Sprintf("%s endpoint, invalid signature: %s", TransactionHookURL, err.Error()))
+		return fiber.ErrForbidden
+	}
+
+	h := webhooks.Hook{
+		URL:   req.URL,
+		Token: string(req.Data),
+	}
+	if err := a.wh.CreateWebhook(webhooks.TriggerNewTransaction, req.Address, h); err != nil {
+		a.log.Error(fmt.Sprintf("%s failed to create webhook: %s", TransactionHookURL, err.Error()))
+		return c.JSON(CreateRemoveUpdateHookResponse{Ok: false, Err: err.Error()})
+	}
+
+	return c.JSON(CreateRemoveUpdateHookResponse{Ok: true})
 }
