@@ -346,7 +346,6 @@ type DataToSignRequest struct {
 }
 
 // DataToSignRequest is a response containing data to sign for proving identity.
-RejectTransactions(ctx context.Context, receiver string, hashes [][32]byte) error 
 type DataToSignResponse struct {
 	Data []byte `json:"message"`
 }
