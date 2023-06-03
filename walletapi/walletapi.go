@@ -40,6 +40,7 @@ const (
 	Address                 = "/address"               // URL allows to check wallet public address
 	IssueTransaction        = "/transactions/issue"    // URL allows to issue transaction signed by the issuer.
 	ConfirmTransaction      = "/transaction/sign"      // URL allows to sign transaction received by the receiver.
+	RejectTransactions      = "/transactions/reject"   // URL allows to reject transactions received by the receiver.
 	GetIssuedTransactions   = "/transactions/issued"   // URL allows to get issued transactions for the issuer.
 	GetReceivedTransactions = "/transactions/received" // URL allows to get received transactions for the receiver.
 	CreateWallet            = "/wallet/create"         // URL allows to create new wallet.
@@ -92,6 +93,7 @@ func Run(ctx context.Context, cfg Config, log logger.Logger, timeout time.Durati
 	router.Get(GetReceivedTransactions, s.receivedTransactions)
 	router.Post(IssueTransaction, s.issueTransaction)
 	router.Post(ConfirmTransaction, s.confirmReceivedTransaction)
+	router.Post(RejectTransactions, s.rejectTransactions)
 	router.Post(CreateWallet, s.createWallet)
 	router.Post(CreateUpdateWebhook, s.createUpdateWebHook)
 	router.Get(ReadWalletPublicAddress, s.readWalletPublicAddress)
@@ -179,12 +181,12 @@ func (a *app) issueTransaction(c *fiber.Ctx) error {
 	return c.JSON(IssueTransactionResponse{Ok: true})
 }
 
-// ValidateTransactionRequest is a request to validate transaction.
+// ConfirmTransactionRequest is a request to confirm transaction.
 type ConfirmTransactionRequest struct {
-	Transaction transaction.Transaction `json:"transaction"`
+	Transaction transaction.Transaction `transaction"`
 }
 
-// ConfirmTransactionResponse is response to validate transaction.
+// ConfirmTransactionResponse is response of confirming transaction.
 type ConfirmTransactionResponse struct {
 	Ok  bool   `json:"ok"`
 	Err string `json:"err"`
@@ -205,6 +207,35 @@ func (a *app) confirmReceivedTransaction(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(ConfirmTransactionResponse{Ok: true})
+}
+
+// RejectTransactionsRequest is a request to reject transactions.
+type RejectTransactionsRequest struct {
+	Transactions []transaction.Transaction `json:"transactions"`
+}
+
+// RejectTransactionsResponse is response of rejecting transactions.
+type RejectTransactionsResponse struct {
+	Ok         bool       `json:"ok"`
+	Err        string     `json:"err"`
+	TrxsHashes [][32]byte `json:"trxs_hashes"`
+}
+
+func (a *app) rejectTransactions(c *fiber.Ctx) error {
+	var req RejectTransactionsRequest
+	if err := c.BodyParser(&req); err != nil {
+		err := fmt.Errorf("error reading data: %v", err)
+		a.log.Error(err.Error())
+		return errors.Join(fiber.ErrBadRequest, err)
+	}
+
+	hashes, err := a.centralNodeClient.RejectTransactions(req.Transactions)
+	ok := true
+	if err != nil {
+		ok = false
+	}
+
+	return c.JSON(RejectTransactionsResponse{Ok: ok, TrxsHashes: hashes, Err: err.Error()})
 }
 
 // IssuedTransactionResponse is a response of issued transactions.
