@@ -219,12 +219,19 @@ func (s *server) reject(c *fiber.Ctx) error {
 		return fiber.ErrForbidden
 	}
 
-	if err := s.repo.RejectTransactions(c.Context(), req.Address, req.Transactions); err != nil {
+	trxsReject := make([]transaction.Transaction, 0, len(req.Transactions))
+	for _, trx := range req.Transactions {
+		if trx.ReceiverAddress == req.Address {
+			trxsReject = append(trxsReject, trx)
+		}
+	}
+
+	if err := s.repo.RejectTransactions(c.Context(), req.Address, trxsReject); err != nil {
 		return c.JSON(TransactionsRejectResponse{Success: false, TrxHashes: nil})
 	}
 
-	hashes := make([][32]byte, 0, len(req.Transactions))
-	for _, trx := range req.Transactions {
+	hashes := make([][32]byte, 0, len(trxsReject))
+	for _, trx := range trxsReject {
 		hashes = append(hashes, trx.Hash)
 	}
 

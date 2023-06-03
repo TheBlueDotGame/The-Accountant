@@ -196,6 +196,41 @@ func (c *Client) ConfirmTransaction(trx *transaction.Transaction) error {
 	return nil
 }
 
+// RejectTransactions rejects given transactions.
+// Transaction will be rejected if the transaction receiver is a given wellet public address.
+// Returns hashes of all the rejected transactions or error otherwise.
+func (c *Client) RejectTransactions(trxs []transaction.Transaction) ([][32]byte, error) {
+	addr, err := c.Address()
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := c.DataToSign()
+	if err != nil {
+		return nil, errors.Join(httpclient.ErrRejectedByServer, err)
+	}
+
+	hash, signature := c.w.Sign(data.Data)
+	req := server.TransactionsRejectRequest{
+		Address:      addr,
+		Data:         data.Data,
+		Hash:         hash,
+		Signature:    signature,
+		Transactions: trxs,
+	}
+
+	var res server.TransactionsRejectResponse
+	url := fmt.Sprintf("%s%s", c.apiRoot, server.RejectTransactionURL)
+	if err := httpclient.MakePost(c.timeout, url, req, &res); err != nil {
+		return nil, errors.Join(httpclient.ErrRejectedByServer, err)
+	}
+	if !res.Success {
+		return nil, errors.Join(httpclient.ErrRejectedByServer, errors.New("failed to reject transactions"))
+	}
+
+	return res.TrxHashes, nil
+}
+
 // ReadWaitingTransactions reads all waiting transactions belonging to current wallet from the API server.
 func (c *Client) ReadWaitingTransactions() ([]transaction.Transaction, error) {
 	if !c.ready {
@@ -224,7 +259,6 @@ func (c *Client) ReadWaitingTransactions() ([]transaction.Transaction, error) {
 	}
 
 	return res.AwaitedTransactions, nil
-
 }
 
 // ReadIssuedTransactions reads all issued transactions belonging to current wallet from the API server.
