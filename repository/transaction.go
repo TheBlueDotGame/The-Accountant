@@ -16,9 +16,13 @@ const (
 	rejected  = "rejected"
 )
 
-// MoveTransactionsFromAwaitingToTemporary moves awaiting transaction marking it as temporary.
-func (db DataBase) MoveTransactionsFromAwaitingToTemporary(ctx context.Context, trxHash [32]byte) error {
-	_, err := db.inner.ExecContext(ctx, "UPDATE transactions SET status = $1 WHERE hash = $2", temporary, trxHash[:])
+// MoveTransactionFromAwaitingToTemporary moves awaiting transaction marking it as temporary.
+func (db DataBase) MoveTransactionFromAwaitingToTemporary(ctx context.Context, trx *transaction.Transaction) error {
+	_, err := db.inner.ExecContext(
+		ctx,
+		"UPDATE transactions SET status = $1, receiver_signature = $2, WHERE hash = $3",
+		temporary, trx.ReceiverSignature, trx.Hash[:],
+	)
 	if err != nil {
 		errors.Join(ErrRemoveFailed, err)
 	}
@@ -175,4 +179,35 @@ func (db DataBase) FindTransactionInBlockHash(ctx context.Context, trxHash [32]b
 	var bh [32]byte
 	copy(bh[:], blockHash)
 	return bh, nil
+}
+
+// RejectTransactions rejects transactions addressed to the receiver address.
+func (db DataBase) RejectTransactions(ctx context.Context, receiver string, trxs []transaction.Transaction) error {
+	var err error
+	var tx *sql.Tx
+	tx, err = db.inner.BeginTx(ctx, nil)
+	if err != nil {
+		return errors.Join(ErrTrxBeginFailed, err)
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	for _, trx := range trxs {
+		_, err := tx.ExecContext(
+			ctx,
+			"UPDATE transactions SET status = $1 WHERE hash = $2 AND receiver_address = $3",
+			rejected, trx.Hash[:], receiver)
+		if err != nil {
+			return errors.Join(ErrInsertFailed, err)
+		}
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return errors.Join(ErrCommitFailed, err)
+	}
+	return nil
 }

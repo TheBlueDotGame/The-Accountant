@@ -177,6 +177,60 @@ func (s *server) confirm(c *fiber.Ctx) error {
 	})
 }
 
+// TransactionsRejectRequest is a request to reject a transactions.
+type TransactionsRejectRequest struct {
+	Address      string                    `json:"address"`
+	Data         []byte                    `json:"data"`
+	Signature    []byte                    `json:"signature"`
+	Hash         [32]byte                  `json:"hash"`
+	Transactions []transaction.Transaction `json:"transaction"`
+}
+
+// TransactionsRejectResponse is a response for transaction reject.
+type TransactionsRejectResponse struct {
+	Success   bool       `json:"success"`
+	TrxHashes [][32]byte `json:"trx_hash"`
+}
+
+func (s *server) reject(c *fiber.Ctx) error {
+	var req TransactionsRejectRequest
+	if err := c.BodyParser(&req); err != nil {
+		s.log.Error(fmt.Sprintf("reject endpoint, failed to parse request body: %s", err.Error()))
+		return fiber.ErrBadRequest
+	}
+
+	if ok := s.randDataProv.ValidateData(req.Address, req.Data); !ok {
+		s.log.Error(fmt.Sprintf("issued endpoint, failed to validate data for address: %s", req.Address))
+		return fiber.ErrForbidden
+	}
+
+	if ok, err := s.repo.IsAddressSuspended(c.Context(), req.Address); err != nil || ok {
+		if err != nil {
+			s.log.Error(fmt.Sprintf("failed to check address: %s", err.Error()))
+			return fiber.ErrForbidden
+		}
+		s.log.Error(fmt.Sprintf("address %s is suspended", req.Address))
+		return fiber.ErrForbidden
+	}
+
+	if err := s.bookkeeping.VerifySignature(req.Data, req.Signature, req.Hash, req.Address); err != nil {
+		s.log.Error(
+			fmt.Sprintf("issued endpoint, failed to verify signature for address: %s, %s", req.Address, err.Error()))
+		return fiber.ErrForbidden
+	}
+
+	if err := s.repo.RejectTransactions(c.Context(), req.Address, req.Transactions); err != nil {
+		return c.JSON(TransactionsRejectResponse{Success: false, TrxHashes: nil})
+	}
+
+	hashes := make([][32]byte, 0, len(req.Transactions))
+	for _, trx := range req.Transactions {
+		hashes = append(hashes, trx.Hash)
+	}
+
+	return c.JSON(TransactionsRejectResponse{Success: true, TrxHashes: hashes})
+}
+
 // AwaitedIssuedTransactionRequest is a request to get awaited or issued transactions for given address.
 // Request contains of Address for which Transactions are requested, Data in binary format,
 // Hash of Data and Signature of the Data to prove that entity doing the request is an Address owner.
@@ -292,6 +346,7 @@ type DataToSignRequest struct {
 }
 
 // DataToSignRequest is a response containing data to sign for proving identity.
+RejectTransactions(ctx context.Context, receiver string, hashes [][32]byte) error 
 type DataToSignResponse struct {
 	Data []byte `json:"message"`
 }

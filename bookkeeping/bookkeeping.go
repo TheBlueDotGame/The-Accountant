@@ -39,7 +39,7 @@ var (
 type TrxWriteReadMover interface {
 	WriteIssuerSignedTransactionForReceiver(ctx context.Context, trx *transaction.Transaction) error
 	MoveTransactionsFromTemporaryToPermanent(ctx context.Context, blockHash [32]byte, hashes [][32]byte) error
-	MoveTransactionsFromAwaitingToTemporary(ctx context.Context, trxHash [32]byte) error
+	MoveTransactionFromAwaitingToTemporary(ctx context.Context, trx *transaction.Transaction) error
 	ReadAwaitingTransactionsByReceiver(ctx context.Context, address string) ([]transaction.Transaction, error)
 	ReadAwaitingTransactionsByIssuer(ctx context.Context, address string) ([]transaction.Transaction, error)
 	ReadTemporaryTransactions(ctx context.Context) ([]transaction.Transaction, error)
@@ -247,7 +247,7 @@ func (l *Ledger) WriteCandidateTransaction(ctx context.Context, trx *transaction
 		return err
 	}
 
-	if err := l.db.MoveTransactionsFromAwaitingToTemporary(ctx, trx.Hash); err != nil {
+	if err := l.db.MoveTransactionFromAwaitingToTemporary(ctx, trx); err != nil {
 		return err
 	}
 
