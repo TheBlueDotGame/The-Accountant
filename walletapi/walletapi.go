@@ -183,7 +183,7 @@ func (a *app) issueTransaction(c *fiber.Ctx) error {
 
 // ConfirmTransactionRequest is a request to confirm transaction.
 type ConfirmTransactionRequest struct {
-	Transaction transaction.Transaction `transaction"`
+	Transaction transaction.Transaction `json:"transaction"`
 }
 
 // ConfirmTransactionResponse is response of confirming transaction.
