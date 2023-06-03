@@ -38,6 +38,7 @@ const (
 	dataURL             = "/data"
 	addressGroupURL     = "/address"
 	createURL           = "/create"
+	rejectURL           = "/reject"
 	generateURL         = "/generate"
 )
 
@@ -48,6 +49,7 @@ const (
 	SearchBlockURL        = searchGroupURL + blockURL        // URL to search for block that contains transaction hash.
 	ProposeTransactionURL = transactionGroupURL + proposeURL // URL to propose transaction signed by the issuer.
 	ConfirmTransactionURL = transactionGroupURL + confirmURL // URL to confirm transaction signed by the receiver.
+	RejectTransactionURL  = transactionGroupURL + rejectURL  // URL to reject transaction signed only by issuer.
 	AwaitedTransactionURL = transactionGroupURL + awaitedURL // URL to get awaited transactions for the receiver.
 	IssuedTransactionURL  = transactionGroupURL + issuedURL  // URL to get issued transactions for the issuer.
 	DataToValidateURL     = validatorGroupURL + dataURL      // URL to get data to validate address by signing rew message.
@@ -100,6 +102,7 @@ type Repository interface {
 	FindTransactionInBlockHash(ctx context.Context, trxBlockHash [32]byte) ([32]byte, error)
 	ReadAwaitingTransactionsByIssuer(ctx context.Context, address string) ([]transaction.Transaction, error)
 	ReadAwaitingTransactionsByReceiver(ctx context.Context, address string) ([]transaction.Transaction, error)
+	RejectTransactions(ctx context.Context, receiver string, trxs []transaction.Transaction) error
 }
 
 // Verifier provides methods to verify the signature of the message.
@@ -204,6 +207,7 @@ func Run(
 	transaction := router.Group(transactionGroupURL)
 	transaction.Post(proposeURL, s.propose)
 	transaction.Post(confirmURL, s.confirm)
+	transaction.Post(rejectURL, s.reject)
 	transaction.Post(awaitedURL, s.awaited)
 	transaction.Post(issuedURL, s.issued)
 

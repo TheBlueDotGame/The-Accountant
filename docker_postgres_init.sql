@@ -37,10 +37,11 @@ CREATE TABLE IF NOT EXISTS transactions(
 
 CREATE INDEX transaction_hash ON transactions USING HASH (hash);
 CREATE INDEX transaction_status ON transactions USING HASH (status);
-CREATE INDEX transaction_permanent_issuer_address_state ON transactions USING BTREE (issuer_address, status);
-CREATE INDEX transaction_permanent_receiver_address_state ON transactions USING BTREE (receiver_address, status);
-CREATE INDEX transaction_permanent_issuer_address_created_at ON transactions USING BTREE (issuer_address, created_at);
-CREATE INDEX transaction_permanent_receiver_address_created_at ON transactions USING BTREE (receiver_address, created_at);
+CREATE INDEX transaction_issuer_address_status ON transactions USING BTREE (issuer_address, status);
+CREATE INDEX transaction_receiver_address_status ON transactions USING BTREE (receiver_address, status);
+CREATE INDEX transaction_issuer_address_created_at ON transactions USING BTREE (issuer_address, created_at);
+CREATE INDEX transaction_receiver_address_created_at ON transactions USING BTREE (receiver_address, created_at);
+CREATE INDEX transaction_receiver_address_hash ON transactions USING BTREE (receiver_address, hash);
 
 CREATE TABLE IF NOT EXISTS blocks (
    id serial PRIMARY KEY,
