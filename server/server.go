@@ -231,7 +231,7 @@ func Run(
 	}()
 	go s.hub.run(ctxx)
 	go s.runSubscriber(ctxx)
-	go s.runControlCentralNodes(ctxx)
+	go s.runControlCentralNodesRegistration(ctxx)
 
 	<-ctxx.Done()
 
@@ -306,35 +306,42 @@ func (s *server) runSubscriber(ctx context.Context) {
 	}
 }
 
-func (s *server) runControlCentralNodes(ctx context.Context) {
-	socketCount := 1
+func (s *server) runControlCentralNodesRegistration(ctx context.Context) {
+	socketCount := 1 // current node is registrated
 	tc := time.NewTicker(checkForRegisteredNodesInterval)
 	defer tc.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-tc.C:
+		case <-tc.C: // TODO: introduce repository table subscription to react to change
 			count, err := s.repo.CountRegistered(ctx)
 			if err != nil {
 				s.log.Error(err.Error())
 				continue
 			}
 			if count != socketCount {
-				sockets, err := s.repo.ReadRegisteredNodesAddresses(ctx)
+				err = s.broadcastSockets(ctx)
 				if err != nil {
 					s.log.Error(err.Error())
-					continue
-				}
-				s.hub.broadcast <- &Message{
-					Command:               CommandSocketList,
-					Error:                 "",
-					Block:                 block.Block{},
-					IssuedTrxForAddresses: []string{},
-					Sockets:               sockets,
 				}
 			}
 			socketCount = count
 		}
 	}
+}
+
+func (s *server) broadcastSockets(ctx context.Context) error {
+	sockets, err := s.repo.ReadRegisteredNodesAddresses(ctx)
+	if err != nil {
+		return err
+	}
+	s.hub.broadcast <- &Message{
+		Command:               CommandSocketList,
+		Error:                 "",
+		Block:                 block.Block{},
+		IssuedTrxForAddresses: []string{},
+		Sockets:               sockets,
+	}
+	return nil
 }
