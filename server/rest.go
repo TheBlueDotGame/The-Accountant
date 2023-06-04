@@ -238,112 +238,163 @@ func (s *server) reject(c *fiber.Ctx) error {
 	return c.JSON(TransactionsRejectResponse{Success: true, TrxHashes: hashes})
 }
 
-// AwaitedIssuedTransactionRequest is a request to get awaited or issued transactions for given address.
+// AwaitedIssuedRejectedTransactionsRequest is a request to get awaited, issued or rejected transactions for given address.
 // Request contains of Address for which Transactions are requested, Data in binary format,
 // Hash of Data and Signature of the Data to prove that entity doing the request is an Address owner.
-type AwaitedIssuedTransactionRequest struct {
+type AwaitedIssuedRejectedTransactionsRequest struct {
 	Address   string   `json:"address"`
 	Data      []byte   `json:"data"`
 	Hash      [32]byte `json:"hash"`
 	Signature []byte   `json:"signature"`
+	Offset    int      `json:"offset,omitempty"`
+	Limit     int      `json:"limit,omitempty"`
 }
 
-// AwaitedTransactionResponse is a response for awaited transactions request.
-type AwaitedTransactionResponse struct {
+// AwaitedTransactionsResponse is a response for awaited transactions request.
+type AwaitedTransactionsResponse struct {
 	Success             bool                      `json:"success"`
 	AwaitedTransactions []transaction.Transaction `json:"awaited_transactions"`
 }
 
 func (s *server) awaited(c *fiber.Ctx) error {
-	var req AwaitedIssuedTransactionRequest
+	var req AwaitedIssuedRejectedTransactionsRequest
 	if err := c.BodyParser(&req); err != nil {
-		s.log.Error(fmt.Sprintf("awaited endpoint, failed to parse request body: %s", err.Error()))
+		s.log.Error(fmt.Sprintf("awaited transactions endpoint, failed to parse request body: %s", err.Error()))
 		return fiber.ErrBadRequest
 	}
 
 	if ok := s.randDataProv.ValidateData(req.Address, req.Data); !ok {
-		s.log.Error(fmt.Sprintf("awaited endpoint, failed to validate data for address: %s", req.Address))
+		s.log.Error(fmt.Sprintf("awaited transactions endpoint, failed to validate data for address: %s", req.Address))
 		return fiber.ErrForbidden
 	}
 
 	if ok, err := s.repo.IsAddressSuspended(c.Context(), req.Address); err != nil || ok {
 		if err != nil {
-			s.log.Error(fmt.Sprintf("failed to check address: %s", err.Error()))
+			s.log.Error(fmt.Sprintf("awaited transactions endpoint, failed to check address: %s", err.Error()))
 			return fiber.ErrForbidden
 		}
-		s.log.Error(fmt.Sprintf("address %s is suspended", req.Address))
+		s.log.Error(fmt.Sprintf("awaited transactions endpoint, address %s is suspended", req.Address))
 		return fiber.ErrForbidden
 	}
 
 	if err := s.bookkeeping.VerifySignature(req.Data, req.Signature, req.Hash, req.Address); err != nil {
 		s.log.Error(
-			fmt.Sprintf("awaited endpoint, failed to verify signature for address: %s, %s", req.Address, err.Error()))
+			fmt.Sprintf("awaited transactions endpoint, failed to verify signature for address: %s, %s", req.Address, err.Error()))
 		return fiber.ErrForbidden
 	}
 
 	trxs, err := s.repo.ReadAwaitingTransactionsByReceiver(c.Context(), req.Address)
 	if err != nil {
 		s.log.Error(
-			fmt.Sprintf("awaited endpoint, failed to read awaiting transactions for address: %s, %s",
+			fmt.Sprintf("awaited transactions endpoint, failed to read awaiting transactions for address: %s, %s",
 				req.Address, err.Error()))
-		return c.JSON(AwaitedTransactionResponse{
+		return c.JSON(AwaitedTransactionsResponse{
 			Success:             false,
 			AwaitedTransactions: nil,
 		})
 	}
 
-	return c.JSON(AwaitedTransactionResponse{
+	return c.JSON(AwaitedTransactionsResponse{
 		Success:             true,
 		AwaitedTransactions: trxs,
 	})
 }
 
-// AwaitedTransactionResponse is a response for issued transactions request.
-type IssuedTransactionResponse struct {
+// IssuedTransactionsResponse is a response for issued transactions request.
+type IssuedTransactionsResponse struct {
 	Success            bool                      `json:"success"`
 	IssuedTransactions []transaction.Transaction `json:"issued_transactions"`
 }
 
 func (s *server) issued(c *fiber.Ctx) error {
-	var req AwaitedIssuedTransactionRequest
+	var req AwaitedIssuedRejectedTransactionsRequest
 	if err := c.BodyParser(&req); err != nil {
-		s.log.Error(fmt.Sprintf("issued endpoint, failed to parse request body: %s", err.Error()))
+		s.log.Error(fmt.Sprintf("issued transactions endpoint, failed to parse request body: %s", err.Error()))
 		return fiber.ErrBadRequest
 	}
 
 	if ok := s.randDataProv.ValidateData(req.Address, req.Data); !ok {
-		s.log.Error(fmt.Sprintf("issued endpoint, failed to validate data for address: %s", req.Address))
+		s.log.Error(fmt.Sprintf("issued transactions endpoint, failed to validate data for address: %s", req.Address))
 		return fiber.ErrForbidden
 	}
 
 	if ok, err := s.repo.IsAddressSuspended(c.Context(), req.Address); err != nil || ok {
 		if err != nil {
-			s.log.Error(fmt.Sprintf("failed to check address: %s", err.Error()))
+			s.log.Error(fmt.Sprintf("issued transactions endpoint, failed to check address: %s", err.Error()))
 			return fiber.ErrForbidden
 		}
-		s.log.Error(fmt.Sprintf("address %s is suspended", req.Address))
+		s.log.Error(fmt.Sprintf("issued transactions endpoint, address %s is suspended", req.Address))
 		return fiber.ErrForbidden
 	}
 
 	if err := s.bookkeeping.VerifySignature(req.Data, req.Signature, req.Hash, req.Address); err != nil {
 		s.log.Error(
-			fmt.Sprintf("issued endpoint, failed to verify signature for address: %s, %s", req.Address, err.Error()))
+			fmt.Sprintf("issued transactions endpoint, failed to verify signature for address: %s, %s", req.Address, err.Error()))
 		return fiber.ErrForbidden
 	}
 
-	trxs, err := s.repo.ReadAwaitingTransactionsByIssuer(c.Context(), req.Address)
+	trxs, err := s.repo.ReadRejectedTransactionsPagginate(c.Context(), req.Address, req.Offset, req.Limit)
 	if err != nil {
-		s.log.Error(fmt.Sprintf("issued endpoint, failed to read issued transactions for address: %s, %s",
+		s.log.Error(fmt.Sprintf("issued transactions endpoint, failed to read issued transactions for address: %s, %s",
 			req.Address, err.Error()))
-		return c.JSON(IssuedTransactionResponse{
+		return c.JSON(IssuedTransactionsResponse{
 			Success:            false,
 			IssuedTransactions: nil,
 		})
 	}
 
-	return c.JSON(IssuedTransactionResponse{
+	return c.JSON(IssuedTransactionsResponse{
 		Success:            true,
 		IssuedTransactions: trxs,
+	})
+}
+
+// RejectedTransactionsResponse is a response for rejected transactions request.
+type RejectedTransactionsResponse struct {
+	Success              bool                      `json:"success"`
+	RejectedTransactions []transaction.Transaction `json:"rejected_transactions"`
+}
+
+func (s *server) rejected(c *fiber.Ctx) error {
+	var req AwaitedIssuedRejectedTransactionsRequest
+	if err := c.BodyParser(&req); err != nil {
+		s.log.Error(fmt.Sprintf("rejected transactions endpoint, failed to parse request body: %s", err.Error()))
+		return fiber.ErrBadRequest
+	}
+
+	if ok := s.randDataProv.ValidateData(req.Address, req.Data); !ok {
+		s.log.Error(fmt.Sprintf("rejected transactions endpoint, failed to validate data for address: %s", req.Address))
+		return fiber.ErrForbidden
+	}
+
+	if ok, err := s.repo.IsAddressSuspended(c.Context(), req.Address); err != nil || ok {
+		if err != nil {
+			s.log.Error(fmt.Sprintf("rejected transactions endpoint, failed to check address: %s", err.Error()))
+			return fiber.ErrForbidden
+		}
+		s.log.Error(fmt.Sprintf("rejected transactions endpoint, address %s is suspended", req.Address))
+		return fiber.ErrForbidden
+	}
+
+	if err := s.bookkeeping.VerifySignature(req.Data, req.Signature, req.Hash, req.Address); err != nil {
+		s.log.Error(
+			fmt.Sprintf("rejected transactions endpoint, failed to verify signature for address: %s, %s", req.Address, err.Error()))
+		return fiber.ErrForbidden
+	}
+
+	trxs, err := s.repo.ReadAwaitingTransactionsByIssuer(c.Context(), req.Address)
+	if err != nil {
+		s.log.Error(fmt.Sprintf("rejected transactions endpoint, failed to read issued transactions for address: %s, %s",
+			req.Address, err.Error()))
+		return c.JSON(RejectedTransactionsResponse{
+			Success:              false,
+			RejectedTransactions: nil,
+		})
+	}
+
+	return c.JSON(RejectedTransactionsResponse{
+		Success:              true,
+		RejectedTransactions: trxs,
 	})
 }
 

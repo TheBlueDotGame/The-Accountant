@@ -243,13 +243,13 @@ func (c *Client) ReadWaitingTransactions() ([]transaction.Transaction, error) {
 	}
 
 	hash, signature := c.w.Sign(data.Data)
-	req := server.AwaitedIssuedTransactionRequest{
+	req := server.AwaitedIssuedRejectedTransactionsRequest{
 		Address:   c.w.Address(),
 		Data:      data.Data,
 		Hash:      hash,
 		Signature: signature,
 	}
-	var res server.AwaitedTransactionResponse
+	var res server.AwaitedTransactionsResponse
 	url := fmt.Sprintf("%s%s", c.apiRoot, server.AwaitedTransactionURL)
 	if err := httpclient.MakePost(c.timeout, url, req, &res); err != nil {
 		return nil, errors.Join(httpclient.ErrRejectedByServer, err)
@@ -273,13 +273,13 @@ func (c *Client) ReadIssuedTransactions() ([]transaction.Transaction, error) {
 	}
 
 	hash, signature := c.w.Sign(data.Data)
-	req := server.AwaitedIssuedTransactionRequest{
+	req := server.AwaitedIssuedRejectedTransactionsRequest{
 		Address:   c.w.Address(),
 		Data:      data.Data,
 		Hash:      hash,
 		Signature: signature,
 	}
-	var res server.IssuedTransactionResponse
+	var res server.IssuedTransactionsResponse
 	url := fmt.Sprintf("%s%s", c.apiRoot, server.IssuedTransactionURL)
 	if err := httpclient.MakePost(c.timeout, url, req, &res); err != nil {
 		return nil, errors.Join(httpclient.ErrRejectedByServer, err)
@@ -289,6 +289,43 @@ func (c *Client) ReadIssuedTransactions() ([]transaction.Transaction, error) {
 	}
 
 	return res.IssuedTransactions, nil
+}
+
+// ReadRejectedTransactions reads rejected transactions belonging to current wallet from the API server.
+// Method allows for paggination with offset and limit.
+func (c *Client) ReadRejectedTransactions(offset, limit int) ([]transaction.Transaction, error) {
+	if !c.ready {
+		return nil, httpclient.ErrWalletNotReady
+	}
+
+	if limit == 0 {
+		limit = 100
+	}
+
+	data, err := c.DataToSign()
+	if err != nil {
+		return nil, errors.Join(httpclient.ErrRejectedByServer, err)
+	}
+
+	hash, signature := c.w.Sign(data.Data)
+	req := server.AwaitedIssuedRejectedTransactionsRequest{
+		Address:   c.w.Address(),
+		Data:      data.Data,
+		Hash:      hash,
+		Signature: signature,
+		Offset:    offset,
+		Limit:     limit,
+	}
+	var res server.RejectedTransactionsResponse
+	url := fmt.Sprintf("%s%s", c.apiRoot, server.RejectedTransactionURL)
+	if err := httpclient.MakePost(c.timeout, url, req, &res); err != nil {
+		return nil, errors.Join(httpclient.ErrRejectedByServer, err)
+	}
+	if !res.Success {
+		return nil, errors.Join(httpclient.ErrRejectedByServer, errors.New("failed to read rejected transactions"))
+	}
+
+	return res.RejectedTransactions, nil
 }
 
 // GenerateToken generates a token for the given time in the central node repository.
