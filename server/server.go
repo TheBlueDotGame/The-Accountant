@@ -36,6 +36,7 @@ const (
 	awaitedURL          = "/awaited"
 	issuedURL           = "/issued"
 	rejectedURL         = "/rejected"
+	approvedURL         = "/approved"
 	dataURL             = "/data"
 	addressGroupURL     = "/address"
 	createURL           = "/create"
@@ -54,6 +55,7 @@ const (
 	AwaitedTransactionURL  = transactionGroupURL + awaitedURL  // URL to get awaited transactions for the receiver.
 	IssuedTransactionURL   = transactionGroupURL + issuedURL   // URL to get issued transactions for the issuer.
 	RejectedTransactionURL = transactionGroupURL + rejectedURL // URL to get rejected transactions for given address.
+	ApprovedTransactionURL = transactionGroupURL + approvedURL // URL to get approved transactions for given address.
 	DataToValidateURL      = validatorGroupURL + dataURL       // URL to get data to validate address by signing rew message.
 	CreateAddressURL       = addressGroupURL + createURL       // URL to create new address.
 	GenerateTokenURL       = tokenGroupURL + generateURL       // URL to generate new token.
@@ -105,6 +107,7 @@ type Repository interface {
 	ReadAwaitingTransactionsByIssuer(ctx context.Context, address string) ([]transaction.Transaction, error)
 	ReadAwaitingTransactionsByReceiver(ctx context.Context, address string) ([]transaction.Transaction, error)
 	ReadRejectedTransactionsPagginate(ctx context.Context, address string, offset, limit int) ([]transaction.Transaction, error)
+	ReadApprovedTransactions(ctx context.Context, address string, offset, limit int) ([]transaction.Transaction, error)
 	RejectTransactions(ctx context.Context, receiver string, trxs []transaction.Transaction) error
 }
 
@@ -214,6 +217,7 @@ func Run(
 	transaction.Post(awaitedURL, s.awaited)
 	transaction.Post(issuedURL, s.issued)
 	transaction.Post(rejectedURL, s.rejected)
+	transaction.Post(approvedURL, s.approved)
 
 	validator := router.Group(validatorGroupURL)
 	validator.Post(dataURL, s.data)

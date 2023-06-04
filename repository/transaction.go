@@ -51,79 +51,42 @@ func (db DataBase) WriteIssuerSignedTransactionForReceiver(
 	return nil
 }
 
-// ReadAwaitingTransactionsByReceiver reads all transactions paired with given receiver address.
+// ReadAwaitingTransactionsByReceiver reads up to the limit transactions paired with given receiver address.
+// Upper limit of read all is MaxLimit constant.
 func (db DataBase) ReadAwaitingTransactionsByReceiver(ctx context.Context, address string) ([]transaction.Transaction, error) {
-	rows, err := db.inner.QueryContext(ctx,
-		`SELECT id, created_at, hash, issuer_address, receiver_address, subject, data, issuer_signature, receiver_signature 
-			FROM transactions WHERE receiver_address = $1 AND status = $2`, address, awaited)
-	if err != nil {
-		return nil, errors.Join(ErrSelectFailed, err)
-	}
-	defer rows.Close()
-
-	var trxsAwaiting []transaction.Transaction
-	for rows.Next() {
-		var trx transaction.Transaction
-		hash := make([]byte, 0, 32)
-		var timestamp int64
-		err := rows.Scan(
-			&trx.ID, &timestamp, &hash, &trx.IssuerAddress,
-			&trx.ReceiverAddress, &trx.Subject, &trx.Data,
-			&trx.IssuerSignature, &trx.ReceiverSignature)
-		if err != nil {
-			return nil, errors.Join(ErrSelectFailed, err)
-		}
-		copy(trx.Hash[:], hash[:])
-		trx.CreatedAt = time.UnixMicro(timestamp)
-		trxsAwaiting = append(trxsAwaiting, trx)
-	}
-	return trxsAwaiting, nil
+	return db.readTransactionsByStatusPagginate(ctx, address, awaited, 0, 0)
 }
 
-// ReadAwaitingTransactionsByIssuer  reads all transactions paired with given issuer address.
+// ReadAwaitingTransactionsByIssuer reads up to the limit awaiting transactions paired with given issuer address.
+// Upper limit of read all is MaxLimit constant.
 func (db DataBase) ReadAwaitingTransactionsByIssuer(ctx context.Context, address string) ([]transaction.Transaction, error) {
-	rows, err := db.inner.QueryContext(ctx,
-		`SELECT id, created_at, hash, issuer_address, receiver_address, subject, data, issuer_signature, receiver_signature 
-			FROM transactions WHERE issuer_address = $1 AND status = $2`, address, awaited)
-	if err != nil {
-		return nil, errors.Join(ErrSelectFailed, err)
-	}
-	defer rows.Close()
-
-	var trxsAwaiting []transaction.Transaction
-	var timestamp int64
-	for rows.Next() {
-		var trx transaction.Transaction
-		hash := make([]byte, 0, 32)
-		err := rows.Scan(
-			&trx.ID, &timestamp, &hash, &trx.IssuerAddress,
-			&trx.ReceiverAddress, &trx.Subject, &trx.Data,
-			&trx.IssuerSignature, &trx.ReceiverSignature)
-		if err != nil {
-			return nil, errors.Join(ErrSelectFailed, err)
-		}
-		copy(trx.Hash[:], hash[:])
-		trx.CreatedAt = time.UnixMicro(timestamp)
-		trxsAwaiting = append(trxsAwaiting, trx)
-	}
-	return trxsAwaiting, nil
+	return db.readTransactionsByStatusPagginate(ctx, address, awaited, 0, 0)
 }
 
 // ReadRejectedTransactionsPagginate reads rejected transactions with pagination.
 func (db DataBase) ReadRejectedTransactionsPagginate(ctx context.Context, address string, offset, limit int) ([]transaction.Transaction, error) {
+	return db.readTransactionsByStatusPagginate(ctx, address, rejected, offset, limit)
+}
+
+// ReadApprovedTransactions reads the approved transactions with pagination.
+func (db DataBase) ReadApprovedTransactions(ctx context.Context, address string, offset, limit int) ([]transaction.Transaction, error) {
+	return db.readTransactionsByStatusPagginate(ctx, address, permanent, offset, limit)
+}
+
+// ReadTemporaryTransactions reads all transactions that are marked as temporary.
+func (db DataBase) ReadTemporaryTransactions(ctx context.Context) ([]transaction.Transaction, error) {
 	rows, err := db.inner.QueryContext(ctx,
 		`SELECT id, created_at, hash, issuer_address, receiver_address, subject, data, issuer_signature, receiver_signature 
-			FROM transactions WHERE address = $1 AND status = $2 ORDER BY created_at DESC LIMIT $3 OFFSET = $4`,
-		address, rejected, limit, offset)
+			FROM transactions WHERE status = $1`, temporary)
 	if err != nil {
 		return nil, errors.Join(ErrSelectFailed, err)
 	}
 	defer rows.Close()
 
-	var trxsRejected []transaction.Transaction
-	var timestamp int64
+	var trxsAwaiting []transaction.Transaction
 	for rows.Next() {
 		var trx transaction.Transaction
+		var timestamp int64
 		hash := make([]byte, 0, 32)
 		err := rows.Scan(
 			&trx.ID, &timestamp, &hash, &trx.IssuerAddress,
@@ -134,9 +97,9 @@ func (db DataBase) ReadRejectedTransactionsPagginate(ctx context.Context, addres
 		}
 		copy(trx.Hash[:], hash[:])
 		trx.CreatedAt = time.UnixMicro(timestamp)
-		trxsRejected = append(trxsRejected, trx)
+		trxsAwaiting = append(trxsAwaiting, trx)
 	}
-	return trxsRejected, nil
+	return trxsAwaiting, nil
 }
 
 // MoveTransactionsFromTemporaryToPermanent moves transactions by marking transactions with matching hash to be permanent
@@ -167,35 +130,6 @@ func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context,
 		return errors.Join(ErrCommitFailed, err)
 	}
 	return nil
-}
-
-// ReadTemporaryTransactions reads all transactions that are marked as temporary.
-func (db DataBase) ReadTemporaryTransactions(ctx context.Context) ([]transaction.Transaction, error) {
-	rows, err := db.inner.QueryContext(ctx,
-		`SELECT id, created_at, hash, issuer_address, receiver_address, subject, data, issuer_signature, receiver_signature 
-			FROM transactions WHERE status = $1`, temporary)
-	if err != nil {
-		return nil, errors.Join(ErrSelectFailed, err)
-	}
-	defer rows.Close()
-
-	var trxsAwaiting []transaction.Transaction
-	for rows.Next() {
-		var trx transaction.Transaction
-		var timestamp int64
-		hash := make([]byte, 0, 32)
-		err := rows.Scan(
-			&trx.ID, &timestamp, &hash, &trx.IssuerAddress,
-			&trx.ReceiverAddress, &trx.Subject, &trx.Data,
-			&trx.IssuerSignature, &trx.ReceiverSignature)
-		if err != nil {
-			return nil, errors.Join(ErrSelectFailed, err)
-		}
-		copy(trx.Hash[:], hash[:])
-		trx.CreatedAt = time.UnixMicro(timestamp)
-		trxsAwaiting = append(trxsAwaiting, trx)
-	}
-	return trxsAwaiting, nil
 }
 
 // FindTransactionInBlockHash returns block hash in to which transaction with given hash was added.
@@ -240,4 +174,39 @@ func (db DataBase) RejectTransactions(ctx context.Context, receiver string, trxs
 		return errors.Join(ErrCommitFailed, err)
 	}
 	return nil
+}
+
+func (db DataBase) readTransactionsByStatusPagginate(
+	ctx context.Context, status, address string, offset, limit int,
+) ([]transaction.Transaction, error) {
+	if limit > MaxLimit || limit == 0 {
+		limit = MaxLimit
+	}
+
+	rows, err := db.inner.QueryContext(ctx,
+		`SELECT id, created_at, hash, issuer_address, receiver_address, subject, data, issuer_signature, receiver_signature 
+			FROM transactions WHERE address = $1 AND status = $2 ORDER BY created_at DESC LIMIT $3 OFFSET = $4`,
+		address, status, limit, offset)
+	if err != nil {
+		return nil, errors.Join(ErrSelectFailed, err)
+	}
+	defer rows.Close()
+
+	var trxs []transaction.Transaction
+	var timestamp int64
+	for rows.Next() {
+		var trx transaction.Transaction
+		hash := make([]byte, 0, 32)
+		err := rows.Scan(
+			&trx.ID, &timestamp, &hash, &trx.IssuerAddress,
+			&trx.ReceiverAddress, &trx.Subject, &trx.Data,
+			&trx.IssuerSignature, &trx.ReceiverSignature)
+		if err != nil {
+			return nil, errors.Join(ErrSelectFailed, err)
+		}
+		copy(trx.Hash[:], hash[:])
+		trx.CreatedAt = time.UnixMicro(timestamp)
+		trxs = append(trxs, trx)
+	}
+	return trxs, nil
 }

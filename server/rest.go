@@ -238,10 +238,10 @@ func (s *server) reject(c *fiber.Ctx) error {
 	return c.JSON(TransactionsRejectResponse{Success: true, TrxHashes: hashes})
 }
 
-// AwaitedIssuedRejectedTransactionsRequest is a request to get awaited, issued or rejected transactions for given address.
+// TransactionsRequest is a request to get awaited, issued or rejected transactions for given address.
 // Request contains of Address for which Transactions are requested, Data in binary format,
 // Hash of Data and Signature of the Data to prove that entity doing the request is an Address owner.
-type AwaitedIssuedRejectedTransactionsRequest struct {
+type TransactionsRequest struct {
 	Address   string   `json:"address"`
 	Data      []byte   `json:"data"`
 	Hash      [32]byte `json:"hash"`
@@ -257,7 +257,7 @@ type AwaitedTransactionsResponse struct {
 }
 
 func (s *server) awaited(c *fiber.Ctx) error {
-	var req AwaitedIssuedRejectedTransactionsRequest
+	var req TransactionsRequest
 	if err := c.BodyParser(&req); err != nil {
 		s.log.Error(fmt.Sprintf("awaited transactions endpoint, failed to parse request body: %s", err.Error()))
 		return fiber.ErrBadRequest
@@ -307,7 +307,7 @@ type IssuedTransactionsResponse struct {
 }
 
 func (s *server) issued(c *fiber.Ctx) error {
-	var req AwaitedIssuedRejectedTransactionsRequest
+	var req TransactionsRequest
 	if err := c.BodyParser(&req); err != nil {
 		s.log.Error(fmt.Sprintf("issued transactions endpoint, failed to parse request body: %s", err.Error()))
 		return fiber.ErrBadRequest
@@ -356,7 +356,7 @@ type RejectedTransactionsResponse struct {
 }
 
 func (s *server) rejected(c *fiber.Ctx) error {
-	var req AwaitedIssuedRejectedTransactionsRequest
+	var req TransactionsRequest
 	if err := c.BodyParser(&req); err != nil {
 		s.log.Error(fmt.Sprintf("rejected transactions endpoint, failed to parse request body: %s", err.Error()))
 		return fiber.ErrBadRequest
@@ -382,7 +382,7 @@ func (s *server) rejected(c *fiber.Ctx) error {
 		return fiber.ErrForbidden
 	}
 
-	trxs, err := s.repo.ReadAwaitingTransactionsByIssuer(c.Context(), req.Address)
+	trxs, err := s.repo.ReadRejectedTransactionsPagginate(c.Context(), req.Address, req.Offset, req.Limit)
 	if err != nil {
 		s.log.Error(fmt.Sprintf("rejected transactions endpoint, failed to read issued transactions for address: %s, %s",
 			req.Address, err.Error()))
@@ -395,6 +395,55 @@ func (s *server) rejected(c *fiber.Ctx) error {
 	return c.JSON(RejectedTransactionsResponse{
 		Success:              true,
 		RejectedTransactions: trxs,
+	})
+}
+
+// ApprovedTransactionsResponse is a response for approved transactions request.
+type ApprovedTransactionsResponse struct {
+	Success              bool                      `json:"success"`
+	ApprovedTransactions []transaction.Transaction `json:"approved_transactions"`
+}
+
+func (s *server) approved(c *fiber.Ctx) error {
+	var req TransactionsRequest
+	if err := c.BodyParser(&req); err != nil {
+		s.log.Error(fmt.Sprintf("approved transactions endpoint, failed to parse request body: %s", err.Error()))
+		return fiber.ErrBadRequest
+	}
+
+	if ok := s.randDataProv.ValidateData(req.Address, req.Data); !ok {
+		s.log.Error(fmt.Sprintf("approved transactions endpoint, failed to validate data for address: %s", req.Address))
+		return fiber.ErrForbidden
+	}
+
+	if ok, err := s.repo.IsAddressSuspended(c.Context(), req.Address); err != nil || ok {
+		if err != nil {
+			s.log.Error(fmt.Sprintf("approved transactions endpoint, failed to check address: %s", err.Error()))
+			return fiber.ErrForbidden
+		}
+		s.log.Error(fmt.Sprintf("approved transactions endpoint, address %s is suspended", req.Address))
+		return fiber.ErrForbidden
+	}
+
+	if err := s.bookkeeping.VerifySignature(req.Data, req.Signature, req.Hash, req.Address); err != nil {
+		s.log.Error(
+			fmt.Sprintf("approved transactions endpoint, failed to verify signature for address: %s, %s", req.Address, err.Error()))
+		return fiber.ErrForbidden
+	}
+
+	trxs, err := s.repo.ReadApprovedTransactions(c.Context(), req.Address, req.Offset, req.Limit)
+	if err != nil {
+		s.log.Error(fmt.Sprintf("approved transactions endpoint, failed to read issued transactions for address: %s, %s",
+			req.Address, err.Error()))
+		return c.JSON(ApprovedTransactionsResponse{
+			Success:              false,
+			ApprovedTransactions: nil,
+		})
+	}
+
+	return c.JSON(ApprovedTransactionsResponse{
+		Success:              true,
+		ApprovedTransactions: trxs,
 	})
 }
 
