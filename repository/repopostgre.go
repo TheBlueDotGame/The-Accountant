@@ -3,11 +3,16 @@ package repository
 import (
 	"context"
 	"fmt"
+	"math"
 
 	"database/sql"
 
 	"github.com/lib/pq"
 	_ "github.com/lib/pq"
+)
+
+const (
+	MaxLimit = math.MaxInt16 // MaxLimit is the maximum limit of entities read in a single for the query.
 )
 
 var (
