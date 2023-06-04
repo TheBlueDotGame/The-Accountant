@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/bartossh/Computantis/logger"
@@ -35,19 +36,20 @@ const (
 )
 
 const (
-	MetricsURL              = server.MetricsURL        // URL serves service metrics.
-	Alive                   = server.AliveURL          // URL allows to check if server is alive and if sign service is of the same version.
-	Address                 = "/address"               // URL allows to check wallet public address
-	IssueTransaction        = "/transactions/issue"    // URL allows to issue transaction signed by the issuer.
-	ConfirmTransaction      = "/transaction/sign"      // URL allows to sign transaction received by the receiver.
-	RejectTransactions      = "/transactions/reject"   // URL allows to reject transactions received by the receiver.
-	GetIssuedTransactions   = "/transactions/issued"   // URL allows to get issued transactions for the issuer.
-	GetReceivedTransactions = "/transactions/received" // URL allows to get received transactions for the receiver.
-	CreateWallet            = "/wallet/create"         // URL allows to create new wallet.
-	CreateUpdateWebhook     = "/webhook/create"        // URL allows to creatre webhook
-	ReadWalletPublicAddress = "/wallet/address"        // URL allows to read public address of the wallet.
-	GetOneDayToken          = "token/day"              // URL allows to get one day token.
-	GetOneWeekToken         = "token/week"             // URL allows to get one week token.
+	MetricsURL              = server.MetricsURL                       // URL serves service metrics.
+	Alive                   = server.AliveURL                         // URL allows to check if server is alive and if sign service is of the same version.
+	Address                 = "/address"                              // URL allows to check wallet public address
+	IssueTransaction        = "/transactions/issue"                   // URL allows to issue transaction signed by the issuer.
+	ConfirmTransaction      = "/transaction/sign"                     // URL allows to sign transaction received by the receiver.
+	RejectTransactions      = "/transactions/reject"                  // URL allows to reject transactions received by the receiver.
+	GetIssuedTransactions   = "/transactions/issued"                  // URL allows to get issued transactions for the issuer.
+	GetReceivedTransactions = "/transactions/received"                // URL allows to get received transactions for the receiver.
+	GetRejectedTransactions = "/transactions/rejected/:offset/:limit" // URL allows to get rejected transactions.
+	CreateWallet            = "/wallet/create"                        // URL allows to create new wallet.
+	CreateUpdateWebhook     = "/webhook/create"                       // URL allows to creatre webhook
+	ReadWalletPublicAddress = "/wallet/address"                       // URL allows to read public address of the wallet.
+	GetOneDayToken          = "token/day"                             // URL allows to get one day token.
+	GetOneWeekToken         = "token/week"                            // URL allows to get one week token.
 )
 
 // Run runs the service application that exposes the API for creating, validating and signing transactions.
@@ -91,6 +93,7 @@ func Run(ctx context.Context, cfg Config, log logger.Logger, timeout time.Durati
 
 	router.Get(GetIssuedTransactions, s.issuedTransactions)
 	router.Get(GetReceivedTransactions, s.receivedTransactions)
+	router.Get(GetRejectedTransactions, s.rejectedTransactions)
 	router.Post(IssueTransaction, s.issueTransaction)
 	router.Post(ConfirmTransaction, s.confirmReceivedTransaction)
 	router.Post(RejectTransactions, s.rejectTransactions)
@@ -270,6 +273,37 @@ func (a *app) receivedTransactions(c *fiber.Ctx) error {
 		return c.JSON(ReceivedTransactionResponse{Ok: false, Err: err.Error()})
 	}
 	return c.JSON(ReceivedTransactionResponse{Ok: true, Transactions: transactions})
+}
+
+// RejectedTransactionResponse is a response of rejected transactions.
+type RejectedTransactionResponse struct {
+	Ok           bool                      `json:"ok"`
+	Err          string                    `json:"err"`
+	Transactions []transaction.Transaction `json:"transactions"`
+}
+
+func (a *app) rejectedTransactions(c *fiber.Ctx) error {
+	offset := c.Params("offset")
+	limit := c.Params("limit")
+
+	offsetNum, err := strconv.Atoi(offset)
+	if err != nil {
+		a.log.Error(err.Error())
+		return c.JSON(RejectedTransactionResponse{Ok: false, Err: err.Error()})
+	}
+	limitNum, err := strconv.Atoi(limit)
+	if err != nil {
+		a.log.Error(err.Error())
+		return c.JSON(RejectedTransactionResponse{Ok: false, Err: err.Error()})
+	}
+
+	transactions, err := a.centralNodeClient.ReadRejectedTransactions(offsetNum, limitNum)
+	if err != nil {
+		err := fmt.Errorf("error getting rejected transactions: %v", err)
+		a.log.Error(err.Error())
+		return c.JSON(RejectedTransactionResponse{Ok: false, Err: err.Error()})
+	}
+	return c.JSON(RejectedTransactionResponse{Ok: true, Transactions: transactions})
 }
 
 // CreateWalletRequest is a request to create wallet.

@@ -109,6 +109,36 @@ func (db DataBase) ReadAwaitingTransactionsByIssuer(ctx context.Context, address
 	return trxsAwaiting, nil
 }
 
+// ReadRejectedTransactionsPagginate reads rejected transactions with pagination.
+func (db DataBase) ReadRejectedTransactionsPagginate(ctx context.Context, address string, offset, limit int) ([]transaction.Transaction, error) {
+	rows, err := db.inner.QueryContext(ctx,
+		`SELECT id, created_at, hash, issuer_address, receiver_address, subject, data, issuer_signature, receiver_signature 
+			FROM transactions WHERE address = $1 AND status = $2 ORDER BY created_at DESC LIMIT $3 OFFSET = $4`,
+		address, rejected, limit, offset)
+	if err != nil {
+		return nil, errors.Join(ErrSelectFailed, err)
+	}
+	defer rows.Close()
+
+	var trxsRejected []transaction.Transaction
+	var timestamp int64
+	for rows.Next() {
+		var trx transaction.Transaction
+		hash := make([]byte, 0, 32)
+		err := rows.Scan(
+			&trx.ID, &timestamp, &hash, &trx.IssuerAddress,
+			&trx.ReceiverAddress, &trx.Subject, &trx.Data,
+			&trx.IssuerSignature, &trx.ReceiverSignature)
+		if err != nil {
+			return nil, errors.Join(ErrSelectFailed, err)
+		}
+		copy(trx.Hash[:], hash[:])
+		trx.CreatedAt = time.UnixMicro(timestamp)
+		trxsRejected = append(trxsRejected, trx)
+	}
+	return trxsRejected, nil
+}
+
 // MoveTransactionsFromTemporaryToPermanent moves transactions by marking transactions with matching hash to be permanent
 // and sets block hash field to referenced block hash.
 func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context, blockHash [32]byte, hashes [][32]byte) error {

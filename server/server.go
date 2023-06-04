@@ -35,6 +35,7 @@ const (
 	confirmURL          = "/confirm"
 	awaitedURL          = "/awaited"
 	issuedURL           = "/issued"
+	rejectedURL         = "/rejected"
 	dataURL             = "/data"
 	addressGroupURL     = "/address"
 	createURL           = "/create"
@@ -43,19 +44,20 @@ const (
 )
 
 const (
-	MetricsURL            = "/metrics"                       // URL to check service metrics
-	AliveURL              = "/alive"                         // URL to check if server is alive and version.
-	SearchAddressURL      = searchGroupURL + addressURL      // URL to search for address.
-	SearchBlockURL        = searchGroupURL + blockURL        // URL to search for block that contains transaction hash.
-	ProposeTransactionURL = transactionGroupURL + proposeURL // URL to propose transaction signed by the issuer.
-	ConfirmTransactionURL = transactionGroupURL + confirmURL // URL to confirm transaction signed by the receiver.
-	RejectTransactionURL  = transactionGroupURL + rejectURL  // URL to reject transaction signed only by issuer.
-	AwaitedTransactionURL = transactionGroupURL + awaitedURL // URL to get awaited transactions for the receiver.
-	IssuedTransactionURL  = transactionGroupURL + issuedURL  // URL to get issued transactions for the issuer.
-	DataToValidateURL     = validatorGroupURL + dataURL      // URL to get data to validate address by signing rew message.
-	CreateAddressURL      = addressGroupURL + createURL      // URL to create new address.
-	GenerateTokenURL      = tokenGroupURL + generateURL      // URL to generate new token.
-	WsURL                 = "/ws"                            // URL to connect to websocket.
+	MetricsURL             = "/metrics"                        // URL to check service metrics
+	AliveURL               = "/alive"                          // URL to check if server is alive and version.
+	SearchAddressURL       = searchGroupURL + addressURL       // URL to search for address.
+	SearchBlockURL         = searchGroupURL + blockURL         // URL to search for block that contains transaction hash.
+	ProposeTransactionURL  = transactionGroupURL + proposeURL  // URL to propose transaction signed by the issuer.
+	ConfirmTransactionURL  = transactionGroupURL + confirmURL  // URL to confirm transaction signed by the receiver.
+	RejectTransactionURL   = transactionGroupURL + rejectURL   // URL to reject transaction signed only by issuer.
+	AwaitedTransactionURL  = transactionGroupURL + awaitedURL  // URL to get awaited transactions for the receiver.
+	IssuedTransactionURL   = transactionGroupURL + issuedURL   // URL to get issued transactions for the issuer.
+	RejectedTransactionURL = transactionGroupURL + rejectedURL // URL to get rejected transactions for given address.
+	DataToValidateURL      = validatorGroupURL + dataURL       // URL to get data to validate address by signing rew message.
+	CreateAddressURL       = addressGroupURL + createURL       // URL to create new address.
+	GenerateTokenURL       = tokenGroupURL + generateURL       // URL to generate new token.
+	WsURL                  = "/ws"                             // URL to connect to websocket.
 )
 
 const queryLimit = 100
@@ -102,6 +104,7 @@ type Repository interface {
 	FindTransactionInBlockHash(ctx context.Context, trxBlockHash [32]byte) ([32]byte, error)
 	ReadAwaitingTransactionsByIssuer(ctx context.Context, address string) ([]transaction.Transaction, error)
 	ReadAwaitingTransactionsByReceiver(ctx context.Context, address string) ([]transaction.Transaction, error)
+	ReadRejectedTransactionsPagginate(ctx context.Context, address string, offset, limit int) ([]transaction.Transaction, error)
 	RejectTransactions(ctx context.Context, receiver string, trxs []transaction.Transaction) error
 }
 
@@ -210,6 +213,7 @@ func Run(
 	transaction.Post(rejectURL, s.reject)
 	transaction.Post(awaitedURL, s.awaited)
 	transaction.Post(issuedURL, s.issued)
+	transaction.Post(rejectedURL, s.rejected)
 
 	validator := router.Group(validatorGroupURL)
 	validator.Post(dataURL, s.data)
