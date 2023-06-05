@@ -2,6 +2,7 @@ package emulator
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -22,8 +23,14 @@ type publisher struct {
 
 // RunPublisher runs publisher emulator that emulates data in a buffer.
 // Running emmulator is stopped by canceling context.
-func RunPublisher(ctx context.Context, cancel context.CancelFunc, config Config, data [][]byte) error {
+func RunPublisher(ctx context.Context, cancel context.CancelFunc, config Config, data []byte) error {
 	defer cancel()
+
+	var measurtements []Measurement
+	if err := json.Unmarshal(data, &measurtements); err != nil {
+		return fmt.Errorf("cannot unmarshal data, %s", err)
+	}
+
 	if config.TimeoutSeconds < 1 || config.TimeoutSeconds > 20 {
 		return fmt.Errorf("wrong timeout_seconds parameter, expected value between 1 and 20 inclusive")
 	}
@@ -65,7 +72,7 @@ func RunPublisher(ctx context.Context, cancel context.CancelFunc, config Config,
 			return nil
 		case <-t.C:
 			spinner, _ = pterm.DefaultSpinner.Start(fmt.Sprintf("Making [ %d ] transaction emulation.\n", p.position+1))
-			if err := p.emulate(ctx, addr.Address, data); err != nil {
+			if err := p.emulate(ctx, addr.Address, measurtements); err != nil {
 				spinner.Warning()
 				return err
 			}
@@ -74,15 +81,15 @@ func RunPublisher(ctx context.Context, cancel context.CancelFunc, config Config,
 	}
 }
 
-func (p *publisher) emulate(ctx context.Context, receiver string, data [][]byte) error {
+func (p *publisher) emulate(ctx context.Context, receiver string, measurements []Measurement) error {
 	switch p.random {
 	case true:
-		p.position = rand.Intn(len(data))
+		p.position = rand.Intn(len(measurements))
 	default:
 		p.position++
 	}
 
-	if p.position >= len(data) {
+	if p.position >= len(measurements) {
 		p.position = 0
 	}
 
@@ -95,10 +102,15 @@ func (p *publisher) emulate(ctx context.Context, receiver string, data [][]byte)
 		defer func() {
 			d <- struct{}{}
 		}()
+		var data []byte
+		data, err = json.Marshal(measurements[p.position])
+		if err != nil {
+			return
+		}
 		req := walletapi.IssueTransactionRequest{
 			ReceiverAddress: receiver,
 			Subject:         "emulator-test",
-			Data:            data[p.position],
+			Data:            data,
 		}
 		var resp walletapi.IssueTransactionResponse
 		url := fmt.Sprintf("%s%s", p.clientURL, walletapi.IssueTransaction)
@@ -110,6 +122,8 @@ func (p *publisher) emulate(ctx context.Context, receiver string, data [][]byte)
 		if !resp.Ok {
 			err = errors.New("unexpected error")
 		}
+
+		pterm.Info.Printf("Emulated measuremnt: %#v", measurements[p.position])
 	}()
 
 	select {

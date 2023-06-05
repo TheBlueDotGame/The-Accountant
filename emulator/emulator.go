@@ -9,3 +9,10 @@ type Config struct {
 	Port           string `yaml:"port"`
 	PublicURL      string `yaml:"public_url"`
 }
+
+// Measurement is data structure containing measurements received in a single transaction.
+type Measurement struct {
+	Volts int `json:"volts"`
+	Mamps int `json:"m_amps"`
+	Power int `json:"power"`
+}
