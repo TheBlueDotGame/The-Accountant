@@ -1,10 +1,8 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"os/signal"
 
@@ -26,25 +24,6 @@ func configReader(confFile string) (configuration.Configuration, error) {
 	}
 
 	return cfg, nil
-}
-
-func readLines(file string) ([][]byte, error) {
-	readFile, err := os.Open(file)
-	defer readFile.Close()
-
-	if err != nil {
-		return nil, fmt.Errorf("reading %s failed, %s", file, err)
-	}
-	fileScanner := bufio.NewScanner(readFile)
-
-	fileScanner.Split(bufio.ScanLines)
-
-	var data [][]byte
-	for fileScanner.Scan() {
-		data = append(data, fileScanner.Bytes())
-	}
-
-	return data, nil
 }
 
 func closerContext() (context.Context, context.CancelFunc) {
@@ -93,7 +72,7 @@ func main() {
 					if err != nil {
 						return err
 					}
-					data, err := readLines(dataFile)
+					data, err := os.ReadFile(dataFile)
 					if err != nil {
 						return err
 					}
@@ -113,8 +92,12 @@ func main() {
 					if err != nil {
 						return err
 					}
+					data, err := os.ReadFile(dataFile)
+					if err != nil {
+						return err
+					}
 					ctx, cancel := closerContext()
-					if err := emulator.RunSubscriber(ctx, cancel, cfg.Emulator); err != nil {
+					if err := emulator.RunSubscriber(ctx, cancel, cfg.Emulator, data); err != nil {
 						return err
 					}
 					return nil
