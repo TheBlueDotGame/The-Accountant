@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/bartossh/Computantis/transaction"
@@ -18,13 +19,12 @@ const (
 
 // MoveTransactionFromAwaitingToTemporary moves awaiting transaction marking it as temporary.
 func (db DataBase) MoveTransactionFromAwaitingToTemporary(ctx context.Context, trx *transaction.Transaction) error {
-	_, err := db.inner.ExecContext(
+	if _, err := db.inner.ExecContext(
 		ctx,
-		"UPDATE transactions SET status = $1, receiver_signature = $2, WHERE hash = $3",
-		temporary, trx.ReceiverSignature, trx.Hash[:],
-	)
-	if err != nil {
-		errors.Join(ErrRemoveFailed, err)
+		"UPDATE transactions SET status = $1, receiver_signature = $2 WHERE hash = $3 AND status = $4",
+		temporary, trx.ReceiverSignature, trx.Hash[:], awaited,
+	); err != nil {
+		return errors.Join(ErrUpdateFailed, err)
 	}
 	return nil
 }
@@ -35,7 +35,7 @@ func (db DataBase) WriteIssuerSignedTransactionForReceiver(
 	trx *transaction.Transaction,
 ) error {
 	timestamp := trx.CreatedAt.UnixMicro()
-	_, err := db.inner.ExecContext(
+	if _, err := db.inner.ExecContext(
 		ctx,
 		`INSERT INTO 
 			transactions(
@@ -44,8 +44,8 @@ func (db DataBase) WriteIssuerSignedTransactionForReceiver(
 		timestamp, trx.Hash[:], trx.IssuerAddress,
 		trx.ReceiverAddress, trx.Subject, trx.Data,
 		trx.IssuerSignature, trx.ReceiverSignature,
-		awaited, []byte{})
-	if err != nil {
+		awaited, []byte{}); err != nil {
+
 		return errors.Join(ErrInsertFailed, err)
 	}
 	return nil
@@ -54,30 +54,46 @@ func (db DataBase) WriteIssuerSignedTransactionForReceiver(
 // ReadAwaitingTransactionsByReceiver reads up to the limit transactions paired with given receiver address.
 // Upper limit of read all is MaxLimit constant.
 func (db DataBase) ReadAwaitingTransactionsByReceiver(ctx context.Context, address string) ([]transaction.Transaction, error) {
-	return db.readTransactionsByStatusPagginate(ctx, address, awaited, 0, 0)
+	return db.readTransactionsByStatusPagginate(ctx, address, "receiver_address", awaited, 0, 0)
 }
 
 // ReadAwaitingTransactionsByIssuer reads up to the limit awaiting transactions paired with given issuer address.
 // Upper limit of read all is MaxLimit constant.
 func (db DataBase) ReadAwaitingTransactionsByIssuer(ctx context.Context, address string) ([]transaction.Transaction, error) {
-	return db.readTransactionsByStatusPagginate(ctx, address, awaited, 0, 0)
+	return db.readTransactionsByStatusPagginate(ctx, address, "issuer_address", awaited, 0, 0)
 }
 
 // ReadRejectedTransactionsPagginate reads rejected transactions with pagination.
 func (db DataBase) ReadRejectedTransactionsPagginate(ctx context.Context, address string, offset, limit int) ([]transaction.Transaction, error) {
-	return db.readTransactionsByStatusPagginate(ctx, address, rejected, offset, limit)
+	issuerTrx, err := db.readTransactionsByStatusPagginate(ctx, address, "issuer_address", rejected, offset, limit) // TODO: refactor this to make sense of pagination
+	if err != nil {
+		return nil, err
+	}
+	receiverTrx, err := db.readTransactionsByStatusPagginate(ctx, address, "receiver_address", rejected, offset, limit)
+	if err != nil {
+		return nil, err
+	}
+	return append(issuerTrx, receiverTrx...), nil
 }
 
 // ReadApprovedTransactions reads the approved transactions with pagination.
 func (db DataBase) ReadApprovedTransactions(ctx context.Context, address string, offset, limit int) ([]transaction.Transaction, error) {
-	return db.readTransactionsByStatusPagginate(ctx, address, permanent, offset, limit)
+	issuerTrx, err := db.readTransactionsByStatusPagginate(ctx, address, "issuer_address", permanent, offset, limit) // TODO: refactor that to make sense of pagination
+	if err != nil {
+		return nil, err
+	}
+	receiverTrx, err := db.readTransactionsByStatusPagginate(ctx, address, "receiver_address", permanent, offset, limit)
+	if err != nil {
+		return nil, err
+	}
+	return append(issuerTrx, receiverTrx...), nil
 }
 
-// ReadTemporaryTransactions reads all transactions that are marked as temporary.
-func (db DataBase) ReadTemporaryTransactions(ctx context.Context) ([]transaction.Transaction, error) {
+// ReadTemporaryTransactions reads transactions that are marked as temporary with offset and limit.
+func (db DataBase) ReadTemporaryTransactions(ctx context.Context, offset, limit int) ([]transaction.Transaction, error) {
 	rows, err := db.inner.QueryContext(ctx,
 		`SELECT id, created_at, hash, issuer_address, receiver_address, subject, data, issuer_signature, receiver_signature 
-			FROM transactions WHERE status = $1`, temporary)
+			FROM transactions WHERE status = $1 ORDER by id DESC LIMIT $2 OFFSET $3`, temporary, limit, offset)
 	if err != nil {
 		return nil, errors.Join(ErrSelectFailed, err)
 	}
@@ -119,7 +135,8 @@ func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context,
 
 	for _, h := range hashes {
 		_, err := tx.ExecContext(
-			ctx, "UPDATE transactions SET status = $1, block_hash = $2 WHERE hash = $3", permanent, blockHash[:], h[:])
+			ctx, "UPDATE transactions SET status = $1, block_hash = $2 WHERE hash = $3 AND status = $4",
+			permanent, blockHash[:], h[:], temporary)
 		if err != nil {
 			return errors.Join(ErrInsertFailed, err)
 		}
@@ -177,16 +194,25 @@ func (db DataBase) RejectTransactions(ctx context.Context, receiver string, trxs
 }
 
 func (db DataBase) readTransactionsByStatusPagginate(
-	ctx context.Context, status, address string, offset, limit int,
+	ctx context.Context, address, addressColumn, status string, offset, limit int,
 ) ([]transaction.Transaction, error) {
 	if limit > MaxLimit || limit == 0 {
 		limit = MaxLimit
 	}
 
-	rows, err := db.inner.QueryContext(ctx,
-		`SELECT id, created_at, hash, issuer_address, receiver_address, subject, data, issuer_signature, receiver_signature 
-			FROM transactions WHERE address = $1 AND status = $2 ORDER BY created_at DESC LIMIT $3 OFFSET = $4`,
-		address, status, limit, offset)
+	var query string
+	switch addressColumn {
+	case "issuer_address":
+		query = `SELECT id, created_at, hash, issuer_address, receiver_address, subject, data, issuer_signature, receiver_signature 
+			FROM transactions WHERE issuer_address = $1 AND status = $2 ORDER BY id DESC, created_at DESC LIMIT $3 OFFSET $4`
+	case "receiver_address":
+		query = `SELECT id, created_at, hash, issuer_address, receiver_address, subject, data, issuer_signature, receiver_signature 
+			FROM transactions WHERE receiver_address = $1 AND status = $2 ORDER BY id DESC, created_at DESC LIMIT $3 OFFSET $4`
+	default:
+		return nil, fmt.Errorf("unknown address colummn: %s", addressColumn)
+	}
+
+	rows, err := db.inner.QueryContext(ctx, query, address, status, limit, offset)
 	if err != nil {
 		return nil, errors.Join(ErrSelectFailed, err)
 	}

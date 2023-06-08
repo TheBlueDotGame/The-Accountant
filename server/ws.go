@@ -140,38 +140,15 @@ func (s *server) wsWrapper(ctx context.Context, c *fiber.Ctx) error {
 		go client.writePump(ctxx, cancel)
 		client.readPump(ctxx, cancel)
 	}
-	s.log.Info(fmt.Sprintf("websocket server, new connection from address: %s accepted", c.IP()))
+	s.log.Info(fmt.Sprintf("websocket server, new connection from address [ %s ] accepted", c.IP()))
 
 	return websocket.New(serveWs)(c)
-}
-
-func (c *socket) readAllCentralNodes(ctx context.Context) error {
-	sockets, err := c.repo.ReadRegisteredNodesAddresses(ctx)
-	if err != nil {
-		return err
-	}
-	m := &Message{
-		Command:               CommandSocketList,
-		Error:                 "",
-		Block:                 block.Block{},
-		IssuedTrxForAddresses: []string{},
-		Sockets:               sockets,
-	}
-	c.process(ctx, m)
-
-	return nil
 }
 
 func (c *socket) readPump(ctx context.Context, cancel context.CancelFunc) {
 	c.conn.SetReadLimit(socketMaxMessageSize)
 	c.conn.SetReadDeadline(time.Now().Add(socketPongWait))
 	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(socketPongWait)); return nil })
-
-	if err := c.readAllCentralNodes(ctx); err != nil {
-		c.log.Error(fmt.Sprintf("reading central nodes failed, %s", err))
-		cancel()
-		return
-	}
 
 	tc := time.NewTicker(socketTickerInterval)
 	defer tc.Stop()

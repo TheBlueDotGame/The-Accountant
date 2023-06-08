@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/bartossh/Computantis/block"
+	"github.com/bartossh/Computantis/httpclient"
 	"github.com/bartossh/Computantis/logger"
 	"github.com/bartossh/Computantis/server"
 	"github.com/bartossh/Computantis/wallet"
@@ -72,9 +73,9 @@ type Verifier interface {
 
 // Config contains configuration of the validator.
 type Config struct {
-	Token     string `yaml:"token"`     // token is used to authenticate validator in the central server
-	Websocket string `yaml:"websocket"` // websocket address of the central server
-	Port      int    `yaml:"port"`      // port on which validator will listen for http requests
+	Token              string `yaml:"token"`                // token is used to authenticate validator in the central server
+	CentralNodeAddress string `yaml:"central_node_address"` // address of the central server
+	Port               int    `yaml:"port"`                 // port on which validator will listen for http requests
 }
 
 type app struct {
@@ -115,9 +116,15 @@ func Run(
 
 	log.Info(fmt.Sprintf("validator [ %s ] is starting on port: %d", a.wallet.Address(), cfg.Port))
 
-	if err := a.connectToSocket(ctxx, cfg.Websocket); err != nil {
-		return err
+	deadline, ok := ctxx.Deadline()
+	timeout := deadline.Sub(time.Now())
+	if !ok {
+		timeout = time.Second * 5
 	}
+	var res server.DiscoverResponse
+	httpclient.MakeGet(timeout, fmt.Sprintf("%s%s", cfg.CentralNodeAddress, server.DiscoverCentralNodesURL), &res)
+
+	a.processSocketList(ctxx, res.Sockets)
 
 	return a.runServer(ctxx, cancel)
 }
@@ -302,7 +309,7 @@ func (a *app) processBlock(_ context.Context, b *block.Block, remoteAddress stri
 	defer a.mux.Unlock()
 	err := a.validateBlock(b)
 	if err != nil {
-		a.log.Error(fmt.Sprintf("remote address: %s => validator received invalid:  %s ", remoteAddress, err.Error()))
+		a.log.Error(fmt.Sprintf("remote node address [ %s ], %s ", remoteAddress, err.Error()))
 	}
 	a.log.Info(fmt.Sprintf("remote address: %s => last block idx: %v | new block idx %v \n", remoteAddress, a.lastBlock.Index, b.Index))
 	a.lastBlock = *b

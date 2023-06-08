@@ -25,11 +25,11 @@ import (
 // Create corresponding tokens to be valid in database.
 func TestFullClientApiCycle(t *testing.T) {
 	transactionsCount := 10000
-	type tesCase struct {
+	type testCase struct {
 		port   string
 		tokens []string
 	}
-	testCases := []tesCase{
+	testCases := []testCase{
 		{
 			port: "8080",
 			tokens: []string{
@@ -64,7 +64,7 @@ func TestFullClientApiCycle(t *testing.T) {
 	now := time.Now()
 	for _, c := range testCases {
 		wg.Add(1)
-		go func(c tesCase) {
+		go func(c testCase) {
 			addr := fmt.Sprintf("http://localhost:%s", c.port)
 			issuer := walletmiddleware.NewClient(addr, 5*time.Second, wallet.Helper{}, fileoperations.Helper{}, wallet.New)
 			err := issuer.ValidateApiVersion()
@@ -77,6 +77,7 @@ func TestFullClientApiCycle(t *testing.T) {
 			assert.Nil(t, err)
 			err = receiver.NewWallet(c.tokens[1])
 			assert.Nil(t, err)
+
 			for i := 0; i < transactionsCount; i++ {
 				receiverAddr, err := receiver.Address()
 				assert.Nil(t, err)
@@ -87,8 +88,10 @@ func TestFullClientApiCycle(t *testing.T) {
 				assert.Nil(t, err)
 				assert.Equal(t, 1, len(awaitedTrx))
 
-				err = receiver.ConfirmTransaction(&awaitedTrx[0])
-				assert.Nil(t, err)
+				for i := range awaitedTrx {
+					receiver.ConfirmTransaction(&awaitedTrx[i])
+					assert.Nil(t, err)
+				}
 			}
 
 			issuer.FlushWalletFromMemory()

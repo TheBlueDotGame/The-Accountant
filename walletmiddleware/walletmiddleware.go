@@ -88,8 +88,12 @@ func (c *Client) NewWallet(token string) error {
 			fmt.Errorf("version mismatch, expected %d but got %d", version, w.Version()))
 	}
 
+	c.w = w
+	c.ready = true
+
 	dataToSign, err := c.DataToSign()
 	if err != nil {
+		c.ready = false // reset wallet ready
 		return errors.Join(httpclient.ErrRejectedByServer, err)
 	}
 
@@ -105,19 +109,19 @@ func (c *Client) NewWallet(token string) error {
 	var resCreateAddr server.CreateAddressResponse
 	url := fmt.Sprintf("%s%s", c.apiRoot, server.CreateAddressURL)
 	if err := httpclient.MakePost(c.timeout, url, reqCreateAddr, &resCreateAddr); err != nil {
+		c.ready = false // reset wallet ready
 		return err
 	}
 
 	if !resCreateAddr.Success {
+		c.ready = false // reset wallet ready
 		return errors.Join(httpclient.ErrRejectedByServer, errors.New("failed to create address"))
 	}
 
 	if resCreateAddr.Address != w.Address() {
+		c.ready = false // reset wallet ready
 		return errors.Join(httpclient.ErrServerReturnsInconsistentData, errors.New("failed to create address"))
 	}
-
-	c.w = w
-	c.ready = true
 
 	return nil
 }
