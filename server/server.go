@@ -45,21 +45,22 @@ const (
 )
 
 const (
-	MetricsURL             = "/metrics"                        // URL to check service metrics
-	AliveURL               = "/alive"                          // URL to check if server is alive and version.
-	SearchAddressURL       = searchGroupURL + addressURL       // URL to search for address.
-	SearchBlockURL         = searchGroupURL + blockURL         // URL to search for block that contains transaction hash.
-	ProposeTransactionURL  = transactionGroupURL + proposeURL  // URL to propose transaction signed by the issuer.
-	ConfirmTransactionURL  = transactionGroupURL + confirmURL  // URL to confirm transaction signed by the receiver.
-	RejectTransactionURL   = transactionGroupURL + rejectURL   // URL to reject transaction signed only by issuer.
-	AwaitedTransactionURL  = transactionGroupURL + awaitedURL  // URL to get awaited transactions for the receiver.
-	IssuedTransactionURL   = transactionGroupURL + issuedURL   // URL to get issued transactions for the issuer.
-	RejectedTransactionURL = transactionGroupURL + rejectedURL // URL to get rejected transactions for given address.
-	ApprovedTransactionURL = transactionGroupURL + approvedURL // URL to get approved transactions for given address.
-	DataToValidateURL      = validatorGroupURL + dataURL       // URL to get data to validate address by signing rew message.
-	CreateAddressURL       = addressGroupURL + createURL       // URL to create new address.
-	GenerateTokenURL       = tokenGroupURL + generateURL       // URL to generate new token.
-	WsURL                  = "/ws"                             // URL to connect to websocket.
+	MetricsURL              = "/metrics"                        // URL to check service metrics
+	AliveURL                = "/alive"                          // URL to check if server is alive and version.
+	DiscoverCentralNodesURL = "/discover"                       // URL to discover all running central nodes.
+	SearchAddressURL        = searchGroupURL + addressURL       // URL to search for address.
+	SearchBlockURL          = searchGroupURL + blockURL         // URL to search for block that contains transaction hash.
+	ProposeTransactionURL   = transactionGroupURL + proposeURL  // URL to propose transaction signed by the issuer.
+	ConfirmTransactionURL   = transactionGroupURL + confirmURL  // URL to confirm transaction signed by the receiver.
+	RejectTransactionURL    = transactionGroupURL + rejectURL   // URL to reject transaction signed only by issuer.
+	AwaitedTransactionURL   = transactionGroupURL + awaitedURL  // URL to get awaited transactions for the receiver.
+	IssuedTransactionURL    = transactionGroupURL + issuedURL   // URL to get issued transactions for the issuer.
+	RejectedTransactionURL  = transactionGroupURL + rejectedURL // URL to get rejected transactions for given address.
+	ApprovedTransactionURL  = transactionGroupURL + approvedURL // URL to get approved transactions for given address.
+	DataToValidateURL       = validatorGroupURL + dataURL       // URL to get data to validate address by signing rew message.
+	CreateAddressURL        = addressGroupURL + createURL       // URL to create new address.
+	GenerateTokenURL        = tokenGroupURL + generateURL       // URL to generate new token.
+	WsURL                   = "/ws"                             // URL to connect to websocket.
 )
 
 const queryLimit = 100
@@ -205,6 +206,7 @@ func Run(
 	router.Use(recover.New())
 	router.Get(MetricsURL, monitor.New(monitor.Config{Title: fmt.Sprintf("Central Node %s", id)}))
 	router.Get(AliveURL, s.alive)
+	router.Get(DiscoverCentralNodesURL, s.discover)
 
 	search := router.Group(searchGroupURL)
 	search.Post(addressURL, s.address)
@@ -315,7 +317,7 @@ func (s *server) runSubscriber(ctx context.Context) {
 }
 
 func (s *server) runControlCentralNodesRegistration(ctx context.Context) {
-	socketCount := 1 // current node is registrated
+	socketCount := 0
 	tc := time.NewTicker(checkForRegisteredNodesInterval)
 	defer tc.Stop()
 	for {
@@ -328,13 +330,13 @@ func (s *server) runControlCentralNodesRegistration(ctx context.Context) {
 				s.log.Error(err.Error())
 				continue
 			}
-			if count != socketCount {
+			if socketCount != count {
 				err = s.broadcastSockets(ctx)
 				if err != nil {
 					s.log.Error(err.Error())
 				}
+				socketCount = count
 			}
-			socketCount = count
 		}
 	}
 }

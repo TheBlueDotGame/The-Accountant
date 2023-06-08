@@ -13,7 +13,7 @@ database:
 dataprovider:
   longevity: 300
 validator:
-  websocket: "ws://localhost:8080/ws"
+  central_node_address: "http://localhost:8080"
   port: 9090
   token: "jykkeD6Tr6xikkYwC805kVoFThm8VGEHStTFk1lIU6RgEf7p3vjFpPQFI3VP9SYeARjYh2jecMSYsmgddjZZcy32iySHijJQ"
 file_operator:

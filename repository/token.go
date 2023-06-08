@@ -44,7 +44,7 @@ func (db DataBase) WriteToken(ctx context.Context, tkn string, expirationDate in
 func (db DataBase) InvalidateToken(ctx context.Context, token string) error {
 	if _, err := db.inner.ExecContext(ctx,
 		"UPDATE tokens SET valid = false WHERE token = $1", token); err != nil {
-		return errors.Join(ErrRemoveFailed, err)
+		return errors.Join(ErrUpdateFailed, err)
 	}
 	return nil
 }

@@ -17,7 +17,7 @@ const (
 
 var (
 	ErrInsertFailed                            = fmt.Errorf("insert failed")
-	ErrRemoveFailed                            = fmt.Errorf("remove failed")
+	ErrUpdateFailed                            = fmt.Errorf("update failed")
 	ErrSelectFailed                            = fmt.Errorf("select failed")
 	ErrMoveFailed                              = fmt.Errorf("move failed")
 	ErrScanFailed                              = fmt.Errorf("scan failed")

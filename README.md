@@ -86,7 +86,7 @@ dataprovider:
 - The validator node:
 ```yaml
 validator:
-  websocket: "ws://localhost:8080/ws" # Websocket address of central node that validator will use for a discovery of the rest of the nodes.
+  central_node_address: "http://localhost:8080" # Address of the central node to get discovery information from.
   port: 9090 # Port on which the validator REST API is exposed.
   token: "jykkeD6Tr6xikkYwC805kVoFThm8VGEHStTFk1lIU6RgEf7p3vjFpPQFI3VP9SYeARjYh2jecMSYsmgddjZZcy32iySHijJQ" # Token required by the validator to connect to all the central nodes.
 ```
@@ -1617,6 +1617,7 @@ import "github.com/bartossh/Computantis/server"
 - [type CreateAddressResponse](<#type-createaddressresponse>)
 - [type DataToSignRequest](<#type-datatosignrequest>)
 - [type DataToSignResponse](<#type-datatosignresponse>)
+- [type DiscoverResponse](<#type-discoverresponse>)
 - [type GenerateTokenRequest](<#type-generatetokenrequest>)
 - [type GenerateTokenResponse](<#type-generatetokenresponse>)
 - [type IssuedTransactionsResponse](<#type-issuedtransactionsresponse>)
@@ -1651,21 +1652,22 @@ const (
 
 ```go
 const (
-    MetricsURL             = "/metrics"                        // URL to check service metrics
-    AliveURL               = "/alive"                          // URL to check if server is alive and version.
-    SearchAddressURL       = searchGroupURL + addressURL       // URL to search for address.
-    SearchBlockURL         = searchGroupURL + blockURL         // URL to search for block that contains transaction hash.
-    ProposeTransactionURL  = transactionGroupURL + proposeURL  // URL to propose transaction signed by the issuer.
-    ConfirmTransactionURL  = transactionGroupURL + confirmURL  // URL to confirm transaction signed by the receiver.
-    RejectTransactionURL   = transactionGroupURL + rejectURL   // URL to reject transaction signed only by issuer.
-    AwaitedTransactionURL  = transactionGroupURL + awaitedURL  // URL to get awaited transactions for the receiver.
-    IssuedTransactionURL   = transactionGroupURL + issuedURL   // URL to get issued transactions for the issuer.
-    RejectedTransactionURL = transactionGroupURL + rejectedURL // URL to get rejected transactions for given address.
-    ApprovedTransactionURL = transactionGroupURL + approvedURL // URL to get approved transactions for given address.
-    DataToValidateURL      = validatorGroupURL + dataURL       // URL to get data to validate address by signing rew message.
-    CreateAddressURL       = addressGroupURL + createURL       // URL to create new address.
-    GenerateTokenURL       = tokenGroupURL + generateURL       // URL to generate new token.
-    WsURL                  = "/ws"                             // URL to connect to websocket.
+    MetricsURL              = "/metrics"                        // URL to check service metrics
+    AliveURL                = "/alive"                          // URL to check if server is alive and version.
+    DiscoverCentralNodesURL = "/discover"                       // URL to discover all running central nodes.
+    SearchAddressURL        = searchGroupURL + addressURL       // URL to search for address.
+    SearchBlockURL          = searchGroupURL + blockURL         // URL to search for block that contains transaction hash.
+    ProposeTransactionURL   = transactionGroupURL + proposeURL  // URL to propose transaction signed by the issuer.
+    ConfirmTransactionURL   = transactionGroupURL + confirmURL  // URL to confirm transaction signed by the receiver.
+    RejectTransactionURL    = transactionGroupURL + rejectURL   // URL to reject transaction signed only by issuer.
+    AwaitedTransactionURL   = transactionGroupURL + awaitedURL  // URL to get awaited transactions for the receiver.
+    IssuedTransactionURL    = transactionGroupURL + issuedURL   // URL to get issued transactions for the issuer.
+    RejectedTransactionURL  = transactionGroupURL + rejectedURL // URL to get rejected transactions for given address.
+    ApprovedTransactionURL  = transactionGroupURL + approvedURL // URL to get approved transactions for given address.
+    DataToValidateURL       = validatorGroupURL + dataURL       // URL to get data to validate address by signing rew message.
+    CreateAddressURL        = addressGroupURL + createURL       // URL to create new address.
+    GenerateTokenURL        = tokenGroupURL + generateURL       // URL to generate new token.
+    WsURL                   = "/ws"                             // URL to connect to websocket.
 )
 ```
 
@@ -1687,7 +1689,7 @@ var (
 )
 ```
 
-## func [Run](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L168-L172>)
+## func [Run](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L169-L173>)
 
 ```go
 func Run(ctx context.Context, c Config, repo Repository, bookkeeping Bookkeeper, pv RandomDataProvideValidator, log logger.Logger, rxBlock ReactiveBlock, rxTrxIssued ReactiveTrxIssued) error
@@ -1695,7 +1697,7 @@ func Run(ctx context.Context, c Config, repo Repository, bookkeeping Bookkeeper,
 
 Run initializes routing and runs the server. To stop the server cancel the context. It blocks until the context is canceled.
 
-## type [AddressReaderWriterModifier](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L81-L89>)
+## type [AddressReaderWriterModifier](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L82-L90>)
 
 AddressReaderWriterModifier abstracts address operations.
 
@@ -1723,7 +1725,7 @@ type AliveResponse struct {
 }
 ```
 
-## type [ApprovedTransactionsResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L402-L405>)
+## type [ApprovedTransactionsResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L416-L419>)
 
 ApprovedTransactionsResponse is a response for approved transactions request.
 
@@ -1734,7 +1736,7 @@ type ApprovedTransactionsResponse struct {
 }
 ```
 
-## type [AwaitedTransactionsResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L254-L257>)
+## type [AwaitedTransactionsResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L268-L271>)
 
 AwaitedTransactionsResponse is a response for awaited transactions request.
 
@@ -1745,7 +1747,7 @@ type AwaitedTransactionsResponse struct {
 }
 ```
 
-## type [Bookkeeper](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L120-L125>)
+## type [Bookkeeper](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L121-L126>)
 
 Bookkeeper abstracts methods of the bookkeeping of a blockchain.
 
@@ -1758,7 +1760,7 @@ type Bookkeeper interface {
 }
 ```
 
-## type [Config](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L149-L153>)
+## type [Config](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L150-L154>)
 
 Config contains configuration of the server.
 
@@ -1770,7 +1772,7 @@ type Config struct {
 }
 ```
 
-## type [CreateAddressRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L472-L478>)
+## type [CreateAddressRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L486-L492>)
 
 CreateAddressRequest is a request to create an address.
 
@@ -1784,7 +1786,7 @@ type CreateAddressRequest struct {
 }
 ```
 
-## type [CreateAddressResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L482-L485>)
+## type [CreateAddressResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L496-L499>)
 
 Response for address creation request. If Success is true, Address contains created address in base58 format.
 
@@ -1795,7 +1797,7 @@ type CreateAddressResponse struct {
 }
 ```
 
-## type [DataToSignRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L451-L453>)
+## type [DataToSignRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L465-L467>)
 
 DataToSignRequest is a request to get data to sign for proving identity.
 
@@ -1805,7 +1807,7 @@ type DataToSignRequest struct {
 }
 ```
 
-## type [DataToSignResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L456-L458>)
+## type [DataToSignResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L470-L472>)
 
 DataToSignRequest is a response containing data to sign for proving identity.
 
@@ -1815,7 +1817,17 @@ type DataToSignResponse struct {
 }
 ```
 
-## type [GenerateTokenRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L536-L542>)
+## type [DiscoverResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L28-L30>)
+
+DiscoverResponse is a response containing all the central node registered in the current system.
+
+```go
+type DiscoverResponse struct {
+    Sockets []string `json:"sockets"`
+}
+```
+
+## type [GenerateTokenRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L550-L556>)
 
 GenerateTokenRequest is a request for token generation.
 
@@ -1829,7 +1841,7 @@ type GenerateTokenRequest struct {
 }
 ```
 
-## type [GenerateTokenResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L545>)
+## type [GenerateTokenResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L559>)
 
 GenerateTokenResponse is a response containing generated token.
 
@@ -1837,7 +1849,7 @@ GenerateTokenResponse is a response containing generated token.
 type GenerateTokenResponse = token.Token
 ```
 
-## type [IssuedTransactionsResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L304-L307>)
+## type [IssuedTransactionsResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L318-L321>)
 
 IssuedTransactionsResponse is a response for issued transactions request.
 
@@ -1862,7 +1874,7 @@ type Message struct {
 }
 ```
 
-## type [RandomDataProvideValidator](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L129-L132>)
+## type [RandomDataProvideValidator](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L130-L133>)
 
 RandomDataProvideValidator provides random binary data for signing to prove identity and the validator of data being valid and not expired.
 
@@ -1873,7 +1885,7 @@ type RandomDataProvideValidator interface {
 }
 ```
 
-## type [ReactiveBlock](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L136-L139>)
+## type [ReactiveBlock](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L137-L140>)
 
 ReactiveBlock provides reactive subscription to the blockchain. It allows to listen for the new blocks created by the Ladger.
 
@@ -1884,7 +1896,7 @@ type ReactiveBlock interface {
 }
 ```
 
-## type [ReactiveTrxIssued](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L143-L146>)
+## type [ReactiveTrxIssued](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L144-L147>)
 
 ReactiveTrxIssued provides reactive subscription to the issuer address. It allows to listen for the new blocks created by the Ladger.
 
@@ -1895,7 +1907,7 @@ type ReactiveTrxIssued interface {
 }
 ```
 
-## type [Register](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L73-L78>)
+## type [Register](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L74-L79>)
 
 Register abstracts node registration operations.
 
@@ -1908,7 +1920,7 @@ type Register interface {
 }
 ```
 
-## type [RejectedTransactionsResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L353-L356>)
+## type [RejectedTransactionsResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L367-L370>)
 
 RejectedTransactionsResponse is a response for rejected transactions request.
 
@@ -1919,7 +1931,7 @@ type RejectedTransactionsResponse struct {
 }
 ```
 
-## type [Repository](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L102-L112>)
+## type [Repository](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L103-L113>)
 
 Repository is the interface that wraps the basic CRUD and Search methods. Repository should be properly indexed to allow for transaction and block hash. as well as address public keys to be and unique and the hash lookup should be fast. Repository holds the blocks and transaction that are part of the blockchain.
 
@@ -1937,7 +1949,7 @@ type Repository interface {
 }
 ```
 
-## type [SearchAddressRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L28-L30>)
+## type [SearchAddressRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L42-L44>)
 
 SearchAddressRequest is a request to search for address.
 
@@ -1947,7 +1959,7 @@ type SearchAddressRequest struct {
 }
 ```
 
-## type [SearchAddressResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L33-L35>)
+## type [SearchAddressResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L47-L49>)
 
 SearchAddressResponse is a response for address search.
 
@@ -1957,7 +1969,7 @@ type SearchAddressResponse struct {
 }
 ```
 
-## type [SearchBlockRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L56-L59>)
+## type [SearchBlockRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L70-L73>)
 
 SearchBlockRequest is a request to search for block.
 
@@ -1968,7 +1980,7 @@ type SearchBlockRequest struct {
 }
 ```
 
-## type [SearchBlockResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L62-L64>)
+## type [SearchBlockResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L76-L78>)
 
 SearchBlockResponse is a response for block search.
 
@@ -1978,7 +1990,7 @@ type SearchBlockResponse struct {
 }
 ```
 
-## type [TokenWriteInvalidateChecker](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L92-L96>)
+## type [TokenWriteInvalidateChecker](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L93-L97>)
 
 TokenWriteInvalidateChecker abstracts token operations.
 
@@ -1990,7 +2002,7 @@ type TokenWriteInvalidateChecker interface {
 }
 ```
 
-## type [TransactionConfirmProposeResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L101-L104>)
+## type [TransactionConfirmProposeResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L115-L118>)
 
 TransactionConfirmProposeResponse is a response for transaction propose.
 
@@ -2001,7 +2013,7 @@ type TransactionConfirmProposeResponse struct {
 }
 ```
 
-## type [TransactionProposeRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L95-L98>)
+## type [TransactionProposeRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L109-L112>)
 
 TransactionProposeRequest is a request to propose a transaction.
 
@@ -2012,7 +2024,7 @@ type TransactionProposeRequest struct {
 }
 ```
 
-## type [TransactionsRejectRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L181-L187>)
+## type [TransactionsRejectRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L195-L201>)
 
 TransactionsRejectRequest is a request to reject a transactions.
 
@@ -2026,7 +2038,7 @@ type TransactionsRejectRequest struct {
 }
 ```
 
-## type [TransactionsRejectResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L190-L193>)
+## type [TransactionsRejectResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L204-L207>)
 
 TransactionsRejectResponse is a response for transaction reject.
 
@@ -2037,7 +2049,7 @@ type TransactionsRejectResponse struct {
 }
 ```
 
-## type [TransactionsRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L244-L251>)
+## type [TransactionsRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L258-L265>)
 
 TransactionsRequest is a request to get awaited, issued or rejected transactions for given address. Request contains of Address for which Transactions are requested, Data in binary format, Hash of Data and Signature of the Data to prove that entity doing the request is an Address owner.
 
@@ -2052,7 +2064,7 @@ type TransactionsRequest struct {
 }
 ```
 
-## type [Verifier](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L115-L117>)
+## type [Verifier](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L116-L118>)
 
 Verifier provides methods to verify the signature of the message.
 
@@ -2307,7 +2319,7 @@ var (
 )
 ```
 
-## func [Run](<https://github.com/bartossh/Computantis/blob/main/validator/validator.go#L97-L101>)
+## func [Run](<https://github.com/bartossh/Computantis/blob/main/validator/validator.go#L98-L102>)
 
 ```go
 func Run(ctx context.Context, cfg Config, srw StatusReadWriter, log logger.Logger, ver Verifier, wh WebhookCreateRemovePoster, wallet *wallet.Wallet, rdp server.RandomDataProvideValidator) error
@@ -2315,15 +2327,15 @@ func Run(ctx context.Context, cfg Config, srw StatusReadWriter, log logger.Logge
 
 Run initializes routing and runs the validator. To stop the validator cancel the context. Validator connects to the central server via websocket and listens for new blocks. It will block until the context is canceled.
 
-## type [Config](<https://github.com/bartossh/Computantis/blob/main/validator/validator.go#L74-L78>)
+## type [Config](<https://github.com/bartossh/Computantis/blob/main/validator/validator.go#L75-L79>)
 
 Config contains configuration of the validator.
 
 ```go
 type Config struct {
-    Token     string `yaml:"token"`     // token is used to authenticate validator in the central server
-    Websocket string `yaml:"websocket"` // websocket address of the central server
-    Port      int    `yaml:"port"`      // port on which validator will listen for http requests
+    Token              string `yaml:"token"`                // token is used to authenticate validator in the central server
+    CentralNodeAddress string `yaml:"central_node_address"` // address of the central server
+    Port               int    `yaml:"port"`                 // port on which validator will listen for http requests
 }
 ```
 
@@ -2352,7 +2364,7 @@ type CreateRemoveUpdateHookResponse struct {
 }
 ```
 
-## type [Status](<https://github.com/bartossh/Computantis/blob/main/validator/validator.go#L46-L52>)
+## type [Status](<https://github.com/bartossh/Computantis/blob/main/validator/validator.go#L47-L53>)
 
 Status is a status of each received block by the validator. It keeps track of invalid blocks in case of blockchain corruption.
 
@@ -2366,7 +2378,7 @@ type Status struct {
 }
 ```
 
-## type [StatusReadWriter](<https://github.com/bartossh/Computantis/blob/main/validator/validator.go#L55-L58>)
+## type [StatusReadWriter](<https://github.com/bartossh/Computantis/blob/main/validator/validator.go#L56-L59>)
 
 StatusReadWriter provides methods to bulk read and single write validator status.
 
@@ -2377,7 +2389,7 @@ type StatusReadWriter interface {
 }
 ```
 
-## type [Verifier](<https://github.com/bartossh/Computantis/blob/main/validator/validator.go#L69-L71>)
+## type [Verifier](<https://github.com/bartossh/Computantis/blob/main/validator/validator.go#L70-L72>)
 
 Verifier provides methods to verify the signature of the message.
 
@@ -2387,7 +2399,7 @@ type Verifier interface {
 }
 ```
 
-## type [WebhookCreateRemovePoster](<https://github.com/bartossh/Computantis/blob/main/validator/validator.go#L61-L66>)
+## type [WebhookCreateRemovePoster](<https://github.com/bartossh/Computantis/blob/main/validator/validator.go#L62-L67>)
 
 WebhookCreateRemovePoster provides methods to create, remove webhooks and post messages to webhooks.
 

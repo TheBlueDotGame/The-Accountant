@@ -174,7 +174,7 @@ func (sub *subscriber) actOnTransactions() {
 	for _, trx := range resReceivedTransactions.Transactions {
 
 		if err := sub.validateData(trx.Data); err != nil {
-			pterm.Error.Printf("Trx data [ %s ] rejected, %s", err)
+			pterm.Error.Printf("Trx data [ %s ] rejected, %s", trx.Data, err)
 
 			rejectReq := walletapi.RejectTransactionsRequest{
 				Transactions: []transaction.Transaction{trx},

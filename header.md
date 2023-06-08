@@ -86,7 +86,7 @@ dataprovider:
 - The validator node:
 ```yaml
 validator:
-  websocket: "ws://localhost:8080/ws" # Websocket address of central node that validator will use for a discovery of the rest of the nodes.
+  central_node_address: "http://localhost:8080" # Address of the central node to get discovery information from.
   port: 9090 # Port on which the validator REST API is exposed.
   token: "jykkeD6Tr6xikkYwC805kVoFThm8VGEHStTFk1lIU6RgEf7p3vjFpPQFI3VP9SYeARjYh2jecMSYsmgddjZZcy32iySHijJQ" # Token required by the validator to connect to all the central nodes.
 ```

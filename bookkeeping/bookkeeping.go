@@ -42,7 +42,7 @@ type TrxWriteReadMover interface {
 	MoveTransactionFromAwaitingToTemporary(ctx context.Context, trx *transaction.Transaction) error
 	ReadAwaitingTransactionsByReceiver(ctx context.Context, address string) ([]transaction.Transaction, error)
 	ReadAwaitingTransactionsByIssuer(ctx context.Context, address string) ([]transaction.Transaction, error)
-	ReadTemporaryTransactions(ctx context.Context) ([]transaction.Transaction, error)
+	ReadTemporaryTransactions(ctx context.Context, offset, limit int) ([]transaction.Transaction, error)
 }
 
 // BlockReader provides block read methods.
@@ -262,17 +262,21 @@ func (l *Ledger) VerifySignature(message, signature []byte, hash [32]byte, addre
 }
 
 func (l *Ledger) forgeTemporaryTrxs(ctx context.Context) error {
-	trxs, err := l.db.ReadTemporaryTransactions(ctx)
-	if err != nil {
-		return err
+	for {
+		trxs, err := l.db.ReadTemporaryTransactions(ctx, 0, l.config.BlockTransactionsSize)
+		if err != nil {
+			return err
+		}
+		if len(trxs) == 0 {
+			return nil
+		}
+		for _, trx := range trxs {
+			l.hashes = append(l.hashes, trx.Hash)
+		}
+		if len(l.hashes) > 0 {
+			l.forge(ctx)
+		}
 	}
-	for _, trx := range trxs {
-		l.hashes = append(l.hashes, trx.Hash)
-	}
-	if len(l.hashes) > 0 {
-		l.forge(ctx)
-	}
-	return nil
 }
 
 func (l *Ledger) forge(ctx context.Context) {
@@ -282,19 +286,17 @@ func (l *Ledger) forge(ctx context.Context) {
 		log.Fatal(err.Error())
 		return
 	}
-	for i := 0; i < len(l.hashes); i += l.config.BlockTransactionsSize {
-		hashes := l.hashes[i:min(i+l.config.BlockTransactionsSize, len(l.hashes))]
-		blcHash, err := l.savePublishNewBlock(ctx)
-		if err != nil {
-			msg := fmt.Sprintf("error while saving block: %s", err.Error())
-			log.Fatal(msg)
-			return
-		}
 
-		if err := l.db.MoveTransactionsFromTemporaryToPermanent(ctx, blcHash, hashes); err != nil {
-			msg := fmt.Sprintf("error while moving transactions from temporary to permanent: %s", err.Error())
-			log.Fatal(msg)
-		}
+	blcHash, err := l.savePublishNewBlock(ctx)
+	if err != nil {
+		msg := fmt.Sprintf("error while saving block: %s", err.Error())
+		log.Fatal(msg)
+		return
+	}
+
+	if err := l.db.MoveTransactionsFromTemporaryToPermanent(ctx, blcHash, l.hashes); err != nil {
+		msg := fmt.Sprintf("error while moving transactions from temporary to permanent: %s", err.Error())
+		log.Fatal(msg)
 	}
 	if err := sync.releaseLock(ctx); err != nil {
 		log.Fatal(err.Error())
@@ -340,7 +342,7 @@ func (l *Ledger) validatePartiallyTransaction(ctx context.Context, trx *transact
 		return ErrAddressNotExists
 	}
 
-	if err := l.vr.Verify(trx.GeMessage(), trx.IssuerSignature, trx.Hash, trx.IssuerAddress); err != nil {
+	if err := l.vr.Verify(trx.GetMessage(), trx.IssuerSignature, trx.Hash, trx.IssuerAddress); err != nil {
 		return err
 	}
 	return nil
@@ -363,11 +365,11 @@ func (l *Ledger) validateFullyTransaction(ctx context.Context, trx *transaction.
 		return ErrAddressNotExists
 	}
 
-	if err := l.vr.Verify(trx.GeMessage(), trx.IssuerSignature, trx.Hash, trx.IssuerAddress); err != nil {
+	if err := l.vr.Verify(trx.GetMessage(), trx.IssuerSignature, trx.Hash, trx.IssuerAddress); err != nil {
 		return err
 	}
 
-	if err := l.vr.Verify(trx.GeMessage(), trx.IssuerSignature, trx.Hash, trx.IssuerAddress); err != nil {
+	if err := l.vr.Verify(trx.GetMessage(), trx.ReceiverSignature, trx.Hash, trx.ReceiverAddress); err != nil {
 		return err
 	}
 

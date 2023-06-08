@@ -24,6 +24,20 @@ func (s *server) alive(c *fiber.Ctx) error {
 		})
 }
 
+// DiscoverResponse is a response containing all the central node registered in the current system.
+type DiscoverResponse struct {
+	Sockets []string `json:"sockets"`
+}
+
+func (s *server) discover(c *fiber.Ctx) error {
+	sockets, err := s.repo.ReadRegisteredNodesAddresses(c.Context())
+	if err != nil {
+		return fiber.ErrInternalServerError
+	}
+
+	return c.JSON(DiscoverResponse{Sockets: sockets})
+}
+
 // SearchAddressRequest is a request to search for address.
 type SearchAddressRequest struct {
 	Address string `json:"address"`
