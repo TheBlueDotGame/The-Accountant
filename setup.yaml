@@ -3,9 +3,9 @@ bookkeeper:
   block_write_timestamp: 300
   block_transactions_size: 1000
 server:
-  port: 8080
+  port: 8085
   data_size_bytes: 15000000
-  websocket_address: "ws://localhost:8080/ws"
+  websocket_address: "ws://localhost:8085/ws"
 database:
   conn_str: "postgres://computantis:computantis@localhost:5432"
   database_name: "computantis"
