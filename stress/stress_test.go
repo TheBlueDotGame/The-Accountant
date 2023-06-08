@@ -58,6 +58,34 @@ func TestFullClientApiCycle(t *testing.T) {
 				"w4NXZ8H5vebzhfgvfanFXzEIaoPwyWeZpZjRheo4LnG8vjWlMQeNVBz9lCMhTiBbj1PjVFWXHiUyZW21P7o6DkTlrx5x3tJ1",
 			},
 		},
+		{
+			port: "8080",
+			tokens: []string{
+				"80fda91a43989fa81347aa011e0f1e0fdde4eaabb408bf426166a62c80456c30",
+				"7147a8f255f49cb7693dcd19b6b46e139680d48a03e0a075ea237deb7e6bacc9",
+			},
+		},
+		{
+			port: "8085",
+			tokens: []string{
+				"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+				"7147a8f255f49cb7693dcd19b6b46e139680d48a03e0a075ea237deb7e6bacc1",
+			},
+		},
+		{
+			port: "8080",
+			tokens: []string{
+				"7147a8f255f49cb7693dcd19b6b46e139680d48a03e0a075ea237deb7e6bac22",
+				"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b543",
+			},
+		},
+		{
+			port: "8085",
+			tokens: []string{
+				"7147a8f255f49cb7693dcd19b6b46e139680d48a03e0a075ea237deb7e6bac11",
+				"11b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b543",
+			},
+		},
 	}
 
 	var wg sync.WaitGroup

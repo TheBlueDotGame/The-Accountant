@@ -8,3 +8,11 @@ INSERT INTO tokens (token, valid, expiration_date) VALUES ('ZepH88DsFcoPoZUzIE0A
 INSERT INTO tokens (token, valid, expiration_date) VALUES ('w4NXZ8H5vebzhfgvfanFXzEIaoPwyWeZpZjRheo4LnG8vjWlMQeNVBz9lCMhTiBbj1PjVFWXHiUyZW21P7o6DkTlrx5x3tJ1', true, 9223372036854775807);
 INSERT INTO tokens (token, valid, expiration_date) VALUES ('a6858eLd1GHvoGXrq6nNhEiHrEmkRN3tXu5dYqCjiMUL9sRfUz1iBns0kEnPizzrLfj2TZGU2Wel52fJ6YDNiVrdtvf2kZm4', true, 9223372036854775807);
 INSERT INTO tokens (token, valid, expiration_date) VALUES ('80fda91a43989fa81347aa011e0f1e0fdde4eaabb408bf426166a62c80456c30', true, 9223372036854775807);
+INSERT INTO tokens (token, valid, expiration_date) VALUES ('7147a8f255f49cb7693dcd19b6b46e139680d48a03e0a075ea237deb7e6bacc9', true, 9223372036854775807);
+INSERT INTO tokens (token, valid, expiration_date) VALUES ('e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', true, 9223372036854775807);
+INSERT INTO tokens (token, valid, expiration_date) VALUES ('7147a8f255f49cb7693dcd19b6b46e139680d48a03e0a075ea237deb7e6bacc1', true, 9223372036854775807);
+INSERT INTO tokens (token, valid, expiration_date) VALUES ('7147a8f255f49cb7693dcd19b6b46e139680d48a03e0a075ea237deb7e6bac22', true, 9223372036854775807);
+INSERT INTO tokens (token, valid, expiration_date) VALUES ('e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b543', true, 9223372036854775807);
+INSERT INTO tokens (token, valid, expiration_date) VALUES ('7147a8f255f49cb7693dcd19b6b46e139680d48a03e0a075ea237deb7e6bac11', true, 9223372036854775807);
+INSERT INTO tokens (token, valid, expiration_date) VALUES ('11b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b543', true, 9223372036854775807);
+

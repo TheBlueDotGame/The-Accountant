@@ -136,7 +136,7 @@ type Ledger struct {
 	id           string
 	config       Config
 	hashC        chan [32]byte
-	hashes       [][32]byte
+	hashes       map[[32]byte]struct{}
 	db           DataBaseProvider
 	bc           BlockReadWriter
 	ac           AddressChecker
@@ -169,6 +169,7 @@ func New(
 		id:           primitive.NewObjectID().Hex(),
 		config:       config,
 		hashC:        make(chan [32]byte, config.BlockTransactionsSize),
+		hashes:       make(map[[32]byte]struct{}),
 		db:           db,
 		bc:           bc,
 		ac:           ac,
@@ -207,9 +208,11 @@ func (l *Ledger) Run(ctx context.Context) {
 				}
 				return
 			case h := <-l.hashC:
-				l.hashes = append(l.hashes, h)
-				if len(l.hashes) == l.config.BlockTransactionsSize {
-					l.forge(ctx)
+				if _, ok := l.hashes[h]; !ok {
+					l.hashes[h] = struct{}{}
+					if len(l.hashes) == l.config.BlockTransactionsSize {
+						l.forge(ctx)
+					}
 				}
 			case <-ticker.C:
 				if len(l.hashes) > 0 {
@@ -271,11 +274,10 @@ func (l *Ledger) forgeTemporaryTrxs(ctx context.Context) error {
 			return nil
 		}
 		for _, trx := range trxs {
-			l.hashes = append(l.hashes, trx.Hash)
+			l.hashes[trx.Hash] = struct{}{}
 		}
-		if len(l.hashes) > 0 {
-			l.forge(ctx)
-		}
+		l.forge(ctx)
+		l.cleanHashes()
 	}
 }
 
@@ -287,14 +289,19 @@ func (l *Ledger) forge(ctx context.Context) {
 		return
 	}
 
-	blcHash, err := l.savePublishNewBlock(ctx)
+	hashes := make([][32]byte, 0, len(l.hashes))
+	for h := range l.hashes {
+		hashes = append(hashes, h)
+	}
+
+	blcHash, err := l.savePublishNewBlock(ctx, hashes)
 	if err != nil {
 		msg := fmt.Sprintf("error while saving block: %s", err.Error())
 		log.Fatal(msg)
 		return
 	}
 
-	if err := l.db.MoveTransactionsFromTemporaryToPermanent(ctx, blcHash, l.hashes); err != nil {
+	if err := l.db.MoveTransactionsFromTemporaryToPermanent(ctx, blcHash, hashes); err != nil {
 		msg := fmt.Sprintf("error while moving transactions from temporary to permanent: %s", err.Error())
 		log.Fatal(msg)
 	}
@@ -304,17 +311,17 @@ func (l *Ledger) forge(ctx context.Context) {
 }
 
 func (l *Ledger) cleanHashes() {
-	l.hashes = make([][32]byte, 0, l.config.BlockTransactionsSize)
+	l.hashes = make(map[[32]byte]struct{}, l.config.BlockTransactionsSize)
 }
 
-func (l *Ledger) savePublishNewBlock(ctx context.Context) ([32]byte, error) {
+func (l *Ledger) savePublishNewBlock(ctx context.Context, hashes [][32]byte) ([32]byte, error) {
 	h, idx, err := l.bc.LastBlockHashIndex(ctx)
 	if err != nil {
 		return [32]byte{}, err
 	}
 
 	idx++
-	nb := block.New(l.config.Difficulty, idx, h, l.hashes)
+	nb := block.New(l.config.Difficulty, idx, h, hashes)
 
 	if err := l.bc.WriteBlock(ctx, nb); err != nil {
 		return [32]byte{}, err

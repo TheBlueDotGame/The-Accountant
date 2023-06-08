@@ -572,7 +572,7 @@ func New(config Config, bc BlockReadWriter, db DataBaseProvider, ac AddressCheck
 
 New creates new Ledger if config is valid or returns error otherwise.
 
-### func \(\*Ledger\) [Run](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L187>)
+### func \(\*Ledger\) [Run](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L188>)
 
 ```go
 func (l *Ledger) Run(ctx context.Context)
@@ -580,7 +580,7 @@ func (l *Ledger) Run(ctx context.Context)
 
 Run runs the Ladger engine that writes blocks to the blockchain repository. Run starts a goroutine and can be stopped by cancelling the context. It is non\-blocking and concurrent safe.
 
-### func \(\*Ledger\) [VerifySignature](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L260>)
+### func \(\*Ledger\) [VerifySignature](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L263>)
 
 ```go
 func (l *Ledger) VerifySignature(message, signature []byte, hash [32]byte, address string) error
@@ -588,7 +588,7 @@ func (l *Ledger) VerifySignature(message, signature []byte, hash [32]byte, addre
 
 VerifySignature verifies signature of the message.
 
-### func \(\*Ledger\) [WriteCandidateTransaction](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L245>)
+### func \(\*Ledger\) [WriteCandidateTransaction](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L248>)
 
 ```go
 func (l *Ledger) WriteCandidateTransaction(ctx context.Context, trx *transaction.Transaction) error
@@ -596,7 +596,7 @@ func (l *Ledger) WriteCandidateTransaction(ctx context.Context, trx *transaction
 
 WriteCandidateTransaction validates and writes a transaction to the repository. Transaction is not yet a part of the blockchain at this point. Ladger will perform all the necessary checks and validations before writing it to the repository. The candidate needs to be signed by the receiver later in the process  to be placed as a candidate in the blockchain.
 
-### func \(\*Ledger\) [WriteIssuerSignedTransactionForReceiver](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L224-L227>)
+### func \(\*Ledger\) [WriteIssuerSignedTransactionForReceiver](<https://github.com/bartossh/Computantis/blob/main/bookkeeping/bookkeeping.go#L227-L230>)
 
 ```go
 func (l *Ledger) WriteIssuerSignedTransactionForReceiver(ctx context.Context, trx *transaction.Transaction) error
@@ -657,7 +657,7 @@ type TrxWriteReadMover interface {
     MoveTransactionFromAwaitingToTemporary(ctx context.Context, trx *transaction.Transaction) error
     ReadAwaitingTransactionsByReceiver(ctx context.Context, address string) ([]transaction.Transaction, error)
     ReadAwaitingTransactionsByIssuer(ctx context.Context, address string) ([]transaction.Transaction, error)
-    ReadTemporaryTransactions(ctx context.Context) ([]transaction.Transaction, error)
+    ReadTemporaryTransactions(ctx context.Context, offset, limit int) ([]transaction.Transaction, error)
 }
 ```
 
@@ -1158,7 +1158,7 @@ import "github.com/bartossh/Computantis/repository"
   - [func (db DataBase) ReadLastNValidatorStatuses(ctx context.Context, last int64) ([]validator.Status, error)](<#func-database-readlastnvalidatorstatuses>)
   - [func (db DataBase) ReadRegisteredNodesAddresses(ctx context.Context) ([]string, error)](<#func-database-readregisterednodesaddresses>)
   - [func (db DataBase) ReadRejectedTransactionsPagginate(ctx context.Context, address string, offset, limit int) ([]transaction.Transaction, error)](<#func-database-readrejectedtransactionspagginate>)
-  - [func (db DataBase) ReadTemporaryTransactions(ctx context.Context) ([]transaction.Transaction, error)](<#func-database-readtemporarytransactions>)
+  - [func (db DataBase) ReadTemporaryTransactions(ctx context.Context, offset, limit int) ([]transaction.Transaction, error)](<#func-database-readtemporarytransactions>)
   - [func (db DataBase) RegisterNode(ctx context.Context, n, ws string) error](<#func-database-registernode>)
   - [func (db DataBase) RejectTransactions(ctx context.Context, receiver string, trxs []transaction.Transaction) error](<#func-database-rejecttransactions>)
   - [func (db DataBase) RemoveFromBlockchainLocks(ctx context.Context, nodeID string) error](<#func-database-removefromblockchainlocks>)
@@ -1190,7 +1190,7 @@ const (
 ```go
 var (
     ErrInsertFailed                            = fmt.Errorf("insert failed")
-    ErrRemoveFailed                            = fmt.Errorf("remove failed")
+    ErrUpdateFailed                            = fmt.Errorf("update failed")
     ErrSelectFailed                            = fmt.Errorf("select failed")
     ErrMoveFailed                              = fmt.Errorf("move failed")
     ErrScanFailed                              = fmt.Errorf("scan failed")
@@ -1294,7 +1294,7 @@ func (db DataBase) FindAddress(ctx context.Context, search string, limit int) ([
 
 FindAddress finds address in the database.
 
-### func \(DataBase\) [FindTransactionInBlockHash](<https://github.com/bartossh/Computantis/blob/main/repository/transaction.go#L137>)
+### func \(DataBase\) [FindTransactionInBlockHash](<https://github.com/bartossh/Computantis/blob/main/repository/transaction.go#L154>)
 
 ```go
 func (db DataBase) FindTransactionInBlockHash(ctx context.Context, trxHash [32]byte) ([32]byte, error)
@@ -1350,7 +1350,7 @@ func (db DataBase) LastBlock(ctx context.Context) (block.Block, error)
 
 LastBlock returns last block from the database.
 
-### func \(DataBase\) [MoveTransactionFromAwaitingToTemporary](<https://github.com/bartossh/Computantis/blob/main/repository/transaction.go#L20>)
+### func \(DataBase\) [MoveTransactionFromAwaitingToTemporary](<https://github.com/bartossh/Computantis/blob/main/repository/transaction.go#L21>)
 
 ```go
 func (db DataBase) MoveTransactionFromAwaitingToTemporary(ctx context.Context, trx *transaction.Transaction) error
@@ -1358,7 +1358,7 @@ func (db DataBase) MoveTransactionFromAwaitingToTemporary(ctx context.Context, t
 
 MoveTransactionFromAwaitingToTemporary moves awaiting transaction marking it as temporary.
 
-### func \(DataBase\) [MoveTransactionsFromTemporaryToPermanent](<https://github.com/bartossh/Computantis/blob/main/repository/transaction.go#L107>)
+### func \(DataBase\) [MoveTransactionsFromTemporaryToPermanent](<https://github.com/bartossh/Computantis/blob/main/repository/transaction.go#L123>)
 
 ```go
 func (db DataBase) MoveTransactionsFromTemporaryToPermanent(ctx context.Context, blockHash [32]byte, hashes [][32]byte) error
@@ -1374,7 +1374,7 @@ func (db DataBase) Ping(ctx context.Context) error
 
 Ping checks if the connection to the database is still alive.
 
-### func \(DataBase\) [ReadApprovedTransactions](<https://github.com/bartossh/Computantis/blob/main/repository/transaction.go#L72>)
+### func \(DataBase\) [ReadApprovedTransactions](<https://github.com/bartossh/Computantis/blob/main/repository/transaction.go#L80>)
 
 ```go
 func (db DataBase) ReadApprovedTransactions(ctx context.Context, address string, offset, limit int) ([]transaction.Transaction, error)
@@ -1430,13 +1430,13 @@ func (db DataBase) ReadRejectedTransactionsPagginate(ctx context.Context, addres
 
 ReadRejectedTransactionsPagginate reads rejected transactions with pagination.
 
-### func \(DataBase\) [ReadTemporaryTransactions](<https://github.com/bartossh/Computantis/blob/main/repository/transaction.go#L77>)
+### func \(DataBase\) [ReadTemporaryTransactions](<https://github.com/bartossh/Computantis/blob/main/repository/transaction.go#L93>)
 
 ```go
-func (db DataBase) ReadTemporaryTransactions(ctx context.Context) ([]transaction.Transaction, error)
+func (db DataBase) ReadTemporaryTransactions(ctx context.Context, offset, limit int) ([]transaction.Transaction, error)
 ```
 
-ReadTemporaryTransactions reads all transactions that are marked as temporary.
+ReadTemporaryTransactions reads transactions that are marked as temporary with offset and limit.
 
 ### func \(DataBase\) [RegisterNode](<https://github.com/bartossh/Computantis/blob/main/repository/node.go#L9>)
 
@@ -1446,7 +1446,7 @@ func (db DataBase) RegisterNode(ctx context.Context, n, ws string) error
 
 RegisterNode registers node in the database.
 
-### func \(DataBase\) [RejectTransactions](<https://github.com/bartossh/Computantis/blob/main/repository/transaction.go#L149>)
+### func \(DataBase\) [RejectTransactions](<https://github.com/bartossh/Computantis/blob/main/repository/transaction.go#L166>)
 
 ```go
 func (db DataBase) RejectTransactions(ctx context.Context, receiver string, trxs []transaction.Transaction) error
@@ -2156,7 +2156,7 @@ import "github.com/bartossh/Computantis/transaction"
 - [type Signer](<#type-signer>)
 - [type Transaction](<#type-transaction>)
   - [func New(subject string, data []byte, receiverAddress string, issuer Signer) (Transaction, error)](<#func-new>)
-  - [func (t *Transaction) GeMessage() []byte](<#func-transaction-gemessage>)
+  - [func (t *Transaction) GetMessage() []byte](<#func-transaction-getmessage>)
   - [func (t *Transaction) Sign(receiver Signer, v Verifier) ([32]byte, error)](<#func-transaction-sign>)
 - [type TransactionAwaitingReceiverSignature](<#type-transactionawaitingreceiversignature>)
 - [type TransactionInBlock](<#type-transactioninblock>)
@@ -2219,10 +2219,10 @@ func New(subject string, data []byte, receiverAddress string, issuer Signer) (Tr
 
 New creates new transaction signed by the issuer.
 
-### func \(\*Transaction\) [GeMessage](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L121>)
+### func \(\*Transaction\) [GetMessage](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L121>)
 
 ```go
-func (t *Transaction) GeMessage() []byte
+func (t *Transaction) GetMessage() []byte
 ```
 
 GeMessage returns message used for signature validation.
@@ -2849,7 +2849,7 @@ func NewClient(apiRoot string, timeout time.Duration, fw transaction.Verifier, w
 
 NewClient creates a new rest client.
 
-### func \(\*Client\) [Address](<https://github.com/bartossh/Computantis/blob/main/walletmiddleware/walletmiddleware.go#L127>)
+### func \(\*Client\) [Address](<https://github.com/bartossh/Computantis/blob/main/walletmiddleware/walletmiddleware.go#L131>)
 
 ```go
 func (c *Client) Address() (string, error)
@@ -2857,7 +2857,7 @@ func (c *Client) Address() (string, error)
 
 Address reads the wallet address. Address is a string representation of wallet public key.
 
-### func \(\*Client\) [ConfirmTransaction](<https://github.com/bartossh/Computantis/blob/main/walletmiddleware/walletmiddleware.go#L173>)
+### func \(\*Client\) [ConfirmTransaction](<https://github.com/bartossh/Computantis/blob/main/walletmiddleware/walletmiddleware.go#L177>)
 
 ```go
 func (c *Client) ConfirmTransaction(trx *transaction.Transaction) error
@@ -2865,13 +2865,13 @@ func (c *Client) ConfirmTransaction(trx *transaction.Transaction) error
 
 ConfirmTransaction confirms transaction by signing it with the wallet and then sending it to the API server.
 
-### func \(\*Client\) [CreateWebhook](<https://github.com/bartossh/Computantis/blob/main/walletmiddleware/walletmiddleware.go#L443>)
+### func \(\*Client\) [CreateWebhook](<https://github.com/bartossh/Computantis/blob/main/walletmiddleware/walletmiddleware.go#L447>)
 
 ```go
 func (c *Client) CreateWebhook(webHookURL string) error
 ```
 
-### func \(\*Client\) [DataToSign](<https://github.com/bartossh/Computantis/blob/main/walletmiddleware/walletmiddleware.go#L416>)
+### func \(\*Client\) [DataToSign](<https://github.com/bartossh/Computantis/blob/main/walletmiddleware/walletmiddleware.go#L420>)
 
 ```go
 func (c *Client) DataToSign() (server.DataToSignResponse, error)
@@ -2879,7 +2879,7 @@ func (c *Client) DataToSign() (server.DataToSignResponse, error)
 
 DataToSign returns data to sign for the current wallet. Data to sign are randomly generated bytes by the server and stored in pair with the address. Signing this data is a proof that the signing public address is the owner of the wallet a making request.
 
-### func \(\*Client\) [FlushWalletFromMemory](<https://github.com/bartossh/Computantis/blob/main/walletmiddleware/walletmiddleware.go#L491>)
+### func \(\*Client\) [FlushWalletFromMemory](<https://github.com/bartossh/Computantis/blob/main/walletmiddleware/walletmiddleware.go#L495>)
 
 ```go
 func (c *Client) FlushWalletFromMemory()
@@ -2887,7 +2887,7 @@ func (c *Client) FlushWalletFromMemory()
 
 FlushWalletFromMemory flushes the wallet from the memory. Do it after you have saved the wallet to the file. It is recommended to use this just before logging out from the UI or closing the front end app that.
 
-### func \(\*Client\) [GenerateToken](<https://github.com/bartossh/Computantis/blob/main/walletmiddleware/walletmiddleware.go#L362>)
+### func \(\*Client\) [GenerateToken](<https://github.com/bartossh/Computantis/blob/main/walletmiddleware/walletmiddleware.go#L366>)
 
 ```go
 func (c *Client) GenerateToken(t time.Time) (token.Token, error)
@@ -2903,7 +2903,7 @@ func (c *Client) NewWallet(token string) error
 
 NewWallet creates a new wallet and sends a request to the API server to validate the wallet.
 
-### func \(\*Client\) [ProposeTransaction](<https://github.com/bartossh/Computantis/blob/main/walletmiddleware/walletmiddleware.go#L140>)
+### func \(\*Client\) [ProposeTransaction](<https://github.com/bartossh/Computantis/blob/main/walletmiddleware/walletmiddleware.go#L144>)
 
 ```go
 func (c *Client) ProposeTransaction(receiverAddr string, subject string, data []byte) error
@@ -2911,7 +2911,7 @@ func (c *Client) ProposeTransaction(receiverAddr string, subject string, data []
 
 ProposeTransaction sends a Transaction proposal to the API server for provided receiver address. Subject describes how to read the data from the transaction. For example, if the subject is "json", then the data can by decoded to map\[sting\]any, when subject "pdf" than it should be decoded by proper pdf decoder, when "csv" then it should be decoded by proper csv decoder. Client is not responsible for decoding the data, it is only responsible for sending the data to the API server.
 
-### func \(\*Client\) [ReadApprovedTransactions](<https://github.com/bartossh/Computantis/blob/main/walletmiddleware/walletmiddleware.go#L329>)
+### func \(\*Client\) [ReadApprovedTransactions](<https://github.com/bartossh/Computantis/blob/main/walletmiddleware/walletmiddleware.go#L333>)
 
 ```go
 func (c *Client) ReadApprovedTransactions(offset, limit int) ([]transaction.Transaction, error)
@@ -2919,7 +2919,7 @@ func (c *Client) ReadApprovedTransactions(offset, limit int) ([]transaction.Tran
 
 ReadApprovedTransactions reads approved transactions belonging to current wallet from the API server. Method allows for paggination with offset and limit.
 
-### func \(\*Client\) [ReadIssuedTransactions](<https://github.com/bartossh/Computantis/blob/main/walletmiddleware/walletmiddleware.go#L265>)
+### func \(\*Client\) [ReadIssuedTransactions](<https://github.com/bartossh/Computantis/blob/main/walletmiddleware/walletmiddleware.go#L269>)
 
 ```go
 func (c *Client) ReadIssuedTransactions() ([]transaction.Transaction, error)
@@ -2927,7 +2927,7 @@ func (c *Client) ReadIssuedTransactions() ([]transaction.Transaction, error)
 
 ReadIssuedTransactions reads all issued transactions belonging to current wallet from the API server.
 
-### func \(\*Client\) [ReadRejectedTransactions](<https://github.com/bartossh/Computantis/blob/main/walletmiddleware/walletmiddleware.go#L296>)
+### func \(\*Client\) [ReadRejectedTransactions](<https://github.com/bartossh/Computantis/blob/main/walletmiddleware/walletmiddleware.go#L300>)
 
 ```go
 func (c *Client) ReadRejectedTransactions(offset, limit int) ([]transaction.Transaction, error)
@@ -2935,7 +2935,7 @@ func (c *Client) ReadRejectedTransactions(offset, limit int) ([]transaction.Tran
 
 ReadRejectedTransactions reads rejected transactions belonging to current wallet from the API server. Method allows for paggination with offset and limit.
 
-### func \(\*Client\) [ReadWaitingTransactions](<https://github.com/bartossh/Computantis/blob/main/walletmiddleware/walletmiddleware.go#L235>)
+### func \(\*Client\) [ReadWaitingTransactions](<https://github.com/bartossh/Computantis/blob/main/walletmiddleware/walletmiddleware.go#L239>)
 
 ```go
 func (c *Client) ReadWaitingTransactions() ([]transaction.Transaction, error)
@@ -2943,7 +2943,7 @@ func (c *Client) ReadWaitingTransactions() ([]transaction.Transaction, error)
 
 ReadWaitingTransactions reads all waiting transactions belonging to current wallet from the API server.
 
-### func \(\*Client\) [ReadWalletFromFile](<https://github.com/bartossh/Computantis/blob/main/walletmiddleware/walletmiddleware.go#L403>)
+### func \(\*Client\) [ReadWalletFromFile](<https://github.com/bartossh/Computantis/blob/main/walletmiddleware/walletmiddleware.go#L407>)
 
 ```go
 func (c *Client) ReadWalletFromFile() error
@@ -2951,7 +2951,7 @@ func (c *Client) ReadWalletFromFile() error
 
 ReadWalletFromFile reads the wallet from the file in the path.
 
-### func \(\*Client\) [RejectTransactions](<https://github.com/bartossh/Computantis/blob/main/walletmiddleware/walletmiddleware.go#L202>)
+### func \(\*Client\) [RejectTransactions](<https://github.com/bartossh/Computantis/blob/main/walletmiddleware/walletmiddleware.go#L206>)
 
 ```go
 func (c *Client) RejectTransactions(trxs []transaction.Transaction) ([][32]byte, error)
@@ -2959,7 +2959,7 @@ func (c *Client) RejectTransactions(trxs []transaction.Transaction) ([][32]byte,
 
 RejectTransactions rejects given transactions. Transaction will be rejected if the transaction receiver is a given wellet public address. Returns hashes of all the rejected transactions or error otherwise.
 
-### func \(\*Client\) [SaveWalletToFile](<https://github.com/bartossh/Computantis/blob/main/walletmiddleware/walletmiddleware.go#L394>)
+### func \(\*Client\) [SaveWalletToFile](<https://github.com/bartossh/Computantis/blob/main/walletmiddleware/walletmiddleware.go#L398>)
 
 ```go
 func (c *Client) SaveWalletToFile() error
@@ -2967,7 +2967,7 @@ func (c *Client) SaveWalletToFile() error
 
 SaveWalletToFile saves the wallet to the file in the path.
 
-### func \(\*Client\) [Sign](<https://github.com/bartossh/Computantis/blob/main/walletmiddleware/walletmiddleware.go#L435>)
+### func \(\*Client\) [Sign](<https://github.com/bartossh/Computantis/blob/main/walletmiddleware/walletmiddleware.go#L439>)
 
 ```go
 func (c *Client) Sign(d []byte) (digest [32]byte, signature []byte, err error)

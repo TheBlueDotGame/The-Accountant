@@ -311,7 +311,7 @@ func (a *app) processBlock(_ context.Context, b *block.Block, remoteAddress stri
 	if err != nil {
 		a.log.Error(fmt.Sprintf("remote node address [ %s ], %s ", remoteAddress, err.Error()))
 	}
-	a.log.Info(fmt.Sprintf("remote address: %s => last block idx: %v | new block idx %v \n", remoteAddress, a.lastBlock.Index, b.Index))
+	a.log.Info(fmt.Sprintf("block from [ %s ] :: last idx [ %v ] :: new idx [ %v ] \n", remoteAddress, a.lastBlock.Index, b.Index))
 	a.lastBlock = *b
 
 	go a.wh.PostWebhookBlock(b) // post concurrently
