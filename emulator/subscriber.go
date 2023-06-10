@@ -8,15 +8,17 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bartossh/Computantis/block"
 	"github.com/bartossh/Computantis/httpclient"
 	"github.com/bartossh/Computantis/transaction"
 	"github.com/bartossh/Computantis/walletapi"
 	"github.com/bartossh/Computantis/webhooks"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/pterm/pterm"
 )
+
+const maxTrxInBuffer = 25
 
 const (
 	header     = "SubscriberEmulator"
@@ -36,8 +38,11 @@ var (
 // Message holds timestamp info.
 type Message struct {
 	Timestamp   int64                   `json:"timestamp"`
+	Status      string                  `json:"status"`
 	Transaction transaction.Transaction `json:"transaction"`
-	Block       block.Block             `json:"block"`
+	Volts       int                     `json:"volts"`
+	MiliAmps    int                     `json:"mili_amps"`
+	Power       int                     `json:"power"`
 }
 
 type subscriber struct {
@@ -53,7 +58,6 @@ type subscriber struct {
 // To stop the subscriber cancel the context.
 func RunSubscriber(ctx context.Context, cancel context.CancelFunc, config Config, data []byte) error {
 	defer cancel()
-
 	var m [2]Measurement
 	if err := json.Unmarshal(data, &m); err != nil {
 		return fmt.Errorf("cannot unmarshal data, %s", err)
@@ -86,7 +90,7 @@ func RunSubscriber(ctx context.Context, cancel context.CancelFunc, config Config
 		AppName:       apiVersion,
 		Concurrency:   16,
 	})
-
+	router.Use(cors.New())
 	router.Use(recover.New())
 	router.Post(WebHookEndpointTransaction, s.hookTransaction)
 	router.Post(WebHookEndpointTransaction, s.hookTransaction)
@@ -139,12 +143,7 @@ func (sub *subscriber) messages(c *fiber.Ctx) error {
 	sub.mux.Lock()
 	defer sub.mux.Unlock()
 	c.Set("Content-Type", "application/json")
-	buff := make([]Message, 0, len(sub.buffer))
-	for _, m := range sub.buffer {
-		buff = append(buff, m)
-	}
-	sub.buffer = make([]Message, 0, len(sub.buffer))
-	return c.JSON(buff)
+	return c.JSON(sub.buffer)
 }
 
 func (sub *subscriber) hookBlock(ctx *fiber.Ctx) error {
@@ -160,12 +159,6 @@ func (sub *subscriber) hookBlock(ctx *fiber.Ctx) error {
 
 	sub.mux.Lock()
 	defer sub.mux.Unlock()
-
-	sub.buffer = append(sub.buffer, Message{
-		Timestamp:   time.Now().UnixNano(),
-		Transaction: transaction.Transaction{},
-		Block:       res.Block,
-	})
 
 	hookRes["ack"] = true
 	hookRes["ok"] = true
@@ -187,7 +180,7 @@ func (sub *subscriber) hookTransaction(ctx *fiber.Ctx) error {
 	defer sub.mux.Unlock()
 
 	if res.Time.Before(sub.lastTransactionTime) {
-		pterm.Error.Println("time is corrupted")
+		pterm.Error.Println("Time is corrupted.")
 		hookRes["ack"] = true
 		hookRes["ok"] = false
 		return ctx.JSON(hookRes)
@@ -224,15 +217,8 @@ func (sub *subscriber) actOnTransactions() {
 	var confirmRes walletapi.ConfirmTransactionResponse
 
 	for _, trx := range resReceivedTransactions.Transactions {
-
-		sub.buffer = append(sub.buffer, Message{
-			Timestamp:   time.Now().UnixNano(),
-			Block:       block.Block{},
-			Transaction: trx,
-		})
-
 		if err := sub.validateData(trx.Data); err != nil {
-			pterm.Error.Printf("Trx data [ %s ] rejected, %s", trx.Data, err)
+			pterm.Warning.Printf("Trx [ %x ] data [ %s ] rejected, %s.\n", trx.Hash[:], trx.Data, err)
 
 			rejectReq := walletapi.RejectTransactionsRequest{
 				Transactions: []transaction.Transaction{trx},
@@ -240,12 +226,14 @@ func (sub *subscriber) actOnTransactions() {
 			var rejectRes walletapi.RejectedTransactionResponse
 			url := fmt.Sprintf("%s%s", sub.pub.clientURL, walletapi.RejectTransactions)
 			if err := httpclient.MakePost(sub.pub.timeout, url, rejectReq, &rejectRes); err != nil {
-				pterm.Error.Printf("Transaction cannot be rejected, %s\n", err)
+				pterm.Error.Printf("Transaction faild to be rejected due to: %s.\n", err)
 			}
+
+			sub.appendToBuffer("rejected", trx)
 			continue
 		}
 
-		pterm.Info.Printf("Trx data: [ %s ]\n", string(trx.Data))
+		pterm.Info.Printf("Trx [ %x ] data [ %s ] accepted.\n", trx.Hash[:], string(trx.Data))
 
 		confirmReq := walletapi.ConfirmTransactionRequest{
 			Transaction: trx,
@@ -253,26 +241,29 @@ func (sub *subscriber) actOnTransactions() {
 
 		url := fmt.Sprintf("%s%s", sub.pub.clientURL, walletapi.ConfirmTransaction)
 		if err := httpclient.MakePost(sub.pub.timeout, url, confirmReq, &confirmRes); err != nil {
-			pterm.Error.Printf("Transaction cannot be signed, %s\n", err)
+			pterm.Error.Printf("Transaction failed to be signed due to: %s.\n", err)
 			continue
 		}
 
 		if !confirmRes.Ok {
 			if confirmRes.Err != "" {
-				pterm.Error.Printf("Transaction cannot be signed, %s\n", confirmRes.Err)
+				pterm.Error.Printf("Transaction cannot be signed, %.s\n", confirmRes.Err)
 				continue
 			}
 			pterm.Error.Println("Transaction cannot be signed.")
 			continue
 		}
+
+		sub.appendToBuffer("accepted", trx)
+
 		counter++
 	}
 
 	if counter == len(resReceivedTransactions.Transactions) {
-		pterm.Info.Printf("Signed all of [ %v ] received transactions\n", counter)
+		pterm.Info.Printf("Signed all of [ %v ] received transactions.\n", counter)
 		return
 	}
-	pterm.Warning.Printf("Signed [ %v ] of [ %v ] received transactions\n", counter, len(resReceivedTransactions.Transactions))
+	pterm.Warning.Printf("Signed [ %v ] of [ %v ] received transactions.\n", counter, len(resReceivedTransactions.Transactions))
 }
 
 func (sub *subscriber) validateData(data []byte) error {
@@ -286,7 +277,27 @@ func (sub *subscriber) validateData(data []byte) error {
 	dVolts := m.Volts > sub.allowdMeasurements[1].Volts || m.Volts < sub.allowdMeasurements[0].Volts
 
 	if dMamps || dPower || dVolts {
-		return fmt.Errorf("value out of range, %v#", m)
+		return errors.New("value out of range")
 	}
 	return nil
+}
+
+func (sub *subscriber) appendToBuffer(status string, trx transaction.Transaction) {
+	var m Measurement
+	if err := json.Unmarshal(trx.Data, &m); err != nil {
+		pterm.Error.Printf("Failed to marshal mesuremet due to: %s", err)
+		return
+	}
+	sub.buffer = append(sub.buffer, Message{
+		Timestamp:   time.Now().UnixNano(),
+		Status:      status,
+		Transaction: trx,
+		Volts:       m.Volts,
+		MiliAmps:    m.Mamps,
+		Power:       m.Power,
+	})
+
+	if len(sub.buffer) > maxTrxInBuffer {
+		sub.buffer = sub.buffer[len(sub.buffer)-maxTrxInBuffer:]
+	}
 }

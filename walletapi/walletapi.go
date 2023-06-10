@@ -236,11 +236,13 @@ func (a *app) rejectTransactions(c *fiber.Ctx) error {
 
 	hashes, err := a.centralNodeClient.RejectTransactions(req.Transactions)
 	ok := true
+	var errMsg string
 	if err != nil {
 		ok = false
+		errMsg = err.Error()
 	}
 
-	return c.JSON(RejectTransactionsResponse{Ok: ok, TrxsHashes: hashes, Err: err.Error()})
+	return c.JSON(RejectTransactionsResponse{Ok: ok, TrxsHashes: hashes, Err: errMsg})
 }
 
 // IssuedTransactionResponse is a response of issued transactions.
