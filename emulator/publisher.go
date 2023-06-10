@@ -123,7 +123,7 @@ func (p *publisher) emulate(ctx context.Context, receiver string, measurements [
 			err = errors.New("unexpected error")
 		}
 
-		pterm.Info.Printf("Emulated measuremnt: %#v", measurements[p.position])
+		pterm.Info.Printf("Emulated measuremnt: %#v.", measurements[p.position])
 	}()
 
 	select {

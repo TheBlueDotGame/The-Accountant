@@ -3,9 +3,9 @@ bookkeeper:
   block_write_timestamp: 300
   block_transactions_size: 1000
 server:
-  port: 8085
+  port: 8080
   data_size_bytes: 15000000
-  websocket_address: "ws://localhost:8085/ws"
+  websocket_address: "ws://localhost:8080/ws"
 database:
   conn_str: "postgres://computantis:computantis@localhost:5432"
   database_name: "computantis"
@@ -25,7 +25,7 @@ client:
   validator_node_url: "http://localhost:9090"
 emulator:
   timeout_seconds: 5
-  tick_seconds: 5
+  tick_seconds: 1
   random: false
   client_url: "http://localhost:8095"
   port: "8060"

@@ -42,3 +42,5 @@ server_settings.yml
 # test wallet
 test_wallet
 
+# data json
+*.json
