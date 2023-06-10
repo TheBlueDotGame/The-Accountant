@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bartossh/Computantis/block"
 	"github.com/bartossh/Computantis/httpclient"
 	"github.com/bartossh/Computantis/transaction"
 	"github.com/bartossh/Computantis/walletapi"
@@ -22,15 +23,27 @@ const (
 	apiVersion = "1.0"
 )
 
-const WebHookEndpoint = "/hook/transaction"
+const (
+	WebHookEndpointTransaction = "/hook/transaction"
+	WebHookEndpointBlock       = "hook/block"
+	MessageEndpoint            = "/message"
+)
 
 var (
 	ErrFailedHook = errors.New("failed to create web hook")
 )
 
+// Message holds timestamp info.
+type Message struct {
+	Timestamp   int64                   `json:"timestamp"`
+	Transaction transaction.Transaction `json:"transaction"`
+	Block       block.Block             `json:"block"`
+}
+
 type subscriber struct {
 	mux                  sync.Mutex
 	pub                  publisher
+	buffer               []Message
 	lastTransactionTime  time.Time
 	allowedIssuerAddress string
 	allowdMeasurements   [2]Measurement
@@ -75,7 +88,9 @@ func RunSubscriber(ctx context.Context, cancel context.CancelFunc, config Config
 	})
 
 	router.Use(recover.New())
-	router.Post(WebHookEndpoint, s.hook)
+	router.Post(WebHookEndpointTransaction, s.hookTransaction)
+	router.Post(WebHookEndpointTransaction, s.hookTransaction)
+	router.Get(MessageEndpoint, s.messages)
 
 	var err error
 	isServerRunning := true
@@ -100,18 +115,18 @@ func RunSubscriber(ctx context.Context, cancel context.CancelFunc, config Config
 		return err
 	}
 
-	var res walletapi.CreateWebhookResponse
-	req := walletapi.CreateWebHookRequest{
-		URL: fmt.Sprintf("%s%s", config.PublicURL, WebHookEndpoint),
+	var resT walletapi.CreateWebhookResponse
+	reqT := walletapi.CreateWebHookRequest{
+		URL: fmt.Sprintf("%s%s", config.PublicURL, WebHookEndpointTransaction),
 	}
 	url := fmt.Sprintf("%s%s", s.pub.clientURL, walletapi.CreateUpdateWebhook)
-	if err := httpclient.MakePost(s.pub.timeout, url, req, &res); err != nil {
+	if err := httpclient.MakePost(s.pub.timeout, url, reqT, &resT); err != nil {
 		return err
 	}
 
-	if !res.Ok {
-		if res.Err != "" {
-			return errors.New(res.Err)
+	if !resT.Ok {
+		if resT.Err != "" {
+			return errors.New(resT.Err)
 		}
 		return errors.New("unexpected error when creating the webkhook")
 	}
@@ -120,7 +135,44 @@ func RunSubscriber(ctx context.Context, cancel context.CancelFunc, config Config
 	return err
 }
 
-func (sub *subscriber) hook(ctx *fiber.Ctx) error {
+func (sub *subscriber) messages(c *fiber.Ctx) error {
+	sub.mux.Lock()
+	defer sub.mux.Unlock()
+	c.Set("Content-Type", "application/json")
+	buff := make([]Message, 0, len(sub.buffer))
+	for _, m := range sub.buffer {
+		buff = append(buff, m)
+	}
+	sub.buffer = make([]Message, 0, len(sub.buffer))
+	return c.JSON(buff)
+}
+
+func (sub *subscriber) hookBlock(ctx *fiber.Ctx) error {
+	hookRes := make(map[string]bool)
+
+	var res webhooks.WebHookNewBlockMessage
+	if err := ctx.BodyParser(&res); err != nil {
+		pterm.Error.Println(err.Error())
+		hookRes["ack"] = false
+		hookRes["ok"] = false
+		return ctx.JSON(hookRes)
+	}
+
+	sub.mux.Lock()
+	defer sub.mux.Unlock()
+
+	sub.buffer = append(sub.buffer, Message{
+		Timestamp:   time.Now().UnixNano(),
+		Transaction: transaction.Transaction{},
+		Block:       res.Block,
+	})
+
+	hookRes["ack"] = true
+	hookRes["ok"] = true
+	return ctx.JSON(hookRes)
+}
+
+func (sub *subscriber) hookTransaction(ctx *fiber.Ctx) error {
 	hookRes := make(map[string]bool)
 
 	var res webhooks.NewTransactionMessage
@@ -172,6 +224,12 @@ func (sub *subscriber) actOnTransactions() {
 	var confirmRes walletapi.ConfirmTransactionResponse
 
 	for _, trx := range resReceivedTransactions.Transactions {
+
+		sub.buffer = append(sub.buffer, Message{
+			Timestamp:   time.Now().UnixNano(),
+			Block:       block.Block{},
+			Transaction: trx,
+		})
 
 		if err := sub.validateData(trx.Data); err != nil {
 			pterm.Error.Printf("Trx data [ %s ] rejected, %s", trx.Data, err)
