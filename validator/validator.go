@@ -367,7 +367,35 @@ func (a *app) data(c *fiber.Ctx) error {
 }
 
 func (a *app) blocks(c *fiber.Ctx) error {
-	return nil
+	var req CreateRemoveUpdateHookRequest
+	if err := c.BodyParser(&req); err != nil {
+		a.log.Error(fmt.Sprintf("%s endpoint, failed to parse request body: %s", BloclHookURL, err.Error()))
+		return fiber.ErrBadRequest
+	}
+
+	if ok := a.randDataProv.ValidateData(req.Address, req.Data); !ok {
+		a.log.Error("%s endpoint, corrupted data")
+		return fiber.ErrForbidden
+	}
+
+	buf := make([]byte, 0, len(req.Data)+len(req.URL))
+	buf = append(buf, append(req.Data, []byte(req.URL)...)...)
+
+	if err := a.ver.Verify(buf, req.Signature, [32]byte(req.Digest), req.Address); err != nil {
+		a.log.Error(fmt.Sprintf("%s endpoint, invalid signature: %s", BloclHookURL, err.Error()))
+		return fiber.ErrForbidden
+	}
+
+	h := webhooks.Hook{
+		URL:   req.URL,
+		Token: string(req.Data),
+	}
+	if err := a.wh.CreateWebhook(webhooks.TriggerNewBlock, req.Address, h); err != nil {
+		a.log.Error(fmt.Sprintf("%s failed to create webhook: %s", BloclHookURL, err.Error()))
+		return c.JSON(CreateRemoveUpdateHookResponse{Ok: false, Err: err.Error()})
+	}
+
+	return c.JSON(CreateRemoveUpdateHookResponse{Ok: true})
 }
 
 func (a *app) transactions(c *fiber.Ctx) error {

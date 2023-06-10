@@ -771,12 +771,17 @@ import "github.com/bartossh/Computantis/emulator"
 - [func RunSubscriber(ctx context.Context, cancel context.CancelFunc, config Config, data []byte) error](<#func-runsubscriber>)
 - [type Config](<#type-config>)
 - [type Measurement](<#type-measurement>)
+- [type Message](<#type-message>)
 
 
 ## Constants
 
 ```go
-const WebHookEndpoint = "/hook/transaction"
+const (
+    WebHookEndpointTransaction = "/hook/transaction"
+    WebHookEndpointBlock       = "hook/block"
+    MessageEndpoint            = "/message"
+)
 ```
 
 ## Variables
@@ -795,7 +800,7 @@ func RunPublisher(ctx context.Context, cancel context.CancelFunc, config Config,
 
 RunPublisher runs publisher emulator that emulates data in a buffer. Running emmulator is stopped by canceling context.
 
-## func [RunSubscriber](<https://github.com/bartossh/Computantis/blob/main/emulator/subscriber.go#L41>)
+## func [RunSubscriber](<https://github.com/bartossh/Computantis/blob/main/emulator/subscriber.go#L54>)
 
 ```go
 func RunSubscriber(ctx context.Context, cancel context.CancelFunc, config Config, data []byte) error
@@ -827,6 +832,18 @@ type Measurement struct {
     Volts int `json:"volts"`
     Mamps int `json:"m_amps"`
     Power int `json:"power"`
+}
+```
+
+## type [Message](<https://github.com/bartossh/Computantis/blob/main/emulator/subscriber.go#L37-L41>)
+
+Message holds timestamp info.
+
+```go
+type Message struct {
+    Timestamp   int64                   `json:"timestamp"`
+    Transaction transaction.Transaction `json:"transaction"`
+    Block       block.Block             `json:"block"`
 }
 ```
 
