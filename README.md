@@ -800,7 +800,7 @@ func RunPublisher(ctx context.Context, cancel context.CancelFunc, config Config,
 
 RunPublisher runs publisher emulator that emulates data in a buffer. Running emmulator is stopped by canceling context.
 
-## func [RunSubscriber](<https://github.com/bartossh/Computantis/blob/main/emulator/subscriber.go#L54>)
+## func [RunSubscriber](<https://github.com/bartossh/Computantis/blob/main/emulator/subscriber.go#L59>)
 
 ```go
 func RunSubscriber(ctx context.Context, cancel context.CancelFunc, config Config, data []byte) error
@@ -835,15 +835,18 @@ type Measurement struct {
 }
 ```
 
-## type [Message](<https://github.com/bartossh/Computantis/blob/main/emulator/subscriber.go#L37-L41>)
+## type [Message](<https://github.com/bartossh/Computantis/blob/main/emulator/subscriber.go#L39-L46>)
 
 Message holds timestamp info.
 
 ```go
 type Message struct {
     Timestamp   int64                   `json:"timestamp"`
+    Status      string                  `json:"status"`
     Transaction transaction.Transaction `json:"transaction"`
-    Block       block.Block             `json:"block"`
+    Volts       int                     `json:"volts"`
+    MiliAmps    int                     `json:"mili_amps"`
+    Power       int                     `json:"power"`
 }
 ```
 
@@ -916,6 +919,25 @@ type Sealer interface {
     Decrypt(key, data []byte) ([]byte, error)
 }
 ```
+
+# generator
+
+```go
+import "github.com/bartossh/Computantis/generator"
+```
+
+## Index
+
+- [func GenerateToFile(filePath string, count, vMin, vMax, maMin, maMax int) error](<#func-generatetofile>)
+
+
+## func [GenerateToFile](<https://github.com/bartossh/Computantis/blob/main/generator/generator.go#L13>)
+
+```go
+func GenerateToFile(filePath string, count, vMin, vMax, maMin, maMax int) error
+```
+
+GenerateToFile generates data to file in json format.
 
 # httpclient
 
@@ -2637,7 +2659,7 @@ AliveResponse is containing server alive data such as ApiVersion and APIHeader.
 type AliveResponse server.AliveResponse
 ```
 
-## type [ApprovedTransactionResponse](<https://github.com/bartossh/Computantis/blob/main/walletapi/walletapi.go#L312-L316>)
+## type [ApprovedTransactionResponse](<https://github.com/bartossh/Computantis/blob/main/walletapi/walletapi.go#L314-L318>)
 
 ApprovedTransactionResponse is a response of approved transactions.
 
@@ -2682,7 +2704,7 @@ type ConfirmTransactionResponse struct {
 }
 ```
 
-## type [CreateWalletRequest](<https://github.com/bartossh/Computantis/blob/main/walletapi/walletapi.go#L343-L345>)
+## type [CreateWalletRequest](<https://github.com/bartossh/Computantis/blob/main/walletapi/walletapi.go#L345-L347>)
 
 CreateWalletRequest is a request to create wallet.
 
@@ -2692,7 +2714,7 @@ type CreateWalletRequest struct {
 }
 ```
 
-## type [CreateWalletResponse](<https://github.com/bartossh/Computantis/blob/main/walletapi/walletapi.go#L348-L351>)
+## type [CreateWalletResponse](<https://github.com/bartossh/Computantis/blob/main/walletapi/walletapi.go#L350-L353>)
 
 CreateWalletResponse is response to create wallet.
 
@@ -2703,7 +2725,7 @@ type CreateWalletResponse struct {
 }
 ```
 
-## type [CreateWebHookRequest](<https://github.com/bartossh/Computantis/blob/main/walletapi/walletapi.go#L377-L379>)
+## type [CreateWebHookRequest](<https://github.com/bartossh/Computantis/blob/main/walletapi/walletapi.go#L379-L381>)
 
 CreateWebHookRequest is a request to create a web hook
 
@@ -2713,7 +2735,7 @@ type CreateWebHookRequest struct {
 }
 ```
 
-## type [CreateWebhookResponse](<https://github.com/bartossh/Computantis/blob/main/walletapi/walletapi.go#L382-L385>)
+## type [CreateWebhookResponse](<https://github.com/bartossh/Computantis/blob/main/walletapi/walletapi.go#L384-L387>)
 
 CreateWebhookResponse is a response describing effect of creating a web hook
 
@@ -2747,7 +2769,7 @@ type IssueTransactionResponse struct {
 }
 ```
 
-## type [IssuedTransactionResponse](<https://github.com/bartossh/Computantis/blob/main/walletapi/walletapi.go#L247-L251>)
+## type [IssuedTransactionResponse](<https://github.com/bartossh/Computantis/blob/main/walletapi/walletapi.go#L249-L253>)
 
 IssuedTransactionResponse is a response of issued transactions.
 
@@ -2759,7 +2781,7 @@ type IssuedTransactionResponse struct {
 }
 ```
 
-## type [ReadWalletPublicAddressResponse](<https://github.com/bartossh/Computantis/blob/main/walletapi/walletapi.go#L407-L411>)
+## type [ReadWalletPublicAddressResponse](<https://github.com/bartossh/Computantis/blob/main/walletapi/walletapi.go#L409-L413>)
 
 ReadWalletPublicAddressResponse is a response to read wallet public address.
 
@@ -2771,7 +2793,7 @@ type ReadWalletPublicAddressResponse struct {
 }
 ```
 
-## type [ReceivedTransactionResponse](<https://github.com/bartossh/Computantis/blob/main/walletapi/walletapi.go#L264-L268>)
+## type [ReceivedTransactionResponse](<https://github.com/bartossh/Computantis/blob/main/walletapi/walletapi.go#L266-L270>)
 
 ReceivedTransactionResponse is a response of issued transactions.
 
@@ -2805,7 +2827,7 @@ type RejectTransactionsResponse struct {
 }
 ```
 
-## type [RejectedTransactionResponse](<https://github.com/bartossh/Computantis/blob/main/walletapi/walletapi.go#L281-L285>)
+## type [RejectedTransactionResponse](<https://github.com/bartossh/Computantis/blob/main/walletapi/walletapi.go#L283-L287>)
 
 RejectedTransactionResponse is a response of rejected transactions.
 
@@ -3173,6 +3195,16 @@ import "github.com/bartossh/Computantis/cmd/client"
 
 ```go
 import "github.com/bartossh/Computantis/cmd/emulator"
+```
+
+## Index
+
+
+
+# generator
+
+```go
+import "github.com/bartossh/Computantis/cmd/generator"
 ```
 
 ## Index
