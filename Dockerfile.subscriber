@@ -1,0 +1,16 @@
+FROM golang:latest as base_subscriber
+WORKDIR /app
+COPY . .
+RUN go mod tidy
+RUN CGO_ENABLED=0 go build -a -installsuffix cgo -o emulator -ldflags="-s -w" cmd/emulator/main.go
+
+FROM alpine:latest
+RUN apk --no-cache add ca-certificates
+WORKDIR /
+COPY --from=base_subscriber /app/emulator ./
+COPY --from=base_subscriber /app/setup.yaml ./
+COPY --from=base_subscriber /app/data.json ./
+EXPOSE 8060
+
+ENTRYPOINT [ "./emulator", "--config", "/setup.yaml", "--data", "data.json", "subscriber"]
+

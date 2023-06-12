@@ -1,14 +1,59 @@
 version: '3.8'
 
 services:
+
   postgres:
-    container_name: computantis_postgresql
     image: postgres:latest
     environment:
       POSTGRES_USER: "postgres"
       POSTGRES_PASSWORD: "postgres"
     volumes:
       - ./docker_postgres_init.sql:/docker-entrypoint-initdb.d/docker_postgres_init.sql
+    restart: unless-stopped
+
+  central:
+    depends_on:
+      postgres:
+        condition: service_healthy
+    image: central:demo
+    build:
+      dockerfile: ./Dockerfile.central
+    restart: unless-stopped
+
+  validator:
+    depends_on:
+      central:
+        condition: service_healthy
+    image: validator:demo
+    build:
+      dockerfile: ./Dockerfile.validator
+    restart: unless-stopped
+
+  client:
+    depends_on:
+      central:
+        condition: service_healthy
+    image: client:demo
+    build:
+      dockerfile: ./Dockerfile.client
+    restart: unless-stopped
+
+  publisher:
+    depends_on:
+      client:
+        condition: service_healthy
+    image: publisher:demo
+    build:
+      dockerfile: ./Dockerfile.publisher
+    restart: unless-stopped
+
+  subscriber:
+    depends_on:
+      client:
+        condition: service_healthy
+    image: subscriber:demo
     ports:
-      - "5432:5432"
+      - "8060:8060"
+    build:
+      dockerfile: ./Dockerfile.subscriber
     restart: unless-stopped

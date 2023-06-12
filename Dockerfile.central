@@ -1,0 +1,14 @@
+FROM golang:latest as base_central
+WORKDIR /app
+COPY . .
+RUN go mod tidy
+RUN CGO_ENABLED=0 go build -a -installsuffix cgo -o central -ldflags="-s -w" cmd/central/main.go
+
+FROM alpine:latest
+RUN apk --no-cache add ca-certificates
+WORKDIR /
+COPY --from=base_central /app/central ./
+COPY --from=base_central /app/setup.yaml ./
+EXPOSE 8080
+
+ENTRYPOINT [ "./central", "--config", "/setup.yaml" ]

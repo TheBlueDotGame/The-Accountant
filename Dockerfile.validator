@@ -1,0 +1,14 @@
+FROM golang:latest as base_validator
+WORKDIR /app
+COPY . .
+RUN go mod tidy
+RUN CGO_ENABLED=0 go build -a -installsuffix cgo -o validator -ldflags="-s -w" cmd/validator/main.go
+
+FROM alpine:latest
+RUN apk --no-cache add ca-certificates
+WORKDIR /
+COPY --from=base_validator /app/validator ./
+COPY --from=base_validator /app/setup.yaml ./
+EXPOSE 9090
+
+ENTRYPOINT [ "./validator", "--config", "/setup.yaml" ]
