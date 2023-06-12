@@ -1,0 +1,5002 @@
+[
+ {
+  "volts": 216,
+  "m_amps": 1037,
+  "power": 223
+ },
+ {
+  "volts": 213,
+  "m_amps": 4762,
+  "power": 1014
+ },
+ {
+  "volts": 215,
+  "m_amps": 4351,
+  "power": 935
+ },
+ {
+  "volts": 200,
+  "m_amps": 4387,
+  "power": 877
+ },
+ {
+  "volts": 235,
+  "m_amps": 3253,
+  "power": 764
+ },
+ {
+  "volts": 236,
+  "m_amps": 1527,
+  "power": 360
+ },
+ {
+  "volts": 205,
+  "m_amps": 939,
+  "power": 192
+ },
+ {
+  "volts": 203,
+  "m_amps": 2308,
+  "power": 468
+ },
+ {
+  "volts": 239,
+  "m_amps": 1489,
+  "power": 355
+ },
+ {
+  "volts": 215,
+  "m_amps": 852,
+  "power": 183
+ },
+ {
+  "volts": 222,
+  "m_amps": 2675,
+  "power": 593
+ },
+ {
+  "volts": 209,
+  "m_amps": 2743,
+  "power": 573
+ },
+ {
+  "volts": 228,
+  "m_amps": 3592,
+  "power": 818
+ },
+ {
+  "volts": 200,
+  "m_amps": 745,
+  "power": 149
+ },
+ {
+  "volts": 207,
+  "m_amps": 2966,
+  "power": 613
+ },
+ {
+  "volts": 224,
+  "m_amps": 1134,
+  "power": 254
+ },
+ {
+  "volts": 220,
+  "m_amps": 946,
+  "power": 208
+ },
+ {
+  "volts": 220,
+  "m_amps": 3310,
+  "power": 728
+ },
+ {
+  "volts": 221,
+  "m_amps": 4568,
+  "power": 1009
+ },
+ {
+  "volts": 236,
+  "m_amps": 4772,
+  "power": 1126
+ },
+ {
+  "volts": 213,
+  "m_amps": 2702,
+  "power": 575
+ },
+ {
+  "volts": 215,
+  "m_amps": 4150,
+  "power": 892
+ },
+ {
+  "volts": 230,
+  "m_amps": 4448,
+  "power": 1023
+ },
+ {
+  "volts": 201,
+  "m_amps": 993,
+  "power": 199
+ },
+ {
+  "volts": 218,
+  "m_amps": 3847,
+  "power": 838
+ },
+ {
+  "volts": 223,
+  "m_amps": 897,
+  "power": 200
+ },
+ {
+  "volts": 230,
+  "m_amps": 2005,
+  "power": 461
+ },
+ {
+  "volts": 227,
+  "m_amps": 1780,
+  "power": 404
+ },
+ {
+  "volts": 201,
+  "m_amps": 1127,
+  "power": 226
+ },
+ {
+  "volts": 239,
+  "m_amps": 3744,
+  "power": 894
+ },
+ {
+  "volts": 201,
+  "m_amps": 3156,
+  "power": 634
+ },
+ {
+  "volts": 219,
+  "m_amps": 2003,
+  "power": 438
+ },
+ {
+  "volts": 208,
+  "m_amps": 3057,
+  "power": 635
+ },
+ {
+  "volts": 205,
+  "m_amps": 1377,
+  "power": 282
+ },
+ {
+  "volts": 201,
+  "m_amps": 1397,
+  "power": 280
+ },
+ {
+  "volts": 220,
+  "m_amps": 1424,
+  "power": 313
+ },
+ {
+  "volts": 225,
+  "m_amps": 1409,
+  "power": 317
+ },
+ {
+  "volts": 217,
+  "m_amps": 2313,
+  "power": 501
+ },
+ {
+  "volts": 223,
+  "m_amps": 3267,
+  "power": 728
+ },
+ {
+  "volts": 217,
+  "m_amps": 1699,
+  "power": 368
+ },
+ {
+  "volts": 238,
+  "m_amps": 2798,
+  "power": 665
+ },
+ {
+  "volts": 231,
+  "m_amps": 1911,
+  "power": 441
+ },
+ {
+  "volts": 239,
+  "m_amps": 3925,
+  "power": 938
+ },
+ {
+  "volts": 226,
+  "m_amps": 3106,
+  "power": 701
+ },
+ {
+  "volts": 232,
+  "m_amps": 3875,
+  "power": 899
+ },
+ {
+  "volts": 202,
+  "m_amps": 3013,
+  "power": 608
+ },
+ {
+  "volts": 227,
+  "m_amps": 3878,
+  "power": 880
+ },
+ {
+  "volts": 221,
+  "m_amps": 2051,
+  "power": 453
+ },
+ {
+  "volts": 233,
+  "m_amps": 1811,
+  "power": 421
+ },
+ {
+  "volts": 229,
+  "m_amps": 2476,
+  "power": 567
+ },
+ {
+  "volts": 239,
+  "m_amps": 3744,
+  "power": 894
+ },
+ {
+  "volts": 216,
+  "m_amps": 1593,
+  "power": 344
+ },
+ {
+  "volts": 216,
+  "m_amps": 1255,
+  "power": 271
+ },
+ {
+  "volts": 208,
+  "m_amps": 2969,
+  "power": 617
+ },
+ {
+  "volts": 208,
+  "m_amps": 1097,
+  "power": 228
+ },
+ {
+  "volts": 211,
+  "m_amps": 2553,
+  "power": 538
+ },
+ {
+  "volts": 201,
+  "m_amps": 4942,
+  "power": 993
+ },
+ {
+  "volts": 204,
+  "m_amps": 4844,
+  "power": 988
+ },
+ {
+  "volts": 200,
+  "m_amps": 2792,
+  "power": 558
+ },
+ {
+  "volts": 214,
+  "m_amps": 2401,
+  "power": 513
+ },
+ {
+  "volts": 220,
+  "m_amps": 4978,
+  "power": 1095
+ },
+ {
+  "volts": 205,
+  "m_amps": 2426,
+  "power": 497
+ },
+ {
+  "volts": 207,
+  "m_amps": 4649,
+  "power": 962
+ },
+ {
+  "volts": 227,
+  "m_amps": 2917,
+  "power": 662
+ },
+ {
+  "volts": 213,
+  "m_amps": 2542,
+  "power": 541
+ },
+ {
+  "volts": 200,
+  "m_amps": 4918,
+  "power": 983
+ },
+ {
+  "volts": 233,
+  "m_amps": 839,
+  "power": 195
+ },
+ {
+  "volts": 211,
+  "m_amps": 3401,
+  "power": 717
+ },
+ {
+  "volts": 220,
+  "m_amps": 1107,
+  "power": 243
+ },
+ {
+  "volts": 211,
+  "m_amps": 817,
+  "power": 172
+ },
+ {
+  "volts": 236,
+  "m_amps": 2324,
+  "power": 548
+ },
+ {
+  "volts": 228,
+  "m_amps": 3890,
+  "power": 886
+ },
+ {
+  "volts": 210,
+  "m_amps": 1806,
+  "power": 379
+ },
+ {
+  "volts": 219,
+  "m_amps": 3725,
+  "power": 815
+ },
+ {
+  "volts": 238,
+  "m_amps": 4526,
+  "power": 1077
+ },
+ {
+  "volts": 226,
+  "m_amps": 1424,
+  "power": 321
+ },
+ {
+  "volts": 209,
+  "m_amps": 644,
+  "power": 134
+ },
+ {
+  "volts": 202,
+  "m_amps": 3601,
+  "power": 727
+ },
+ {
+  "volts": 208,
+  "m_amps": 1937,
+  "power": 402
+ },
+ {
+  "volts": 205,
+  "m_amps": 2392,
+  "power": 490
+ },
+ {
+  "volts": 226,
+  "m_amps": 897,
+  "power": 202
+ },
+ {
+  "volts": 237,
+  "m_amps": 1669,
+  "power": 395
+ },
+ {
+  "volts": 213,
+  "m_amps": 4299,
+  "power": 915
+ },
+ {
+  "volts": 229,
+  "m_amps": 4008,
+  "power": 917
+ },
+ {
+  "volts": 239,
+  "m_amps": 2901,
+  "power": 693
+ },
+ {
+  "volts": 223,
+  "m_amps": 4215,
+  "power": 939
+ },
+ {
+  "volts": 233,
+  "m_amps": 999,
+  "power": 232
+ },
+ {
+  "volts": 231,
+  "m_amps": 2991,
+  "power": 690
+ },
+ {
+  "volts": 206,
+  "m_amps": 615,
+  "power": 126
+ },
+ {
+  "volts": 226,
+  "m_amps": 3320,
+  "power": 750
+ },
+ {
+  "volts": 212,
+  "m_amps": 2054,
+  "power": 435
+ },
+ {
+  "volts": 209,
+  "m_amps": 1495,
+  "power": 312
+ },
+ {
+  "volts": 211,
+  "m_amps": 3992,
+  "power": 842
+ },
+ {
+  "volts": 213,
+  "m_amps": 3764,
+  "power": 801
+ },
+ {
+  "volts": 230,
+  "m_amps": 2725,
+  "power": 626
+ },
+ {
+  "volts": 208,
+  "m_amps": 1527,
+  "power": 317
+ },
+ {
+  "volts": 201,
+  "m_amps": 4401,
+  "power": 884
+ },
+ {
+  "volts": 220,
+  "m_amps": 4918,
+  "power": 1081
+ },
+ {
+  "volts": 229,
+  "m_amps": 3476,
+  "power": 796
+ },
+ {
+  "volts": 226,
+  "m_amps": 4360,
+  "power": 985
+ },
+ {
+  "volts": 202,
+  "m_amps": 1607,
+  "power": 324
+ },
+ {
+  "volts": 215,
+  "m_amps": 1163,
+  "power": 250
+ },
+ {
+  "volts": 224,
+  "m_amps": 2131,
+  "power": 477
+ },
+ {
+  "volts": 222,
+  "m_amps": 4544,
+  "power": 1008
+ },
+ {
+  "volts": 203,
+  "m_amps": 2407,
+  "power": 488
+ },
+ {
+  "volts": 211,
+  "m_amps": 3945,
+  "power": 832
+ },
+ {
+  "volts": 208,
+  "m_amps": 4997,
+  "power": 1039
+ },
+ {
+  "volts": 204,
+  "m_amps": 1563,
+  "power": 318
+ },
+ {
+  "volts": 235,
+  "m_amps": 3670,
+  "power": 862
+ },
+ {
+  "volts": 219,
+  "m_amps": 2630,
+  "power": 575
+ },
+ {
+  "volts": 222,
+  "m_amps": 3707,
+  "power": 822
+ },
+ {
+  "volts": 238,
+  "m_amps": 1605,
+  "power": 381
+ },
+ {
+  "volts": 220,
+  "m_amps": 1828,
+  "power": 402
+ },
+ {
+  "volts": 201,
+  "m_amps": 3399,
+  "power": 683
+ },
+ {
+  "volts": 209,
+  "m_amps": 734,
+  "power": 153
+ },
+ {
+  "volts": 219,
+  "m_amps": 4611,
+  "power": 1009
+ },
+ {
+  "volts": 237,
+  "m_amps": 4515,
+  "power": 1070
+ },
+ {
+  "volts": 231,
+  "m_amps": 2066,
+  "power": 477
+ },
+ {
+  "volts": 232,
+  "m_amps": 748,
+  "power": 173
+ },
+ {
+  "volts": 212,
+  "m_amps": 3697,
+  "power": 783
+ },
+ {
+  "volts": 225,
+  "m_amps": 1114,
+  "power": 250
+ },
+ {
+  "volts": 216,
+  "m_amps": 2224,
+  "power": 480
+ },
+ {
+  "volts": 223,
+  "m_amps": 2189,
+  "power": 488
+ },
+ {
+  "volts": 239,
+  "m_amps": 4968,
+  "power": 1187
+ },
+ {
+  "volts": 229,
+  "m_amps": 2636,
+  "power": 603
+ },
+ {
+  "volts": 231,
+  "m_amps": 1206,
+  "power": 278
+ },
+ {
+  "volts": 237,
+  "m_amps": 4776,
+  "power": 1131
+ },
+ {
+  "volts": 227,
+  "m_amps": 2969,
+  "power": 673
+ },
+ {
+  "volts": 200,
+  "m_amps": 4104,
+  "power": 820
+ },
+ {
+  "volts": 231,
+  "m_amps": 977,
+  "power": 225
+ },
+ {
+  "volts": 220,
+  "m_amps": 3920,
+  "power": 862
+ },
+ {
+  "volts": 215,
+  "m_amps": 2354,
+  "power": 506
+ },
+ {
+  "volts": 218,
+  "m_amps": 4772,
+  "power": 1040
+ },
+ {
+  "volts": 233,
+  "m_amps": 1716,
+  "power": 399
+ },
+ {
+  "volts": 229,
+  "m_amps": 2745,
+  "power": 628
+ },
+ {
+  "volts": 223,
+  "m_amps": 2415,
+  "power": 538
+ },
+ {
+  "volts": 209,
+  "m_amps": 4305,
+  "power": 899
+ },
+ {
+  "volts": 202,
+  "m_amps": 4894,
+  "power": 988
+ },
+ {
+  "volts": 233,
+  "m_amps": 2127,
+  "power": 495
+ },
+ {
+  "volts": 229,
+  "m_amps": 1853,
+  "power": 424
+ },
+ {
+  "volts": 236,
+  "m_amps": 2193,
+  "power": 517
+ },
+ {
+  "volts": 225,
+  "m_amps": 1359,
+  "power": 305
+ },
+ {
+  "volts": 216,
+  "m_amps": 2073,
+  "power": 447
+ },
+ {
+  "volts": 209,
+  "m_amps": 1816,
+  "power": 379
+ },
+ {
+  "volts": 225,
+  "m_amps": 3168,
+  "power": 712
+ },
+ {
+  "volts": 235,
+  "m_amps": 3269,
+  "power": 768
+ },
+ {
+  "volts": 216,
+  "m_amps": 1260,
+  "power": 272
+ },
+ {
+  "volts": 205,
+  "m_amps": 4693,
+  "power": 962
+ },
+ {
+  "volts": 235,
+  "m_amps": 2761,
+  "power": 648
+ },
+ {
+  "volts": 206,
+  "m_amps": 2013,
+  "power": 414
+ },
+ {
+  "volts": 210,
+  "m_amps": 2179,
+  "power": 457
+ },
+ {
+  "volts": 235,
+  "m_amps": 4672,
+  "power": 1097
+ },
+ {
+  "volts": 233,
+  "m_amps": 3998,
+  "power": 931
+ },
+ {
+  "volts": 209,
+  "m_amps": 2694,
+  "power": 563
+ },
+ {
+  "volts": 235,
+  "m_amps": 2017,
+  "power": 473
+ },
+ {
+  "volts": 216,
+  "m_amps": 3794,
+  "power": 819
+ },
+ {
+  "volts": 232,
+  "m_amps": 2603,
+  "power": 603
+ },
+ {
+  "volts": 235,
+  "m_amps": 959,
+  "power": 225
+ },
+ {
+  "volts": 226,
+  "m_amps": 3705,
+  "power": 837
+ },
+ {
+  "volts": 214,
+  "m_amps": 3864,
+  "power": 826
+ },
+ {
+  "volts": 209,
+  "m_amps": 3094,
+  "power": 646
+ },
+ {
+  "volts": 206,
+  "m_amps": 1943,
+  "power": 400
+ },
+ {
+  "volts": 221,
+  "m_amps": 4852,
+  "power": 1072
+ },
+ {
+  "volts": 232,
+  "m_amps": 807,
+  "power": 187
+ },
+ {
+  "volts": 223,
+  "m_amps": 2902,
+  "power": 647
+ },
+ {
+  "volts": 218,
+  "m_amps": 1790,
+  "power": 390
+ },
+ {
+  "volts": 204,
+  "m_amps": 4152,
+  "power": 847
+ },
+ {
+  "volts": 238,
+  "m_amps": 2875,
+  "power": 684
+ },
+ {
+  "volts": 217,
+  "m_amps": 2951,
+  "power": 640
+ },
+ {
+  "volts": 208,
+  "m_amps": 659,
+  "power": 137
+ },
+ {
+  "volts": 209,
+  "m_amps": 4547,
+  "power": 950
+ },
+ {
+  "volts": 209,
+  "m_amps": 4230,
+  "power": 884
+ },
+ {
+  "volts": 216,
+  "m_amps": 1865,
+  "power": 402
+ },
+ {
+  "volts": 218,
+  "m_amps": 606,
+  "power": 132
+ },
+ {
+  "volts": 227,
+  "m_amps": 1624,
+  "power": 368
+ },
+ {
+  "volts": 234,
+  "m_amps": 3271,
+  "power": 765
+ },
+ {
+  "volts": 216,
+  "m_amps": 1520,
+  "power": 328
+ },
+ {
+  "volts": 213,
+  "m_amps": 1429,
+  "power": 304
+ },
+ {
+  "volts": 207,
+  "m_amps": 1181,
+  "power": 244
+ },
+ {
+  "volts": 233,
+  "m_amps": 1447,
+  "power": 337
+ },
+ {
+  "volts": 234,
+  "m_amps": 610,
+  "power": 142
+ },
+ {
+  "volts": 207,
+  "m_amps": 2380,
+  "power": 492
+ },
+ {
+  "volts": 221,
+  "m_amps": 2017,
+  "power": 445
+ },
+ {
+  "volts": 214,
+  "m_amps": 616,
+  "power": 131
+ },
+ {
+  "volts": 209,
+  "m_amps": 1365,
+  "power": 285
+ },
+ {
+  "volts": 208,
+  "m_amps": 825,
+  "power": 171
+ },
+ {
+  "volts": 234,
+  "m_amps": 3394,
+  "power": 794
+ },
+ {
+  "volts": 227,
+  "m_amps": 4195,
+  "power": 952
+ },
+ {
+  "volts": 226,
+  "m_amps": 1699,
+  "power": 383
+ },
+ {
+  "volts": 223,
+  "m_amps": 3469,
+  "power": 773
+ },
+ {
+  "volts": 230,
+  "m_amps": 4477,
+  "power": 1029
+ },
+ {
+  "volts": 203,
+  "m_amps": 4750,
+  "power": 964
+ },
+ {
+  "volts": 210,
+  "m_amps": 2967,
+  "power": 623
+ },
+ {
+  "volts": 226,
+  "m_amps": 2354,
+  "power": 532
+ },
+ {
+  "volts": 200,
+  "m_amps": 963,
+  "power": 192
+ },
+ {
+  "volts": 227,
+  "m_amps": 1011,
+  "power": 229
+ },
+ {
+  "volts": 205,
+  "m_amps": 4320,
+  "power": 885
+ },
+ {
+  "volts": 214,
+  "m_amps": 3821,
+  "power": 817
+ },
+ {
+  "volts": 205,
+  "m_amps": 2249,
+  "power": 461
+ },
+ {
+  "volts": 208,
+  "m_amps": 1854,
+  "power": 385
+ },
+ {
+  "volts": 207,
+  "m_amps": 1492,
+  "power": 308
+ },
+ {
+  "volts": 213,
+  "m_amps": 1249,
+  "power": 266
+ },
+ {
+  "volts": 218,
+  "m_amps": 2655,
+  "power": 578
+ },
+ {
+  "volts": 200,
+  "m_amps": 3044,
+  "power": 608
+ },
+ {
+  "volts": 210,
+  "m_amps": 4807,
+  "power": 1009
+ },
+ {
+  "volts": 220,
+  "m_amps": 1431,
+  "power": 314
+ },
+ {
+  "volts": 237,
+  "m_amps": 1818,
+  "power": 430
+ },
+ {
+  "volts": 203,
+  "m_amps": 4929,
+  "power": 1000
+ },
+ {
+  "volts": 229,
+  "m_amps": 1627,
+  "power": 372
+ },
+ {
+  "volts": 206,
+  "m_amps": 1432,
+  "power": 294
+ },
+ {
+  "volts": 236,
+  "m_amps": 3982,
+  "power": 939
+ },
+ {
+  "volts": 234,
+  "m_amps": 4574,
+  "power": 1070
+ },
+ {
+  "volts": 211,
+  "m_amps": 3155,
+  "power": 665
+ },
+ {
+  "volts": 222,
+  "m_amps": 4276,
+  "power": 949
+ },
+ {
+  "volts": 212,
+  "m_amps": 4946,
+  "power": 1048
+ },
+ {
+  "volts": 209,
+  "m_amps": 4829,
+  "power": 1009
+ },
+ {
+  "volts": 232,
+  "m_amps": 3024,
+  "power": 701
+ },
+ {
+  "volts": 219,
+  "m_amps": 1294,
+  "power": 283
+ },
+ {
+  "volts": 234,
+  "m_amps": 4717,
+  "power": 1103
+ },
+ {
+  "volts": 239,
+  "m_amps": 4038,
+  "power": 965
+ },
+ {
+  "volts": 217,
+  "m_amps": 1320,
+  "power": 286
+ },
+ {
+  "volts": 230,
+  "m_amps": 4185,
+  "power": 962
+ },
+ {
+  "volts": 202,
+  "m_amps": 4285,
+  "power": 865
+ },
+ {
+  "volts": 201,
+  "m_amps": 1761,
+  "power": 353
+ },
+ {
+  "volts": 214,
+  "m_amps": 2060,
+  "power": 440
+ },
+ {
+  "volts": 233,
+  "m_amps": 1995,
+  "power": 464
+ },
+ {
+  "volts": 200,
+  "m_amps": 1781,
+  "power": 356
+ },
+ {
+  "volts": 233,
+  "m_amps": 1355,
+  "power": 315
+ },
+ {
+  "volts": 219,
+  "m_amps": 1363,
+  "power": 298
+ },
+ {
+  "volts": 230,
+  "m_amps": 2943,
+  "power": 676
+ },
+ {
+  "volts": 219,
+  "m_amps": 1783,
+  "power": 390
+ },
+ {
+  "volts": 211,
+  "m_amps": 1666,
+  "power": 351
+ },
+ {
+  "volts": 208,
+  "m_amps": 3323,
+  "power": 691
+ },
+ {
+  "volts": 217,
+  "m_amps": 3408,
+  "power": 739
+ },
+ {
+  "volts": 237,
+  "m_amps": 1904,
+  "power": 451
+ },
+ {
+  "volts": 220,
+  "m_amps": 2460,
+  "power": 541
+ },
+ {
+  "volts": 228,
+  "m_amps": 2685,
+  "power": 612
+ },
+ {
+  "volts": 207,
+  "m_amps": 3910,
+  "power": 809
+ },
+ {
+  "volts": 220,
+  "m_amps": 3088,
+  "power": 679
+ },
+ {
+  "volts": 218,
+  "m_amps": 4216,
+  "power": 919
+ },
+ {
+  "volts": 202,
+  "m_amps": 3665,
+  "power": 740
+ },
+ {
+  "volts": 200,
+  "m_amps": 4878,
+  "power": 975
+ },
+ {
+  "volts": 232,
+  "m_amps": 4762,
+  "power": 1104
+ },
+ {
+  "volts": 215,
+  "m_amps": 1920,
+  "power": 412
+ },
+ {
+  "volts": 210,
+  "m_amps": 1032,
+  "power": 216
+ },
+ {
+  "volts": 205,
+  "m_amps": 1223,
+  "power": 250
+ },
+ {
+  "volts": 207,
+  "m_amps": 2244,
+  "power": 464
+ },
+ {
+  "volts": 201,
+  "m_amps": 3734,
+  "power": 750
+ },
+ {
+  "volts": 218,
+  "m_amps": 1508,
+  "power": 328
+ },
+ {
+  "volts": 211,
+  "m_amps": 2819,
+  "power": 594
+ },
+ {
+  "volts": 209,
+  "m_amps": 2819,
+  "power": 589
+ },
+ {
+  "volts": 201,
+  "m_amps": 878,
+  "power": 176
+ },
+ {
+  "volts": 209,
+  "m_amps": 4182,
+  "power": 874
+ },
+ {
+  "volts": 236,
+  "m_amps": 3593,
+  "power": 847
+ },
+ {
+  "volts": 207,
+  "m_amps": 1606,
+  "power": 332
+ },
+ {
+  "volts": 205,
+  "m_amps": 4860,
+  "power": 996
+ },
+ {
+  "volts": 227,
+  "m_amps": 3185,
+  "power": 722
+ },
+ {
+  "volts": 238,
+  "m_amps": 4101,
+  "power": 976
+ },
+ {
+  "volts": 229,
+  "m_amps": 4091,
+  "power": 936
+ },
+ {
+  "volts": 208,
+  "m_amps": 2851,
+  "power": 593
+ },
+ {
+  "volts": 227,
+  "m_amps": 4438,
+  "power": 1007
+ },
+ {
+  "volts": 220,
+  "m_amps": 2809,
+  "power": 617
+ },
+ {
+  "volts": 220,
+  "m_amps": 3626,
+  "power": 797
+ },
+ {
+  "volts": 228,
+  "m_amps": 3593,
+  "power": 819
+ },
+ {
+  "volts": 212,
+  "m_amps": 2492,
+  "power": 528
+ },
+ {
+  "volts": 226,
+  "m_amps": 4244,
+  "power": 959
+ },
+ {
+  "volts": 237,
+  "m_amps": 4058,
+  "power": 961
+ },
+ {
+  "volts": 210,
+  "m_amps": 3524,
+  "power": 740
+ },
+ {
+  "volts": 211,
+  "m_amps": 4540,
+  "power": 957
+ },
+ {
+  "volts": 238,
+  "m_amps": 1855,
+  "power": 441
+ },
+ {
+  "volts": 226,
+  "m_amps": 3946,
+  "power": 891
+ },
+ {
+  "volts": 220,
+  "m_amps": 655,
+  "power": 144
+ },
+ {
+  "volts": 203,
+  "m_amps": 4126,
+  "power": 837
+ },
+ {
+  "volts": 216,
+  "m_amps": 1706,
+  "power": 368
+ },
+ {
+  "volts": 225,
+  "m_amps": 3853,
+  "power": 866
+ },
+ {
+  "volts": 233,
+  "m_amps": 1035,
+  "power": 241
+ },
+ {
+  "volts": 225,
+  "m_amps": 2391,
+  "power": 537
+ },
+ {
+  "volts": 222,
+  "m_amps": 4394,
+  "power": 975
+ },
+ {
+  "volts": 209,
+  "m_amps": 1790,
+  "power": 374
+ },
+ {
+  "volts": 237,
+  "m_amps": 1653,
+  "power": 391
+ },
+ {
+  "volts": 210,
+  "m_amps": 4353,
+  "power": 914
+ },
+ {
+  "volts": 211,
+  "m_amps": 1357,
+  "power": 286
+ },
+ {
+  "volts": 203,
+  "m_amps": 1126,
+  "power": 228
+ },
+ {
+  "volts": 212,
+  "m_amps": 1803,
+  "power": 382
+ },
+ {
+  "volts": 230,
+  "m_amps": 1608,
+  "power": 369
+ },
+ {
+  "volts": 224,
+  "m_amps": 4544,
+  "power": 1017
+ },
+ {
+  "volts": 223,
+  "m_amps": 1897,
+  "power": 423
+ },
+ {
+  "volts": 205,
+  "m_amps": 4757,
+  "power": 975
+ },
+ {
+  "volts": 225,
+  "m_amps": 4195,
+  "power": 943
+ },
+ {
+  "volts": 201,
+  "m_amps": 2737,
+  "power": 550
+ },
+ {
+  "volts": 232,
+  "m_amps": 1541,
+  "power": 357
+ },
+ {
+  "volts": 202,
+  "m_amps": 1571,
+  "power": 317
+ },
+ {
+  "volts": 227,
+  "m_amps": 4242,
+  "power": 962
+ },
+ {
+  "volts": 207,
+  "m_amps": 1818,
+  "power": 376
+ },
+ {
+  "volts": 215,
+  "m_amps": 1098,
+  "power": 236
+ },
+ {
+  "volts": 214,
+  "m_amps": 2481,
+  "power": 530
+ },
+ {
+  "volts": 217,
+  "m_amps": 1883,
+  "power": 408
+ },
+ {
+  "volts": 220,
+  "m_amps": 2366,
+  "power": 520
+ },
+ {
+  "volts": 202,
+  "m_amps": 4033,
+  "power": 814
+ },
+ {
+  "volts": 231,
+  "m_amps": 1340,
+  "power": 309
+ },
+ {
+  "volts": 234,
+  "m_amps": 4402,
+  "power": 1030
+ },
+ {
+  "volts": 216,
+  "m_amps": 1405,
+  "power": 303
+ },
+ {
+  "volts": 228,
+  "m_amps": 901,
+  "power": 205
+ },
+ {
+  "volts": 228,
+  "m_amps": 2654,
+  "power": 605
+ },
+ {
+  "volts": 224,
+  "m_amps": 3111,
+  "power": 696
+ },
+ {
+  "volts": 233,
+  "m_amps": 1144,
+  "power": 266
+ },
+ {
+  "volts": 210,
+  "m_amps": 4201,
+  "power": 882
+ },
+ {
+  "volts": 207,
+  "m_amps": 3924,
+  "power": 812
+ },
+ {
+  "volts": 204,
+  "m_amps": 933,
+  "power": 190
+ },
+ {
+  "volts": 232,
+  "m_amps": 2464,
+  "power": 571
+ },
+ {
+  "volts": 217,
+  "m_amps": 3502,
+  "power": 759
+ },
+ {
+  "volts": 205,
+  "m_amps": 1754,
+  "power": 359
+ },
+ {
+  "volts": 201,
+  "m_amps": 2911,
+  "power": 585
+ },
+ {
+  "volts": 212,
+  "m_amps": 4515,
+  "power": 957
+ },
+ {
+  "volts": 217,
+  "m_amps": 2937,
+  "power": 637
+ },
+ {
+  "volts": 237,
+  "m_amps": 1374,
+  "power": 325
+ },
+ {
+  "volts": 200,
+  "m_amps": 4914,
+  "power": 982
+ },
+ {
+  "volts": 236,
+  "m_amps": 3086,
+  "power": 728
+ },
+ {
+  "volts": 219,
+  "m_amps": 606,
+  "power": 132
+ },
+ {
+  "volts": 232,
+  "m_amps": 3354,
+  "power": 778
+ },
+ {
+  "volts": 235,
+  "m_amps": 1861,
+  "power": 437
+ },
+ {
+  "volts": 228,
+  "m_amps": 750,
+  "power": 171
+ },
+ {
+  "volts": 234,
+  "m_amps": 4903,
+  "power": 1147
+ },
+ {
+  "volts": 238,
+  "m_amps": 2800,
+  "power": 666
+ },
+ {
+  "volts": 210,
+  "m_amps": 2114,
+  "power": 443
+ },
+ {
+  "volts": 209,
+  "m_amps": 1374,
+  "power": 287
+ },
+ {
+  "volts": 237,
+  "m_amps": 832,
+  "power": 197
+ },
+ {
+  "volts": 230,
+  "m_amps": 1574,
+  "power": 362
+ },
+ {
+  "volts": 237,
+  "m_amps": 1673,
+  "power": 396
+ },
+ {
+  "volts": 216,
+  "m_amps": 4496,
+  "power": 971
+ },
+ {
+  "volts": 231,
+  "m_amps": 1899,
+  "power": 438
+ },
+ {
+  "volts": 223,
+  "m_amps": 4301,
+  "power": 959
+ },
+ {
+  "volts": 219,
+  "m_amps": 2636,
+  "power": 577
+ },
+ {
+  "volts": 225,
+  "m_amps": 2655,
+  "power": 597
+ },
+ {
+  "volts": 218,
+  "m_amps": 4457,
+  "power": 971
+ },
+ {
+  "volts": 204,
+  "m_amps": 3657,
+  "power": 746
+ },
+ {
+  "volts": 232,
+  "m_amps": 1765,
+  "power": 409
+ },
+ {
+  "volts": 230,
+  "m_amps": 1815,
+  "power": 417
+ },
+ {
+  "volts": 239,
+  "m_amps": 2150,
+  "power": 513
+ },
+ {
+  "volts": 231,
+  "m_amps": 2897,
+  "power": 669
+ },
+ {
+  "volts": 205,
+  "m_amps": 3140,
+  "power": 643
+ },
+ {
+  "volts": 232,
+  "m_amps": 2635,
+  "power": 611
+ },
+ {
+  "volts": 211,
+  "m_amps": 1614,
+  "power": 340
+ },
+ {
+  "volts": 237,
+  "m_amps": 1361,
+  "power": 322
+ },
+ {
+  "volts": 207,
+  "m_amps": 4452,
+  "power": 921
+ },
+ {
+  "volts": 218,
+  "m_amps": 1286,
+  "power": 280
+ },
+ {
+  "volts": 238,
+  "m_amps": 4823,
+  "power": 1147
+ },
+ {
+  "volts": 201,
+  "m_amps": 2146,
+  "power": 431
+ },
+ {
+  "volts": 202,
+  "m_amps": 4886,
+  "power": 986
+ },
+ {
+  "volts": 201,
+  "m_amps": 1890,
+  "power": 379
+ },
+ {
+  "volts": 234,
+  "m_amps": 874,
+  "power": 204
+ },
+ {
+  "volts": 230,
+  "m_amps": 2274,
+  "power": 523
+ },
+ {
+  "volts": 233,
+  "m_amps": 4053,
+  "power": 944
+ },
+ {
+  "volts": 213,
+  "m_amps": 1250,
+  "power": 266
+ },
+ {
+  "volts": 230,
+  "m_amps": 2843,
+  "power": 653
+ },
+ {
+  "volts": 223,
+  "m_amps": 1776,
+  "power": 396
+ },
+ {
+  "volts": 214,
+  "m_amps": 1778,
+  "power": 380
+ },
+ {
+  "volts": 210,
+  "m_amps": 4919,
+  "power": 1032
+ },
+ {
+  "volts": 202,
+  "m_amps": 4213,
+  "power": 851
+ },
+ {
+  "volts": 230,
+  "m_amps": 4835,
+  "power": 1112
+ },
+ {
+  "volts": 223,
+  "m_amps": 1179,
+  "power": 262
+ },
+ {
+  "volts": 225,
+  "m_amps": 1386,
+  "power": 311
+ },
+ {
+  "volts": 228,
+  "m_amps": 4287,
+  "power": 977
+ },
+ {
+  "volts": 222,
+  "m_amps": 4773,
+  "power": 1059
+ },
+ {
+  "volts": 206,
+  "m_amps": 2697,
+  "power": 555
+ },
+ {
+  "volts": 221,
+  "m_amps": 990,
+  "power": 218
+ },
+ {
+  "volts": 224,
+  "m_amps": 3926,
+  "power": 879
+ },
+ {
+  "volts": 212,
+  "m_amps": 3457,
+  "power": 732
+ },
+ {
+  "volts": 200,
+  "m_amps": 801,
+  "power": 160
+ },
+ {
+  "volts": 233,
+  "m_amps": 3651,
+  "power": 850
+ },
+ {
+  "volts": 239,
+  "m_amps": 4688,
+  "power": 1120
+ },
+ {
+  "volts": 218,
+  "m_amps": 4921,
+  "power": 1072
+ },
+ {
+  "volts": 239,
+  "m_amps": 2040,
+  "power": 487
+ },
+ {
+  "volts": 222,
+  "m_amps": 3964,
+  "power": 880
+ },
+ {
+  "volts": 234,
+  "m_amps": 3648,
+  "power": 853
+ },
+ {
+  "volts": 210,
+  "m_amps": 3708,
+  "power": 778
+ },
+ {
+  "volts": 215,
+  "m_amps": 3533,
+  "power": 759
+ },
+ {
+  "volts": 231,
+  "m_amps": 3231,
+  "power": 746
+ },
+ {
+  "volts": 237,
+  "m_amps": 2258,
+  "power": 535
+ },
+ {
+  "volts": 219,
+  "m_amps": 4416,
+  "power": 967
+ },
+ {
+  "volts": 236,
+  "m_amps": 2245,
+  "power": 529
+ },
+ {
+  "volts": 233,
+  "m_amps": 1974,
+  "power": 459
+ },
+ {
+  "volts": 200,
+  "m_amps": 4245,
+  "power": 849
+ },
+ {
+  "volts": 237,
+  "m_amps": 2660,
+  "power": 630
+ },
+ {
+  "volts": 232,
+  "m_amps": 3256,
+  "power": 755
+ },
+ {
+  "volts": 210,
+  "m_amps": 3737,
+  "power": 784
+ },
+ {
+  "volts": 231,
+  "m_amps": 1279,
+  "power": 295
+ },
+ {
+  "volts": 219,
+  "m_amps": 2672,
+  "power": 585
+ },
+ {
+  "volts": 219,
+  "m_amps": 1233,
+  "power": 270
+ },
+ {
+  "volts": 230,
+  "m_amps": 910,
+  "power": 209
+ },
+ {
+  "volts": 233,
+  "m_amps": 2631,
+  "power": 613
+ },
+ {
+  "volts": 230,
+  "m_amps": 4491,
+  "power": 1032
+ },
+ {
+  "volts": 228,
+  "m_amps": 3694,
+  "power": 842
+ },
+ {
+  "volts": 226,
+  "m_amps": 3803,
+  "power": 859
+ },
+ {
+  "volts": 235,
+  "m_amps": 3871,
+  "power": 909
+ },
+ {
+  "volts": 226,
+  "m_amps": 4860,
+  "power": 1098
+ },
+ {
+  "volts": 235,
+  "m_amps": 3400,
+  "power": 799
+ },
+ {
+  "volts": 234,
+  "m_amps": 1890,
+  "power": 442
+ },
+ {
+  "volts": 215,
+  "m_amps": 2780,
+  "power": 597
+ },
+ {
+  "volts": 233,
+  "m_amps": 3230,
+  "power": 752
+ },
+ {
+  "volts": 235,
+  "m_amps": 2392,
+  "power": 562
+ },
+ {
+  "volts": 210,
+  "m_amps": 4808,
+  "power": 1009
+ },
+ {
+  "volts": 201,
+  "m_amps": 2464,
+  "power": 495
+ },
+ {
+  "volts": 210,
+  "m_amps": 3924,
+  "power": 824
+ },
+ {
+  "volts": 204,
+  "m_amps": 4066,
+  "power": 829
+ },
+ {
+  "volts": 224,
+  "m_amps": 2623,
+  "power": 587
+ },
+ {
+  "volts": 218,
+  "m_amps": 4761,
+  "power": 1037
+ },
+ {
+  "volts": 211,
+  "m_amps": 984,
+  "power": 207
+ },
+ {
+  "volts": 214,
+  "m_amps": 1927,
+  "power": 412
+ },
+ {
+  "volts": 223,
+  "m_amps": 2384,
+  "power": 531
+ },
+ {
+  "volts": 215,
+  "m_amps": 2062,
+  "power": 443
+ },
+ {
+  "volts": 209,
+  "m_amps": 2861,
+  "power": 597
+ },
+ {
+  "volts": 217,
+  "m_amps": 1045,
+  "power": 226
+ },
+ {
+  "volts": 221,
+  "m_amps": 2605,
+  "power": 575
+ },
+ {
+  "volts": 214,
+  "m_amps": 1528,
+  "power": 326
+ },
+ {
+  "volts": 236,
+  "m_amps": 3529,
+  "power": 832
+ },
+ {
+  "volts": 233,
+  "m_amps": 1043,
+  "power": 243
+ },
+ {
+  "volts": 225,
+  "m_amps": 2532,
+  "power": 569
+ },
+ {
+  "volts": 203,
+  "m_amps": 2575,
+  "power": 522
+ },
+ {
+  "volts": 217,
+  "m_amps": 3442,
+  "power": 746
+ },
+ {
+  "volts": 231,
+  "m_amps": 4933,
+  "power": 1139
+ },
+ {
+  "volts": 234,
+  "m_amps": 4849,
+  "power": 1134
+ },
+ {
+  "volts": 213,
+  "m_amps": 2955,
+  "power": 629
+ },
+ {
+  "volts": 226,
+  "m_amps": 3263,
+  "power": 737
+ },
+ {
+  "volts": 232,
+  "m_amps": 2473,
+  "power": 573
+ },
+ {
+  "volts": 212,
+  "m_amps": 2576,
+  "power": 546
+ },
+ {
+  "volts": 207,
+  "m_amps": 904,
+  "power": 187
+ },
+ {
+  "volts": 229,
+  "m_amps": 3944,
+  "power": 903
+ },
+ {
+  "volts": 208,
+  "m_amps": 2858,
+  "power": 594
+ },
+ {
+  "volts": 201,
+  "m_amps": 2116,
+  "power": 425
+ },
+ {
+  "volts": 234,
+  "m_amps": 3242,
+  "power": 758
+ },
+ {
+  "volts": 220,
+  "m_amps": 1055,
+  "power": 232
+ },
+ {
+  "volts": 226,
+  "m_amps": 4369,
+  "power": 987
+ },
+ {
+  "volts": 213,
+  "m_amps": 2712,
+  "power": 577
+ },
+ {
+  "volts": 207,
+  "m_amps": 1258,
+  "power": 260
+ },
+ {
+  "volts": 228,
+  "m_amps": 3281,
+  "power": 748
+ },
+ {
+  "volts": 233,
+  "m_amps": 2220,
+  "power": 517
+ },
+ {
+  "volts": 231,
+  "m_amps": 1926,
+  "power": 444
+ },
+ {
+  "volts": 231,
+  "m_amps": 4132,
+  "power": 954
+ },
+ {
+  "volts": 229,
+  "m_amps": 4757,
+  "power": 1089
+ },
+ {
+  "volts": 231,
+  "m_amps": 2626,
+  "power": 606
+ },
+ {
+  "volts": 206,
+  "m_amps": 4259,
+  "power": 877
+ },
+ {
+  "volts": 223,
+  "m_amps": 1632,
+  "power": 363
+ },
+ {
+  "volts": 215,
+  "m_amps": 4155,
+  "power": 893
+ },
+ {
+  "volts": 238,
+  "m_amps": 2701,
+  "power": 642
+ },
+ {
+  "volts": 204,
+  "m_amps": 2760,
+  "power": 563
+ },
+ {
+  "volts": 209,
+  "m_amps": 3467,
+  "power": 724
+ },
+ {
+  "volts": 230,
+  "m_amps": 3510,
+  "power": 807
+ },
+ {
+  "volts": 234,
+  "m_amps": 708,
+  "power": 165
+ },
+ {
+  "volts": 213,
+  "m_amps": 1989,
+  "power": 423
+ },
+ {
+  "volts": 208,
+  "m_amps": 3662,
+  "power": 761
+ },
+ {
+  "volts": 230,
+  "m_amps": 1424,
+  "power": 327
+ },
+ {
+  "volts": 207,
+  "m_amps": 926,
+  "power": 191
+ },
+ {
+  "volts": 200,
+  "m_amps": 1758,
+  "power": 351
+ },
+ {
+  "volts": 225,
+  "m_amps": 4774,
+  "power": 1074
+ },
+ {
+  "volts": 238,
+  "m_amps": 2897,
+  "power": 689
+ },
+ {
+  "volts": 224,
+  "m_amps": 4317,
+  "power": 967
+ },
+ {
+  "volts": 235,
+  "m_amps": 2375,
+  "power": 558
+ },
+ {
+  "volts": 208,
+  "m_amps": 1930,
+  "power": 401
+ },
+ {
+  "volts": 209,
+  "m_amps": 3991,
+  "power": 834
+ },
+ {
+  "volts": 235,
+  "m_amps": 2566,
+  "power": 603
+ },
+ {
+  "volts": 225,
+  "m_amps": 4588,
+  "power": 1032
+ },
+ {
+  "volts": 239,
+  "m_amps": 3603,
+  "power": 861
+ },
+ {
+  "volts": 217,
+  "m_amps": 1160,
+  "power": 251
+ },
+ {
+  "volts": 221,
+  "m_amps": 2116,
+  "power": 467
+ },
+ {
+  "volts": 217,
+  "m_amps": 1478,
+  "power": 320
+ },
+ {
+  "volts": 229,
+  "m_amps": 2384,
+  "power": 545
+ },
+ {
+  "volts": 219,
+  "m_amps": 4407,
+  "power": 965
+ },
+ {
+  "volts": 203,
+  "m_amps": 1477,
+  "power": 299
+ },
+ {
+  "volts": 226,
+  "m_amps": 2461,
+  "power": 556
+ },
+ {
+  "volts": 239,
+  "m_amps": 816,
+  "power": 195
+ },
+ {
+  "volts": 204,
+  "m_amps": 4302,
+  "power": 877
+ },
+ {
+  "volts": 200,
+  "m_amps": 1873,
+  "power": 374
+ },
+ {
+  "volts": 224,
+  "m_amps": 3839,
+  "power": 859
+ },
+ {
+  "volts": 235,
+  "m_amps": 2008,
+  "power": 471
+ },
+ {
+  "volts": 212,
+  "m_amps": 3208,
+  "power": 680
+ },
+ {
+  "volts": 202,
+  "m_amps": 616,
+  "power": 124
+ },
+ {
+  "volts": 226,
+  "m_amps": 4539,
+  "power": 1025
+ },
+ {
+  "volts": 220,
+  "m_amps": 1197,
+  "power": 263
+ },
+ {
+  "volts": 238,
+  "m_amps": 1373,
+  "power": 326
+ },
+ {
+  "volts": 202,
+  "m_amps": 1333,
+  "power": 269
+ },
+ {
+  "volts": 234,
+  "m_amps": 3705,
+  "power": 866
+ },
+ {
+  "volts": 227,
+  "m_amps": 2183,
+  "power": 495
+ },
+ {
+  "volts": 231,
+  "m_amps": 3355,
+  "power": 775
+ },
+ {
+  "volts": 236,
+  "m_amps": 2401,
+  "power": 566
+ },
+ {
+  "volts": 226,
+  "m_amps": 2294,
+  "power": 518
+ },
+ {
+  "volts": 220,
+  "m_amps": 2248,
+  "power": 494
+ },
+ {
+  "volts": 203,
+  "m_amps": 3519,
+  "power": 714
+ },
+ {
+  "volts": 232,
+  "m_amps": 1202,
+  "power": 278
+ },
+ {
+  "volts": 239,
+  "m_amps": 1448,
+  "power": 346
+ },
+ {
+  "volts": 204,
+  "m_amps": 898,
+  "power": 183
+ },
+ {
+  "volts": 239,
+  "m_amps": 4449,
+  "power": 1063
+ },
+ {
+  "volts": 235,
+  "m_amps": 4438,
+  "power": 1042
+ },
+ {
+  "volts": 208,
+  "m_amps": 1833,
+  "power": 381
+ },
+ {
+  "volts": 229,
+  "m_amps": 1326,
+  "power": 303
+ },
+ {
+  "volts": 236,
+  "m_amps": 1681,
+  "power": 396
+ },
+ {
+  "volts": 234,
+  "m_amps": 3570,
+  "power": 835
+ },
+ {
+  "volts": 213,
+  "m_amps": 4585,
+  "power": 976
+ },
+ {
+  "volts": 230,
+  "m_amps": 3767,
+  "power": 866
+ },
+ {
+  "volts": 219,
+  "m_amps": 1340,
+  "power": 293
+ },
+ {
+  "volts": 206,
+  "m_amps": 4500,
+  "power": 927
+ },
+ {
+  "volts": 238,
+  "m_amps": 2187,
+  "power": 520
+ },
+ {
+  "volts": 232,
+  "m_amps": 2473,
+  "power": 573
+ },
+ {
+  "volts": 221,
+  "m_amps": 2052,
+  "power": 453
+ },
+ {
+  "volts": 229,
+  "m_amps": 2926,
+  "power": 670
+ },
+ {
+  "volts": 210,
+  "m_amps": 3923,
+  "power": 823
+ },
+ {
+  "volts": 218,
+  "m_amps": 3000,
+  "power": 654
+ },
+ {
+  "volts": 204,
+  "m_amps": 1981,
+  "power": 404
+ },
+ {
+  "volts": 200,
+  "m_amps": 3251,
+  "power": 650
+ },
+ {
+  "volts": 223,
+  "m_amps": 4139,
+  "power": 922
+ },
+ {
+  "volts": 214,
+  "m_amps": 4709,
+  "power": 1007
+ },
+ {
+  "volts": 217,
+  "m_amps": 2432,
+  "power": 527
+ },
+ {
+  "volts": 207,
+  "m_amps": 1502,
+  "power": 310
+ },
+ {
+  "volts": 238,
+  "m_amps": 2459,
+  "power": 585
+ },
+ {
+  "volts": 205,
+  "m_amps": 1071,
+  "power": 219
+ },
+ {
+  "volts": 225,
+  "m_amps": 4582,
+  "power": 1030
+ },
+ {
+  "volts": 204,
+  "m_amps": 771,
+  "power": 157
+ },
+ {
+  "volts": 201,
+  "m_amps": 3086,
+  "power": 620
+ },
+ {
+  "volts": 232,
+  "m_amps": 4642,
+  "power": 1076
+ },
+ {
+  "volts": 235,
+  "m_amps": 3869,
+  "power": 909
+ },
+ {
+  "volts": 236,
+  "m_amps": 4443,
+  "power": 1048
+ },
+ {
+  "volts": 222,
+  "m_amps": 3236,
+  "power": 718
+ },
+ {
+  "volts": 207,
+  "m_amps": 4511,
+  "power": 933
+ },
+ {
+  "volts": 238,
+  "m_amps": 4117,
+  "power": 979
+ },
+ {
+  "volts": 233,
+  "m_amps": 4722,
+  "power": 1100
+ },
+ {
+  "volts": 210,
+  "m_amps": 1792,
+  "power": 376
+ },
+ {
+  "volts": 227,
+  "m_amps": 3146,
+  "power": 714
+ },
+ {
+  "volts": 233,
+  "m_amps": 4884,
+  "power": 1137
+ },
+ {
+  "volts": 231,
+  "m_amps": 942,
+  "power": 217
+ },
+ {
+  "volts": 202,
+  "m_amps": 3739,
+  "power": 755
+ },
+ {
+  "volts": 224,
+  "m_amps": 4580,
+  "power": 1025
+ },
+ {
+  "volts": 227,
+  "m_amps": 4637,
+  "power": 1052
+ },
+ {
+  "volts": 223,
+  "m_amps": 2906,
+  "power": 648
+ },
+ {
+  "volts": 216,
+  "m_amps": 1893,
+  "power": 408
+ },
+ {
+  "volts": 226,
+  "m_amps": 3538,
+  "power": 799
+ },
+ {
+  "volts": 238,
+  "m_amps": 4753,
+  "power": 1131
+ },
+ {
+  "volts": 225,
+  "m_amps": 3685,
+  "power": 829
+ },
+ {
+  "volts": 232,
+  "m_amps": 4920,
+  "power": 1141
+ },
+ {
+  "volts": 233,
+  "m_amps": 694,
+  "power": 161
+ },
+ {
+  "volts": 204,
+  "m_amps": 4279,
+  "power": 872
+ },
+ {
+  "volts": 202,
+  "m_amps": 1172,
+  "power": 236
+ },
+ {
+  "volts": 209,
+  "m_amps": 844,
+  "power": 176
+ },
+ {
+  "volts": 223,
+  "m_amps": 4796,
+  "power": 1069
+ },
+ {
+  "volts": 217,
+  "m_amps": 2686,
+  "power": 582
+ },
+ {
+  "volts": 210,
+  "m_amps": 4767,
+  "power": 1001
+ },
+ {
+  "volts": 238,
+  "m_amps": 2175,
+  "power": 517
+ },
+ {
+  "volts": 219,
+  "m_amps": 3143,
+  "power": 688
+ },
+ {
+  "volts": 214,
+  "m_amps": 1779,
+  "power": 380
+ },
+ {
+  "volts": 213,
+  "m_amps": 2743,
+  "power": 584
+ },
+ {
+  "volts": 220,
+  "m_amps": 3869,
+  "power": 851
+ },
+ {
+  "volts": 210,
+  "m_amps": 1207,
+  "power": 253
+ },
+ {
+  "volts": 215,
+  "m_amps": 1374,
+  "power": 295
+ },
+ {
+  "volts": 238,
+  "m_amps": 3445,
+  "power": 819
+ },
+ {
+  "volts": 215,
+  "m_amps": 2595,
+  "power": 557
+ },
+ {
+  "volts": 232,
+  "m_amps": 2764,
+  "power": 641
+ },
+ {
+  "volts": 205,
+  "m_amps": 1938,
+  "power": 397
+ },
+ {
+  "volts": 216,
+  "m_amps": 2828,
+  "power": 610
+ },
+ {
+  "volts": 206,
+  "m_amps": 3674,
+  "power": 756
+ },
+ {
+  "volts": 216,
+  "m_amps": 2170,
+  "power": 468
+ },
+ {
+  "volts": 207,
+  "m_amps": 3814,
+  "power": 789
+ },
+ {
+  "volts": 201,
+  "m_amps": 2550,
+  "power": 512
+ },
+ {
+  "volts": 215,
+  "m_amps": 921,
+  "power": 198
+ },
+ {
+  "volts": 228,
+  "m_amps": 4247,
+  "power": 968
+ },
+ {
+  "volts": 227,
+  "m_amps": 2568,
+  "power": 582
+ },
+ {
+  "volts": 222,
+  "m_amps": 1781,
+  "power": 395
+ },
+ {
+  "volts": 220,
+  "m_amps": 3101,
+  "power": 682
+ },
+ {
+  "volts": 223,
+  "m_amps": 3615,
+  "power": 806
+ },
+ {
+  "volts": 236,
+  "m_amps": 4033,
+  "power": 951
+ },
+ {
+  "volts": 219,
+  "m_amps": 3805,
+  "power": 833
+ },
+ {
+  "volts": 206,
+  "m_amps": 1170,
+  "power": 241
+ },
+ {
+  "volts": 211,
+  "m_amps": 3249,
+  "power": 685
+ },
+ {
+  "volts": 215,
+  "m_amps": 2711,
+  "power": 582
+ },
+ {
+  "volts": 222,
+  "m_amps": 4744,
+  "power": 1053
+ },
+ {
+  "volts": 227,
+  "m_amps": 3777,
+  "power": 857
+ },
+ {
+  "volts": 225,
+  "m_amps": 4812,
+  "power": 1082
+ },
+ {
+  "volts": 219,
+  "m_amps": 1305,
+  "power": 285
+ },
+ {
+  "volts": 236,
+  "m_amps": 3040,
+  "power": 717
+ },
+ {
+  "volts": 205,
+  "m_amps": 2823,
+  "power": 578
+ },
+ {
+  "volts": 224,
+  "m_amps": 1209,
+  "power": 270
+ },
+ {
+  "volts": 219,
+  "m_amps": 4680,
+  "power": 1024
+ },
+ {
+  "volts": 227,
+  "m_amps": 1941,
+  "power": 440
+ },
+ {
+  "volts": 208,
+  "m_amps": 2886,
+  "power": 600
+ },
+ {
+  "volts": 230,
+  "m_amps": 1999,
+  "power": 459
+ },
+ {
+  "volts": 232,
+  "m_amps": 1633,
+  "power": 378
+ },
+ {
+  "volts": 215,
+  "m_amps": 4646,
+  "power": 998
+ },
+ {
+  "volts": 217,
+  "m_amps": 2209,
+  "power": 479
+ },
+ {
+  "volts": 235,
+  "m_amps": 3661,
+  "power": 860
+ },
+ {
+  "volts": 218,
+  "m_amps": 3453,
+  "power": 752
+ },
+ {
+  "volts": 232,
+  "m_amps": 1784,
+  "power": 413
+ },
+ {
+  "volts": 223,
+  "m_amps": 703,
+  "power": 156
+ },
+ {
+  "volts": 208,
+  "m_amps": 3103,
+  "power": 645
+ },
+ {
+  "volts": 212,
+  "m_amps": 2095,
+  "power": 444
+ },
+ {
+  "volts": 204,
+  "m_amps": 1265,
+  "power": 258
+ },
+ {
+  "volts": 215,
+  "m_amps": 2059,
+  "power": 442
+ },
+ {
+  "volts": 236,
+  "m_amps": 1762,
+  "power": 415
+ },
+ {
+  "volts": 214,
+  "m_amps": 1116,
+  "power": 238
+ },
+ {
+  "volts": 234,
+  "m_amps": 2795,
+  "power": 654
+ },
+ {
+  "volts": 224,
+  "m_amps": 1361,
+  "power": 304
+ },
+ {
+  "volts": 239,
+  "m_amps": 1134,
+  "power": 271
+ },
+ {
+  "volts": 205,
+  "m_amps": 3587,
+  "power": 735
+ },
+ {
+  "volts": 235,
+  "m_amps": 2681,
+  "power": 630
+ },
+ {
+  "volts": 202,
+  "m_amps": 3092,
+  "power": 624
+ },
+ {
+  "volts": 231,
+  "m_amps": 3292,
+  "power": 760
+ },
+ {
+  "volts": 205,
+  "m_amps": 1046,
+  "power": 214
+ },
+ {
+  "volts": 201,
+  "m_amps": 2692,
+  "power": 541
+ },
+ {
+  "volts": 235,
+  "m_amps": 1806,
+  "power": 424
+ },
+ {
+  "volts": 235,
+  "m_amps": 1268,
+  "power": 297
+ },
+ {
+  "volts": 223,
+  "m_amps": 949,
+  "power": 211
+ },
+ {
+  "volts": 205,
+  "m_amps": 4025,
+  "power": 825
+ },
+ {
+  "volts": 209,
+  "m_amps": 3587,
+  "power": 749
+ },
+ {
+  "volts": 200,
+  "m_amps": 602,
+  "power": 120
+ },
+ {
+  "volts": 213,
+  "m_amps": 1217,
+  "power": 259
+ },
+ {
+  "volts": 213,
+  "m_amps": 1955,
+  "power": 416
+ },
+ {
+  "volts": 200,
+  "m_amps": 3795,
+  "power": 759
+ },
+ {
+  "volts": 234,
+  "m_amps": 2298,
+  "power": 537
+ },
+ {
+  "volts": 223,
+  "m_amps": 1399,
+  "power": 311
+ },
+ {
+  "volts": 237,
+  "m_amps": 3455,
+  "power": 818
+ },
+ {
+  "volts": 201,
+  "m_amps": 4091,
+  "power": 822
+ },
+ {
+  "volts": 235,
+  "m_amps": 4896,
+  "power": 1150
+ },
+ {
+  "volts": 238,
+  "m_amps": 3063,
+  "power": 728
+ },
+ {
+  "volts": 222,
+  "m_amps": 4665,
+  "power": 1035
+ },
+ {
+  "volts": 207,
+  "m_amps": 2318,
+  "power": 479
+ },
+ {
+  "volts": 220,
+  "m_amps": 1164,
+  "power": 256
+ },
+ {
+  "volts": 235,
+  "m_amps": 1558,
+  "power": 366
+ },
+ {
+  "volts": 221,
+  "m_amps": 4772,
+  "power": 1054
+ },
+ {
+  "volts": 225,
+  "m_amps": 2025,
+  "power": 455
+ },
+ {
+  "volts": 223,
+  "m_amps": 4563,
+  "power": 1017
+ },
+ {
+  "volts": 211,
+  "m_amps": 1289,
+  "power": 271
+ },
+ {
+  "volts": 235,
+  "m_amps": 1077,
+  "power": 253
+ },
+ {
+  "volts": 212,
+  "m_amps": 4918,
+  "power": 1042
+ },
+ {
+  "volts": 218,
+  "m_amps": 2220,
+  "power": 483
+ },
+ {
+  "volts": 212,
+  "m_amps": 4914,
+  "power": 1041
+ },
+ {
+  "volts": 227,
+  "m_amps": 1371,
+  "power": 311
+ },
+ {
+  "volts": 218,
+  "m_amps": 4045,
+  "power": 881
+ },
+ {
+  "volts": 237,
+  "m_amps": 3293,
+  "power": 780
+ },
+ {
+  "volts": 220,
+  "m_amps": 3590,
+  "power": 789
+ },
+ {
+  "volts": 216,
+  "m_amps": 2464,
+  "power": 532
+ },
+ {
+  "volts": 236,
+  "m_amps": 2896,
+  "power": 683
+ },
+ {
+  "volts": 205,
+  "m_amps": 1596,
+  "power": 327
+ },
+ {
+  "volts": 202,
+  "m_amps": 2446,
+  "power": 494
+ },
+ {
+  "volts": 217,
+  "m_amps": 1619,
+  "power": 351
+ },
+ {
+  "volts": 214,
+  "m_amps": 849,
+  "power": 181
+ },
+ {
+  "volts": 234,
+  "m_amps": 4490,
+  "power": 1050
+ },
+ {
+  "volts": 210,
+  "m_amps": 4242,
+  "power": 890
+ },
+ {
+  "volts": 233,
+  "m_amps": 2153,
+  "power": 501
+ },
+ {
+  "volts": 207,
+  "m_amps": 4626,
+  "power": 957
+ },
+ {
+  "volts": 226,
+  "m_amps": 1052,
+  "power": 237
+ },
+ {
+  "volts": 231,
+  "m_amps": 3657,
+  "power": 844
+ },
+ {
+  "volts": 205,
+  "m_amps": 2978,
+  "power": 610
+ },
+ {
+  "volts": 228,
+  "m_amps": 2077,
+  "power": 473
+ },
+ {
+  "volts": 203,
+  "m_amps": 4006,
+  "power": 813
+ },
+ {
+  "volts": 209,
+  "m_amps": 2939,
+  "power": 614
+ },
+ {
+  "volts": 229,
+  "m_amps": 1397,
+  "power": 319
+ },
+ {
+  "volts": 222,
+  "m_amps": 2028,
+  "power": 450
+ },
+ {
+  "volts": 200,
+  "m_amps": 3622,
+  "power": 724
+ },
+ {
+  "volts": 229,
+  "m_amps": 3069,
+  "power": 702
+ },
+ {
+  "volts": 235,
+  "m_amps": 890,
+  "power": 209
+ },
+ {
+  "volts": 213,
+  "m_amps": 3693,
+  "power": 786
+ },
+ {
+  "volts": 200,
+  "m_amps": 4471,
+  "power": 894
+ },
+ {
+  "volts": 239,
+  "m_amps": 2364,
+  "power": 564
+ },
+ {
+  "volts": 216,
+  "m_amps": 4435,
+  "power": 957
+ },
+ {
+  "volts": 234,
+  "m_amps": 2453,
+  "power": 574
+ },
+ {
+  "volts": 237,
+  "m_amps": 1738,
+  "power": 411
+ },
+ {
+  "volts": 221,
+  "m_amps": 2849,
+  "power": 629
+ },
+ {
+  "volts": 216,
+  "m_amps": 2856,
+  "power": 616
+ },
+ {
+  "volts": 201,
+  "m_amps": 4582,
+  "power": 920
+ },
+ {
+  "volts": 227,
+  "m_amps": 1519,
+  "power": 344
+ },
+ {
+  "volts": 234,
+  "m_amps": 3313,
+  "power": 775
+ },
+ {
+  "volts": 215,
+  "m_amps": 1765,
+  "power": 379
+ },
+ {
+  "volts": 208,
+  "m_amps": 3641,
+  "power": 757
+ },
+ {
+  "volts": 212,
+  "m_amps": 2479,
+  "power": 525
+ },
+ {
+  "volts": 236,
+  "m_amps": 2759,
+  "power": 651
+ },
+ {
+  "volts": 234,
+  "m_amps": 4499,
+  "power": 1052
+ },
+ {
+  "volts": 208,
+  "m_amps": 4152,
+  "power": 863
+ },
+ {
+  "volts": 201,
+  "m_amps": 1724,
+  "power": 346
+ },
+ {
+  "volts": 215,
+  "m_amps": 2595,
+  "power": 557
+ },
+ {
+  "volts": 231,
+  "m_amps": 1864,
+  "power": 430
+ },
+ {
+  "volts": 208,
+  "m_amps": 3915,
+  "power": 814
+ },
+ {
+  "volts": 205,
+  "m_amps": 4746,
+  "power": 972
+ },
+ {
+  "volts": 217,
+  "m_amps": 2353,
+  "power": 510
+ },
+ {
+  "volts": 212,
+  "m_amps": 3793,
+  "power": 804
+ },
+ {
+  "volts": 238,
+  "m_amps": 3867,
+  "power": 920
+ },
+ {
+  "volts": 226,
+  "m_amps": 990,
+  "power": 223
+ },
+ {
+  "volts": 231,
+  "m_amps": 651,
+  "power": 150
+ },
+ {
+  "volts": 216,
+  "m_amps": 2326,
+  "power": 502
+ },
+ {
+  "volts": 229,
+  "m_amps": 3932,
+  "power": 900
+ },
+ {
+  "volts": 227,
+  "m_amps": 3287,
+  "power": 746
+ },
+ {
+  "volts": 227,
+  "m_amps": 4000,
+  "power": 908
+ },
+ {
+  "volts": 222,
+  "m_amps": 2321,
+  "power": 515
+ },
+ {
+  "volts": 223,
+  "m_amps": 687,
+  "power": 153
+ },
+ {
+  "volts": 234,
+  "m_amps": 1884,
+  "power": 440
+ },
+ {
+  "volts": 229,
+  "m_amps": 1336,
+  "power": 305
+ },
+ {
+  "volts": 203,
+  "m_amps": 1326,
+  "power": 269
+ },
+ {
+  "volts": 210,
+  "m_amps": 4872,
+  "power": 1023
+ },
+ {
+  "volts": 225,
+  "m_amps": 2806,
+  "power": 631
+ },
+ {
+  "volts": 222,
+  "m_amps": 2996,
+  "power": 665
+ },
+ {
+  "volts": 229,
+  "m_amps": 4707,
+  "power": 1077
+ },
+ {
+  "volts": 233,
+  "m_amps": 2130,
+  "power": 496
+ },
+ {
+  "volts": 233,
+  "m_amps": 4007,
+  "power": 933
+ },
+ {
+  "volts": 228,
+  "m_amps": 4702,
+  "power": 1072
+ },
+ {
+  "volts": 201,
+  "m_amps": 1888,
+  "power": 379
+ },
+ {
+  "volts": 223,
+  "m_amps": 2955,
+  "power": 658
+ },
+ {
+  "volts": 233,
+  "m_amps": 2648,
+  "power": 616
+ },
+ {
+  "volts": 237,
+  "m_amps": 2184,
+  "power": 517
+ },
+ {
+  "volts": 217,
+  "m_amps": 2710,
+  "power": 588
+ },
+ {
+  "volts": 213,
+  "m_amps": 1639,
+  "power": 349
+ },
+ {
+  "volts": 234,
+  "m_amps": 2542,
+  "power": 594
+ },
+ {
+  "volts": 214,
+  "m_amps": 4019,
+  "power": 860
+ },
+ {
+  "volts": 218,
+  "m_amps": 878,
+  "power": 191
+ },
+ {
+  "volts": 207,
+  "m_amps": 2166,
+  "power": 448
+ },
+ {
+  "volts": 218,
+  "m_amps": 1716,
+  "power": 374
+ },
+ {
+  "volts": 236,
+  "m_amps": 1954,
+  "power": 461
+ },
+ {
+  "volts": 225,
+  "m_amps": 2259,
+  "power": 508
+ },
+ {
+  "volts": 216,
+  "m_amps": 741,
+  "power": 160
+ },
+ {
+  "volts": 238,
+  "m_amps": 3233,
+  "power": 769
+ },
+ {
+  "volts": 230,
+  "m_amps": 1477,
+  "power": 339
+ },
+ {
+  "volts": 237,
+  "m_amps": 968,
+  "power": 229
+ },
+ {
+  "volts": 226,
+  "m_amps": 4902,
+  "power": 1107
+ },
+ {
+  "volts": 215,
+  "m_amps": 1746,
+  "power": 375
+ },
+ {
+  "volts": 208,
+  "m_amps": 2706,
+  "power": 562
+ },
+ {
+  "volts": 236,
+  "m_amps": 921,
+  "power": 217
+ },
+ {
+  "volts": 210,
+  "m_amps": 2661,
+  "power": 558
+ },
+ {
+  "volts": 224,
+  "m_amps": 604,
+  "power": 135
+ },
+ {
+  "volts": 223,
+  "m_amps": 1490,
+  "power": 332
+ },
+ {
+  "volts": 226,
+  "m_amps": 4906,
+  "power": 1108
+ },
+ {
+  "volts": 233,
+  "m_amps": 4869,
+  "power": 1134
+ },
+ {
+  "volts": 211,
+  "m_amps": 3355,
+  "power": 707
+ },
+ {
+  "volts": 206,
+  "m_amps": 2756,
+  "power": 567
+ },
+ {
+  "volts": 209,
+  "m_amps": 3216,
+  "power": 672
+ },
+ {
+  "volts": 234,
+  "m_amps": 3735,
+  "power": 873
+ },
+ {
+  "volts": 204,
+  "m_amps": 2178,
+  "power": 444
+ },
+ {
+  "volts": 227,
+  "m_amps": 1814,
+  "power": 411
+ },
+ {
+  "volts": 207,
+  "m_amps": 1035,
+  "power": 214
+ },
+ {
+  "volts": 224,
+  "m_amps": 2731,
+  "power": 611
+ },
+ {
+  "volts": 236,
+  "m_amps": 3860,
+  "power": 910
+ },
+ {
+  "volts": 222,
+  "m_amps": 4423,
+  "power": 981
+ },
+ {
+  "volts": 229,
+  "m_amps": 4408,
+  "power": 1009
+ },
+ {
+  "volts": 234,
+  "m_amps": 2521,
+  "power": 589
+ },
+ {
+  "volts": 222,
+  "m_amps": 3652,
+  "power": 810
+ },
+ {
+  "volts": 213,
+  "m_amps": 3639,
+  "power": 775
+ },
+ {
+  "volts": 226,
+  "m_amps": 4633,
+  "power": 1047
+ },
+ {
+  "volts": 210,
+  "m_amps": 3186,
+  "power": 669
+ },
+ {
+  "volts": 218,
+  "m_amps": 785,
+  "power": 171
+ },
+ {
+  "volts": 225,
+  "m_amps": 4535,
+  "power": 1020
+ },
+ {
+  "volts": 207,
+  "m_amps": 723,
+  "power": 149
+ },
+ {
+  "volts": 204,
+  "m_amps": 4793,
+  "power": 977
+ },
+ {
+  "volts": 219,
+  "m_amps": 3495,
+  "power": 765
+ },
+ {
+  "volts": 229,
+  "m_amps": 3803,
+  "power": 870
+ },
+ {
+  "volts": 230,
+  "m_amps": 4938,
+  "power": 1135
+ },
+ {
+  "volts": 235,
+  "m_amps": 1722,
+  "power": 404
+ },
+ {
+  "volts": 222,
+  "m_amps": 3065,
+  "power": 680
+ },
+ {
+  "volts": 208,
+  "m_amps": 1977,
+  "power": 411
+ },
+ {
+  "volts": 219,
+  "m_amps": 4570,
+  "power": 1000
+ },
+ {
+  "volts": 204,
+  "m_amps": 1330,
+  "power": 271
+ },
+ {
+  "volts": 233,
+  "m_amps": 1625,
+  "power": 378
+ },
+ {
+  "volts": 200,
+  "m_amps": 3845,
+  "power": 769
+ },
+ {
+  "volts": 222,
+  "m_amps": 4902,
+  "power": 1088
+ },
+ {
+  "volts": 223,
+  "m_amps": 2505,
+  "power": 558
+ },
+ {
+  "volts": 204,
+  "m_amps": 4330,
+  "power": 883
+ },
+ {
+  "volts": 213,
+  "m_amps": 2659,
+  "power": 566
+ },
+ {
+  "volts": 235,
+  "m_amps": 1688,
+  "power": 396
+ },
+ {
+  "volts": 228,
+  "m_amps": 3225,
+  "power": 735
+ },
+ {
+  "volts": 236,
+  "m_amps": 4753,
+  "power": 1121
+ },
+ {
+  "volts": 226,
+  "m_amps": 1159,
+  "power": 261
+ },
+ {
+  "volts": 207,
+  "m_amps": 3741,
+  "power": 774
+ },
+ {
+  "volts": 225,
+  "m_amps": 4692,
+  "power": 1055
+ },
+ {
+  "volts": 234,
+  "m_amps": 3515,
+  "power": 822
+ },
+ {
+  "volts": 212,
+  "m_amps": 1673,
+  "power": 354
+ },
+ {
+  "volts": 230,
+  "m_amps": 1076,
+  "power": 247
+ },
+ {
+  "volts": 209,
+  "m_amps": 2719,
+  "power": 568
+ },
+ {
+  "volts": 222,
+  "m_amps": 3297,
+  "power": 731
+ },
+ {
+  "volts": 212,
+  "m_amps": 4976,
+  "power": 1054
+ },
+ {
+  "volts": 219,
+  "m_amps": 2203,
+  "power": 482
+ },
+ {
+  "volts": 205,
+  "m_amps": 3668,
+  "power": 751
+ },
+ {
+  "volts": 225,
+  "m_amps": 1330,
+  "power": 299
+ },
+ {
+  "volts": 211,
+  "m_amps": 2442,
+  "power": 515
+ },
+ {
+  "volts": 239,
+  "m_amps": 4442,
+  "power": 1061
+ },
+ {
+  "volts": 211,
+  "m_amps": 809,
+  "power": 170
+ },
+ {
+  "volts": 218,
+  "m_amps": 4207,
+  "power": 917
+ },
+ {
+  "volts": 218,
+  "m_amps": 2412,
+  "power": 525
+ },
+ {
+  "volts": 218,
+  "m_amps": 620,
+  "power": 135
+ },
+ {
+  "volts": 205,
+  "m_amps": 1900,
+  "power": 389
+ },
+ {
+  "volts": 224,
+  "m_amps": 4744,
+  "power": 1062
+ },
+ {
+  "volts": 218,
+  "m_amps": 2754,
+  "power": 600
+ },
+ {
+  "volts": 223,
+  "m_amps": 4520,
+  "power": 1007
+ },
+ {
+  "volts": 236,
+  "m_amps": 1407,
+  "power": 332
+ },
+ {
+  "volts": 212,
+  "m_amps": 906,
+  "power": 192
+ },
+ {
+  "volts": 234,
+  "m_amps": 4478,
+  "power": 1047
+ },
+ {
+  "volts": 221,
+  "m_amps": 4088,
+  "power": 903
+ },
+ {
+  "volts": 211,
+  "m_amps": 674,
+  "power": 142
+ },
+ {
+  "volts": 229,
+  "m_amps": 3955,
+  "power": 905
+ },
+ {
+  "volts": 222,
+  "m_amps": 4661,
+  "power": 1034
+ },
+ {
+  "volts": 223,
+  "m_amps": 2507,
+  "power": 559
+ },
+ {
+  "volts": 210,
+  "m_amps": 2090,
+  "power": 438
+ },
+ {
+  "volts": 224,
+  "m_amps": 4871,
+  "power": 1091
+ },
+ {
+  "volts": 232,
+  "m_amps": 1515,
+  "power": 351
+ },
+ {
+  "volts": 202,
+  "m_amps": 2896,
+  "power": 584
+ },
+ {
+  "volts": 229,
+  "m_amps": 4343,
+  "power": 994
+ },
+ {
+  "volts": 211,
+  "m_amps": 4674,
+  "power": 986
+ },
+ {
+  "volts": 211,
+  "m_amps": 3136,
+  "power": 661
+ },
+ {
+  "volts": 211,
+  "m_amps": 3702,
+  "power": 781
+ },
+ {
+  "volts": 234,
+  "m_amps": 3183,
+  "power": 744
+ },
+ {
+  "volts": 230,
+  "m_amps": 678,
+  "power": 155
+ },
+ {
+  "volts": 219,
+  "m_amps": 3753,
+  "power": 821
+ },
+ {
+  "volts": 206,
+  "m_amps": 1205,
+  "power": 248
+ },
+ {
+  "volts": 225,
+  "m_amps": 1240,
+  "power": 279
+ },
+ {
+  "volts": 226,
+  "m_amps": 1306,
+  "power": 295
+ },
+ {
+  "volts": 211,
+  "m_amps": 1345,
+  "power": 283
+ },
+ {
+  "volts": 206,
+  "m_amps": 3757,
+  "power": 773
+ },
+ {
+  "volts": 223,
+  "m_amps": 3347,
+  "power": 746
+ },
+ {
+  "volts": 224,
+  "m_amps": 4998,
+  "power": 1119
+ },
+ {
+  "volts": 218,
+  "m_amps": 647,
+  "power": 141
+ },
+ {
+  "volts": 207,
+  "m_amps": 1847,
+  "power": 382
+ },
+ {
+  "volts": 236,
+  "m_amps": 623,
+  "power": 147
+ },
+ {
+  "volts": 225,
+  "m_amps": 2775,
+  "power": 624
+ },
+ {
+  "volts": 211,
+  "m_amps": 3544,
+  "power": 747
+ },
+ {
+  "volts": 215,
+  "m_amps": 891,
+  "power": 191
+ },
+ {
+  "volts": 213,
+  "m_amps": 4915,
+  "power": 1046
+ },
+ {
+  "volts": 210,
+  "m_amps": 3324,
+  "power": 698
+ },
+ {
+  "volts": 213,
+  "m_amps": 4836,
+  "power": 1030
+ },
+ {
+  "volts": 222,
+  "m_amps": 2298,
+  "power": 510
+ },
+ {
+  "volts": 204,
+  "m_amps": 1342,
+  "power": 273
+ },
+ {
+  "volts": 206,
+  "m_amps": 4542,
+  "power": 935
+ },
+ {
+  "volts": 229,
+  "m_amps": 1304,
+  "power": 298
+ },
+ {
+  "volts": 204,
+  "m_amps": 1237,
+  "power": 252
+ },
+ {
+  "volts": 238,
+  "m_amps": 943,
+  "power": 224
+ },
+ {
+  "volts": 230,
+  "m_amps": 944,
+  "power": 217
+ },
+ {
+  "volts": 201,
+  "m_amps": 1182,
+  "power": 237
+ },
+ {
+  "volts": 218,
+  "m_amps": 2694,
+  "power": 587
+ },
+ {
+  "volts": 238,
+  "m_amps": 3037,
+  "power": 722
+ },
+ {
+  "volts": 210,
+  "m_amps": 4498,
+  "power": 944
+ },
+ {
+  "volts": 203,
+  "m_amps": 2614,
+  "power": 530
+ },
+ {
+  "volts": 210,
+  "m_amps": 2903,
+  "power": 609
+ },
+ {
+  "volts": 239,
+  "m_amps": 1338,
+  "power": 319
+ },
+ {
+  "volts": 231,
+  "m_amps": 1772,
+  "power": 409
+ },
+ {
+  "volts": 237,
+  "m_amps": 2683,
+  "power": 635
+ },
+ {
+  "volts": 201,
+  "m_amps": 2018,
+  "power": 405
+ },
+ {
+  "volts": 222,
+  "m_amps": 1450,
+  "power": 321
+ },
+ {
+  "volts": 206,
+  "m_amps": 4431,
+  "power": 912
+ },
+ {
+  "volts": 202,
+  "m_amps": 3103,
+  "power": 626
+ },
+ {
+  "volts": 222,
+  "m_amps": 1929,
+  "power": 428
+ },
+ {
+  "volts": 222,
+  "m_amps": 2679,
+  "power": 594
+ },
+ {
+  "volts": 213,
+  "m_amps": 4710,
+  "power": 1003
+ },
+ {
+  "volts": 213,
+  "m_amps": 1136,
+  "power": 241
+ },
+ {
+  "volts": 223,
+  "m_amps": 2107,
+  "power": 469
+ },
+ {
+  "volts": 235,
+  "m_amps": 2783,
+  "power": 654
+ },
+ {
+  "volts": 234,
+  "m_amps": 4868,
+  "power": 1139
+ },
+ {
+  "volts": 235,
+  "m_amps": 2198,
+  "power": 516
+ },
+ {
+  "volts": 201,
+  "m_amps": 4143,
+  "power": 832
+ },
+ {
+  "volts": 235,
+  "m_amps": 4628,
+  "power": 1087
+ },
+ {
+  "volts": 236,
+  "m_amps": 2973,
+  "power": 701
+ },
+ {
+  "volts": 205,
+  "m_amps": 1763,
+  "power": 361
+ },
+ {
+  "volts": 212,
+  "m_amps": 4449,
+  "power": 943
+ },
+ {
+  "volts": 230,
+  "m_amps": 1148,
+  "power": 264
+ },
+ {
+  "volts": 230,
+  "m_amps": 3783,
+  "power": 870
+ },
+ {
+  "volts": 233,
+  "m_amps": 2319,
+  "power": 540
+ },
+ {
+  "volts": 232,
+  "m_amps": 2692,
+  "power": 624
+ },
+ {
+  "volts": 229,
+  "m_amps": 4283,
+  "power": 980
+ },
+ {
+  "volts": 218,
+  "m_amps": 2341,
+  "power": 510
+ },
+ {
+  "volts": 223,
+  "m_amps": 2079,
+  "power": 463
+ },
+ {
+  "volts": 238,
+  "m_amps": 4265,
+  "power": 1015
+ },
+ {
+  "volts": 221,
+  "m_amps": 2489,
+  "power": 550
+ },
+ {
+  "volts": 239,
+  "m_amps": 1179,
+  "power": 281
+ },
+ {
+  "volts": 210,
+  "m_amps": 4567,
+  "power": 959
+ },
+ {
+  "volts": 218,
+  "m_amps": 4944,
+  "power": 1077
+ },
+ {
+  "volts": 210,
+  "m_amps": 4615,
+  "power": 969
+ },
+ {
+  "volts": 222,
+  "m_amps": 2871,
+  "power": 637
+ },
+ {
+  "volts": 219,
+  "m_amps": 1441,
+  "power": 315
+ },
+ {
+  "volts": 235,
+  "m_amps": 3747,
+  "power": 880
+ },
+ {
+  "volts": 208,
+  "m_amps": 4759,
+  "power": 989
+ },
+ {
+  "volts": 226,
+  "m_amps": 1144,
+  "power": 258
+ },
+ {
+  "volts": 205,
+  "m_amps": 4241,
+  "power": 869
+ },
+ {
+  "volts": 228,
+  "m_amps": 1875,
+  "power": 427
+ },
+ {
+  "volts": 219,
+  "m_amps": 3917,
+  "power": 857
+ },
+ {
+  "volts": 211,
+  "m_amps": 3237,
+  "power": 683
+ },
+ {
+  "volts": 203,
+  "m_amps": 1748,
+  "power": 354
+ },
+ {
+  "volts": 223,
+  "m_amps": 1446,
+  "power": 322
+ },
+ {
+  "volts": 203,
+  "m_amps": 4595,
+  "power": 932
+ },
+ {
+  "volts": 238,
+  "m_amps": 4830,
+  "power": 1149
+ },
+ {
+  "volts": 210,
+  "m_amps": 2262,
+  "power": 475
+ },
+ {
+  "volts": 207,
+  "m_amps": 4364,
+  "power": 903
+ },
+ {
+  "volts": 219,
+  "m_amps": 1701,
+  "power": 372
+ },
+ {
+  "volts": 203,
+  "m_amps": 1991,
+  "power": 404
+ },
+ {
+  "volts": 208,
+  "m_amps": 3056,
+  "power": 635
+ },
+ {
+  "volts": 216,
+  "m_amps": 718,
+  "power": 155
+ },
+ {
+  "volts": 225,
+  "m_amps": 3066,
+  "power": 689
+ },
+ {
+  "volts": 201,
+  "m_amps": 4135,
+  "power": 831
+ },
+ {
+  "volts": 218,
+  "m_amps": 1024,
+  "power": 223
+ },
+ {
+  "volts": 223,
+  "m_amps": 2677,
+  "power": 596
+ },
+ {
+  "volts": 219,
+  "m_amps": 2360,
+  "power": 516
+ },
+ {
+  "volts": 231,
+  "m_amps": 2924,
+  "power": 675
+ },
+ {
+  "volts": 238,
+  "m_amps": 3153,
+  "power": 750
+ },
+ {
+  "volts": 229,
+  "m_amps": 3566,
+  "power": 816
+ },
+ {
+  "volts": 206,
+  "m_amps": 4184,
+  "power": 861
+ },
+ {
+  "volts": 208,
+  "m_amps": 3977,
+  "power": 827
+ },
+ {
+  "volts": 225,
+  "m_amps": 858,
+  "power": 193
+ },
+ {
+  "volts": 237,
+  "m_amps": 2331,
+  "power": 552
+ },
+ {
+  "volts": 228,
+  "m_amps": 2816,
+  "power": 642
+ },
+ {
+  "volts": 219,
+  "m_amps": 1563,
+  "power": 342
+ },
+ {
+  "volts": 229,
+  "m_amps": 2093,
+  "power": 479
+ },
+ {
+  "volts": 226,
+  "m_amps": 2344,
+  "power": 529
+ },
+ {
+  "volts": 222,
+  "m_amps": 3105,
+  "power": 689
+ },
+ {
+  "volts": 219,
+  "m_amps": 1959,
+  "power": 429
+ },
+ {
+  "volts": 222,
+  "m_amps": 4928,
+  "power": 1094
+ },
+ {
+  "volts": 227,
+  "m_amps": 3265,
+  "power": 741
+ },
+ {
+  "volts": 208,
+  "m_amps": 2161,
+  "power": 449
+ },
+ {
+  "volts": 212,
+  "m_amps": 4259,
+  "power": 902
+ },
+ {
+  "volts": 223,
+  "m_amps": 1814,
+  "power": 404
+ },
+ {
+  "volts": 228,
+  "m_amps": 2054,
+  "power": 468
+ },
+ {
+  "volts": 202,
+  "m_amps": 4441,
+  "power": 897
+ },
+ {
+  "volts": 216,
+  "m_amps": 1289,
+  "power": 278
+ },
+ {
+  "volts": 231,
+  "m_amps": 968,
+  "power": 223
+ },
+ {
+  "volts": 228,
+  "m_amps": 3489,
+  "power": 795
+ },
+ {
+  "volts": 230,
+  "m_amps": 851,
+  "power": 195
+ },
+ {
+  "volts": 203,
+  "m_amps": 4943,
+  "power": 1003
+ },
+ {
+  "volts": 216,
+  "m_amps": 3592,
+  "power": 775
+ },
+ {
+  "volts": 208,
+  "m_amps": 4091,
+  "power": 850
+ },
+ {
+  "volts": 207,
+  "m_amps": 4439,
+  "power": 918
+ },
+ {
+  "volts": 238,
+  "m_amps": 4927,
+  "power": 1172
+ },
+ {
+  "volts": 215,
+  "m_amps": 816,
+  "power": 175
+ },
+ {
+  "volts": 201,
+  "m_amps": 4945,
+  "power": 993
+ },
+ {
+  "volts": 211,
+  "m_amps": 3031,
+  "power": 639
+ },
+ {
+  "volts": 216,
+  "m_amps": 3971,
+  "power": 857
+ },
+ {
+  "volts": 209,
+  "m_amps": 936,
+  "power": 195
+ },
+ {
+  "volts": 223,
+  "m_amps": 2580,
+  "power": 575
+ },
+ {
+  "volts": 206,
+  "m_amps": 2744,
+  "power": 565
+ },
+ {
+  "volts": 238,
+  "m_amps": 3984,
+  "power": 948
+ },
+ {
+  "volts": 234,
+  "m_amps": 4275,
+  "power": 1000
+ },
+ {
+  "volts": 234,
+  "m_amps": 2680,
+  "power": 627
+ },
+ {
+  "volts": 213,
+  "m_amps": 2794,
+  "power": 595
+ },
+ {
+  "volts": 205,
+  "m_amps": 2395,
+  "power": 490
+ },
+ {
+  "volts": 232,
+  "m_amps": 788,
+  "power": 182
+ },
+ {
+  "volts": 224,
+  "m_amps": 4367,
+  "power": 978
+ },
+ {
+  "volts": 214,
+  "m_amps": 688,
+  "power": 147
+ },
+ {
+  "volts": 236,
+  "m_amps": 783,
+  "power": 184
+ },
+ {
+  "volts": 228,
+  "m_amps": 3231,
+  "power": 736
+ },
+ {
+  "volts": 227,
+  "m_amps": 4189,
+  "power": 950
+ },
+ {
+  "volts": 220,
+  "m_amps": 1584,
+  "power": 348
+ },
+ {
+  "volts": 236,
+  "m_amps": 1723,
+  "power": 406
+ },
+ {
+  "volts": 220,
+  "m_amps": 636,
+  "power": 139
+ },
+ {
+  "volts": 217,
+  "m_amps": 4675,
+  "power": 1014
+ },
+ {
+  "volts": 214,
+  "m_amps": 4702,
+  "power": 1006
+ },
+ {
+  "volts": 237,
+  "m_amps": 1949,
+  "power": 461
+ },
+ {
+  "volts": 232,
+  "m_amps": 2149,
+  "power": 498
+ },
+ {
+  "volts": 237,
+  "m_amps": 2180,
+  "power": 516
+ },
+ {
+  "volts": 207,
+  "m_amps": 1849,
+  "power": 382
+ },
+ {
+  "volts": 237,
+  "m_amps": 2755,
+  "power": 652
+ },
+ {
+  "volts": 200,
+  "m_amps": 2931,
+  "power": 586
+ },
+ {
+  "volts": 232,
+  "m_amps": 1135,
+  "power": 263
+ },
+ {
+  "volts": 234,
+  "m_amps": 3815,
+  "power": 892
+ },
+ {
+  "volts": 235,
+  "m_amps": 4097,
+  "power": 962
+ },
+ {
+  "volts": 225,
+  "m_amps": 1416,
+  "power": 318
+ },
+ {
+  "volts": 235,
+  "m_amps": 2795,
+  "power": 656
+ },
+ {
+  "volts": 200,
+  "m_amps": 888,
+  "power": 177
+ },
+ {
+  "volts": 234,
+  "m_amps": 2260,
+  "power": 528
+ },
+ {
+  "volts": 223,
+  "m_amps": 4442,
+  "power": 990
+ },
+ {
+  "volts": 225,
+  "m_amps": 4636,
+  "power": 1043
+ },
+ {
+  "volts": 206,
+  "m_amps": 1125,
+  "power": 231
+ },
+ {
+  "volts": 205,
+  "m_amps": 795,
+  "power": 162
+ },
+ {
+  "volts": 204,
+  "m_amps": 4785,
+  "power": 976
+ },
+ {
+  "volts": 227,
+  "m_amps": 1490,
+  "power": 338
+ },
+ {
+  "volts": 211,
+  "m_amps": 3390,
+  "power": 715
+ },
+ {
+  "volts": 214,
+  "m_amps": 3542,
+  "power": 757
+ },
+ {
+  "volts": 221,
+  "m_amps": 3649,
+  "power": 806
+ },
+ {
+  "volts": 210,
+  "m_amps": 1004,
+  "power": 210
+ },
+ {
+  "volts": 227,
+  "m_amps": 876,
+  "power": 198
+ },
+ {
+  "volts": 208,
+  "m_amps": 3352,
+  "power": 697
+ },
+ {
+  "volts": 219,
+  "m_amps": 3459,
+  "power": 757
+ },
+ {
+  "volts": 223,
+  "m_amps": 4771,
+  "power": 1063
+ },
+ {
+  "volts": 206,
+  "m_amps": 1778,
+  "power": 366
+ },
+ {
+  "volts": 218,
+  "m_amps": 3418,
+  "power": 745
+ },
+ {
+  "volts": 237,
+  "m_amps": 1284,
+  "power": 304
+ },
+ {
+  "volts": 200,
+  "m_amps": 1209,
+  "power": 241
+ },
+ {
+  "volts": 211,
+  "m_amps": 1354,
+  "power": 285
+ },
+ {
+  "volts": 201,
+  "m_amps": 842,
+  "power": 169
+ },
+ {
+  "volts": 223,
+  "m_amps": 4709,
+  "power": 1050
+ },
+ {
+  "volts": 234,
+  "m_amps": 2910,
+  "power": 680
+ },
+ {
+  "volts": 234,
+  "m_amps": 2543,
+  "power": 595
+ },
+ {
+  "volts": 203,
+  "m_amps": 4100,
+  "power": 832
+ },
+ {
+  "volts": 226,
+  "m_amps": 797,
+  "power": 180
+ },
+ {
+  "volts": 233,
+  "m_amps": 4432,
+  "power": 1032
+ },
+ {
+  "volts": 215,
+  "m_amps": 4721,
+  "power": 1015
+ },
+ {
+  "volts": 201,
+  "m_amps": 3123,
+  "power": 627
+ },
+ {
+  "volts": 221,
+  "m_amps": 2680,
+  "power": 592
+ },
+ {
+  "volts": 232,
+  "m_amps": 2071,
+  "power": 480
+ },
+ {
+  "volts": 202,
+  "m_amps": 2974,
+  "power": 600
+ },
+ {
+  "volts": 218,
+  "m_amps": 1148,
+  "power": 250
+ },
+ {
+  "volts": 224,
+  "m_amps": 3142,
+  "power": 703
+ },
+ {
+  "volts": 202,
+  "m_amps": 3042,
+  "power": 614
+ },
+ {
+  "volts": 222,
+  "m_amps": 2658,
+  "power": 590
+ },
+ {
+  "volts": 236,
+  "m_amps": 1730,
+  "power": 408
+ },
+ {
+  "volts": 223,
+  "m_amps": 1856,
+  "power": 413
+ },
+ {
+  "volts": 200,
+  "m_amps": 687,
+  "power": 137
+ },
+ {
+  "volts": 211,
+  "m_amps": 3543,
+  "power": 747
+ },
+ {
+  "volts": 239,
+  "m_amps": 4967,
+  "power": 1187
+ },
+ {
+  "volts": 237,
+  "m_amps": 1867,
+  "power": 442
+ },
+ {
+  "volts": 206,
+  "m_amps": 2160,
+  "power": 444
+ },
+ {
+  "volts": 209,
+  "m_amps": 4287,
+  "power": 895
+ },
+ {
+  "volts": 207,
+  "m_amps": 3102,
+  "power": 642
+ },
+ {
+  "volts": 207,
+  "m_amps": 2031,
+  "power": 420
+ }
+]
