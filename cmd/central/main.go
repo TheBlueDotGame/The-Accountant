@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/bartossh/Computantis/logo"
-	"github.com/pterm/pterm"
-	"github.com/urfave/cli/v2"
 	"os"
 	"os/signal"
 	"time"
+
+	"github.com/bartossh/Computantis/logo"
+	"github.com/pterm/pterm"
+	"github.com/urfave/cli/v2"
 
 	"github.com/bartossh/Computantis/block"
 	"github.com/bartossh/Computantis/blockchain"
