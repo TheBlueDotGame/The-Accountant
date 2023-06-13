@@ -162,7 +162,7 @@ func (a *app) connectToSocket(ctx context.Context, address string) error {
 	}
 
 	go a.pullPump(ctxx, c, address)
-	go a.pushPump(ctxx, c, address)
+	go a.pushPump(ctxx, cancelx, c, address)
 	a.log.Info(fmt.Sprintf("validator connected to central node on address: %s", address))
 
 	return nil
@@ -210,19 +210,18 @@ func (a *app) pullPump(ctx context.Context, conn *websocket.Conn, address string
 			msgType, raw, err := conn.ReadMessage()
 			if err != nil {
 				a.log.Error(fmt.Sprintf("validator read msg error, %s", err.Error()))
-				return
+				continue
 			}
 			switch msgType {
 			case websocket.PingMessage, websocket.PongMessage:
 				continue
 			case websocket.CloseMessage:
 				return
-
 			default:
 				var msg server.Message
 				if err := json.Unmarshal(raw, &msg); err != nil {
 					a.log.Error(fmt.Sprintf("validator unmarshal msg error, %s", err.Error()))
-					return
+					continue
 				}
 				if msg.Error != "" {
 					a.log.Info(fmt.Sprintf("validator msg error, %s", msg.Error))
@@ -234,13 +233,8 @@ func (a *app) pullPump(ctx context.Context, conn *websocket.Conn, address string
 	}
 }
 
-func (a *app) pushPump(ctx context.Context, conn *websocket.Conn, address string) {
+func (a *app) pushPump(ctx context.Context, cancel context.CancelFunc, conn *websocket.Conn, address string) {
 	ticker := time.NewTicker(time.Second * 10)
-	defer func() {
-		if err := a.disconnectFromSocket(address); err != nil {
-			a.log.Error(fmt.Sprintf("validator disconnect on close, %s", err.Error()))
-		}
-	}()
 	defer ticker.Stop()
 	for {
 		select {
@@ -248,7 +242,7 @@ func (a *app) pushPump(ctx context.Context, conn *websocket.Conn, address string
 			err := conn.WriteMessage(websocket.PingMessage, nil)
 			if err != nil {
 				a.log.Error(fmt.Sprintf("validator write msg error, %s", err.Error()))
-				return
+				cancel()
 			}
 		case <-ctx.Done():
 			return
@@ -305,15 +299,11 @@ func (a *app) processMessage(ctx context.Context, m *server.Message, remoteAddre
 }
 
 func (a *app) processBlock(_ context.Context, b *block.Block, remoteAddress string) {
-	a.mux.Lock()
-	defer a.mux.Unlock()
 	err := a.validateBlock(b)
 	if err != nil {
 		a.log.Error(fmt.Sprintf("remote node address [ %s ], %s ", remoteAddress, err.Error()))
 	}
 	a.log.Info(fmt.Sprintf("block from [ %s ] :: last idx [ %v ] :: new idx [ %v ] \n", remoteAddress, a.lastBlock.Index, b.Index))
-	a.lastBlock = *b
-
 	go a.wh.PostWebhookBlock(b) // post concurrently
 }
 

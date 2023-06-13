@@ -162,13 +162,15 @@ func (c *socket) readPump(ctx context.Context, cancel context.CancelFunc) {
 			err := c.conn.ReadJSON(&msg)
 			if err != nil {
 				switch {
-				case websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure):
-					c.log.Info(fmt.Sprintf("socket closing connection to the client %s due to unexpected error %s\n", c.address, err))
+				case websocket.IsUnexpectedCloseError(err,
+					websocket.CloseGoingAway, websocket.CloseAbnormalClosure, websocket.CloseMessage, websocket.CloseMessageTooBig):
+					c.log.Info(fmt.Sprintf("closing socket connection to the client %s due to %s\n", c.address, err))
+					cancel()
+					return
 				default:
-					c.log.Info(fmt.Sprintf("socket closing connection to the client %s due to error %s\n", c.address, err))
+					c.log.Info(fmt.Sprintf("reading socket message failed %s due to %s\n", c.address, err))
 				}
-				cancel()
-				return
+				continue
 			}
 			c.process(ctx, &msg)
 		}
@@ -180,7 +182,9 @@ func (c *socket) writePump(ctx context.Context, cancel context.CancelFunc) {
 	defer func() {
 		ticker.Stop()
 		c.hub.unregister <- c
-		err := c.conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "central node stopped"))
+		err := c.conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(
+			websocket.CloseNormalClosure, fmt.Sprintf("central node: %s stopped", c.address)),
+		)
 		if err != nil {
 			c.log.Error(fmt.Sprintf("central node write closing msg error, %s", err.Error()))
 		}

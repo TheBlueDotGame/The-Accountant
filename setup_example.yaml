@@ -24,7 +24,7 @@ client:
   central_node_url: "http://localhost:8080"
   validator_node_url: "http://localhost:9090"
 emulator:
-  timeout_seconds: 5
+  timeout_seconds: 20
   tick_seconds: 1
   random: false
   client_url: "http://localhost:8095"

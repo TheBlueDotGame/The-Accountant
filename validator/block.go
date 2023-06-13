@@ -5,6 +5,8 @@ import (
 )
 
 func (a *app) validateBlock(block *block.Block) error {
+	a.mux.Lock()
+	defer a.mux.Unlock()
 	if a.lastBlock.Index != 0 {
 		if block.Index != a.lastBlock.Index+1 {
 			return ErrBlockIndexIsInvalid
@@ -16,5 +18,6 @@ func (a *app) validateBlock(block *block.Block) error {
 	if !block.Validate(block.TrxHashes) {
 		return ErrProofBlockIsInvalid
 	}
+	a.lastBlock = *block
 	return nil
 }
