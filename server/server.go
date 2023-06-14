@@ -120,7 +120,7 @@ type Verifier interface {
 // Bookkeeper abstracts methods of the bookkeeping of a blockchain.
 type Bookkeeper interface {
 	Verifier
-	Run(ctx context.Context)
+	Run(ctx context.Context) error
 	WriteCandidateTransaction(ctx context.Context, tx *transaction.Transaction) error
 	WriteIssuerSignedTransactionForReceiver(ctx context.Context, trxBlock *transaction.Transaction) error
 }
@@ -233,9 +233,13 @@ func Run(
 	router.Group(WsURL, func(c *fiber.Ctx) error { return s.wsWrapper(ctxx, c) })
 
 	go func() {
-		bookkeeping.Run(ctxx)
+		if err := bookkeeping.Run(ctxx); err != nil {
+			log.Error(err.Error())
+			cancel()
+		}
 		err := router.Listen(fmt.Sprintf("0.0.0.0:%v", c.Port))
 		if err != nil {
+			log.Error(err.Error())
 			cancel()
 		}
 	}()
