@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/bartossh/Computantis/block"
@@ -32,6 +31,11 @@ var (
 	ErrDifficultyNotInRange            = errors.New("invalid difficulty, difficulty can by in range [1 : 255]")
 	ErrBlockWriteTimestampNoInRange    = errors.New("block write timestamp is not in range of [one second : four hours]")
 	ErrBlockTransactionsSizeNotInRange = errors.New("block transactions size is not in range of [1 : 60000]")
+)
+
+var (
+	errSavingBlock        = errors.New("saving block failed")
+	errMovingTransactions = errors.New("movinf transactions failed")
 )
 
 // TrxWriteReadMover provides transactions write, read and move methods.
@@ -185,14 +189,14 @@ func New(
 // Run runs the Ladger engine that writes blocks to the blockchain repository.
 // Run starts a goroutine and can be stopped by cancelling the context.
 // It is non-blocking and concurrent safe.
-func (l *Ledger) Run(ctx context.Context) {
+func (l *Ledger) Run(ctx context.Context) error {
 	count, err := l.db.CountRegistered(ctx)
 	if err != nil {
-		l.log.Fatal(err.Error())
+		return fmt.Errorf("looking for registerd nodes failed, %w", err)
 	}
 	if count == 1 {
 		if err := l.forgeTemporaryTrxs(ctx); err != nil {
-			l.log.Fatal(fmt.Sprintf("forging temporary failed: %s", err.Error()))
+			return fmt.Errorf("forging temporary failed, %w", err)
 		}
 		l.log.Info("forging temporary transactions finished")
 	}
@@ -204,23 +208,31 @@ func (l *Ledger) Run(ctx context.Context) {
 			select {
 			case <-ctx.Done():
 				if len(l.hashes) > 0 {
-					l.forge(ctx)
+					if err := l.forge(ctx); err != nil {
+						l.log.Error(fmt.Sprintf("cannot forge block on closing, %s", err))
+					}
 				}
 				return
 			case h := <-l.hashC:
 				if _, ok := l.hashes[h]; !ok {
 					l.hashes[h] = struct{}{}
 					if len(l.hashes) == l.config.BlockTransactionsSize {
-						l.forge(ctx)
+						if err := l.forge(ctx); err != nil {
+							l.log.Error(fmt.Sprintf("cannot forge block on new transaction, %s", err))
+						}
 					}
 				}
 			case <-ticker.C:
 				if len(l.hashes) > 0 {
-					l.forge(ctx)
+					if err := l.forge(ctx); err != nil {
+						l.log.Error(fmt.Sprintf("cannot forge block on next block tick, %s", err))
+					}
 				}
 			}
 		}
 	}(ctx)
+
+	return nil
 }
 
 // WriteIssuerSignedTransactionForReceiver validates issuer signature and writes a transaction to the repository for receiver.
@@ -276,17 +288,18 @@ func (l *Ledger) forgeTemporaryTrxs(ctx context.Context) error {
 		for _, trx := range trxs {
 			l.hashes[trx.Hash] = struct{}{}
 		}
-		l.forge(ctx)
+		if err := l.forge(ctx); err != nil {
+			return err
+		}
 		l.cleanHashes()
 	}
 }
 
-func (l *Ledger) forge(ctx context.Context) {
+func (l *Ledger) forge(ctx context.Context) error {
 	defer l.cleanHashes()
 	sync := newSync(l.id, l.db, l.sub)
 	if err := sync.waitInQueueForLock(ctx); err != nil {
-		log.Fatal(err.Error())
-		return
+		return err
 	}
 
 	hashes := make([][32]byte, 0, len(l.hashes))
@@ -296,18 +309,17 @@ func (l *Ledger) forge(ctx context.Context) {
 
 	blcHash, err := l.savePublishNewBlock(ctx, hashes)
 	if err != nil {
-		msg := fmt.Sprintf("error while saving block: %s", err.Error())
-		log.Fatal(msg)
-		return
+		return err
+
 	}
 
 	if err := l.db.MoveTransactionsFromTemporaryToPermanent(ctx, blcHash, hashes); err != nil {
-		msg := fmt.Sprintf("error while moving transactions from temporary to permanent: %s", err.Error())
-		log.Fatal(msg)
+		return errors.Join(errMovingTransactions, err)
 	}
 	if err := sync.releaseLock(ctx); err != nil {
-		log.Fatal(err.Error())
+		return err
 	}
+	return nil
 }
 
 func (l *Ledger) cleanHashes() {
@@ -317,14 +329,14 @@ func (l *Ledger) cleanHashes() {
 func (l *Ledger) savePublishNewBlock(ctx context.Context, hashes [][32]byte) ([32]byte, error) {
 	h, idx, err := l.bc.LastBlockHashIndex(ctx)
 	if err != nil {
-		return [32]byte{}, err
+		return [32]byte{}, errors.Join(errSavingBlock, err)
 	}
 
 	idx++
 	nb := block.New(l.config.Difficulty, idx, h, hashes)
 
 	if err := l.bc.WriteBlock(ctx, nb); err != nil {
-		return [32]byte{}, err
+		return [32]byte{}, errors.Join(errSavingBlock, err)
 	}
 
 	l.blcPub.Publish(nb)

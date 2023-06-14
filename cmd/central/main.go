@@ -104,17 +104,17 @@ func run(cfg configuration.Configuration) {
 	defer db.Disconnect(ctxx)
 
 	callbackOnErr := func(err error) {
-		fmt.Println("error with logger: ", err)
+		fmt.Println("Error with logger: ", err)
 	}
 
 	callbackOnFatal := func(err error) {
-		panic(fmt.Sprintf("error with logger: %s", err))
+		panic(fmt.Sprintf("Error with logger: %s", err))
 	}
 
 	log := logging.New(callbackOnErr, callbackOnFatal, db, stdoutwriter.Logger{})
 
 	if err := blockchain.GenesisBlock(ctx, db); err != nil {
-		fmt.Println(err)
+		fmt.Printf("Mining genesis block error: %s\n", err)
 	}
 
 	blc, err := blockchain.New(ctx, db)
