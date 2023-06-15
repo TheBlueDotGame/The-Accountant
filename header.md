@@ -113,12 +113,83 @@ emulator:
   public_url: "http://localhost:8060" # Public root URL of the emulator to create the validator Webhook with.
 ```
 
-## Execute the service
+## Emulate transaction process starting all basic services
+1. To emulate the transaction process first start database using docker-compose.yaml file:
 
-0. Run database `docker compose up`.
-1. Build the server `go build -o path/to/bin/central cmd/<service>/main.go`.
-2. Use `setup.yaml` as example of service configuration file.
-3. Run .`./path/to/bin/central -h` to see the help then run your binary file providing required setup. 
+
+```sh
+docker compose up -d
+```
+
+This will start database creating schema and populating database with address referring to the `test_wallet`.
+Test wallet is encrypted with key stored in `setup_example.yaml` `wallet_passwd` field.
+
+2. When your database is created and running ( should be reachable on `postgres://computantis:computantis@localhost:5432` ) then build and run docker image:
+
+
+```sh
+docker build -t emulation .
+
+docker run --network=host emulation
+```
+
+## Run services one by one
+
+1. To run services one by one go compiler is required:
+ - Install on Darwin `brew install go`.
+ - Install on Linux `apt install go`.
+
+2. Start database:
+
+```sh
+docker compose up -d
+```
+
+3. Compile binaries:
+
+```sh
+make build-local
+
+```
+
+3. Run services:
+ - Central:
+   
+   ```sh
+    ./bin/dedicated/central -c setup_example.yaml
+
+   ``` 
+ - Validator:
+
+   ```sh
+    ./bin/dedicated/validator -c setup_example.yaml
+
+   ``` 
+
+ - Client:
+
+   ```sh
+    ./bin/dedicated/client -c setup_example.yaml
+
+   ``` 
+
+ - Emulator subscriber:
+
+   ```sh
+    ./bin/dedicated/emulator -c setup_example.yaml -d minmax.json subscriber
+
+   ``` 
+
+ - Emulator publisher:
+
+   ```sh
+    ./bin/dedicated/emulator -c setup_example.yaml -d data.json publisher
+
+   ``` 
+
+This will compile all the components when docker image is run. All the processes are running in the single docker container.
+
+Your system 
 
 ## Stress test
 
