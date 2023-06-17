@@ -3,30 +3,30 @@ bookkeeper:
   block_write_timestamp: 300
   block_transactions_size: 1000
 server:
-  port: 8080
+  port: 8000
   data_size_bytes: 15000000
-  websocket_address: "ws://localhost:8080/ws"
+  websocket_address: "ws://central-node:8000/ws"
 database:
-  conn_str: "postgres://computantis:computantis@localhost:5432"
+  conn_str: "postgres://computantis:computantis@postgres:5432"
   database_name: "computantis"
   is_ssl: false
 dataprovider:
   longevity: 300
 validator:
-  central_node_address: "http://localhost:8080"
-  port: 9090
+  central_node_address: "http://central-node:8000"
+  port: 8010
   token: "jykkeD6Tr6xikkYwC805kVoFThm8VGEHStTFk1lIU6RgEf7p3vjFpPQFI3VP9SYeARjYh2jecMSYsmgddjZZcy32iySHijJQ"
 file_operator:
   wallet_path: "test_wallet"
   wallet_passwd: "dc6b5b1635453e0eb57344ffb6cb293e8300fc4001fad3518e721d548459c09d"
 client:
-  port: 8095
-  central_node_url: "http://localhost:8080"
-  validator_node_url: "http://localhost:9090"
+  port: 8020
+  central_node_url: "http://central-node:8000"
+  validator_node_url: "http://validator-node:8010"
 emulator:
   timeout_seconds: 20
   tick_seconds: 1
   random: false
-  client_url: "http://localhost:8095"
+  client_url: "http://localhost:8020"
   port: "8060"
   public_url: "http://localhost:8060"

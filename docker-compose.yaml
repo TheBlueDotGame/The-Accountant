@@ -1,8 +1,15 @@
 version: '3.8'
 
+networks:
+  computantis_network:
+    driver: bridge
+
+volumes:
+  prometheus_data: {}
+
 services:
   postgres:
-    container_name: computantis_postgresql
+    container_name: postgres
     image: postgres:latest
     environment:
       POSTGRES_USER: "postgres"
@@ -12,3 +19,91 @@ services:
     ports:
       - "5432:5432"
     restart: unless-stopped
+    networks:
+      - computantis_network
+    healthcheck:
+      test: "pg_isready --username=postgres && psql --username=postgres --list"
+      timeout: 10s
+      retries: 20
+
+  central-node:
+    container_name: central-node
+    build: 
+      dockerfile: cmd/central/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    networks:
+      - computantis_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+ 
+  validator-node:
+    container_name: validator-node
+    build: 
+      dockerfile: cmd/validator/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8010:8010"
+    networks:
+      - computantis_network
+    depends_on:
+      central-node:
+        condition: service_started
+  
+  client-node:
+    container_name: client-node
+    build: 
+      dockerfile: cmd/client/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8020:8020"
+    networks:
+      - computantis_network
+    depends_on:
+      validator-node:
+        condition: service_started
+ 
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    restart: unless-stopped
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    expose:
+      - 9100
+    networks:
+      - computantis_network
+    depends_on:
+      central-node:
+        condition: service_started
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    volumes:
+      - ./prometheus.yaml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    expose:
+      - 9090
+    networks:
+      - computantis_network
+    depends_on:
+      central-node:
+        condition: service_started
+

@@ -113,46 +113,28 @@ emulator:
   public_url: "http://localhost:8060" # Public root URL of the emulator to create the validator Webhook with.
 ```
 
-## Emulate transaction process starting all basic services
-1. To emulate the transaction process first start database using docker-compose.yaml file:
+## Start locally all services
 
+Required services setup:
+ - PostgreSQL database
+ - Central node
+ - Validator node
+ - Client node
+ - Exporter node
+ - Prometheus node
+
+Run in termial to run services in separate docker containers:
 
 ```sh
 docker compose up -d
-```
-
-This will start database creating schema and populating database with address referring to the `test_wallet`.
-Test wallet is encrypted with key stored in `setup_example.yaml` `wallet_passwd` field.
-
-2. When your database is created and running ( should be reachable on `postgres://computantis:computantis@localhost:5432` ) then build and run docker image:
-
-
-```sh
-docker build -t emulation .
-
-docker run --network=host emulation
 ```
 
 ## Run services one by one
 
-1. To run services one by one go compiler is required:
- - Install on Darwin `brew install go`.
- - Install on Linux `apt install go`.
-
-2. Start database:
-
-```sh
-docker compose up -d
-```
-
-3. Compile binaries:
-
 ```sh
 make build-local
-
 ```
 
-3. Run services:
  - Central:
    
    ```sh
