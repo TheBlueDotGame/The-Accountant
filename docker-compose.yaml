@@ -6,6 +6,7 @@ networks:
 
 volumes:
   prometheus_data: {}
+  grafana-data:
 
 services:
   postgres:
@@ -80,6 +81,8 @@ services:
       - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
     expose:
       - 9100
+    ports:
+      - "9100:9100"
     networks:
       - computantis_network
     depends_on:
@@ -101,9 +104,19 @@ services:
       - '--web.enable-lifecycle'
     expose:
       - 9090
+    ports:
+      - "9090:9090"
     networks:
       - computantis_network
     depends_on:
       central-node:
         condition: service_started
 
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - 3000:3000
+    restart: unless-stopped
+    volumes:
+      - grafana-data:/var/lib/grafana
+      
