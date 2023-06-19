@@ -47,3 +47,14 @@ run-all: run-central run-client run-validator emulate-subscriber emulate-publish
 
 start: build-local run-all
 
+docker-all:
+	docker compose up -d
+
+docker-central-build:
+	docker compose up -d --no-deps --build central-node
+
+docker-validator-build:
+	docker compose up -d --no-deps --build validator-node
+
+docker-client-build:
+	docker compose up -d --no-deps --build client-node

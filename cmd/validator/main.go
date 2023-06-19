@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/bartossh/Computantis/logo"
+	"github.com/bartossh/Computantis/telemetry"
 	"github.com/pterm/pterm"
 	"github.com/urfave/cli/v2"
 
@@ -115,6 +116,12 @@ func run(cfg configuration.Configuration) {
 	}
 
 	dataProvider := dataprovider.New(ctx, cfg.DataProvider)
+
+	go func() {
+		if err := telemetry.Run(ctx, cancel); err != nil {
+			log.Error(err.Error())
+		}
+	}()
 
 	if err := validator.Run(ctx, cfg.Validator, db, log, verify, wh, &wl, dataProvider); err != nil {
 		log.Error(err.Error())

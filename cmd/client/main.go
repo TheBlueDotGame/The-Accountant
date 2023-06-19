@@ -4,11 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/pterm/pterm"
-	"github.com/urfave/cli/v2"
 	"os"
 	"os/signal"
 	"time"
+
+	"github.com/pterm/pterm"
+	"github.com/urfave/cli/v2"
 
 	"github.com/bartossh/Computantis/aeswrapper"
 	"github.com/bartossh/Computantis/configuration"
@@ -17,6 +18,7 @@ import (
 	"github.com/bartossh/Computantis/logo"
 	"github.com/bartossh/Computantis/repository"
 	"github.com/bartossh/Computantis/stdoutwriter"
+	"github.com/bartossh/Computantis/telemetry"
 	"github.com/bartossh/Computantis/wallet"
 	"github.com/bartossh/Computantis/walletapi"
 )
@@ -105,6 +107,12 @@ func run(cfg configuration.Configuration) {
 	fo := fileoperations.New(cfg.FileOperator, seal)
 
 	verify := wallet.NewVerifier()
+
+	go func() {
+		if err := telemetry.Run(ctx, cancel); err != nil {
+			log.Error(err.Error())
+		}
+	}()
 
 	err = walletapi.Run(ctx, cfg.Client, log, timeout, verify, fo, wallet.New)
 
