@@ -13,8 +13,12 @@ scrape_configs:
 
   - job_name: 'central'
     static_configs:
-      - targets: ['central-node:8000']
+      - targets: ['central-node:2112']
   
   - job_name: 'validator'
     static_configs:
-      - targets: ['validator-node:8010']
+      - targets: ['validator-node:2112']
+  
+  - job_name: 'client'
+    static_configs:
+      - targets: ['client-node:2112'] 
