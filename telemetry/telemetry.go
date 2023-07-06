@@ -2,6 +2,7 @@ package telemetry
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -10,39 +11,128 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-var (
-	opsProcessed = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "computantis_processed_ops_total",
-		Help: "The total number of processed events",
-	})
-)
+type record struct {
+	name  byte
+	value float64
+}
 
-func recordMetrics() {
-	for {
-		opsProcessed.Inc()
-		time.Sleep(2 * time.Second)
+// Measurements collects measurements for prometheus
+type Measurements struct {
+	histograms map[string]prometheus.Observer
+	gauge      map[string]prometheus.Gauge
+}
+
+// CreateUpdateObservableHistogtram creats or updates observable histogram.
+func (m Measurements) CreateUpdateObservableHistogtram(name, description string) {
+	hist := promauto.NewHistogram(prometheus.HistogramOpts{
+		Name: name,
+		Help: description,
+	})
+
+	m.histograms[name] = hist
+}
+
+// RecordHistogram records histogram time if entity with given name exists.
+func (m Measurements) RecordHistogram(name string, t time.Duration) bool {
+	ts := float64(t.Microseconds())
+	if v, ok := m.histograms[name]; ok {
+		v.Observe(ts)
+		return true
 	}
+	return false
+}
+
+// CreateUpdateObservableGauge creats or updates observable gauge.
+func (m Measurements) CreateUpdateObservableGauge(name, description string) {
+	gauge := promauto.NewGauge(prometheus.GaugeOpts{
+		Name: name,
+		Help: description,
+	})
+
+	m.gauge[name] = gauge
+}
+
+// AddToGeuge adds to gauge the value if entity with given name exists.
+func (m Measurements) AddToGauge(name string, f float64) bool {
+	if v, ok := m.gauge[name]; ok {
+		v.Add(f)
+		return true
+	}
+	return false
+}
+
+// SubstractFromGeuge substracts from gauge the value if entity with given name exists.
+func (m Measurements) RemoveFromGauge(name string, f float64) bool {
+	if v, ok := m.gauge[name]; ok {
+		v.Sub(f)
+		return true
+	}
+	return false
+}
+
+// IncrementGeuge increments gauge the value if entity with given name exists.
+func (m Measurements) IncrementGauge(name string) bool {
+	if v, ok := m.gauge[name]; ok {
+		v.Inc()
+		return true
+	}
+	return false
+}
+
+// DecrementGeuge decrements gauge the value if entity with given name exists.
+func (m Measurements) DecrementGauge(name string) bool {
+	if v, ok := m.gauge[name]; ok {
+		v.Dec()
+		return true
+	}
+	return false
+}
+
+// SetGeuge sets the gauge to the value if entity with given name exists.
+func (m Measurements) SetGauge(name string, f float64) bool {
+	if v, ok := m.gauge[name]; ok {
+		v.Set(f)
+		return true
+	}
+	return false
+}
+
+// SetToCurrentTimeGeuge sets the gauge to the current time if entity with given name exists.
+func (m Measurements) SetToCurrentTimeGauge(name string) bool {
+	if v, ok := m.gauge[name]; ok {
+		v.SetToCurrentTime()
+		return true
+	}
+	return false
 }
 
 // Run starts collecting metrics and server with prometheus telemetry endpoint.
-// This functions blocks. To stop cancel ctx.
-func Run(ctx context.Context, cancel context.CancelFunc) error {
-	mux := http.NewServeMux()
-	mux.Handle("/metrics", promhttp.Handler())
-	srv := http.Server{Addr: ":2112", Handler: mux}
-
-	var err error
+// Returns Measurements structure if successfully started or cancels context otherwise.
+// Default port of 2112 is used if port value is set to 0.
+func Run(ctx context.Context, cancel context.CancelFunc, port int) (*Measurements, error) {
+	if port > 65535 || port < 0 {
+		return nil, fmt.Errorf("port range allowd is from 1 to 65535, received %d", port)
+	}
 	go func() {
-		if err = srv.ListenAndServe(); err != nil {
-			cancel()
-			return
+		if port == 0 {
+			port = 2112
 		}
+		mux := http.NewServeMux()
+		mux.Handle("/metrics", promhttp.Handler())
+		srv := http.Server{Addr: fmt.Sprintf(":%d", port), Handler: mux}
+
+		var err error
+		go func() {
+			if err = srv.ListenAndServe(); err != nil {
+				cancel()
+			}
+		}()
+
+		<-ctx.Done()
+
+		srv.Shutdown(ctx)
+
 	}()
 
-	go recordMetrics()
-
-	<-ctx.Done()
-
-	err = srv.Shutdown(ctx)
-	return err
+	return &Measurements{make(map[string]prometheus.Observer), make(map[string]prometheus.Gauge)}, nil
 }

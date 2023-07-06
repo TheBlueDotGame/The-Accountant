@@ -108,11 +108,12 @@ func run(cfg configuration.Configuration) {
 
 	verify := wallet.NewVerifier()
 
-	go func() {
-		if err := telemetry.Run(ctx, cancel); err != nil {
-			log.Error(err.Error())
-		}
-	}()
+	_, err = telemetry.Run(ctx, cancel, 0)
+	if err != nil {
+		log.Error(err.Error())
+		c <- os.Interrupt
+		return
+	}
 
 	err = walletapi.Run(ctx, cfg.Client, log, timeout, verify, fo, wallet.New)
 
