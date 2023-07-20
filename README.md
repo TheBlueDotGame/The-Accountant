@@ -123,7 +123,7 @@ Required services setup:
  - Exporter node
  - Prometheus node
 
-Run in termial to run services in separate docker containers:
+Run in terminal to run services in separate docker containers:
 
 ```sh
 docker compose up -d
@@ -180,6 +180,11 @@ Bottleneck is on I/O calls, mostly database writes.
 Single PostgreSQL database instance run in docker 1CPU and 2GB RAM allows for 
 full cycle processing of 750 transactions per second. This is rough estimate and 
 I would soon provide more precise benchmarks.
+
+## Vulnerability scanning.
+
+Install govulncheck to perform vulnerability scanning  `go install golang.org/x/vuln/cmd/govulncheck@latest`.
+
 
 ## Package provides webassembly package that expose client API to the front-end applications.
 
