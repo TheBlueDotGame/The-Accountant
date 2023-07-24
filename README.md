@@ -1749,7 +1749,7 @@ import "github.com/bartossh/Computantis/server"
 
 - [Constants](<#constants>)
 - [Variables](<#variables>)
-- [func Run(ctx context.Context, c Config, repo Repository, bookkeeping Bookkeeper, pv RandomDataProvideValidator, log logger.Logger, rxBlock ReactiveBlock, rxTrxIssued ReactiveTrxIssued) error](<#func-run>)
+- [func Run(ctx context.Context, c Config, repo Repository, bookkeeping Bookkeeper, pv RandomDataProvideValidator, tele providers.HistogramProvider, log logger.Logger, rxBlock ReactiveBlock, rxTrxIssued ReactiveTrxIssued) error](<#func-run>)
 - [type AddressReaderWriterModifier](<#type-addressreaderwritermodifier>)
 - [type AliveResponse](<#type-aliveresponse>)
 - [type ApprovedTransactionsResponse](<#type-approvedtransactionsresponse>)
@@ -1832,15 +1832,15 @@ var (
 )
 ```
 
-## func [Run](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L169-L173>)
+## func [Run](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L189-L193>)
 
 ```go
-func Run(ctx context.Context, c Config, repo Repository, bookkeeping Bookkeeper, pv RandomDataProvideValidator, log logger.Logger, rxBlock ReactiveBlock, rxTrxIssued ReactiveTrxIssued) error
+func Run(ctx context.Context, c Config, repo Repository, bookkeeping Bookkeeper, pv RandomDataProvideValidator, tele providers.HistogramProvider, log logger.Logger, rxBlock ReactiveBlock, rxTrxIssued ReactiveTrxIssued) error
 ```
 
 Run initializes routing and runs the server. To stop the server cancel the context. It blocks until the context is canceled.
 
-## type [AddressReaderWriterModifier](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L82-L90>)
+## type [AddressReaderWriterModifier](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L101-L109>)
 
 AddressReaderWriterModifier abstracts address operations.
 
@@ -1856,7 +1856,7 @@ type AddressReaderWriterModifier interface {
 }
 ```
 
-## type [AliveResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L12-L16>)
+## type [AliveResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L14-L18>)
 
 AliveResponse is a response for alive and version check.
 
@@ -1868,7 +1868,7 @@ type AliveResponse struct {
 }
 ```
 
-## type [ApprovedTransactionsResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L416-L419>)
+## type [ApprovedTransactionsResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L445-L448>)
 
 ApprovedTransactionsResponse is a response for approved transactions request.
 
@@ -1879,7 +1879,7 @@ type ApprovedTransactionsResponse struct {
 }
 ```
 
-## type [AwaitedTransactionsResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L268-L271>)
+## type [AwaitedTransactionsResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L288-L291>)
 
 AwaitedTransactionsResponse is a response for awaited transactions request.
 
@@ -1890,7 +1890,7 @@ type AwaitedTransactionsResponse struct {
 }
 ```
 
-## type [Bookkeeper](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L121-L126>)
+## type [Bookkeeper](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L140-L145>)
 
 Bookkeeper abstracts methods of the bookkeeping of a blockchain.
 
@@ -1903,7 +1903,7 @@ type Bookkeeper interface {
 }
 ```
 
-## type [Config](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L150-L154>)
+## type [Config](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L169-L173>)
 
 Config contains configuration of the server.
 
@@ -1915,7 +1915,7 @@ type Config struct {
 }
 ```
 
-## type [CreateAddressRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L486-L492>)
+## type [CreateAddressRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L521-L527>)
 
 CreateAddressRequest is a request to create an address.
 
@@ -1929,7 +1929,7 @@ type CreateAddressRequest struct {
 }
 ```
 
-## type [CreateAddressResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L496-L499>)
+## type [CreateAddressResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L531-L534>)
 
 Response for address creation request. If Success is true, Address contains created address in base58 format.
 
@@ -1940,7 +1940,7 @@ type CreateAddressResponse struct {
 }
 ```
 
-## type [DataToSignRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L465-L467>)
+## type [DataToSignRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L497-L499>)
 
 DataToSignRequest is a request to get data to sign for proving identity.
 
@@ -1950,7 +1950,7 @@ type DataToSignRequest struct {
 }
 ```
 
-## type [DataToSignResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L470-L472>)
+## type [DataToSignResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L502-L504>)
 
 DataToSignRequest is a response containing data to sign for proving identity.
 
@@ -1960,7 +1960,7 @@ type DataToSignResponse struct {
 }
 ```
 
-## type [DiscoverResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L28-L30>)
+## type [DiscoverResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L30-L32>)
 
 DiscoverResponse is a response containing all the central node registered in the current system.
 
@@ -1970,7 +1970,7 @@ type DiscoverResponse struct {
 }
 ```
 
-## type [GenerateTokenRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L550-L556>)
+## type [GenerateTokenRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L588-L594>)
 
 GenerateTokenRequest is a request for token generation.
 
@@ -1984,7 +1984,7 @@ type GenerateTokenRequest struct {
 }
 ```
 
-## type [GenerateTokenResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L559>)
+## type [GenerateTokenResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L597>)
 
 GenerateTokenResponse is a response containing generated token.
 
@@ -1992,7 +1992,7 @@ GenerateTokenResponse is a response containing generated token.
 type GenerateTokenResponse = token.Token
 ```
 
-## type [IssuedTransactionsResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L318-L321>)
+## type [IssuedTransactionsResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L341-L344>)
 
 IssuedTransactionsResponse is a response for issued transactions request.
 
@@ -2003,7 +2003,7 @@ type IssuedTransactionsResponse struct {
 }
 ```
 
-## type [Message](<https://github.com/bartossh/Computantis/blob/main/server/ws.go#L39-L45>)
+## type [Message](<https://github.com/bartossh/Computantis/blob/main/server/ws.go#L41-L47>)
 
 Message is the message that is used to exchange information between the server and the client.
 
@@ -2017,7 +2017,7 @@ type Message struct {
 }
 ```
 
-## type [RandomDataProvideValidator](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L130-L133>)
+## type [RandomDataProvideValidator](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L149-L152>)
 
 RandomDataProvideValidator provides random binary data for signing to prove identity and the validator of data being valid and not expired.
 
@@ -2028,7 +2028,7 @@ type RandomDataProvideValidator interface {
 }
 ```
 
-## type [ReactiveBlock](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L137-L140>)
+## type [ReactiveBlock](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L156-L159>)
 
 ReactiveBlock provides reactive subscription to the blockchain. It allows to listen for the new blocks created by the Ladger.
 
@@ -2039,7 +2039,7 @@ type ReactiveBlock interface {
 }
 ```
 
-## type [ReactiveTrxIssued](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L144-L147>)
+## type [ReactiveTrxIssued](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L163-L166>)
 
 ReactiveTrxIssued provides reactive subscription to the issuer address. It allows to listen for the new blocks created by the Ladger.
 
@@ -2050,7 +2050,7 @@ type ReactiveTrxIssued interface {
 }
 ```
 
-## type [Register](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L74-L79>)
+## type [Register](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L93-L98>)
 
 Register abstracts node registration operations.
 
@@ -2063,7 +2063,7 @@ type Register interface {
 }
 ```
 
-## type [RejectedTransactionsResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L367-L370>)
+## type [RejectedTransactionsResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L393-L396>)
 
 RejectedTransactionsResponse is a response for rejected transactions request.
 
@@ -2074,7 +2074,7 @@ type RejectedTransactionsResponse struct {
 }
 ```
 
-## type [Repository](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L103-L113>)
+## type [Repository](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L122-L132>)
 
 Repository is the interface that wraps the basic CRUD and Search methods. Repository should be properly indexed to allow for transaction and block hash. as well as address public keys to be and unique and the hash lookup should be fast. Repository holds the blocks and transaction that are part of the blockchain.
 
@@ -2092,7 +2092,7 @@ type Repository interface {
 }
 ```
 
-## type [SearchAddressRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L42-L44>)
+## type [SearchAddressRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L47-L49>)
 
 SearchAddressRequest is a request to search for address.
 
@@ -2102,7 +2102,7 @@ type SearchAddressRequest struct {
 }
 ```
 
-## type [SearchAddressResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L47-L49>)
+## type [SearchAddressResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L52-L54>)
 
 SearchAddressResponse is a response for address search.
 
@@ -2112,7 +2112,7 @@ type SearchAddressResponse struct {
 }
 ```
 
-## type [SearchBlockRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L70-L73>)
+## type [SearchBlockRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L78-L81>)
 
 SearchBlockRequest is a request to search for block.
 
@@ -2123,7 +2123,7 @@ type SearchBlockRequest struct {
 }
 ```
 
-## type [SearchBlockResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L76-L78>)
+## type [SearchBlockResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L84-L86>)
 
 SearchBlockResponse is a response for block search.
 
@@ -2133,7 +2133,7 @@ type SearchBlockResponse struct {
 }
 ```
 
-## type [TokenWriteInvalidateChecker](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L93-L97>)
+## type [TokenWriteInvalidateChecker](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L112-L116>)
 
 TokenWriteInvalidateChecker abstracts token operations.
 
@@ -2145,7 +2145,7 @@ type TokenWriteInvalidateChecker interface {
 }
 ```
 
-## type [TransactionConfirmProposeResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L115-L118>)
+## type [TransactionConfirmProposeResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L126-L129>)
 
 TransactionConfirmProposeResponse is a response for transaction propose.
 
@@ -2156,7 +2156,7 @@ type TransactionConfirmProposeResponse struct {
 }
 ```
 
-## type [TransactionProposeRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L109-L112>)
+## type [TransactionProposeRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L120-L123>)
 
 TransactionProposeRequest is a request to propose a transaction.
 
@@ -2167,7 +2167,7 @@ type TransactionProposeRequest struct {
 }
 ```
 
-## type [TransactionsRejectRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L195-L201>)
+## type [TransactionsRejectRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L212-L218>)
 
 TransactionsRejectRequest is a request to reject a transactions.
 
@@ -2181,7 +2181,7 @@ type TransactionsRejectRequest struct {
 }
 ```
 
-## type [TransactionsRejectResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L204-L207>)
+## type [TransactionsRejectResponse](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L221-L224>)
 
 TransactionsRejectResponse is a response for transaction reject.
 
@@ -2192,7 +2192,7 @@ type TransactionsRejectResponse struct {
 }
 ```
 
-## type [TransactionsRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L258-L265>)
+## type [TransactionsRequest](<https://github.com/bartossh/Computantis/blob/main/server/rest.go#L278-L285>)
 
 TransactionsRequest is a request to get awaited, issued or rejected transactions for given address. Request contains of Address for which Transactions are requested, Data in binary format, Hash of Data and Signature of the Data to prove that entity doing the request is an Address owner.
 
@@ -2207,7 +2207,7 @@ type TransactionsRequest struct {
 }
 ```
 
-## type [Verifier](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L116-L118>)
+## type [Verifier](<https://github.com/bartossh/Computantis/blob/main/server/server.go#L135-L137>)
 
 Verifier provides methods to verify the signature of the message.
 
@@ -2263,20 +2263,21 @@ import "github.com/bartossh/Computantis/telemetry"
 
 - [type Measurements](<#type-measurements>)
   - [func Run(ctx context.Context, cancel context.CancelFunc, port int) (*Measurements, error)](<#func-run>)
-  - [func (m Measurements) AddToGauge(name string, f float64) bool](<#func-measurements-addtogauge>)
-  - [func (m Measurements) CreateUpdateObservableGauge(name, description string)](<#func-measurements-createupdateobservablegauge>)
-  - [func (m Measurements) CreateUpdateObservableHistogtram(name, description string)](<#func-measurements-createupdateobservablehistogtram>)
-  - [func (m Measurements) DecrementGauge(name string) bool](<#func-measurements-decrementgauge>)
-  - [func (m Measurements) IncrementGauge(name string) bool](<#func-measurements-incrementgauge>)
-  - [func (m Measurements) RecordHistogram(name string, t time.Duration) bool](<#func-measurements-recordhistogram>)
-  - [func (m Measurements) RemoveFromGauge(name string, f float64) bool](<#func-measurements-removefromgauge>)
-  - [func (m Measurements) SetGauge(name string, f float64) bool](<#func-measurements-setgauge>)
-  - [func (m Measurements) SetToCurrentTimeGauge(name string) bool](<#func-measurements-settocurrenttimegauge>)
+  - [func (m *Measurements) AddToGauge(name string, f float64) bool](<#func-measurements-addtogauge>)
+  - [func (m *Measurements) CreateUpdateObservableGauge(name, description string)](<#func-measurements-createupdateobservablegauge>)
+  - [func (m *Measurements) CreateUpdateObservableHistogtram(name, description string)](<#func-measurements-createupdateobservablehistogtram>)
+  - [func (m *Measurements) DecrementGauge(name string) bool](<#func-measurements-decrementgauge>)
+  - [func (m *Measurements) IncrementGauge(name string) bool](<#func-measurements-incrementgauge>)
+  - [func (m *Measurements) RecordHistogramTime(name string, t time.Duration) bool](<#func-measurements-recordhistogramtime>)
+  - [func (m *Measurements) RecordHistogramValue(name string, f float64) bool](<#func-measurements-recordhistogramvalue>)
+  - [func (m *Measurements) RemoveFromGauge(name string, f float64) bool](<#func-measurements-removefromgauge>)
+  - [func (m *Measurements) SetGauge(name string, f float64) bool](<#func-measurements-setgauge>)
+  - [func (m *Measurements) SetToCurrentTimeGauge(name string) bool](<#func-measurements-settocurrenttimegauge>)
 
 
 ## type [Measurements](<https://github.com/bartossh/Computantis/blob/main/telemetry/telemetry.go#L20-L23>)
 
-Measurements collects measurements for prometheus
+Measurements collects measurements for prometheus.
 
 ```go
 type Measurements struct {
@@ -2284,82 +2285,90 @@ type Measurements struct {
 }
 ```
 
-### func [Run](<https://github.com/bartossh/Computantis/blob/main/telemetry/telemetry.go#L112>)
+### func [Run](<https://github.com/bartossh/Computantis/blob/main/telemetry/telemetry.go#L121>)
 
 ```go
 func Run(ctx context.Context, cancel context.CancelFunc, port int) (*Measurements, error)
 ```
 
-Run starts collecting metrics and server with prometheus telemetry endpoint. Returns Measurements structure if successfully started or cancels context otherwise. Default port of 2112 is used if port value is set to 0.
+Run starts collecting metrics and server with prometheus telemetry endpoint. Returns \*Measurements structure if successfully started or cancels context otherwise. Default port of 2112 is used if port value is set to 0.
 
-### func \(Measurements\) [AddToGauge](<https://github.com/bartossh/Computantis/blob/main/telemetry/telemetry.go#L56>)
+### func \(\*Measurements\) [AddToGauge](<https://github.com/bartossh/Computantis/blob/main/telemetry/telemetry.go#L65>)
 
 ```go
-func (m Measurements) AddToGauge(name string, f float64) bool
+func (m *Measurements) AddToGauge(name string, f float64) bool
 ```
 
 AddToGeuge adds to gauge the value if entity with given name exists.
 
-### func \(Measurements\) [CreateUpdateObservableGauge](<https://github.com/bartossh/Computantis/blob/main/telemetry/telemetry.go#L46>)
+### func \(\*Measurements\) [CreateUpdateObservableGauge](<https://github.com/bartossh/Computantis/blob/main/telemetry/telemetry.go#L55>)
 
 ```go
-func (m Measurements) CreateUpdateObservableGauge(name, description string)
+func (m *Measurements) CreateUpdateObservableGauge(name, description string)
 ```
 
 CreateUpdateObservableGauge creats or updates observable gauge.
 
-### func \(Measurements\) [CreateUpdateObservableHistogtram](<https://github.com/bartossh/Computantis/blob/main/telemetry/telemetry.go#L26>)
+### func \(\*Measurements\) [CreateUpdateObservableHistogtram](<https://github.com/bartossh/Computantis/blob/main/telemetry/telemetry.go#L26>)
 
 ```go
-func (m Measurements) CreateUpdateObservableHistogtram(name, description string)
+func (m *Measurements) CreateUpdateObservableHistogtram(name, description string)
 ```
 
 CreateUpdateObservableHistogtram creats or updates observable histogram.
 
-### func \(Measurements\) [DecrementGauge](<https://github.com/bartossh/Computantis/blob/main/telemetry/telemetry.go#L83>)
+### func \(\*Measurements\) [DecrementGauge](<https://github.com/bartossh/Computantis/blob/main/telemetry/telemetry.go#L92>)
 
 ```go
-func (m Measurements) DecrementGauge(name string) bool
+func (m *Measurements) DecrementGauge(name string) bool
 ```
 
 DecrementGeuge decrements gauge the value if entity with given name exists.
 
-### func \(Measurements\) [IncrementGauge](<https://github.com/bartossh/Computantis/blob/main/telemetry/telemetry.go#L74>)
+### func \(\*Measurements\) [IncrementGauge](<https://github.com/bartossh/Computantis/blob/main/telemetry/telemetry.go#L83>)
 
 ```go
-func (m Measurements) IncrementGauge(name string) bool
+func (m *Measurements) IncrementGauge(name string) bool
 ```
 
 IncrementGeuge increments gauge the value if entity with given name exists.
 
-### func \(Measurements\) [RecordHistogram](<https://github.com/bartossh/Computantis/blob/main/telemetry/telemetry.go#L36>)
+### func \(\*Measurements\) [RecordHistogramTime](<https://github.com/bartossh/Computantis/blob/main/telemetry/telemetry.go#L36>)
 
 ```go
-func (m Measurements) RecordHistogram(name string, t time.Duration) bool
+func (m *Measurements) RecordHistogramTime(name string, t time.Duration) bool
 ```
 
-RecordHistogram records histogram time if entity with given name exists.
+RecordHistogramTime records histogram time if entity with given name exists.
 
-### func \(Measurements\) [RemoveFromGauge](<https://github.com/bartossh/Computantis/blob/main/telemetry/telemetry.go#L65>)
+### func \(\*Measurements\) [RecordHistogramValue](<https://github.com/bartossh/Computantis/blob/main/telemetry/telemetry.go#L46>)
 
 ```go
-func (m Measurements) RemoveFromGauge(name string, f float64) bool
+func (m *Measurements) RecordHistogramValue(name string, f float64) bool
+```
+
+RecordHistogramValue records histogram value if entity with given name exists.
+
+### func \(\*Measurements\) [RemoveFromGauge](<https://github.com/bartossh/Computantis/blob/main/telemetry/telemetry.go#L74>)
+
+```go
+func (m *Measurements) RemoveFromGauge(name string, f float64) bool
 ```
 
 SubstractFromGeuge substracts from gauge the value if entity with given name exists.
 
-### func \(Measurements\) [SetGauge](<https://github.com/bartossh/Computantis/blob/main/telemetry/telemetry.go#L92>)
+### func \(\*Measurements\) [SetGauge](<https://github.com/bartossh/Computantis/blob/main/telemetry/telemetry.go#L101>)
 
 ```go
-func (m Measurements) SetGauge(name string, f float64) bool
+func (m *Measurements) SetGauge(name string, f float64) bool
 ```
 
 SetGeuge sets the gauge to the value if entity with given name exists.
 
-### func \(Measurements\) [SetToCurrentTimeGauge](<https://github.com/bartossh/Computantis/blob/main/telemetry/telemetry.go#L101>)
+### func \(\*Measurements\) [SetToCurrentTimeGauge](<https://github.com/bartossh/Computantis/blob/main/telemetry/telemetry.go#L110>)
 
 ```go
-func (m Measurements) SetToCurrentTimeGauge(name string) bool
+func (m *Measurements) SetToCurrentTimeGauge(name string) bool
 ```
 
 SetToCurrentTimeGeuge sets the gauge to the current time if entity with given name exists.
