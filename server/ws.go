@@ -12,6 +12,7 @@ import (
 
 	"github.com/bartossh/Computantis/block"
 	"github.com/bartossh/Computantis/logger"
+	"github.com/bartossh/Computantis/providers"
 )
 
 const (
@@ -48,6 +49,9 @@ type Message struct {
 type socket struct {
 	hub     *hub
 	conn    *websocket.Conn
+	send    chan []byte
+	repo    Repository
+	tele    providers.HistogramProvider
 	log     logger.Logger
 	repo    Repository
 	send    chan []byte
@@ -131,6 +135,7 @@ func (s *server) wsWrapper(ctx context.Context, c *fiber.Ctx) error {
 		conn:    nil,
 		send:    make(chan []byte, clientMessageChannelsBufferSize),
 		repo:    s.repo,
+		tele:    s.tele,
 		log:     s.log,
 	}
 

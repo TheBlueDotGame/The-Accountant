@@ -13,7 +13,6 @@ import (
 
 	"github.com/bartossh/Computantis/block"
 	"github.com/bartossh/Computantis/logger"
-	"github.com/bartossh/Computantis/providers"
 	"github.com/bartossh/Computantis/transaction"
 )
 
