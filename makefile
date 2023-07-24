@@ -58,3 +58,7 @@ docker-validator-build:
 
 docker-client-build:
 	docker compose up -d --no-deps --build client-node
+
+make scan:
+	govulncheck ./...
+
