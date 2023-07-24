@@ -116,7 +116,7 @@ func (m *Measurements) SetToCurrentTimeGauge(name string) bool {
 }
 
 // Run starts collecting metrics and server with prometheus telemetry endpoint.
-// Returns *Measurements structure if successfully started or cancels context otherwise.
+// Returns Measurements structure if successfully started or cancels context otherwise.
 // Default port of 2112 is used if port value is set to 0.
 func Run(ctx context.Context, cancel context.CancelFunc, port int) (*Measurements, error) {
 	if port > 65535 || port < 0 {
