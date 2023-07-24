@@ -280,6 +280,9 @@ func (c *socket) process(ctx context.Context, msg *Message) {
 		}
 		c.sendCommand(msg)
 	case CommandSocketList:
+		t := time.Now()
+		defer c.tele.RecordHistogramTime(wsSocketListTelemetryHistogram, time.Since(t))
+
 		if err := c.socketList(ctx, msg); err != nil {
 			c.sendCommand(setCommandError(msg, err))
 		}

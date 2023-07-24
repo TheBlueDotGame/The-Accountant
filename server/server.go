@@ -13,6 +13,7 @@ import (
 
 	"github.com/bartossh/Computantis/block"
 	"github.com/bartossh/Computantis/logger"
+	"github.com/bartossh/Computantis/providers"
 	"github.com/bartossh/Computantis/transaction"
 )
 
@@ -39,6 +40,7 @@ const (
 	dataToSignTelemetryHistogram          = "data_to_sign_request_duration"
 	addressCreateTelemetryHistogram       = "address_create_request_duration"
 	tokenGenerateTelemetryHistogram       = "token_generate_request_duration"
+	wsSocketListTelemetryHistogram        = "get_socket_list_ws_request_duration"
 )
 
 const (
@@ -262,6 +264,7 @@ func Run(
 	s.tele.CreateUpdateObservableHistogtram(dataToSignTelemetryHistogram, "Generate data to sign endpoint request duration on [ ms ].")
 	s.tele.CreateUpdateObservableHistogtram(addressCreateTelemetryHistogram, "Create address endpoint request duration on [ ms ].")
 	s.tele.CreateUpdateObservableHistogtram(tokenGenerateTelemetryHistogram, "Generate token endpoint request duration on [ ms ].")
+	s.tele.CreateUpdateObservableHistogtram(wsSocketListTelemetryHistogram, "Websocket read socket list endpoint request duration on [ ms ].")
 
 	router.Group(WsURL, func(c *fiber.Ctx) error { return s.wsWrapper(ctxx, c) })
 
