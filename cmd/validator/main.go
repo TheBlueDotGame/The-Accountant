@@ -8,8 +8,6 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/bartossh/Computantis/logo"
-	"github.com/bartossh/Computantis/telemetry"
 	"github.com/pterm/pterm"
 	"github.com/urfave/cli/v2"
 
@@ -18,8 +16,10 @@ import (
 	"github.com/bartossh/Computantis/dataprovider"
 	"github.com/bartossh/Computantis/fileoperations"
 	"github.com/bartossh/Computantis/logging"
+	"github.com/bartossh/Computantis/logo"
 	"github.com/bartossh/Computantis/repository"
 	"github.com/bartossh/Computantis/stdoutwriter"
+	"github.com/bartossh/Computantis/telemetry"
 	"github.com/bartossh/Computantis/validator"
 	"github.com/bartossh/Computantis/wallet"
 	"github.com/bartossh/Computantis/webhooks"
@@ -57,7 +57,7 @@ func main() {
 				Destination: &file,
 			},
 		},
-		Action: func(cCtx *cli.Context) error {
+		Action: func(_ *cli.Context) error {
 			cfg, err := configurator()
 			if err != nil {
 				return err

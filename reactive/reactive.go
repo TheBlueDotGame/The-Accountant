@@ -23,8 +23,8 @@ func (o *subscriber[T]) Channel() <-chan T {
 // Observable creates a container for subscribers.
 // This works in single producer multiple consumer pattern.
 type Observable[T any] struct {
-	mux         sync.RWMutex
 	subscribers map[*subscriber[T]]struct{}
+	mux         sync.RWMutex
 	size        int
 }
 
@@ -32,8 +32,8 @@ type Observable[T any] struct {
 // size is the buffer size of each channel.
 func New[T any](size int) *Observable[T] {
 	return &Observable[T]{
-		mux:         sync.RWMutex{},
 		subscribers: make(map[*subscriber[T]]struct{}),
+		mux:         sync.RWMutex{},
 		size:        size,
 	}
 }

@@ -6,10 +6,11 @@ import (
 	"fmt"
 	"time"
 
+	"go.mongodb.org/mongo-driver/bson/primitive"
+
 	"github.com/bartossh/Computantis/block"
 	"github.com/bartossh/Computantis/logger"
 	"github.com/bartossh/Computantis/transaction"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 const (
@@ -137,10 +138,6 @@ func (c Config) Validate() error {
 // It performs all the actions on the transactions and blockchain.
 // Ladger seals all the transaction actions in the blockchain.
 type Ledger struct {
-	id           string
-	config       Config
-	hashC        chan [32]byte
-	hashes       map[[32]byte]struct{}
 	db           DataBaseProvider
 	bc           BlockReadWriter
 	ac           AddressChecker
@@ -150,6 +147,10 @@ type Ledger struct {
 	blcPub       BlockReactivePublisher
 	trxIssuedPub TrxIssuedReactivePunlisher
 	sub          BlockchainLockSubscriber
+	hashes       map[[32]byte]struct{}
+	hashC        chan [32]byte
+	id           string
+	config       Config
 }
 
 // New creates new Ledger if config is valid or returns error otherwise.
@@ -310,7 +311,6 @@ func (l *Ledger) forge(ctx context.Context) error {
 	blcHash, err := l.savePublishNewBlock(ctx, hashes)
 	if err != nil {
 		return err
-
 	}
 
 	if err := l.db.MoveTransactionsFromTemporaryToPermanent(ctx, blcHash, hashes); err != nil {

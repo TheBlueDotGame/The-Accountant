@@ -6,11 +6,12 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/pterm/pterm"
+	"github.com/urfave/cli/v2"
+
 	"github.com/bartossh/Computantis/configuration"
 	"github.com/bartossh/Computantis/emulator"
 	"github.com/bartossh/Computantis/logo"
-	"github.com/pterm/pterm"
-	"github.com/urfave/cli/v2"
 )
 
 func configReader(confFile string) (configuration.Configuration, error) {
@@ -67,7 +68,7 @@ func main() {
 				Name:    "publisher",
 				Aliases: []string{"p"},
 				Usage:   "Starts publisher emulator",
-				Action: func(cCtx *cli.Context) error {
+				Action: func(_ *cli.Context) error {
 					cfg, err := configReader(confFile)
 					if err != nil {
 						return err
@@ -87,7 +88,7 @@ func main() {
 				Name:    "subscriber",
 				Aliases: []string{"s"},
 				Usage:   "Starts subscriber emulator",
-				Action: func(cCtx *cli.Context) error {
+				Action: func(_ *cli.Context) error {
 					cfg, err := configReader(confFile)
 					if err != nil {
 						return err

@@ -3,16 +3,17 @@ package server
 import (
 	"fmt"
 
+	"github.com/gofiber/fiber/v2"
+
 	"github.com/bartossh/Computantis/token"
 	"github.com/bartossh/Computantis/transaction"
-	"github.com/gofiber/fiber/v2"
 )
 
 // AliveResponse is a response for alive and version check.
 type AliveResponse struct {
-	Alive      bool   `json:"alive"`
 	APIVersion string `json:"api_version"`
 	APIHeader  string `json:"api_header"`
+	Alive      bool   `json:"alive"`
 }
 
 func (s *server) alive(c *fiber.Ctx) error {
@@ -113,8 +114,8 @@ type TransactionProposeRequest struct {
 
 // TransactionConfirmProposeResponse is a response for transaction propose.
 type TransactionConfirmProposeResponse struct {
-	Success bool     `json:"success"`
 	TrxHash [32]byte `json:"trx_hash"`
+	Success bool     `json:"success"`
 }
 
 func (s *server) propose(c *fiber.Ctx) error {
@@ -194,16 +195,16 @@ func (s *server) confirm(c *fiber.Ctx) error {
 // TransactionsRejectRequest is a request to reject a transactions.
 type TransactionsRejectRequest struct {
 	Address      string                    `json:"address"`
+	Transactions []transaction.Transaction `json:"transaction"`
 	Data         []byte                    `json:"data"`
 	Signature    []byte                    `json:"signature"`
 	Hash         [32]byte                  `json:"hash"`
-	Transactions []transaction.Transaction `json:"transaction"`
 }
 
 // TransactionsRejectResponse is a response for transaction reject.
 type TransactionsRejectResponse struct {
-	Success   bool       `json:"success"`
 	TrxHashes [][32]byte `json:"trx_hash"`
+	Success   bool       `json:"success"`
 }
 
 func (s *server) reject(c *fiber.Ctx) error {
@@ -258,16 +259,16 @@ func (s *server) reject(c *fiber.Ctx) error {
 type TransactionsRequest struct {
 	Address   string   `json:"address"`
 	Data      []byte   `json:"data"`
-	Hash      [32]byte `json:"hash"`
 	Signature []byte   `json:"signature"`
+	Hash      [32]byte `json:"hash"`
 	Offset    int      `json:"offset,omitempty"`
 	Limit     int      `json:"limit,omitempty"`
 }
 
 // AwaitedTransactionsResponse is a response for awaited transactions request.
 type AwaitedTransactionsResponse struct {
-	Success             bool                      `json:"success"`
 	AwaitedTransactions []transaction.Transaction `json:"awaited_transactions"`
+	Success             bool                      `json:"success"`
 }
 
 func (s *server) awaited(c *fiber.Ctx) error {
@@ -316,8 +317,8 @@ func (s *server) awaited(c *fiber.Ctx) error {
 
 // IssuedTransactionsResponse is a response for issued transactions request.
 type IssuedTransactionsResponse struct {
-	Success            bool                      `json:"success"`
 	IssuedTransactions []transaction.Transaction `json:"issued_transactions"`
+	Success            bool                      `json:"success"`
 }
 
 func (s *server) issued(c *fiber.Ctx) error {
@@ -365,8 +366,8 @@ func (s *server) issued(c *fiber.Ctx) error {
 
 // RejectedTransactionsResponse is a response for rejected transactions request.
 type RejectedTransactionsResponse struct {
-	Success              bool                      `json:"success"`
 	RejectedTransactions []transaction.Transaction `json:"rejected_transactions"`
+	Success              bool                      `json:"success"`
 }
 
 func (s *server) rejected(c *fiber.Ctx) error {
@@ -414,8 +415,8 @@ func (s *server) rejected(c *fiber.Ctx) error {
 
 // ApprovedTransactionsResponse is a response for approved transactions request.
 type ApprovedTransactionsResponse struct {
-	Success              bool                      `json:"success"`
 	ApprovedTransactions []transaction.Transaction `json:"approved_transactions"`
+	Success              bool                      `json:"success"`
 }
 
 func (s *server) approved(c *fiber.Ctx) error {
@@ -487,15 +488,15 @@ type CreateAddressRequest struct {
 	Address   string   `json:"address"`
 	Token     string   `json:"token"`
 	Data      []byte   `json:"data"`
-	Hash      [32]byte `json:"hash"`
 	Signature []byte   `json:"signature"`
+	Hash      [32]byte `json:"hash"`
 }
 
 // Response for address creation request.
 // If Success is true, Address contains created address in base58 format.
 type CreateAddressResponse struct {
-	Success bool   `json:"success"`
 	Address string `json:"address"`
+	Success bool   `json:"success"`
 }
 
 func (s *server) addressCreate(c *fiber.Ctx) error {
@@ -534,7 +535,7 @@ func (s *server) addressCreate(c *fiber.Ctx) error {
 			s.log.Error(fmt.Sprintf("address create endpoint, failed to check address: %s,%s", req.Address, err.Error()))
 			return fiber.ErrGone
 		}
-		s.log.Error(fmt.Sprintf("address create endpoint, address already exists: %s, %s", req.Address, err.Error()))
+		s.log.Error(fmt.Sprintf("address create endpoint, address already exists: %s", req.Address))
 		return fiber.ErrConflict
 	}
 
@@ -549,10 +550,10 @@ func (s *server) addressCreate(c *fiber.Ctx) error {
 // GenerateTokenRequest is a request for token generation.
 type GenerateTokenRequest struct {
 	Address    string   `json:"address"`
-	Expiration int64    `json:"expiration"`
 	Data       []byte   `json:"data"`
-	Hash       [32]byte `json:"hash"`
 	Signature  []byte   `json:"signature"`
+	Hash       [32]byte `json:"hash"`
+	Expiration int64    `json:"expiration"`
 }
 
 // GenerateTokenResponse is a response containing generated token.
@@ -580,7 +581,7 @@ func (s *server) tokenGenerate(c *fiber.Ctx) error {
 			s.log.Error(fmt.Sprintf("token generate, failed to check address: %s,%s", req.Address, err.Error()))
 			return fiber.ErrGone
 		}
-		s.log.Error(fmt.Sprintf("token generate, address is not admin: %s, %s", req.Address, err.Error()))
+		s.log.Error(fmt.Sprintf("token generate, address is not admin: %s", req.Address))
 		return fiber.ErrForbidden
 	}
 

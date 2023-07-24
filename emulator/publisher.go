@@ -8,17 +8,18 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/pterm/pterm"
+
 	"github.com/bartossh/Computantis/httpclient"
 	"github.com/bartossh/Computantis/server"
 	"github.com/bartossh/Computantis/walletapi"
-	"github.com/pterm/pterm"
 )
 
 type publisher struct {
-	timeout   time.Duration
 	clientURL string
-	random    bool
+	timeout   time.Duration
 	position  int
+	random    bool
 }
 
 // RunPublisher runs publisher emulator that emulates data in a buffer.

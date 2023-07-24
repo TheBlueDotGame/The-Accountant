@@ -7,9 +7,9 @@ import (
 // Log is log marshaled and written in to the io.Writer of the helper implementing Logger abstraction.
 type Log struct {
 	ID        any       `json:"_id"        bson:"_id"        db:"id"`
+	CreatedAt time.Time `json:"created_at" bson:"created_at" db:"created_at"`
 	Level     string    `jon:"level"       bson:"level"      db:"level"`
 	Msg       string    `json:"msg"        bson:"msg"        db:"msg"`
-	CreatedAt time.Time `json:"created_at" bson:"created_at" db:"created_at"`
 }
 
 // Logger provides logging methods for debug, info, warning, error and fatal.

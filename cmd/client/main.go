@@ -56,7 +56,7 @@ func main() {
 				Destination: &file,
 			},
 		},
-		Action: func(cCtx *cli.Context) error {
+		Action: func(_ *cli.Context) error {
 			cfg, err := configurator()
 			if err != nil {
 				return err
@@ -94,7 +94,6 @@ func run(cfg configuration.Configuration) {
 
 	callbackOnErr := func(err error) {
 		fmt.Println("error with logger: ", err)
-		return
 	}
 
 	callbackOnFatal := func(err error) {

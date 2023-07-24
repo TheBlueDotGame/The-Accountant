@@ -19,13 +19,13 @@ var separator = []byte{}
 // Block ensures that transactions hashes are valid and match the transactions stored in the repository.
 type Block struct {
 	ID         any        `json:"-"          bson:"_id"        db:"id"`
+	TrxHashes  [][32]byte `json:"trx_hashes" bson:"trx_hashes" db:"trx_hashes"`
+	Hash       [32]byte   `json:"hash"       bson:"hash"       db:"hash"`
+	PrevHash   [32]byte   `json:"prev_hash"  bson:"prev_hash"  db:"prev_hash"`
 	Index      uint64     `json:"index"      bson:"index"      db:"index"`
 	Timestamp  uint64     `json:"timestamp"  bson:"timestamp"  db:"timestamp"`
 	Nonce      uint64     `json:"nonce"      bson:"nonce"      db:"nonce"`
 	Difficulty uint64     `json:"difficulty" bson:"difficulty" db:"difficulty"`
-	Hash       [32]byte   `json:"hash"       bson:"hash"       db:"hash"`
-	PrevHash   [32]byte   `json:"prev_hash"  bson:"prev_hash"  db:"prev_hash"`
-	TrxHashes  [][32]byte `json:"trx_hashes" bson:"trx_hashes" db:"trx_hashes"`
 }
 
 // New creates a new Block hashing it with given difficulty.
