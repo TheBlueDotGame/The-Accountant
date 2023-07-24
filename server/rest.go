@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 
@@ -31,6 +32,9 @@ type DiscoverResponse struct {
 }
 
 func (s *server) discover(c *fiber.Ctx) error {
+	t := time.Now()
+	defer s.tele.RecordHistogramTime(discoverCentralNodeTelemetryHistogram, time.Since(t))
+
 	sockets, err := s.repo.ReadRegisteredNodesAddresses(c.Context())
 	if err != nil {
 		return fiber.ErrInternalServerError
@@ -50,6 +54,9 @@ type SearchAddressResponse struct {
 }
 
 func (s *server) address(c *fiber.Ctx) error {
+	t := time.Now()
+	defer s.tele.RecordHistogramTime(addressURLTelemetryHistogram, time.Since(t))
+
 	var req SearchAddressRequest
 
 	if err := c.BodyParser(&req); err != nil {
@@ -79,6 +86,9 @@ type SearchBlockResponse struct {
 }
 
 func (s *server) trxInBlock(c *fiber.Ctx) error {
+	t := time.Now()
+	defer s.tele.RecordHistogramTime(trxInBlockTelemetryHistogram, time.Since(t))
+
 	var req SearchBlockRequest
 
 	if err := c.BodyParser(&req); err != nil {
@@ -119,6 +129,9 @@ type TransactionConfirmProposeResponse struct {
 }
 
 func (s *server) propose(c *fiber.Ctx) error {
+	t := time.Now()
+	defer s.tele.RecordHistogramTime(proposeTrxTelemetryHistogram, time.Since(t))
+
 	var req TransactionProposeRequest
 	if err := c.BodyParser(&req); err != nil {
 		s.log.Error(fmt.Sprintf("propose endpoint, failed to parse request body: %s", err.Error()))
@@ -154,6 +167,9 @@ func (s *server) propose(c *fiber.Ctx) error {
 }
 
 func (s *server) confirm(c *fiber.Ctx) error {
+	t := time.Now()
+	defer s.tele.RecordHistogramTime(confirmTrxTelemetryHistogram, time.Since(t))
+
 	var trx transaction.Transaction
 	if err := c.BodyParser(&trx); err != nil {
 		s.log.Error(fmt.Sprintf("confirm endpoint, failed to parse request body: %s", err.Error()))
@@ -208,6 +224,9 @@ type TransactionsRejectResponse struct {
 }
 
 func (s *server) reject(c *fiber.Ctx) error {
+	t := time.Now()
+	defer s.tele.RecordHistogramTime(rejectTrxTelemetryHistogram, time.Since(t))
+
 	var req TransactionsRejectRequest
 	if err := c.BodyParser(&req); err != nil {
 		s.log.Error(fmt.Sprintf("reject endpoint, failed to parse request body: %s", err.Error()))
@@ -272,6 +291,9 @@ type AwaitedTransactionsResponse struct {
 }
 
 func (s *server) awaited(c *fiber.Ctx) error {
+	t := time.Now()
+	defer s.tele.RecordHistogramTime(awaitedTrxTelemetryHistogram, time.Since(t))
+
 	var req TransactionsRequest
 	if err := c.BodyParser(&req); err != nil {
 		s.log.Error(fmt.Sprintf("awaited transactions endpoint, failed to parse request body: %s", err.Error()))
@@ -322,6 +344,9 @@ type IssuedTransactionsResponse struct {
 }
 
 func (s *server) issued(c *fiber.Ctx) error {
+	t := time.Now()
+	defer s.tele.RecordHistogramTime(issuedTrxTelemetryHistogram, time.Since(t))
+
 	var req TransactionsRequest
 	if err := c.BodyParser(&req); err != nil {
 		s.log.Error(fmt.Sprintf("issued transactions endpoint, failed to parse request body: %s", err.Error()))
@@ -371,6 +396,9 @@ type RejectedTransactionsResponse struct {
 }
 
 func (s *server) rejected(c *fiber.Ctx) error {
+	t := time.Now()
+	defer s.tele.RecordHistogramTime(rejectedTrxTelemetryHistogram, time.Since(t))
+
 	var req TransactionsRequest
 	if err := c.BodyParser(&req); err != nil {
 		s.log.Error(fmt.Sprintf("rejected transactions endpoint, failed to parse request body: %s", err.Error()))
@@ -420,6 +448,9 @@ type ApprovedTransactionsResponse struct {
 }
 
 func (s *server) approved(c *fiber.Ctx) error {
+	t := time.Now()
+	defer s.tele.RecordHistogramTime(approvedTrxTelemetryHistogram, time.Since(t))
+
 	var req TransactionsRequest
 	if err := c.BodyParser(&req); err != nil {
 		s.log.Error(fmt.Sprintf("approved transactions endpoint, failed to parse request body: %s", err.Error()))
@@ -473,6 +504,9 @@ type DataToSignResponse struct {
 }
 
 func (s *server) data(c *fiber.Ctx) error {
+	t := time.Now()
+	defer s.tele.RecordHistogramTime(dataToSignTelemetryHistogram, time.Since(t))
+
 	var req DataToSignRequest
 	if err := c.BodyParser(&req); err != nil {
 		s.log.Error(fmt.Sprintf("data endpoint, failed to parse request body: %s", err.Error()))
@@ -500,6 +534,9 @@ type CreateAddressResponse struct {
 }
 
 func (s *server) addressCreate(c *fiber.Ctx) error {
+	t := time.Now()
+	defer s.tele.RecordHistogramTime(addressCreateTelemetryHistogram, time.Since(t))
+
 	var req CreateAddressRequest
 	if err := c.BodyParser(&req); err != nil {
 		s.log.Error(fmt.Sprintf("address create endpoint, failed to parse request body: %s", err.Error()))
@@ -560,6 +597,9 @@ type GenerateTokenRequest struct {
 type GenerateTokenResponse = token.Token
 
 func (s *server) tokenGenerate(c *fiber.Ctx) error {
+	t := time.Now()
+	defer s.tele.RecordHistogramTime(tokenGenerateTelemetryHistogram, time.Since(t))
+
 	var req GenerateTokenRequest
 	if err := c.BodyParser(&req); err != nil {
 		s.log.Error(fmt.Sprintf("token generate, failed to parse request body: %s", err.Error()))
@@ -585,7 +625,7 @@ func (s *server) tokenGenerate(c *fiber.Ctx) error {
 		return fiber.ErrForbidden
 	}
 
-	t, err := token.New(req.Expiration)
+	token, err := token.New(req.Expiration)
 	if err != nil {
 		s.log.Error(fmt.Sprintf("token generate, failed to create token: %s", err.Error()))
 		return fiber.ErrInternalServerError
@@ -596,5 +636,5 @@ func (s *server) tokenGenerate(c *fiber.Ctx) error {
 		return fiber.ErrConflict
 	}
 
-	return c.JSON(t)
+	return c.JSON(token)
 }
