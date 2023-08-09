@@ -185,6 +185,12 @@ I would soon provide more precise benchmarks.
 
 Install govulncheck to perform vulnerability scanning  `go install golang.org/x/vuln/cmd/govulncheck@latest`.
 
+## Documentation:
+
+1. Install gomarkdoc to generate documentation: `go install github.com/princjef/gomarkdoc/cmd/gomarkdoc@latest`.
+
+Documentation is generated using `header.md` file and the code documentation, then saved in the `README.md`.
+Do not modify `README.md` file, all the changes will be overwritten. 
 
 ## Package provides webassembly package that expose client API to the front-end applications.
 
