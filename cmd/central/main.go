@@ -24,7 +24,7 @@ import (
 	"github.com/bartossh/Computantis/stdoutwriter"
 	"github.com/bartossh/Computantis/telemetry"
 	"github.com/bartossh/Computantis/wallet"
-	"github.com/bartossh/Computantis/zincaddapter"
+	"github.com/bartossh/Computantis/zincadapter"
 )
 
 const (
@@ -113,7 +113,7 @@ func run(cfg configuration.Configuration) {
 		panic(fmt.Sprintf("Error with logger: %s", err))
 	}
 
-	zinc, err := zincaddapter.New(cfg.ZincLogger)
+	zinc, err := zincadapter.New(cfg.ZincLogger)
 	if err != nil {
 		fmt.Println(err)
 		c <- os.Interrupt
