@@ -1,6 +1,7 @@
 package wallet
 
 import (
+	"math"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -61,6 +62,21 @@ func TestSignVerifyFail(t *testing.T) {
 
 	ok := w.Verify(message, sig, hash)
 	assert.False(t, ok)
+}
+
+func TestAddressLength(t *testing.T) {
+	smallest := math.MaxInt
+	for i := 0; i < 10000; i++ {
+		w, err := New()
+		assert.Nil(t, err)
+		assert.NotNil(t, w.Private)
+		assert.NotNil(t, w.Public)
+		addrLen := len(w.Address())
+		if smallest > addrLen {
+			smallest = addrLen
+		}
+	}
+	assert.Less(t, 48, smallest)
 }
 
 func BenchmarkVerifyLargeMessage(b *testing.B) {

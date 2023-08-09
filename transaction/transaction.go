@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	minAddressLength     = 50
+	minAddressLength     = 49
 	ExpirationTimeInDays = 7 // transaction validity expiration time in days. TODO: move to config
 )
 

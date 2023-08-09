@@ -12,6 +12,7 @@ import (
 
 	"github.com/bartossh/Computantis/block"
 	"github.com/bartossh/Computantis/logger"
+	"github.com/bartossh/Computantis/providers"
 )
 
 const (
@@ -35,22 +36,22 @@ const (
 	CommandNewTrxIssued = "command_new_trx_issued"
 )
 
-// Message is the message that is used to exchange information between
-// the server and the client.
+// Message is the message that is used to exchange information between the server and the client.
 type Message struct {
 	Command               string      `json:"command"`                            // Command is the command that refers to the action handler in websocket protocol.
 	Error                 string      `json:"error,omitempty"`                    // Error is the error message that is sent to the client.
-	Block                 block.Block `json:"block,omitempty"`                    // Block is the block that is sent to the client.
 	IssuedTrxForAddresses []string    `json:"issued_trx_for_addresses,omitempty"` // IssuedTrxForAddresses is the list of addresses that have issued transactions for.
 	Sockets               []string    `json:"sockets,omitempty"`                  // sockets is the list of central nodes web-sockets addresses.
+	Block                 block.Block `json:"block,omitempty"`                    // Block is the block that is sent to the client.
 }
 
 type socket struct {
 	hub     *hub
 	conn    *websocket.Conn
-	log     logger.Logger
-	repo    Repository
 	send    chan []byte
+	repo    Repository
+	tele    providers.HistogramProvider
+	log     logger.Logger
 	address string
 }
 
@@ -131,6 +132,7 @@ func (s *server) wsWrapper(ctx context.Context, c *fiber.Ctx) error {
 		conn:    nil,
 		send:    make(chan []byte, clientMessageChannelsBufferSize),
 		repo:    s.repo,
+		tele:    s.tele,
 		log:     s.log,
 	}
 
@@ -275,6 +277,9 @@ func (c *socket) process(ctx context.Context, msg *Message) {
 		}
 		c.sendCommand(msg)
 	case CommandSocketList:
+		t := time.Now()
+		defer c.tele.RecordHistogramTime(wsSocketListTelemetryHistogram, time.Since(t))
+
 		if err := c.socketList(ctx, msg); err != nil {
 			c.sendCommand(setCommandError(msg, err))
 		}

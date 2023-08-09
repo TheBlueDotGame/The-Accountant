@@ -13,6 +13,7 @@ import (
 
 	"github.com/bartossh/Computantis/block"
 	"github.com/bartossh/Computantis/logger"
+	"github.com/bartossh/Computantis/providers"
 	"github.com/bartossh/Computantis/transaction"
 )
 
@@ -23,6 +24,23 @@ const (
 const (
 	ApiVersion = "1.0.0"
 	Header     = "Computantis-Central"
+)
+
+const (
+	discoverCentralNodeTelemetryHistogram = "discover_central_nodes_request_duration"
+	addressURLTelemetryHistogram          = "address_url_request_duration"
+	trxInBlockTelemetryHistogram          = "trx_in_block_request_duration"
+	proposeTrxTelemetryHistogram          = "propose_trx_request_duration"
+	confirmTrxTelemetryHistogram          = "confirm_trx_request_duration"
+	rejectTrxTelemetryHistogram           = "reject_trx_request_duration"
+	awaitedTrxTelemetryHistogram          = "read_awaited_trx_request_duration"
+	issuedTrxTelemetryHistogram           = "read_issued_trx_request_duration"
+	rejectedTrxTelemetryHistogram         = "read_rejected_trx_request_duration"
+	approvedTrxTelemetryHistogram         = "read_approved_trx_request_duration"
+	dataToSignTelemetryHistogram          = "data_to_sign_request_duration"
+	addressCreateTelemetryHistogram       = "address_create_request_duration"
+	tokenGenerateTelemetryHistogram       = "token_generate_request_duration"
+	wsSocketListTelemetryHistogram        = "get_socket_list_ws_request_duration"
 )
 
 const (
@@ -158,6 +176,7 @@ type server struct {
 	repo         Repository
 	bookkeeping  Bookkeeper
 	randDataProv RandomDataProvideValidator
+	tele         providers.HistogramProvider
 	hub          *hub
 	log          logger.Logger
 	rxBlock      ReactiveBlock
@@ -169,7 +188,7 @@ type server struct {
 // It blocks until the context is canceled.
 func Run(
 	ctx context.Context, c Config, repo Repository,
-	bookkeeping Bookkeeper, pv RandomDataProvideValidator,
+	bookkeeping Bookkeeper, pv RandomDataProvideValidator, tele providers.HistogramProvider,
 	log logger.Logger, rxBlock ReactiveBlock, rxTrxIssued ReactiveTrxIssued,
 ) error {
 	var err error
@@ -188,6 +207,7 @@ func Run(
 		repo:         repo,
 		bookkeeping:  bookkeeping,
 		randDataProv: pv,
+		tele:         tele,
 		hub:          newHub(log),
 		log:          log,
 		rxBlock:      rxBlock,
@@ -230,6 +250,21 @@ func Run(
 
 	token := router.Group(tokenGroupURL)
 	token.Post(GenerateTokenURL, s.tokenGenerate)
+
+	s.tele.CreateUpdateObservableHistogtram(discoverCentralNodeTelemetryHistogram, "Discover central nodes endpoint request duration on [ ms ].")
+	s.tele.CreateUpdateObservableHistogtram(addressURLTelemetryHistogram, "Address URL endpoint request duration on [ ms ].")
+	s.tele.CreateUpdateObservableHistogtram(trxInBlockTelemetryHistogram, "Transaction in block lookup endpoint request duration on [ ms ].")
+	s.tele.CreateUpdateObservableHistogtram(proposeTrxTelemetryHistogram, "Propose trx endpoint request duration on [ ms ].")
+	s.tele.CreateUpdateObservableHistogtram(confirmTrxTelemetryHistogram, "Confirm trx endpoint request duration on [ ms ].")
+	s.tele.CreateUpdateObservableHistogtram(rejectTrxTelemetryHistogram, "Reject trx endpoint request duration on [ ms ].")
+	s.tele.CreateUpdateObservableHistogtram(awaitedTrxTelemetryHistogram, "Read awaited trx endpoint request duration on [ ms ].")
+	s.tele.CreateUpdateObservableHistogtram(issuedTrxTelemetryHistogram, "Read issued trx endpoint request duration on [ ms ].")
+	s.tele.CreateUpdateObservableHistogtram(rejectedTrxTelemetryHistogram, "Read rejected trx endpoint request duration on [ ms ].")
+	s.tele.CreateUpdateObservableHistogtram(approvedTrxTelemetryHistogram, "Read approved trx endpoint request duration on [ ms ].")
+	s.tele.CreateUpdateObservableHistogtram(dataToSignTelemetryHistogram, "Generate data to sign endpoint request duration on [ ms ].")
+	s.tele.CreateUpdateObservableHistogtram(addressCreateTelemetryHistogram, "Create address endpoint request duration on [ ms ].")
+	s.tele.CreateUpdateObservableHistogtram(tokenGenerateTelemetryHistogram, "Generate token endpoint request duration on [ ms ].")
+	s.tele.CreateUpdateObservableHistogtram(wsSocketListTelemetryHistogram, "Websocket read socket list endpoint request duration on [ ms ].")
 
 	router.Group(WsURL, func(c *fiber.Ctx) error { return s.wsWrapper(ctxx, c) })
 

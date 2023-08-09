@@ -8,8 +8,6 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/bartossh/Computantis/logo"
-	"github.com/bartossh/Computantis/telemetry"
 	"github.com/pterm/pterm"
 	"github.com/urfave/cli/v2"
 
@@ -19,10 +17,12 @@ import (
 	"github.com/bartossh/Computantis/configuration"
 	"github.com/bartossh/Computantis/dataprovider"
 	"github.com/bartossh/Computantis/logging"
+	"github.com/bartossh/Computantis/logo"
 	"github.com/bartossh/Computantis/reactive"
 	"github.com/bartossh/Computantis/repository"
 	"github.com/bartossh/Computantis/server"
 	"github.com/bartossh/Computantis/stdoutwriter"
+	"github.com/bartossh/Computantis/telemetry"
 	"github.com/bartossh/Computantis/wallet"
 )
 
@@ -61,7 +61,7 @@ func main() {
 				Destination: &file,
 			},
 		},
-		Action: func(cCtx *cli.Context) error {
+		Action: func(_ *cli.Context) error {
 			cfg, err := configurator()
 			if err != nil {
 				return err
@@ -138,14 +138,14 @@ func run(cfg configuration.Configuration) {
 
 	dataProvider := dataprovider.New(ctx, cfg.DataProvider)
 
-	_, err = telemetry.Run(ctx, cancel, 0)
+	tele, err := telemetry.Run(ctx, cancel, 0)
 	if err != nil {
 		log.Error(err.Error())
 		c <- os.Interrupt
 		return
 	}
 
-	err = server.Run(ctx, cfg.Server, db, ladger, dataProvider, log, rxBlock.Subscribe(), rxTrxIssuer.Subscribe())
+	err = server.Run(ctx, cfg.Server, db, ladger, dataProvider, tele, log, rxBlock.Subscribe(), rxTrxIssuer.Subscribe())
 	if err != nil {
 		log.Error(err.Error())
 	}
