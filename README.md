@@ -80,6 +80,10 @@ database:
   is_ssl: false # Set to true if database requires SSL or to false otherwise, On production SSL true is a must. 
 dataprovider:
   longevity: 300 # Data provider provides the data to be signed by the wallet holder in order to verify the wallet public key. This is a time [ s ] describing how long data are valid.
+zinc_logger: # Zinc search (elastic-search like service) for convenient access to logs. 
+  address: http://zincsearch:4080 # Zinc search address in computantis network.
+  index: central # Name of the micro-service for easy logs filtering.
+  token: Basic YWRtaW46emluY3NlYXJjaA== # Token allows to validate legitimacy of the service that is sending the log.
 ```
 
 - The validator node:
@@ -88,6 +92,10 @@ validator:
   central_node_address: "http://localhost:8080" # Address of the central node to get discovery information from.
   port: 9090 # Port on which the validator REST API is exposed.
   token: "jykkeD6Tr6xikkYwC805kVoFThm8VGEHStTFk1lIU6RgEf7p3vjFpPQFI3VP9SYeARjYh2jecMSYsmgddjZZcy32iySHijJQ" # Token required by the validator to connect to all the central nodes.
+zinc_logger: # Zinc search (elastic-search like service) for convenient access to logs. 
+  address: http://zincsearch:4080 # Zinc search address in computantis network.
+  index: validator # Name of the micro-service for easy logs filtering.
+  token: Basic YWRtaW46emluY3NlYXJjaA== # Token allows to validate legitimacy of the service that is sending the log.
 ```
 
 - The wallet client:
@@ -99,6 +107,10 @@ client:
   port: 8095 # Port on which the wallet API is exposed.
   central_node_url: "http://localhost:8080" # Root URL address of a central node or the proxy.
   validator_node_url: "http://localhost:9090" # Root URL of specific validator node to create a Webhook with.
+zinc_logger: # Zinc search (elastic-search like service) for convenient access to logs. 
+  address: http://zincsearch:4080 # Zinc search address in computantis network.
+  index: wallet # Name of the micro-service for easy logs filtering.
+  token: Basic YWRtaW46emluY3NlYXJjaA== # Token allows to validate legitimacy of the service that is sending the log.
 ```
 
 - The emulator:
@@ -121,6 +133,7 @@ Required services setup:
  - Client node
  - Exporter node
  - Prometheus node
+ - Zincsearch node
 
 Run in terminal to run services in separate docker containers:
 
@@ -736,7 +749,7 @@ import "github.com/bartossh/Computantis/configuration"
   - [func Read(path string) (Configuration, error)](<#func-read>)
 
 
-## type [Configuration](<https://github.com/bartossh/Computantis/blob/main/configuration/configuration.go#L21-L30>)
+## type [Configuration](<https://github.com/bartossh/Computantis/blob/main/configuration/configuration.go#L22-L32>)
 
 Configuration is the main configuration of the application that corresponds to the \*.yaml file that holds the configuration.
 
@@ -746,6 +759,7 @@ type Configuration struct {
     Database     repository.DBConfig   `yaml:"database"`
     Client       walletapi.Config      `yaml:"client"`
     FileOperator fileoperations.Config `yaml:"file_operator"`
+    ZincLogger   zincaddapter.Config   `yaml:"zinc_logger"`
     Validator    validator.Config      `yaml:"validator"`
     Emulator     emulator.Config       `yaml:"emulator"`
     DataProvider dataprovider.Config   `yaml:"data_provider"`
@@ -753,7 +767,7 @@ type Configuration struct {
 }
 ```
 
-### func [Read](<https://github.com/bartossh/Computantis/blob/main/configuration/configuration.go#L33>)
+### func [Read](<https://github.com/bartossh/Computantis/blob/main/configuration/configuration.go#L35>)
 
 ```go
 func Read(path string) (Configuration, error)
@@ -1009,8 +1023,10 @@ import "github.com/bartossh/Computantis/httpclient"
 ## Index
 
 - [Variables](<#variables>)
-- [func MakeGet(timeout time.Duration, url string, out any) error](<#func-makeget>)
+- [func MakeGet(timeout time.Duration, url string, in any) error](<#func-makeget>)
+- [func MakeGetAuth(timeout time.Duration, token, url string, in any) error](<#func-makegetauth>)
 - [func MakePost(timeout time.Duration, url string, out, in any) error](<#func-makepost>)
+- [func MakePostAuth(timeout time.Duration, token, url string, out, in any) error](<#func-makepostauth>)
 
 
 ## Variables
@@ -1030,17 +1046,33 @@ var (
 )
 ```
 
-## func [MakeGet](<https://github.com/bartossh/Computantis/blob/main/httpclient/httpclient.go#L65>)
+## func [MakeGet](<https://github.com/bartossh/Computantis/blob/main/httpclient/httpclient.go#L36>)
 
 ```go
-func MakeGet(timeout time.Duration, url string, out any) error
+func MakeGet(timeout time.Duration, url string, in any) error
 ```
+
+## func [MakeGetAuth](<https://github.com/bartossh/Computantis/blob/main/httpclient/httpclient.go#L64>)
+
+```go
+func MakeGetAuth(timeout time.Duration, token, url string, in any) error
+```
+
+MakeGetAuth make a get request to the given 'url' with authorization token 'in' is a pointer to the structure to be deserialized from the received json data.
 
 ## func [MakePost](<https://github.com/bartossh/Computantis/blob/main/httpclient/httpclient.go#L25>)
 
 ```go
 func MakePost(timeout time.Duration, url string, out, in any) error
 ```
+
+## func [MakePostAuth](<https://github.com/bartossh/Computantis/blob/main/httpclient/httpclient.go#L48>)
+
+```go
+func MakePostAuth(timeout time.Duration, token, url string, out, in any) error
+```
+
+MakePostAuth make a post request with serialized 'out' structure which is send to the given 'url' with authorization token 'in' is a pointer to the structure to be deserialized from the received json data.
 
 # logger
 
@@ -3391,6 +3423,68 @@ type WebHookNewBlockMessage struct {
     Valid bool        `json:"valid"` // Valid is the flag that indicates if the block is valid.
 }
 ```
+
+# zincaddapter
+
+```go
+import "github.com/bartossh/Computantis/zincaddapter"
+```
+
+## Index
+
+- [Variables](<#variables>)
+- [type Config](<#type-config>)
+- [type ZincClient](<#type-zincclient>)
+  - [func New(cfg Config) (ZincClient, error)](<#func-new>)
+  - [func (z *ZincClient) Write(p []byte) (n int, err error)](<#func-zincclient-write>)
+
+
+## Variables
+
+```go
+var (
+    ErrZincServerNotResponding = errors.New("zinc server not responding on given address")
+    ErrZincServerWriteFailed   = errors.New("zinc server write failed")
+)
+```
+
+## type [Config](<https://github.com/bartossh/Computantis/blob/main/zincaddapter/zincaddapter.go#L24-L28>)
+
+LoggerConfig contains configuration for logger back\-end
+
+```go
+type Config struct {
+    Address string `yaml:"address"` // logger back-end server address
+    Index   string `yaml:"index"`   // unique index per service to easy search for logs by the service
+    Token   string `yaml:"token"`   // Authentication token i n format [ Basic some-auth-token-base64 ]
+}
+```
+
+## type [ZincClient](<https://github.com/bartossh/Computantis/blob/main/zincaddapter/zincaddapter.go#L37-L41>)
+
+ZincClient provides a client that sends logs to the zincsearch backend
+
+```go
+type ZincClient struct {
+    // contains filtered or unexported fields
+}
+```
+
+### func [New](<https://github.com/bartossh/Computantis/blob/main/zincaddapter/zincaddapter.go#L44>)
+
+```go
+func New(cfg Config) (ZincClient, error)
+```
+
+New creates a new ZincClient.
+
+### func \(\*ZincClient\) [Write](<https://github.com/bartossh/Computantis/blob/main/zincaddapter/zincaddapter.go#L52>)
+
+```go
+func (z *ZincClient) Write(p []byte) (n int, err error)
+```
+
+Write satisfies io.Writer abstraction.
 
 # central
 

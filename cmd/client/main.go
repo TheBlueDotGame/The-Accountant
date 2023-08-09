@@ -21,6 +21,7 @@ import (
 	"github.com/bartossh/Computantis/telemetry"
 	"github.com/bartossh/Computantis/wallet"
 	"github.com/bartossh/Computantis/walletapi"
+	"github.com/bartossh/Computantis/zincaddapter"
 )
 
 const usage = `Client runs wallet API service that serves as a middleware between your application and central node.
@@ -100,7 +101,14 @@ func run(cfg configuration.Configuration) {
 		panic(fmt.Sprintf("error with logger: %s", err))
 	}
 
-	log := logging.New(callbackOnErr, callbackOnFatal, db, stdoutwriter.Logger{})
+	zinc, err := zincaddapter.New(cfg.ZincLogger)
+	if err != nil {
+		fmt.Println(err)
+		c <- os.Interrupt
+		return
+	}
+
+	log := logging.New(callbackOnErr, callbackOnFatal, db, stdoutwriter.Logger{}, &zinc)
 
 	seal := aeswrapper.New()
 	fo := fileoperations.New(cfg.FileOperator, seal)

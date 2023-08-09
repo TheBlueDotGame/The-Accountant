@@ -23,10 +23,11 @@ import (
 	"github.com/bartossh/Computantis/validator"
 	"github.com/bartossh/Computantis/wallet"
 	"github.com/bartossh/Computantis/webhooks"
+	"github.com/bartossh/Computantis/zincaddapter"
 )
 
 const usage = `The Validator Computantis API server validates transactions and blocks. In additions Validator offers
-webhook endpoint where any application with valid address can register to listen for new blocks or transactions for 
+web-hook endpoint where any application with valid address can register to listen for new blocks or transactions for 
 given wallet public address.`
 
 func main() {
@@ -96,7 +97,14 @@ func run(cfg configuration.Configuration) {
 		panic(fmt.Sprintf("fatal error: %s", err))
 	}
 
-	log := logging.New(callbackOnErr, callbackOnFatal, db, stdoutwriter.Logger{})
+	zinc, err := zincaddapter.New(cfg.ZincLogger)
+	if err != nil {
+		fmt.Println(err)
+		c <- os.Interrupt
+		return
+	}
+
+	log := logging.New(callbackOnErr, callbackOnFatal, db, stdoutwriter.Logger{}, &zinc)
 
 	go func() {
 		<-c

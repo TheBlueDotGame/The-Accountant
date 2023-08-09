@@ -24,6 +24,7 @@ import (
 	"github.com/bartossh/Computantis/stdoutwriter"
 	"github.com/bartossh/Computantis/telemetry"
 	"github.com/bartossh/Computantis/wallet"
+	"github.com/bartossh/Computantis/zincaddapter"
 )
 
 const (
@@ -112,7 +113,14 @@ func run(cfg configuration.Configuration) {
 		panic(fmt.Sprintf("Error with logger: %s", err))
 	}
 
-	log := logging.New(callbackOnErr, callbackOnFatal, db, stdoutwriter.Logger{})
+	zinc, err := zincaddapter.New(cfg.ZincLogger)
+	if err != nil {
+		fmt.Println(err)
+		c <- os.Interrupt
+		return
+	}
+
+	log := logging.New(callbackOnErr, callbackOnFatal, db, stdoutwriter.Logger{}, &zinc)
 
 	if err := blockchain.GenesisBlock(ctx, db); err != nil {
 		fmt.Printf("Mining genesis block error: %s\n", err)
