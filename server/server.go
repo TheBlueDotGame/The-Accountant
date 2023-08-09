@@ -6,13 +6,14 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/bartossh/Computantis/block"
-	"github.com/bartossh/Computantis/logger"
-	"github.com/bartossh/Computantis/transaction"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/monitor"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+
+	"github.com/bartossh/Computantis/block"
+	"github.com/bartossh/Computantis/logger"
+	"github.com/bartossh/Computantis/transaction"
 )
 
 const (
@@ -148,13 +149,12 @@ type ReactiveTrxIssued interface {
 
 // Config contains configuration of the server.
 type Config struct {
+	WebsocketAddress string `yaml:"websocket_address"` // Address of the websocket server.
 	Port             int    `yaml:"port"`              // Port to listen on.
 	DataSizeBytes    int    `yaml:"data_size_bytes"`   // Size of the data to be stored in the transaction.
-	WebsocketAddress string `yaml:"websocket_address"` // Address of the websocket server.
 }
 
 type server struct {
-	dataSize     int
 	repo         Repository
 	bookkeeping  Bookkeeper
 	randDataProv RandomDataProvideValidator
@@ -162,6 +162,7 @@ type server struct {
 	log          logger.Logger
 	rxBlock      ReactiveBlock
 	rxTrxIssued  ReactiveTrxIssued
+	dataSize     int
 }
 
 // Run initializes routing and runs the server. To stop the server cancel the context.

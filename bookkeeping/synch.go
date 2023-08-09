@@ -23,9 +23,9 @@ type Synchronizer interface {
 }
 
 type sync struct {
-	id        string
 	synchro   Synchronizer
 	subscribe BlockchainLockSubscriber
+	id        string
 }
 
 // newSync creates new sync.

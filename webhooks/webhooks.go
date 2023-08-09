@@ -16,9 +16,7 @@ const (
 	TriggerNewTransaction             // TriggerNewTransaction is a trigger for new transaction. It is triggered when a new transaction is received.
 )
 
-var (
-	ErrorHookNotImplemented = errors.New("hook not implemented")
-)
+var ErrorHookNotImplemented = errors.New("hook not implemented")
 
 // WebHookNewBlockMessage is the message send to the webhook url about new forged block.
 type WebHookNewBlockMessage struct {
@@ -34,9 +32,9 @@ const (
 
 // NewTransactionMessage is the message send to the webhook url about new transaction for given wallet address.
 type NewTransactionMessage struct {
-	State byte      `json:"state"`
-	Time  time.Time `json:"time"`
 	Token string    `json:"token"`
+	Time  time.Time `json:"time"`
+	State byte      `json:"state"`
 }
 
 // Hook is the hook that is used to trigger the webhook.
@@ -49,9 +47,9 @@ type hooks map[string]Hook
 
 // Service provide webhook service that is used to create, remove and update webhooks.
 type Service struct {
-	mux    sync.RWMutex
 	buffer map[byte]hooks
 	log    logger.Logger
+	mux    sync.RWMutex
 }
 
 // New creates new instance of the webhook service.

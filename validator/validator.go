@@ -10,16 +10,17 @@ import (
 	"sync"
 	"time"
 
+	"github.com/fasthttp/websocket"
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/monitor"
+	"github.com/gofiber/fiber/v2/middleware/recover"
+
 	"github.com/bartossh/Computantis/block"
 	"github.com/bartossh/Computantis/httpclient"
 	"github.com/bartossh/Computantis/logger"
 	"github.com/bartossh/Computantis/server"
 	"github.com/bartossh/Computantis/wallet"
 	"github.com/bartossh/Computantis/webhooks"
-	"github.com/fasthttp/websocket"
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/monitor"
-	"github.com/gofiber/fiber/v2/middleware/recover"
 )
 
 const wsConnectionTimeout = 5 * time.Second
@@ -46,10 +47,10 @@ var (
 // It keeps track of invalid blocks in case of blockchain corruption.
 type Status struct {
 	ID        any         `json:"-"          bson:"_id,omitempty" db:"id"`
-	Index     int64       `json:"index"      bson:"index"         db:"index"`
-	Block     block.Block `json:"block"      bson:"block"         db:"-"`
-	Valid     bool        `json:"valid"      bson:"valid"         db:"valid"`
 	CreatedAt time.Time   `json:"created_at" bson:"created_at"    db:"created_at"`
+	Block     block.Block `json:"block"      bson:"block"         db:"-"`
+	Index     int64       `json:"index"      bson:"index"         db:"index"`
+	Valid     bool        `json:"valid"      bson:"valid"         db:"valid"`
 }
 
 // StatusReadWriter provides methods to bulk read and single write validator status.
@@ -79,17 +80,17 @@ type Config struct {
 }
 
 type app struct {
-	mux          sync.RWMutex
-	lastBlock    block.Block
-	cfg          Config
-	srw          StatusReadWriter
-	log          logger.Logger
 	conns        map[string]socket
+	cancel       context.CancelFunc
+	srw          StatusReadWriter
 	ver          Verifier
 	wh           WebhookCreateRemovePoster
-	wallet       *wallet.Wallet
 	randDataProv server.RandomDataProvideValidator
-	cancel       context.CancelFunc
+	log          logger.Logger
+	wallet       *wallet.Wallet
+	mux          sync.RWMutex
+	cfg          Config
+	lastBlock    block.Block
 }
 
 // Run initializes routing and runs the validator. To stop the validator cancel the context.
@@ -99,7 +100,8 @@ func Run(
 	ctx context.Context, cfg Config,
 	srw StatusReadWriter, log logger.Logger,
 	ver Verifier, wh WebhookCreateRemovePoster,
-	wallet *wallet.Wallet, rdp server.RandomDataProvideValidator) error {
+	wallet *wallet.Wallet, rdp server.RandomDataProvideValidator,
+) error {
 	ctxx, cancel := context.WithCancel(ctx)
 	a := &app{
 		mux:          sync.RWMutex{},
@@ -117,7 +119,7 @@ func Run(
 	log.Info(fmt.Sprintf("validator [ %s ] is starting on port: %d", a.wallet.Address(), cfg.Port))
 
 	deadline, ok := ctxx.Deadline()
-	timeout := deadline.Sub(time.Now())
+	timeout := time.Until(deadline)
 	if !ok {
 		timeout = time.Second * 5
 	}

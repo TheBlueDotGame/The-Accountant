@@ -8,14 +8,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bartossh/Computantis/httpclient"
-	"github.com/bartossh/Computantis/transaction"
-	"github.com/bartossh/Computantis/walletapi"
-	"github.com/bartossh/Computantis/webhooks"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/pterm/pterm"
+
+	"github.com/bartossh/Computantis/httpclient"
+	"github.com/bartossh/Computantis/transaction"
+	"github.com/bartossh/Computantis/walletapi"
+	"github.com/bartossh/Computantis/webhooks"
 )
 
 const maxTrxInBuffer = 25
@@ -31,26 +32,24 @@ const (
 	MessageEndpoint            = "/message"
 )
 
-var (
-	ErrFailedHook = errors.New("failed to create web hook")
-)
+var ErrFailedHook = errors.New("failed to create web hook")
 
 // Message holds timestamp info.
 type Message struct {
-	Timestamp   int64                   `json:"timestamp"`
 	Status      string                  `json:"status"`
 	Transaction transaction.Transaction `json:"transaction"`
+	Timestamp   int64                   `json:"timestamp"`
 	Volts       int                     `json:"volts"`
 	MiliAmps    int                     `json:"mili_amps"`
 	Power       int                     `json:"power"`
 }
 
 type subscriber struct {
-	mux                  sync.Mutex
-	pub                  publisher
 	buffer               []Message
+	mux                  sync.Mutex
 	lastTransactionTime  time.Time
 	allowedIssuerAddress string
+	pub                  publisher
 	allowdMeasurements   [2]Measurement
 }
 

@@ -9,8 +9,10 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-const minAddressLength = 50
-const ExpirationTimeInDays = 7 // transaction validity expiration time in days. TODO: move to config
+const (
+	minAddressLength     = 50
+	ExpirationTimeInDays = 7 // transaction validity expiration time in days. TODO: move to config
+)
 
 var (
 	ErrTransactionHasAFutureTime        = errors.New("transaction has a future time")
@@ -42,13 +44,13 @@ type Verifier interface {
 type Transaction struct {
 	ID                any       `json:"-"                  bson:"_id"                db:"id"`
 	CreatedAt         time.Time `json:"created_at"         bson:"created_at"         db:"created_at"`
-	Hash              [32]byte  `json:"hash"               bson:"hash"               db:"hash"`
 	IssuerAddress     string    `json:"issuer_address"     bson:"issuer_address"     db:"issuer_address"`
 	ReceiverAddress   string    `json:"receiver_address"   bson:"receiver_address"   db:"receiver_address"`
 	Subject           string    `json:"subject"            bson:"subject"            db:"subject"`
 	Data              []byte    `json:"data"               bson:"data"               db:"data"`
 	IssuerSignature   []byte    `json:"issuer_signature"   bson:"issuer_signature"   db:"issuer_signature"`
 	ReceiverSignature []byte    `json:"receiver_signature" bson:"receiver_signature" db:"receiver_signature"`
+	Hash              [32]byte  `json:"hash"               bson:"hash"               db:"hash"`
 }
 
 // New creates new transaction signed by the issuer.

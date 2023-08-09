@@ -7,10 +7,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/bartossh/Computantis/block"
-	"github.com/bartossh/Computantis/logger"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
+
+	"github.com/bartossh/Computantis/block"
+	"github.com/bartossh/Computantis/logger"
 )
 
 const (
@@ -45,12 +46,12 @@ type Message struct {
 }
 
 type socket struct {
-	address string
 	hub     *hub
 	conn    *websocket.Conn
-	send    chan []byte
-	repo    Repository
 	log     logger.Logger
+	repo    Repository
+	send    chan []byte
+	address string
 }
 
 func (s *server) wsWrapper(ctx context.Context, c *fiber.Ctx) error {

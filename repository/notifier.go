@@ -26,9 +26,9 @@ type notification struct {
 	Table  string `json:"table"`
 	Action string `json:"action"`
 	Data   struct {
+		Node      string `json:"node"`
 		ID        int    `json:"id"`
 		Timestamp int    `json:"timestamp"`
-		Node      string `json:"node"`
 	} `json:"data"`
 }
 

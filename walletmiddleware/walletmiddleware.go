@@ -33,12 +33,12 @@ type NewSignValidatorCreator func() (wallet.Wallet, error)
 // and is designed to serve as a easy way of building client applications
 // that uses the REST API of the central node.
 type Client struct {
-	apiRoot       string
-	timeout       time.Duration
 	verifier      transaction.Verifier
 	wrs           WalletReadSaver
-	w             wallet.Wallet
 	walletCreator NewSignValidatorCreator
+	apiRoot       string
+	w             wallet.Wallet
+	timeout       time.Duration
 	ready         bool
 }
 

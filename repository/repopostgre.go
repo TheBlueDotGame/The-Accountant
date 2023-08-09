@@ -2,10 +2,9 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"math"
-
-	"database/sql"
 
 	"github.com/lib/pq"
 	_ "github.com/lib/pq"
@@ -47,8 +46,8 @@ type DataBase struct {
 }
 
 // Subscribe subscribes to the database events.
-func Subscribe(ctx context.Context, cfg DBConfig) (Listener, error) {
-	f := func(ev pq.ListenerEventType, err error) {
+func Subscribe(_ context.Context, cfg DBConfig) (Listener, error) {
+	f := func(_ pq.ListenerEventType, err error) {
 		if err != nil {
 			panic(err)
 		}
@@ -61,7 +60,7 @@ func Subscribe(ctx context.Context, cfg DBConfig) (Listener, error) {
 }
 
 // Connect creates new connection to the repository and returns pointer to the DataBase.
-func Connect(ctx context.Context, cfg DBConfig) (*DataBase, error) {
+func Connect(_ context.Context, cfg DBConfig) (*DataBase, error) {
 	sslMode := "sslmode=disable"
 	if cfg.IsSSL {
 		sslMode = "sslmode=require"

@@ -8,8 +8,8 @@ type Config struct {
 
 // Helper holds all file operation methods.
 type Helper struct {
-	cfg Config
 	s   Sealer
+	cfg Config
 }
 
 // New creates new Helper.
