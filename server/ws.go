@@ -53,8 +53,6 @@ type socket struct {
 	repo    Repository
 	tele    providers.HistogramProvider
 	log     logger.Logger
-	repo    Repository
-	send    chan []byte
 	address string
 }
 
