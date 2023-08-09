@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const token = "Basic YWRtaW46emluY3NlYXJjaA==" // Update token before testin.
+const token = "Basic YWRtaW46emluY3NlYXJjaA==" // Update token before testing.
 
 func TestZincsearchLoggingIntegration(t *testing.T) {
 	cfg := Config{"http://localhost:4080", "test_logging", token}
