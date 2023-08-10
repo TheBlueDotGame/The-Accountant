@@ -7,6 +7,7 @@ networks:
 volumes:
   prometheus_data: {}
   grafana-data:
+  zincsearch_data_container:
 
 services:
   postgres:
@@ -26,6 +27,22 @@ services:
       test: "pg_isready --username=postgres && psql --username=postgres --list"
       timeout: 10s
       retries: 20
+      
+  zincsearch:
+    image: public.ecr.aws/zinclabs/zincsearch:latest
+    container_name: zincsearch
+    environment:
+      ZINC_FIRST_ADMIN_USER: admin
+      ZINC_FIRST_ADMIN_PASSWORD: zincsearch
+      ZINC_PROMETHEUS_ENABLE: true
+    ports:
+      - 4080:4080
+    expose:
+      - 4080
+    volumes:
+      - zincsearch_data_container:/data
+    networks:
+      - computantis_network
 
   central-node:
     container_name: central-node

@@ -80,6 +80,10 @@ database:
   is_ssl: false # Set to true if database requires SSL or to false otherwise, On production SSL true is a must. 
 dataprovider:
   longevity: 300 # Data provider provides the data to be signed by the wallet holder in order to verify the wallet public key. This is a time [ s ] describing how long data are valid.
+zinc_logger: # Zinc search (elastic-search like service) for convenient access to logs. 
+  address: http://zincsearch:4080 # Zinc search address in computantis network.
+  index: central # Name of the micro-service for easy logs filtering.
+  token: Basic YWRtaW46emluY3NlYXJjaA== # Token allows to validate legitimacy of the service that is sending the log.
 ```
 
 - The validator node:
@@ -88,6 +92,10 @@ validator:
   central_node_address: "http://localhost:8080" # Address of the central node to get discovery information from.
   port: 9090 # Port on which the validator REST API is exposed.
   token: "jykkeD6Tr6xikkYwC805kVoFThm8VGEHStTFk1lIU6RgEf7p3vjFpPQFI3VP9SYeARjYh2jecMSYsmgddjZZcy32iySHijJQ" # Token required by the validator to connect to all the central nodes.
+zinc_logger: # Zinc search (elastic-search like service) for convenient access to logs. 
+  address: http://zincsearch:4080 # Zinc search address in computantis network.
+  index: validator # Name of the micro-service for easy logs filtering.
+  token: Basic YWRtaW46emluY3NlYXJjaA== # Token allows to validate legitimacy of the service that is sending the log.
 ```
 
 - The wallet client:
@@ -99,6 +107,10 @@ client:
   port: 8095 # Port on which the wallet API is exposed.
   central_node_url: "http://localhost:8080" # Root URL address of a central node or the proxy.
   validator_node_url: "http://localhost:9090" # Root URL of specific validator node to create a Webhook with.
+zinc_logger: # Zinc search (elastic-search like service) for convenient access to logs. 
+  address: http://zincsearch:4080 # Zinc search address in computantis network.
+  index: wallet # Name of the micro-service for easy logs filtering.
+  token: Basic YWRtaW46emluY3NlYXJjaA== # Token allows to validate legitimacy of the service that is sending the log.
 ```
 
 - The emulator:
@@ -121,6 +133,7 @@ Required services setup:
  - Client node
  - Exporter node
  - Prometheus node
+ - Zincsearch node
 
 Run in terminal to run services in separate docker containers:
 

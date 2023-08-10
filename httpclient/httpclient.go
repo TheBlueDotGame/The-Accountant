@@ -3,10 +3,10 @@ package httpclient
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"github.com/valyala/fasthttp"
 	"time"
+
+	"github.com/valyala/fasthttp"
 )
 
 var (
@@ -29,6 +29,54 @@ func MakePost(timeout time.Duration, url string, out, in any) error {
 	req.SetRequestURI(url)
 	req.Header.SetMethod("POST")
 	req.Header.SetContentType("application/json")
+
+	return makePost(req, timeout, out, in)
+}
+
+func MakeGet(timeout time.Duration, url string, in any) error {
+	req := fasthttp.AcquireRequest()
+	defer fasthttp.ReleaseRequest(req)
+
+	req.SetRequestURI(url)
+	req.Header.SetMethod("GET")
+
+	return makeGet(req, timeout, in)
+}
+
+// MakePostAuth make a post request with serialized 'out' structure which is send to the given 'url' with authorization token
+// 'in' is a pointer to the structure to be deserialized from the received json data.
+func MakePostAuth(timeout time.Duration, token, url string, out, in any) error {
+	req := fasthttp.AcquireRequest()
+	defer fasthttp.ReleaseRequest(req)
+
+	req.SetRequestURI(url)
+	req.Header.SetMethod("POST")
+	req.Header.SetContentType("application/json")
+	req.Header.Set("accept", "application/json")
+	if token != "" {
+		req.Header.Set("Authorization", token)
+	}
+	return makePost(req, timeout, out, in)
+}
+
+// MakeGetAuth make a get request to the given 'url' with authorization token
+// 'in' is a pointer to the structure to be deserialized from the received json data.
+func MakeGetAuth(timeout time.Duration, token, url string, in any) error {
+	req := fasthttp.AcquireRequest()
+	defer fasthttp.ReleaseRequest(req)
+
+	req.SetRequestURI(url)
+	req.Header.SetMethod("GET")
+	req.Header.SetContentType("application/json")
+	req.Header.Set("accept", "application/json")
+	if token != "" {
+		req.Header.Set("Authorization", token)
+	}
+
+	return makeGet(req, timeout, in)
+}
+
+func makePost(req *fasthttp.Request, timeout time.Duration, out, in any) error {
 	raw, err := json.Marshal(out)
 	if err != nil {
 		return err
@@ -47,28 +95,21 @@ func MakePost(timeout time.Duration, url string, out, in any) error {
 	case fasthttp.StatusNoContent:
 		return nil
 	default:
-		return errors.Join(
-			ErrStatusCodeMismatch,
-			fmt.Errorf("expected status code %d but got %d", fasthttp.StatusOK, resp.StatusCode()))
+		return fmt.Errorf("expected status code %d but got %d", fasthttp.StatusOK, resp.StatusCode())
 	}
 
 	contentType := resp.Header.Peek("Content-Type")
 	if bytes.Index(contentType, []byte("application/json")) != 0 {
-		return errors.Join(
-			ErrContentTypeMismatch,
-			fmt.Errorf("expected content type application/json but got %s", contentType))
+		return fmt.Errorf("expected content type application/json but got %s", contentType)
 	}
 
-	return json.Unmarshal(resp.Body(), in)
+	if in != nil {
+		return json.Unmarshal(resp.Body(), in)
+	}
+	return nil
 }
 
-func MakeGet(timeout time.Duration, url string, out any) error {
-	req := fasthttp.AcquireRequest()
-	defer fasthttp.ReleaseRequest(req)
-
-	req.SetRequestURI(url)
-	req.Header.SetMethod("GET")
-
+func makeGet(req *fasthttp.Request, timeout time.Duration, in any) error {
 	resp := fasthttp.AcquireResponse()
 	defer fasthttp.ReleaseResponse(resp)
 
@@ -77,21 +118,20 @@ func MakeGet(timeout time.Duration, url string, out any) error {
 	}
 
 	switch resp.StatusCode() {
-	case fasthttp.StatusOK:
+	case fasthttp.StatusOK, fasthttp.StatusCreated, fasthttp.StatusAccepted:
 	case fasthttp.StatusNoContent:
 		return nil
 	default:
-		return errors.Join(
-			ErrStatusCodeMismatch,
-			fmt.Errorf("expected status code %d but got %d", fasthttp.StatusOK, resp.StatusCode()))
+		return fmt.Errorf("expected status code %d but got %d", fasthttp.StatusOK, resp.StatusCode())
 	}
 
 	contentType := resp.Header.Peek("Content-Type")
 	if bytes.Index(contentType, []byte("application/json")) != 0 {
-		return errors.Join(
-			ErrContentTypeMismatch,
-			fmt.Errorf("expected content type application/json but got %s", contentType))
+		return fmt.Errorf("expected content type application/json but got %s", contentType)
 	}
 
-	return json.Unmarshal(resp.Body(), out)
+	if in != nil {
+		return json.Unmarshal(resp.Body(), in)
+	}
+	return nil
 }
