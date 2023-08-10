@@ -23,7 +23,7 @@ import (
 	"github.com/bartossh/Computantis/validator"
 	"github.com/bartossh/Computantis/wallet"
 	"github.com/bartossh/Computantis/webhooks"
-	"github.com/bartossh/Computantis/zincadapter"
+	"github.com/bartossh/Computantis/zincaddapter"
 )
 
 const usage = `The Validator Computantis API server validates transactions and blocks. In additions Validator offers
@@ -97,7 +97,7 @@ func run(cfg configuration.Configuration) {
 		panic(fmt.Sprintf("fatal error: %s", err))
 	}
 
-	zinc, err := zincadapter.New(cfg.ZincLogger)
+	zinc, err := zincaddapter.New(cfg.ZincLogger)
 	if err != nil {
 		fmt.Println(err)
 		c <- os.Interrupt

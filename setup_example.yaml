@@ -33,3 +33,4 @@ emulator:
 zinc_logger:
   address: http://zincsearch:4080 
   index: central
+  token: Basic YWRtaW46emluY3NlYXJjaA==

@@ -759,7 +759,7 @@ type Configuration struct {
     Database     repository.DBConfig   `yaml:"database"`
     Client       walletapi.Config      `yaml:"client"`
     FileOperator fileoperations.Config `yaml:"file_operator"`
-    ZincLogger   zincadapter.Config    `yaml:"zinc_logger"`
+    ZincLogger   zincaddapter.Config   `yaml:"zinc_logger"`
     Validator    validator.Config      `yaml:"validator"`
     Emulator     emulator.Config       `yaml:"emulator"`
     DataProvider dataprovider.Config   `yaml:"data_provider"`
@@ -3424,10 +3424,10 @@ type WebHookNewBlockMessage struct {
 }
 ```
 
-# zincadapter
+# zincaddapter
 
 ```go
-import "github.com/bartossh/Computantis/zincadapter"
+import "github.com/bartossh/Computantis/zincaddapter"
 ```
 
 ## Index
@@ -3448,7 +3448,7 @@ var (
 )
 ```
 
-## type [Config](<https://github.com/bartossh/Computantis/blob/main/zincadapter/zincadapter.go#L24-L27>)
+## type [Config](<https://github.com/bartossh/Computantis/blob/main/zincaddapter/zincaddapter.go#L24-L28>)
 
 LoggerConfig contains configuration for logger back\-end
 
@@ -3456,10 +3456,11 @@ LoggerConfig contains configuration for logger back\-end
 type Config struct {
     Address string `yaml:"address"` // logger back-end server address
     Index   string `yaml:"index"`   // unique index per service to easy search for logs by the service
+    Token   string `yaml:"token"`   // Authentication token i n format [ Basic some-auth-token-base64 ]
 }
 ```
 
-## type [ZincClient](<https://github.com/bartossh/Computantis/blob/main/zincadapter/zincadapter.go#L36-L39>)
+## type [ZincClient](<https://github.com/bartossh/Computantis/blob/main/zincaddapter/zincaddapter.go#L37-L41>)
 
 ZincClient provides a client that sends logs to the zincsearch backend
 
@@ -3469,7 +3470,7 @@ type ZincClient struct {
 }
 ```
 
-### func [New](<https://github.com/bartossh/Computantis/blob/main/zincadapter/zincadapter.go#L42>)
+### func [New](<https://github.com/bartossh/Computantis/blob/main/zincaddapter/zincaddapter.go#L44>)
 
 ```go
 func New(cfg Config) (ZincClient, error)
@@ -3477,7 +3478,7 @@ func New(cfg Config) (ZincClient, error)
 
 New creates a new ZincClient.
 
-### func \(\*ZincClient\) [Write](<https://github.com/bartossh/Computantis/blob/main/zincadapter/zincadapter.go#L50>)
+### func \(\*ZincClient\) [Write](<https://github.com/bartossh/Computantis/blob/main/zincaddapter/zincaddapter.go#L52>)
 
 ```go
 func (z *ZincClient) Write(p []byte) (n int, err error)

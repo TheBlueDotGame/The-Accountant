@@ -1,6 +1,6 @@
 //go:build integration
 
-package zincadapter
+package zincaddapter
 
 import (
 	"log"
@@ -12,7 +12,7 @@ import (
 const token = "Basic YWRtaW46emluY3NlYXJjaA==" // Update token before testing.
 
 func TestZincsearchLoggingIntegration(t *testing.T) {
-	cfg := Config{"http://localhost:4080", "test_logging"}
+	cfg := Config{"http://localhost:4080", "test_logging", token}
 	writer, err := New(cfg)
 	assert.Nil(t, err)
 

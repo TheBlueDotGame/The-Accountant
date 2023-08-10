@@ -14,7 +14,7 @@ import (
 	"github.com/bartossh/Computantis/server"
 	"github.com/bartossh/Computantis/validator"
 	"github.com/bartossh/Computantis/walletapi"
-	"github.com/bartossh/Computantis/zincadapter"
+	"github.com/bartossh/Computantis/zincaddapter"
 )
 
 // Configuration is the main configuration of the application that corresponds to the *.yaml file
@@ -24,7 +24,7 @@ type Configuration struct {
 	Database     repository.DBConfig   `yaml:"database"`
 	Client       walletapi.Config      `yaml:"client"`
 	FileOperator fileoperations.Config `yaml:"file_operator"`
-	ZincLogger   zincadapter.Config    `yaml:"zinc_logger"`
+	ZincLogger   zincaddapter.Config   `yaml:"zinc_logger"`
 	Validator    validator.Config      `yaml:"validator"`
 	Emulator     emulator.Config       `yaml:"emulator"`
 	DataProvider dataprovider.Config   `yaml:"data_provider"`
