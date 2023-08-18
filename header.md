@@ -229,32 +229,32 @@ copy `wasm/bin/wallet.wasm` and `wasm/js/wasm_exec.js` to you fronted project an
 
 👀 Development guidelines:
 
-Correctness is the first principle.
-Performance counts.
-Performance applies equally to computational performance and development performance.
-Write code that performs well and benchmark it.
-Don't microbenchmark, do the benchmarking in the context.
-Unit test your code, especially critical parts.
-Write integration tests for the API calls or use integration testing tools such as Postman.
-Programming Language counts. Pick the effective, performant, safe and simple one.
-Be open-minded, do not fall into the pitfalls of one ideology, non solve all the problems.
-Less is almost always more.
-Abstraction is your superpower. Unnecessary abstraction and complicated abstraction are your kryptonite.
-Avoid the inheritance it is the root of all evil. But sometimes we pick the inheritance as the lesser evil.
-Use composition. Please keep it simple.
-Problems are complex do not make them more complicated than they are.
-Write documentation, don't write comments (comments lie, code never lies).
-Never panic, handle errors gracefully.
-Focus on data first, avoid pointers if possible, and paginate structures.
-Prealocate continuous memory if possible. Keep things on the stack if possible.
-Have the courage to change your opinion.
-Don't be clever be boring.
+- Correctness is the first principle.
+- Performance counts.
+- Performance applies equally to computational performance and development performance.
+- Write code that performs well and benchmark it.
+- Don't microbenchmark, do the benchmarking in the context.
+- Unit test your code, especially critical parts.
+- Write integration tests for the API calls or use integration testing tools such as Postman.
+- Programming Language counts. Pick the effective, performant, safe and simple one.
+- Be open-minded, do not fall into the pitfalls of one ideology, non solve all the problems.
+- Less is almost always more.
+- Abstraction is your superpower. Unnecessary abstraction and complicated abstraction are your kryptonite.
+- Avoid the inheritance it is the root of all evil. But sometimes we pick the inheritance as the lesser evil.
+- Use composition. Please keep it simple.
+- Problems are complex do not make them more complicated than they are.
+- Write documentation, don't write comments (comments lie, code never lies).
+- Never panic, handle errors gracefully.
+- Focus on data first, avoid pointers if possible, and paginate structures.
+- Prealocate continuous memory if possible. Keep things on the stack if possible.
+- Have the courage to change your opinion.
+- Don't be clever be boring.
 
 💻 Useful resources:
 
-https://go-proverbs.github.io/
-https://ntrs.nasa.gov/api/citations/19950022400/downloads/19950022400.pdf
-https://medium.com/eureka-engineering/understanding-allocations-in-go-stack-heap-memory-9a2631b5035d
-https://www.ardanlabs.com/blog/2023/07/getting-friendly-with-cpu-caches.html
-https://eli.thegreenplace.net/2023/common-pitfalls-in-go-benchmarking/
+- https://go-proverbs.github.io/
+- https://ntrs.nasa.gov/api/citations/19950022400/downloads/19950022400.pdf
+- https://medium.com/eureka-engineering/understanding-allocations-in-go-stack-heap-memory-9a2631b5035d
+- https://www.ardanlabs.com/blog/2023/07/getting-friendly-with-cpu-caches.html
+- https://eli.thegreenplace.net/2023/common-pitfalls-in-go-benchmarking/
 
