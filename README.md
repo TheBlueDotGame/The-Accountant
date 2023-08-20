@@ -2,64 +2,97 @@
 
 [![CodeQL](https://github.com/bartossh/Computantis/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/bartossh/Computantis/actions/workflows/github-code-scanning/codeql)
 [![pages-build-deployment](https://github.com/bartossh/Computantis/actions/workflows/pages/pages-build-deployment/badge.svg)](https://github.com/bartossh/Computantis/actions/workflows/pages/pages-build-deployment)
+## Computantis protocol.
 
-The Computantis is a set of services that keeps track of transactions between wallets.
-Transactions are not transferring any tokens between wallets but it might be the case if someone wants to use it this way. Just this set of services isn't designed to track token exchange. Instead, transactions are entities holding data that the transaction issuer and transaction receiver agreed upon. Each wallet has its own independent history of transactions. There is a set of strict rules allowing for transactions to happen:
+1. General description.
 
-The central server is private to the corporation, government or agency. It is trusted by the above entity and participants. This solution isn't proposing the distributed system of transactions as this is not the case. It is ensuring that the transaction is issued and signed and received and signed to confirm its validity. Blockchain keeps transactions history immutable so the validators can be sure that no one will corrupt the transactions. 
-Transaction to be valid needs to:
-- Have a valid issuer signature.
-- Have a valid receiver signature.
-- Have a valid data digest.
-- Have a valid issuer public address.
-- Have a valid receiver public address.
-- Be part of a blockchain.
+- The protocol works within the application layer in the OSI network model.
+- The protocol wraps data within the transaction.
+- The transaction seals the data cryptographically.
+- The transaction data are irrelevant to the protocol, and so is its encoding. Encoding is the responsibility of the final application.
+- The central node participates in the transmission process of the transaction.
+- The central node acts as a middleware service and ensures transaction legitimacy.
+- The transaction receiver and the transaction issuer are known as the client.
+- The clients are not aware of each other network URLs, they participate in the transaction transmission using the central node (network of central nodes).
+- The client URL is known only for the network of central nodes and the validators.
+- The URL of the client may change while data are transmitted and it is not affecting the transmission consistency.
+- The client is recognized in the network by the public address of cryptographic key pairs.
+- The client's responsibility is to inform the validator of the URL change. The validators are public nodes that are validating the central node's network legitimacy and inform the client nodes about the awaiting transactions.
+- The client node is working on the client machine or as an edge device proxying traffic to the device or a client application.
+- The traffic cannot omit the central node when transmitted from client to client.
+- The client is additionally validating the message's legitimacy, decrypting and decoding the message.
+- The central nodes stores all the transactions in the immutable repository in the form of a blockchain.
+- The central nodes are not competing over the forging of the block but cooperate to do so.
+- There is no token transfer happening and there is no prize given for forging the block. The whole network of nodes is a privately owned entity without the possibility of branching or corrupting the blockchain. Any attempt to corrupt the system by any node will be recognized as a violation of procedure and such central node will be removed from the network and blacklisted, even thou this is a privately owned central node. Any misbehaving node will be treated as broken or compromised by a third party or a hacker.
+- The validators and the central nodes are voting using a weighted system over violation of procedure. There is a minimum of 51% of votes to disconnect the central node and blacklist the node, the same applies to the validators.
 
-The full cycle of the transaction and block forging happens as follows:
-1. The Issuer creates the transaction and signs it with the issuer's private key, attaching the issuer's public key to the transaction.
-2. The Issuer sends the transaction to the central server.
-3. The central server validates The Issuer address, signature, data digest and expiration date. If the transaction is valid then it is kept in awaiting transactions repository for the receiver to sign.
-4. Receiver asks for awaiting transactions for the receiver's signature in the process of proving his public address and signing data received from the server by the receiver's private key.
-5. If the signature is valid then all awaiting transactions are transferred to the receiver.
-6. The receiver can sign transactions that the receiver agrees on, and sends them back to the central server. 
-7. The central server validates the address, signature, data digest and expiration date then appends the transaction to be added to the next forged block. The transaction is moved from the awaiting transactions repository to the temporary repository (just in case of any unexpected crashes or attacks on the central server).
-8. The central servers follow sets of rules from the configuration `yaml` file, which describes how often the block is forged, how many transactions it can hold and what is the difficulty for hashing the block.
-9. When the block is forged and added to the blockchain then transactions that are part of the block are moved from the temporary transactions repository to the permanent transactions repository.
-10. Information about the new blocks is sent to all validators. Validators cannot reject blocks or rewrite the blockchain. The validator serves the purpose of tracking the central node blockchain to ensure data are not corrupted, the central node isn’t hacked, stores the blocks in its own repository, and serves as an information node for the external clients. If the blockchain is corrupted then the validator raises an alert when noticing corrupted data.
-It is good practice to have many validator nodes held by independent entities.
+2. The transaction.
 
-## Microservices
+- Transaction is a central entity of the protocol. 
+- The transaction consists of the minimal information required to seal the protocol:
+- ID: Unique repository key / or hash, it is not transmitted over the network.
+- CreatedAt: Timestamp when the transaction was created.
+- IssuerAddress: Public address of the client issuing the transaction.
+- ReceiverAddress: Public address of the client that is the receiver of the transaction.
+- Subject: The string representing the data encoding, type or else, known for the client. The receiver and the issuer node can agree on any enumeration of that variable. For example, if the receiver and the issuer are sending data in many different formats they may indicate it in the subject.
+- Data: Data that are sealed by cryptographic signatures of the receiver and the issuer and encoded with private keys if necessary.
+- IssuerSignature: The cryptographic signature of the issuer.
+- ReceiverSignature: The cryptographic signature of the receiver.
+- Hash: Message hash acting as the control sum of the transaction.
+- The transaction footprint on the transmitted data size depends on the relation between the size of the ‘Data’ field in the transaction. That is highly recommended to transmit as much data in a single request as possible. 
+- The transaction has an upper limit on the size of transmitted data, that is set according to the requirements.
+- The transaction is validated on any mutation by the central node:
+- If it is a new transaction, the issuer's signature and hash are checked.
+- If it is signed by the receiver, the issuer signature, receiver signature and hash are checked.
+- The client node validates the transaction before it transmits to the application.:
+- The issuer address is checked to ensure messages from the given address can be used.
+- The issuer signature and hash are validated.
+- The message is encoded using a private key if necessary.
 
-<img src="https://github.com/bartossh/Computantis/blob/main/artefacts/services_diagram.svg">
 
-The Computantis is a set of services that run together to create a fully working solution.
-There are 3 services that create the solution but only the central node is required.
-- The central node.
-    The central node is a REST API and Websocket Server. 
-    The central node serves as the main hub of all the computantis actions. 
-    The central node stores, validates and approves transactions. 
-    Blocks are forged and added to the blockchain by that node. 
-    The central node can be scaled and is not competing with other central nodes to forge a block but rather cooperating to make all the work performant.
-    The central node is sending new coming transactions and blocks information to validators.
-- The validator node.
-    The validator is a REST API and Websocket server.
-    The validator node is not making any action to validate transactions or forge blocks. It connects to the Websocket of all the central nodes when it's listen for blocks and transactions.
-    The responsibility of the validator node is mainly to validate that the blockchain is not corrupted.
-    The validator node makes some heavy lifting to inform all the participants about transactions addressed to them. It is done by providing Webhooks for the clients.
-    The validator auto reconnects to all new created central nodes.
-    The validator is not required to run for the system to function and when detecting corruption on the block chain can only make an alert about that situation.
-- The wallet client.
-    The wallet client is the REST API that loads encrypted wallet from the file and makes all the computations, validations and signing required by the central node REST API.
-    The wallet exposes simplified API that can be used by trusted entities (for example on localhost only) that shares given wallet and wants to access simplified API without need of implementing the wallet logic.
-    The wallet client API shouldn't be exposed to the public.
-    The wallet client isn't necessary for the computantis solution to function but the wallet should be then implemented by the participants of the system.
-- The emulator.
-    The emulator contains of two running modes: publisher and subscriber.
-    The publisher is the one that is creating the transaction and sending them through the wallet client.
-    The subscriber is subscribing to the validator by creating the Webhook and is listening on upcoming transactions info. Then subscriber is pulling all the unsigned transactions and based on given conditions accepts them or rejects them.
-    The communication of the emulator is done through the wallet client API. Emulator is not responsible for signing and validating the transactions.
-    The signing, validating of the transactions and proving identity is delegated from emulator to the wallet client API.
-    The emulator is a testing tool not a production service.
+3. The blockchain.
+
+- The block consists of:
+- ID: Unique repository key / or hash, it is not transmitted over the network.
+- TrxHashes: The merkle tree of transaction hashes.
+- Hash: All the other fields hash.
+- PrevHash: Previous block hash.
+- Index: Consecutive number of the block. A unique number describing the block position in the blockchain.
+- Timestamp: Time when the block was forged.
+- Nonce: 64-bit unsigned integer value that was calculated to create a hash to reach a given difficulty.
+- Difficulty: The difficulty of the forging process for looking for the nonce value to calculate block hash. Higher difficulty ensures the immutability of past blocks, there will be harder to rewrite blocks when new ones are created and catch up with the existing chain.
+- The blockchain cannot be mutated, which is ensured by the:
+- Hashed merkle three of all the transactions are part of the current block.
+- The block is hashed.
+- The previous block hash is part of the current block and is taken as a part of the data to hash the current block.
+- No branching of the blockchain is possible, nonce and difficulty prevent rewriting history by creating a requirement for high computational power to overcome the challenge of outperforming the network of nodes that forges the blocks.
+
+4. The networking
+
+- The network consists of three main participants:
+- The central node - validates transactions and forges blocks.
+- The validator - validates blocks and informs the client over webhook about awaiting transactions.
+- The client - proxy between the application or server and the system. Signs the transactions and takes care of transmitting transactions.
+- The central node network:
+- The central node network communicates over the inner pub- sub-system.
+- The transactions and blockchain repository are shared between all the nodes.
+- The repository is sharded and distributed.
+- The central node allows for HTTP and Web Socket connection. HTTP is used for interaction with clients where a Web Socket connection is used to communicate with Validators.
+- Central nodes are offering nodes discovery protocol over the Web Socket.
+- The validators nodes network:
+- Validators are connected to each central node in the computantis network.
+- Validators are able to discover all the central nodes by using the central node discovery protocol over Web Socket.
+- Validators validate the block.
+- Validators consist of a webhook endpoint to which a client node can assign its URL and wait for the information about the awaiting transactions.
+- Validators will reconnect if the connection is lost.
+- Validators will automatically connect to a new central node created in the computantis network if such is started.
+- The client node network:
+- The client sends its location to the validator node.
+- The validator responds with the list of available central nodes to communicate with.
+- The client activates the webhook in the validator node each time the URL is changed. This allows the client node to receive information about transactions waiting, being altered or rejected.
+- The client node pulls transactions from the known central node.
+- The client node sends signed or rejected transactions to the central node.
+
 
 ## Setup
 
@@ -98,7 +131,7 @@ zinc_logger: # Zinc search (elastic-search like service) for convenient access t
   token: Basic YWRtaW46emluY3NlYXJjaA== # Token allows to validate legitimacy of the service that is sending the log.
 ```
 
-- The wallet client:
+- The client node:
 ```yaml
 file_operator:
   wallet_path: "test_wallet" # File path where wallet is stored.
@@ -137,8 +170,14 @@ Required services setup:
 
 Run in terminal to run services in separate docker containers:
 
+- all services
 ```sh
-docker compose up -d
+make docker-all
+```
+
+- dependencies only
+```sh
+make docker-dependencies
 ```
 
 ## Run services one by one
@@ -183,7 +222,23 @@ make build-local
 
 This will compile all the components when docker image is run. All the processes are running in the single docker container.
 
-Your system 
+## Run emulation demo:
+
+1. There is a possibility to run the example demo that will emulate subscriber and publisher:
+- Publisher is publishing the messages from `data.json` and it is possible to alter the data, but the structure and format and data types shall be preserved.
+- Subscriber will subscribe ans validate transmitted transactions and data in the transaction based on `minmax.json` file, it is possible to alter the data but the structure and format and data types shall be preserved.
+2. The configuration for each service is in the `setup_example.yaml` and only one parameter needs to be adjusted. 
+- Check your machine IP address in the local network `ifconfig` on Linux.
+- Set this parameter in `setup_example.yaml`: `public_url: "http://<your.local.ip.address>:8060"`
+
+3. Run the demo.
+- CAUTION: THIS NEEDS TO BE RUN IN DEVELOPMENT ENVIRONMENT AND ALL THE DATA ON YOUR LOCAL COMPUTANTIS ENVIRONMENT WILL BE ALTERED.
+- There will be three steps:
+    - Run `make docker-all`.
+    - Run `go run cmd/emulator/main.go -c setup_example.yaml -d data.json p`
+    - Run `go run cmd/emulator/main.go -c setup_example.yaml -d minmax.json s`
+- Enjoy.
+
 
 ## Stress test
 
@@ -1073,7 +1128,7 @@ func New(cfg Config, s Sealer) Helper
 New creates new Helper.
 
 <a name="Helper.ReadWallet"></a>
-### func \(Helper\) [ReadWallet](<https://github.com/bartossh/Computantis/blob/main/fileoperations/wallet.go#L16>)
+### func \(Helper\) [ReadWallet](<https://github.com/bartossh/Computantis/blob/main/fileoperations/wallet.go#L17>)
 
 ```go
 func (h Helper) ReadWallet() (wallet.Wallet, error)
@@ -1082,7 +1137,7 @@ func (h Helper) ReadWallet() (wallet.Wallet, error)
 RereadWallet reads wallet from the file.
 
 <a name="Helper.SaveWallet"></a>
-### func \(Helper\) [SaveWallet](<https://github.com/bartossh/Computantis/blob/main/fileoperations/wallet.go#L40>)
+### func \(Helper\) [SaveWallet](<https://github.com/bartossh/Computantis/blob/main/fileoperations/wallet.go#L41>)
 
 ```go
 func (h Helper) SaveWallet(w wallet.Wallet) error
@@ -1091,9 +1146,9 @@ func (h Helper) SaveWallet(w wallet.Wallet) error
 SaveWallet saves wallet to the file.
 
 <a name="Sealer"></a>
-## type [Sealer](<https://github.com/bartossh/Computantis/blob/main/fileoperations/wallet.go#L10-L13>)
+## type [Sealer](<https://github.com/bartossh/Computantis/blob/main/fileoperations/wallet.go#L11-L14>)
 
-
+Sealer offers behaviour to seal the bytes returning the signature on the data.
 
 ```go
 type Sealer interface {

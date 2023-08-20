@@ -47,6 +47,9 @@ run-all: run-central run-client run-validator emulate-subscriber emulate-publish
 
 start: build-local run-all
 
+docker-dependencies:
+	docker compose up -f docker-compose.dependencies.yaml -d
+
 docker-all:
 	docker compose up -d
 
