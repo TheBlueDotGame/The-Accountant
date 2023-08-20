@@ -239,6 +239,31 @@ This will compile all the components when docker image is run. All the processes
     - Run `go run cmd/emulator/main.go -c setup_example.yaml -d minmax.json s`
 - Enjoy.
 
+### Demo resource usage
+
+- System parameter
+```sh
+OS: Ubuntu 20.04 focal
+Kernel: x86_64 Linux 5.15.0-76-generic
+CPU: AMD Ryzen 7 PRO 4750U with Radeon Graphics @ 16x 1,7GHz
+GPU: Advanced Micro Devices, Inc. [AMD/ATI] Renoir (rev d1)
+RAM: 31451MiB
+SERVICES: Running in Docker
+```
+
+- Stats:
+```sh
+CONTAINER ID   NAME                    CPU %     MEM USAGE
+294fe037553d   client-node             0.41%     13.99MiB 
+892c7a00df55   prometheus              0.00%     42.24MiB 
+046e5abc3f90   node-exporter           0.00%     10.48MiB 
+b898d27d9ebb   validator-node          0.31%     15.73MiB 
+cf65e697b277   central-node            1.17%     12.95MiB 
+793fe32f060c   postgres                0.70%     38.15MiB 
+d075fab56e0e   computantis-grafana-1   0.06%     86.7MiB 
+b49f6921f75b   zincsearch              1.13%     50.54MiB 
+```
+
 
 ## Stress test
 
