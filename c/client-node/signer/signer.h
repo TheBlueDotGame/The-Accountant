@@ -32,9 +32,16 @@ Signer Signer_new();
 void Signer_free(Signer *s);
 
 ///
-///Singner_is_ready checks if Signer is ready to perform signing.
+/// Signer_save_pem saves private key to pem file.
+/// Returns true on success or flase otherwise;
 ///
-bool Signer_is_ready(Signer *s);
+bool Signer_save_pem(Signer *s, const char *f);
+
+/// 
+/// Signer_read_pem reads pem file to the Signer.
+/// Returns true on success or false otherwise.
+///
+bool Signer_read_pem(Signer *s, const char *f);
 
 ///
 /// Signer_get_private_key returns raw private key. 

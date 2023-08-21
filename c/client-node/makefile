@@ -34,7 +34,7 @@ memcheck: ./*.c ./*.h
 
 .PHONY: clean
 clean:
-	rm -rf *.o *.out *.out.dSYM
+	rm -rf *.o *.out *.out.dSYM *.pem
 
 tests.out: ./*.c ./*.h
 	@echo Compiling $@

@@ -1,5 +1,6 @@
 #include "signer.h"
 #include <openssl/evp.h>
+#include <openssl/pem.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -40,7 +41,7 @@ void Signer_free(Signer *s)
     return;
 }
 
-bool Signer_is_ready(Signer *s)
+static bool signer_is_ready(Signer *s)
 {
     if (s == NULL)
     {
@@ -49,11 +50,45 @@ bool Signer_is_ready(Signer *s)
     return s->evpkey != NULL;
 }
 
+bool Signer_save_pem(Signer *s, const char *f)
+{
+    FILE* outfile;
+
+    if (!signer_is_ready(s))
+    {
+        return false;
+    }
+ 
+    outfile = fopen(f, "wb");
+    if (outfile == NULL)
+    {
+        return false;
+    }
+
+    int flag = PEM_write_PrivateKey(outfile, s->evpkey, NULL, NULL, 0, NULL, NULL);
+    fclose(outfile);
+    return flag == 1;
+}
+
+bool Signer_read_pem(Signer *s, const char *f)
+{
+    FILE* infile;
+
+    infile = fopen(f, "r");
+    if (infile == NULL)
+    {
+        return false;
+    }
+
+    s->evpkey = PEM_read_PrivateKey(infile, NULL, NULL, NULL);
+    fclose(infile);
+    return s->evpkey != NULL;
+}
 
 RawCryptoKey Signer_get_private_key(Signer *s)
 {
     RawCryptoKey raw_key;
-    if (!Signer_is_ready(s))
+    if (!signer_is_ready(s))
     {
         return raw_key;
     }
