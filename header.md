@@ -264,7 +264,6 @@ d075fab56e0e   computantis-grafana-1   0.06%     86.7MiB
 b49f6921f75b   zincsearch              1.13%     50.54MiB 
 ```
 
-
 ## Stress test
 
 Directory `stress/` contains central node REST API performance tests.
@@ -277,7 +276,28 @@ I would soon provide more precise benchmarks.
 
 Install govulncheck to perform vulnerability scanning  `go install golang.org/x/vuln/cmd/govulncheck@latest`.
 
-## Documentation:
+## C - implementation
+
+
+### Development
+
+#### Tests
+
+In `c/` folder contains protocol implementation for client node written in C. 
+All below commands shall be run from `c/` folder in the terminal.
+- To test the implementation run `make test`.
+- To make memory leak checks and tests run `make memcheck`
+- Remember to cleanup the test with `make clean`.
+
+#### Build
+
+UNDER CONSTRUCTION
+
+### Production
+
+UNDER CONSTRUCTION
+
+## GO Packages Documentation:
 
 1. Install gomarkdoc to generate documentation: `go install github.com/princjef/gomarkdoc/cmd/gomarkdoc@latest`.
 

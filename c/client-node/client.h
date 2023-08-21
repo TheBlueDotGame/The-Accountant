@@ -1,5 +1,5 @@
-#ifndef PANGRAM_H
-#define PANGRAM_H
+#ifndef CLIENT_H
+#define CLIENT_H
 
 #include <stdbool.h>
 
