@@ -93,8 +93,8 @@ RawCryptoKey Signer_get_private_key(Signer *s)
         return raw_key;
     }
 
-    raw_key.buffer = malloc(32);
-    raw_key.len = 32;
+    raw_key.buffer = malloc(KEY_LEN);
+    raw_key.len = KEY_LEN;
 
     EVP_PKEY_get_raw_private_key(s->evpkey, raw_key.buffer, &(raw_key.len));
 

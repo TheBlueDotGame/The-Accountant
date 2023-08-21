@@ -1,5 +1,6 @@
 #ifndef SIGNER_H
 #define SIGNER_H
+#define KEY_LEN 32
 
 #include <openssl/evp.h>
 #include <stdbool.h>
