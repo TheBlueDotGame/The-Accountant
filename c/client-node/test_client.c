@@ -26,6 +26,27 @@ static void test_signer_new()
     TEST_ASSERT_NULL(s.evpkey);
 }
 
+static void test_signer_public_key()
+{
+    // Prepare
+    Signer s = Signer_new();
+    TEST_ASSERT_NOT_NULL(s.evpkey);
+    
+    // Test
+    RawCryptoKey raw_key = Signer_get_public_key(&s);
+    TEST_ASSERT_NOT_NULL(raw_key.buffer);
+    TEST_ASSERT_EQUAL_UINT(32, raw_key.len);
+
+    // Test cleanup
+    RawCryptoKey_free(&raw_key);
+    TEST_ASSERT_NULL(raw_key.buffer);
+    TEST_ASSERT_EQUAL_UINT(0, raw_key.len);
+    
+    // Prepare clenup
+    Signer_free(&s);
+    TEST_ASSERT_NULL(s.evpkey);
+}
+
 static void test_signer_private_key(void)
 {
        // Prepare
@@ -75,6 +96,7 @@ int main(void)
 
     RUN_TEST(test_dummy);
     RUN_TEST(test_signer_new);
+    RUN_TEST(test_signer_public_key);
     RUN_TEST(test_signer_private_key);
     RUN_TEST(test_signer_save_read_pem);
 

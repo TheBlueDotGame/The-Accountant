@@ -49,6 +49,10 @@ bool Signer_read_pem(Signer *s, const char *f);
 ///
 RawCryptoKey Signer_get_private_key(Signer *s);
 
+///
+///Signer_get_public_key returns raw public key.
+///
+RawCryptoKey Signer_get_public_key(Signer *s);
 
 ///
 /// RawCryptoKey_free frees the RawCryptoKey;

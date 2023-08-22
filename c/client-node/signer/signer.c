@@ -101,6 +101,21 @@ RawCryptoKey Signer_get_private_key(Signer *s)
     return raw_key;
 }
 
+RawCryptoKey Signer_get_public_key(Signer *s)
+{
+    RawCryptoKey raw_key;
+    if (!signer_is_ready(s))
+    {
+        return raw_key;
+    }
+
+    raw_key.buffer = malloc(KEY_LEN);
+    raw_key.len = KEY_LEN;
+    EVP_PKEY_get_raw_public_key(s->evpkey, raw_key.buffer, &(raw_key.len));
+
+    return raw_key;
+}
+
 void RawCryptoKey_free(RawCryptoKey *r)
 {
     if (r == NULL)
