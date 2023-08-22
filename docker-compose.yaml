@@ -88,6 +88,42 @@ services:
     depends_on:
       validator-node:
         condition: service_started
+
+  # demo only
+  subscriber-node:
+    container_name: subscriber-node
+    build:
+      dockerfile: Dockerfile-emulators
+      args:
+        - "APPLICATION=emulator"
+        - "ROLE=subscriber"
+        - "DATAFILE=minmax.json"
+    profiles: ["demo"]
+    restart: unless-stopped
+    ports:
+      - "8060:8060"
+    networks:
+      - computantis_network
+    depends_on:
+      validator-node:
+        condition: service_started
+
+  # demo only
+  publisher-node:
+    container_name: publisher-node
+    build:
+      dockerfile: Dockerfile-emulators
+      args:
+        - "APPLICATION=emulator"
+        - "ROLE=publisher"
+        - "DATAFILE=data.json"
+    profiles: ["demo"]
+    restart: unless-stopped
+    networks:
+      - computantis_network
+    depends_on:
+      subscriber-node:
+        condition: service_started
  
   node-exporter:
     image: prom/node-exporter:latest
