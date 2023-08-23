@@ -39,3 +39,6 @@ server_settings.yml
 # ide
 .vscode
 
+# c dependencies
+c/client-node/packages/
+

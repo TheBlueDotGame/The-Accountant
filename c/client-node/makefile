@@ -19,6 +19,7 @@ ASANFLAGS += -fno-omit-frame-pointer
 
 TEST_PACKAGES = test-framework/unity.c
 PACKAGES = ./signer/*.c
+PACKAGES += ./address/*.c
 PACKAGES += ./*.c
 
 .PHONY: test
@@ -39,3 +40,4 @@ clean:
 tests.out: ./*.c ./*.h
 	@echo Compiling $@
 	@$(CC) $(CFLAGS) $(TEST_PACKAGES) $(PACKAGES) -o tests.out $(LIBS)
+
