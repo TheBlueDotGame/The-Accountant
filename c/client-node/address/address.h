@@ -8,16 +8,19 @@
 
 ///
 /// encode_address_from_raw encodes new public address string from raw buffer.
-/// Encoder uses base58 encoding algorithm and returns nullable string.
+/// Encoder uses base58 encoding algorithm and returns pointer to nullable string.
+/// Caller takes responsibility of freeing the returned string. 
 ///
 char *encode_address_from_raw(unsigned char  *raw, size_t len);
 
 /// 
-/// decode_to_raw decodes nullable string to raw bytes.
-/// It will override the underlining raw bytes array,
-/// it is the best to pass the pointer to the NULL pointer.
+/// decode_address_to_raw decodes nullable string to raw bytes.
+/// unsigned char **raw bytes array represents the variable that points to the array of bytes that the key will be decoded to.
+/// It will override the underlining unsigned char *raw bytes array.
+/// Best practice is to pass unsigned char **raw as a pointer to NULL pointer.
 /// Decoder uses base58 decoding algorithm.
-/// Returns length of raw bytes array.
+/// Returns length of unsigned char *raw bytes array.
+/// Caller takes the responsibility to free the unsigned char *raw bytes array.
 ///
 int decode_address_to_raw(char *str, unsigned char **raw);
 
