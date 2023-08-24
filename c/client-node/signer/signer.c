@@ -122,13 +122,13 @@ void RawCryptoKey_free(RawCryptoKey *r)
     {
         return;
     }
+    r->len = 0;
+    
     if (r->buffer == NULL)
     {
-        r->len = 0;
         return;
     }
     free(r->buffer);
     r->buffer = NULL;
-    r->len = 0;
     return;
 }

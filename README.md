@@ -93,6 +93,13 @@
 - The client node pulls transactions from the known central node.
 - The client node sends signed or rejected transactions to the central node.
 
+5. Wallet 
+
+- Wallet is the central entity allowing for sealing data with signatures.
+- Wallet holds a pair of asymmetric cryptographic keys. In this case we are implementing asymmetric cryptography based on 256 bits ed25519 elliptic curve algorithm. 
+- Wallet public address is encoded in to the transaction as well shared over network as a base58 encoded string. (Bitcoin standard).
+- Wallet has capability to create data digest, and sign that digest cryptographically.
+- Wallet has capabilities to validate signatures.
 
 ## Setup
 
@@ -277,7 +284,6 @@ I would soon provide more precise benchmarks.
 Install govulncheck to perform vulnerability scanning  `go install golang.org/x/vuln/cmd/govulncheck@latest`.
 
 ## C - implementation
-
 
 ### Development
 
