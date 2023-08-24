@@ -21,12 +21,11 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-typedef  unsigned char uint8_t;
 
 extern bool (*b58_sha256_impl)(void *, const void *, size_t);
 
