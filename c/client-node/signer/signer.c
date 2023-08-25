@@ -148,7 +148,7 @@ Signature Signer_sign(Signer *s, unsigned char *msg, size_t len)
     }
     if (len == 0)
     {
-        printf("message of zero length cannot be signed");
+        printf("message of zero length cannot be signed\n");
         exit(1);
     }
 
@@ -163,7 +163,7 @@ Signature Signer_sign(Signer *s, unsigned char *msg, size_t len)
     unsigned char *flag = SHA256(msg, len, digest);
     if (flag == NULL)
     {
-        printf("hashing message failed");
+        printf("hashing message failed\n");
         exit(1);
     } 
 
@@ -192,7 +192,7 @@ Signature Signer_sign(Signer *s, unsigned char *msg, size_t len)
     unsigned char *signature = OPENSSL_zalloc(sizeof(unsigned char) * sig_len);
     if (signature == NULL)
     {
-        printf("signature allocation failed");
+        printf("signature allocation failed\n");
         exit(1);
     }
     success = EVP_DigestSign(mdctx, signature, &sig_len, digest, digest_len);
