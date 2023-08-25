@@ -72,15 +72,15 @@ void RawCryptoKey_free(RawCryptoKey *r);
 
 ///
 /// Signature Signer_sign signs the provided buffer of bytes.
-/// Is returning Signature with inner signature and digest.
-/// If message is a string then len can be passed as -1, 
-/// function will then calculate the message size itself.
-/// This function performs below steps:
+/// Returns Signature with inner signature and digest buffers.
+/// If message is a string then len can be -1 to 
+/// allow the function to pre calculate the message size itself.
+/// Function performs below steps:
 /// - Creates sha256 digest from the message.
 /// - Generate signature context for the Signer ed25519 private key.
-/// - Signs the digest generating the signature.
-/// - constrect Signature struct.
-/// Digest is 32 bytes long and signature is 64 bytes long for the ed25519 algorithm.
+/// - Signs the digest.
+/// - Creates Signature structure.
+/// For the ed25519 algorithm digest is 32 bytes long and signature is 64 bytes long.
 ///
 Signature Signer_sign(Signer *s, unsigned char *msg, size_t len);
 
