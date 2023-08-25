@@ -50,17 +50,37 @@ start: build-local run-all
 docker-dependencies:
 	docker compose up -f docker-compose.dependencies.yaml -d
 
-docker-all:
+# docker-up|down|logs all take into account the environment variable COMPOSE_PROFILES
+# per https://docs.docker.com/compose/profiles/
+# To run a complete demo with publisher and subscriber nodes, use:
+#   COMPOSE_PROFILES=demo make docker-up|down|logs
+# To run core services only, use:
+#   make docker-up|down|logs
+docker-up:
 	docker compose up -d
 
-docker-central-build:
-	docker compose up -d --no-deps --build central-node
+docker-down:
+	docker compose down
 
-docker-validator-build:
-	docker compose up -d --no-deps --build validator-node
+docker-logs:
+	docker compose logs -f
 
-docker-client-build:
-	docker compose up -d --no-deps --build client-node
+docker-build-all: docker-build-central docker-build-validator docker-build-client docker-build-subscriber docker-build-publisher
+
+docker-build-central:
+	docker compose build central-node
+
+docker-build-validator:
+	docker compose build validator-node
+
+docker-build-client:
+	docker compose build client-node
+
+docker-build-subscriber:
+	docker compose build subscriber-node
+
+docker-build-publisher:
+	docker compose build publisher-node
 
 scan:
 	govulncheck ./...

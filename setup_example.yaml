@@ -27,9 +27,9 @@ emulator:
   timeout_seconds: 20
   tick_seconds: 1
   random: false
-  client_url: "http://localhost:8020"
+  client_url: "http://client-node:8000"
   port: "8060"
-  public_url: "http://192.168.0.143:8060" # Best to set it up as your local network machine IP. 
+  public_url: "http://subscriber-node:8060" # If running emulators locally, best to set it up as your local network machine IP.
 zinc_logger:
   address: http://zincsearch:4080 
   index: central
