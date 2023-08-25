@@ -90,6 +90,26 @@ static void test_signer_save_read_pem(void)
     TEST_ASSERT_NULL(s1.evpkey);
 }
 
+static void test_signer_sign(void)
+{
+    // Prepare
+    Signer s = Signer_new();
+    TEST_ASSERT_NOT_NULL(s.evpkey);
+
+    char msg[24] = "this is message to sing\0";
+    Signature sig = Signer_sign(&s, (unsigned char*)msg, 24);
+    TEST_ASSERT_NOT_NULL(sig.digest_buffer);
+    TEST_ASSERT_EQUAL_UINT(32, sig.digest_len);
+    TEST_ASSERT_NOT_NULL(sig.signature_buffer);
+    TEST_ASSERT_EQUAL_UINT(64, sig.signature_len);
+
+    Signature_free(&sig);
+
+    // Prepare clenup
+    Signer_free(&s);
+    TEST_ASSERT_NULL(s.evpkey);
+}
+
 int main(void)
 {
     UnityBegin("test_client.c");
@@ -99,6 +119,7 @@ int main(void)
     RUN_TEST(test_signer_public_key);
     RUN_TEST(test_signer_private_key);
     RUN_TEST(test_signer_save_read_pem);
+    RUN_TEST(test_signer_sign);
 
     return UnityEnd();
 }
