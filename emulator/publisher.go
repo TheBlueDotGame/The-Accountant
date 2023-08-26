@@ -65,19 +65,15 @@ func RunPublisher(ctx context.Context, cancel context.CancelFunc, config Config,
 
 	t := time.NewTicker(time.Duration(config.TickSeconds) * time.Second)
 	defer t.Stop()
-	spinner, _ := pterm.DefaultSpinner.Start("Emulating transaction publisher...")
-	defer spinner.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
 		case <-t.C:
-			spinner, _ = pterm.DefaultSpinner.Start(fmt.Sprintf("Making [ %d ] transaction emulation.\n", p.position+1))
 			if err := p.emulate(ctx, addr.Address, measurtements); err != nil {
-				spinner.Warning()
 				return err
 			}
-			spinner.Success()
+			pterm.Info.Printf("Emulated and published [ %d ] transaction from the given dataset.\n", p.position+1)
 		}
 	}
 }
@@ -123,8 +119,6 @@ func (p *publisher) emulate(ctx context.Context, receiver string, measurements [
 		if !resp.Ok {
 			err = errors.New("unexpected error")
 		}
-
-		pterm.Info.Printf("Emulated measuremnt: %#v.", measurements[p.position])
 	}()
 
 	select {
