@@ -248,7 +248,7 @@ static void test_signer_verify_signature_failure_wrong_pub_key(void)
     TEST_ASSERT_NULL(wrong_s.evpkey);
 }
 
-static void test_signer_verify_signature_success_corrupted_msg(void)
+static void test_signer_verify_signature_failure_corrupted_msg(void)
 {
     // Prepare
     Signer s = Signer_new();
@@ -287,7 +287,7 @@ static void test_signer_verify_signature_success_corrupted_msg(void)
     TEST_ASSERT_NULL(s.evpkey);
 }
 
-static void test_signer_verify_signature_success_corrupted_digest(void)
+static void test_signer_verify_signature_failure_corrupted_digest(void)
 {
     // Prepare
     Signer s = Signer_new();
@@ -340,8 +340,8 @@ int main(void)
     RUN_TEST(test_signer_sign);
     RUN_TEST(test_signer_verify_signature_success);
     RUN_TEST(test_signer_verify_signature_failure_wrong_pub_key);
-    RUN_TEST(test_signer_verify_signature_success_corrupted_msg);
-    RUN_TEST(test_signer_verify_signature_success_corrupted_digest);
+    RUN_TEST(test_signer_verify_signature_failure_corrupted_msg);
+    RUN_TEST(test_signer_verify_signature_failure_corrupted_digest);
 
     return UnityEnd();
 }
