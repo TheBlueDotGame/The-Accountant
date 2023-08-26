@@ -20,6 +20,7 @@ ASANFLAGS += -fno-omit-frame-pointer
 TEST_PACKAGES = test-framework/unity.c
 PACKAGES = ./signer/*.c
 PACKAGES += ./address/*.c
+PACKAGES += ./signature/*.c
 PACKAGES += ./*.c
 
 .PHONY: test

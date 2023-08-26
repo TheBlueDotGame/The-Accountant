@@ -1,10 +1,21 @@
-#include "test-framework/unity.h"
-#include "client.h"
+///
+/// Copyright (C) 2023 by Computantis
+///
+/// Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without l> imitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+/// 
+/// The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+///
+/// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+///
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+#include <openssl/evp.h>
+#include "test-framework/unity.h"
+#include "client.h"
 #include "./signer/signer.h"
 #include "./address/address.h"
+#include "./signature/signature.h"
 
 
 void setUp(void)
@@ -152,6 +163,170 @@ static void test_signer_sign(void)
     TEST_ASSERT_NULL(s.evpkey);
 }
 
+static void test_signer_verify_signature_success(void)
+{
+    // Prepare
+    Signer s = Signer_new();
+    TEST_ASSERT_NOT_NULL(s.evpkey);
+
+    RawCryptoKey raw_pub_key = Signer_get_public_key(&s);
+    TEST_ASSERT_NOT_NULL(raw_pub_key.buffer);
+    TEST_ASSERT_EQUAL_UINT(32, raw_pub_key.len);
+    
+    // Test 
+    char msg[24] = "this is message to sing\0";
+    Signature sig = Signer_sign(&s, (unsigned char*)msg, 24);
+    TEST_ASSERT_NOT_NULL(sig.digest_buffer);
+    TEST_ASSERT_EQUAL_UINT(32, sig.digest_len);
+    TEST_ASSERT_NOT_NULL(sig.signature_buffer);
+    TEST_ASSERT_EQUAL_UINT(64, sig.signature_len);
+    
+    EVP_PKEY *pkey = RawCryptoKey_get_evp_public_key(&raw_pub_key);
+    TEST_ASSERT_NOT_NULL(pkey);
+    
+    bool success = Signature_verify(&sig, pkey, (unsigned char *)msg, 24);
+    TEST_ASSERT_TRUE(success);
+
+    Signature_free(&sig);
+    EVP_PKEY_free(pkey);
+
+    // Prepare clenup
+    RawCryptoKey_free(&raw_pub_key);
+    TEST_ASSERT_NULL(raw_pub_key.buffer);
+    TEST_ASSERT_EQUAL_UINT(0, raw_pub_key.len);
+    Signer_free(&s);
+    TEST_ASSERT_NULL(s.evpkey);
+}
+
+static void test_signer_verify_signature_failure_wrong_pub_key(void)
+{
+    // Prepare
+    Signer s = Signer_new();
+    TEST_ASSERT_NOT_NULL(s.evpkey);
+
+    RawCryptoKey raw_pub_key = Signer_get_public_key(&s);
+    TEST_ASSERT_NOT_NULL(raw_pub_key.buffer);
+    TEST_ASSERT_EQUAL_UINT(32, raw_pub_key.len);
+
+    Signer wrong_s = Signer_new();
+    TEST_ASSERT_NOT_NULL(wrong_s.evpkey);
+    RawCryptoKey wrong_raw_pub_key = Signer_get_public_key(&wrong_s);
+    TEST_ASSERT_NOT_NULL(wrong_raw_pub_key.buffer);
+    TEST_ASSERT_EQUAL_UINT(32, wrong_raw_pub_key.len);
+    
+    // Test 
+    char msg[24] = "this is message to sing\0";
+    Signature sig = Signer_sign(&s, (unsigned char*)msg, 24);
+    TEST_ASSERT_NOT_NULL(sig.digest_buffer);
+    TEST_ASSERT_EQUAL_UINT(32, sig.digest_len);
+    TEST_ASSERT_NOT_NULL(sig.signature_buffer);
+    TEST_ASSERT_EQUAL_UINT(64, sig.signature_len);
+    
+    EVP_PKEY *pkey = RawCryptoKey_get_evp_public_key(&wrong_raw_pub_key);
+    TEST_ASSERT_NOT_NULL(pkey);
+    
+    bool success = Signature_verify(&sig, pkey, (unsigned char *)msg, 24);
+    TEST_ASSERT_FALSE(success);
+
+    Signature_free(&sig);
+    EVP_PKEY_free(pkey);
+
+    // Prepare clenup
+    RawCryptoKey_free(&raw_pub_key);
+    TEST_ASSERT_NULL(raw_pub_key.buffer);
+    TEST_ASSERT_EQUAL_UINT(0, raw_pub_key.len);
+
+
+    RawCryptoKey_free(&wrong_raw_pub_key);
+    TEST_ASSERT_NULL(wrong_raw_pub_key.buffer);
+    TEST_ASSERT_EQUAL_UINT(0, wrong_raw_pub_key.len);
+
+    Signer_free(&s);
+    TEST_ASSERT_NULL(s.evpkey);
+    
+    Signer_free(&wrong_s);
+    TEST_ASSERT_NULL(wrong_s.evpkey);
+}
+
+static void test_signer_verify_signature_success_corrupted_msg(void)
+{
+    // Prepare
+    Signer s = Signer_new();
+    TEST_ASSERT_NOT_NULL(s.evpkey);
+
+    RawCryptoKey raw_pub_key = Signer_get_public_key(&s);
+    TEST_ASSERT_NOT_NULL(raw_pub_key.buffer);
+    TEST_ASSERT_EQUAL_UINT(32, raw_pub_key.len);
+    
+    // Test 
+    char msg[24] = "this is message to sing\0";
+    Signature sig = Signer_sign(&s, (unsigned char*)msg, 24);
+    TEST_ASSERT_NOT_NULL(sig.digest_buffer);
+    TEST_ASSERT_EQUAL_UINT(32, sig.digest_len);
+    TEST_ASSERT_NOT_NULL(sig.signature_buffer);
+    TEST_ASSERT_EQUAL_UINT(64, sig.signature_len);
+    
+    EVP_PKEY *pkey = RawCryptoKey_get_evp_public_key(&raw_pub_key);
+    TEST_ASSERT_NOT_NULL(pkey);
+
+    // corrupt message
+
+    msg[3] = 'S';
+    
+    bool success = Signature_verify(&sig, pkey, (unsigned char *)msg, 24);
+    TEST_ASSERT_FALSE(success);
+
+    Signature_free(&sig);
+    EVP_PKEY_free(pkey);
+
+    // Prepare clenup
+    RawCryptoKey_free(&raw_pub_key);
+    TEST_ASSERT_NULL(raw_pub_key.buffer);
+    TEST_ASSERT_EQUAL_UINT(0, raw_pub_key.len);
+    Signer_free(&s);
+    TEST_ASSERT_NULL(s.evpkey);
+}
+
+static void test_signer_verify_signature_success_corrupted_digest(void)
+{
+    // Prepare
+    Signer s = Signer_new();
+    TEST_ASSERT_NOT_NULL(s.evpkey);
+
+    RawCryptoKey raw_pub_key = Signer_get_public_key(&s);
+    TEST_ASSERT_NOT_NULL(raw_pub_key.buffer);
+    TEST_ASSERT_EQUAL_UINT(32, raw_pub_key.len);
+    
+    // Test 
+    char msg[24] = "this is message to sing\0";
+    Signature sig = Signer_sign(&s, (unsigned char*)msg, 24);
+    TEST_ASSERT_NOT_NULL(sig.digest_buffer);
+    TEST_ASSERT_EQUAL_UINT(32, sig.digest_len);
+    TEST_ASSERT_NOT_NULL(sig.signature_buffer);
+    TEST_ASSERT_EQUAL_UINT(64, sig.signature_len);
+    
+    EVP_PKEY *pkey = RawCryptoKey_get_evp_public_key(&raw_pub_key);
+    TEST_ASSERT_NOT_NULL(pkey);
+
+    // corrupt message
+
+    sig.digest_buffer[3] = 'X';
+    sig.digest_buffer[4] = 'X';
+    
+    bool success = Signature_verify(&sig, pkey, (unsigned char *)msg, 24);
+    TEST_ASSERT_FALSE(success);
+
+    Signature_free(&sig);
+    EVP_PKEY_free(pkey);
+
+    // Prepare clenup
+    RawCryptoKey_free(&raw_pub_key);
+    TEST_ASSERT_NULL(raw_pub_key.buffer);
+    TEST_ASSERT_EQUAL_UINT(0, raw_pub_key.len);
+    Signer_free(&s);
+    TEST_ASSERT_NULL(s.evpkey);
+}
+
 int main(void)
 {
     UnityBegin("test_client.c");
@@ -163,6 +338,10 @@ int main(void)
     RUN_TEST(test_signer_save_read_pem);
     RUN_TEST(test_encode_decode_public_address);
     RUN_TEST(test_signer_sign);
+    RUN_TEST(test_signer_verify_signature_success);
+    RUN_TEST(test_signer_verify_signature_failure_wrong_pub_key);
+    RUN_TEST(test_signer_verify_signature_success_corrupted_msg);
+    RUN_TEST(test_signer_verify_signature_success_corrupted_digest);
 
     return UnityEnd();
 }
