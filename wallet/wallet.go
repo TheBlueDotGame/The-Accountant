@@ -6,7 +6,11 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/x509"
 	"encoding/gob"
+	"encoding/pem"
+	"errors"
+	"os"
 
 	"github.com/bartossh/Computantis/serializer"
 )
@@ -29,6 +33,78 @@ func New() (Wallet, error) {
 		return Wallet{}, err
 	}
 	return Wallet{Private: private, Public: public}, nil
+}
+
+// SaveToPem saves wallet private and public key to the PEM format file.
+// Saved files are like in the example:
+// - PRIVATE: "your/path/name"
+// - PUBLIC: "your/path/name.pub"
+func (w *Wallet) SaveToPem(filepath string) error {
+	prv, err := x509.MarshalPKCS8PrivateKey(w.Private)
+	if err != nil {
+		return err
+	}
+	pub, err := x509.MarshalPKIXPublicKey(w.Public)
+	if err != nil {
+		return err
+	}
+	blockPrv := &pem.Block{
+		Type:  "PRIVATE KEY",
+		Bytes: prv,
+	}
+	blockPub := &pem.Block{
+		Type:  "PUBLIC KEY",
+		Bytes: pub,
+	}
+	if err := os.WriteFile(filepath, pem.EncodeToMemory(blockPrv), 0644); err != nil {
+		return err
+	}
+	if err := os.WriteFile(filepath+".pub", pem.EncodeToMemory(blockPub), 0644); err != nil {
+		return err
+	}
+	return nil
+}
+
+// ReadFromPem creates Wallet from PEM format file.
+// Uses both private and public key.
+// Provide the path to a file without specifying the extension : <your/path/name".
+func ReadFromPem(filepath string) (Wallet, error) {
+	var w Wallet
+	rawPub, err := os.ReadFile(filepath + ".pub")
+	if err != nil {
+		return w, err
+	}
+	rawPrv, err := os.ReadFile(filepath)
+	if err != nil {
+		return w, err
+	}
+
+	blockPub, _ := pem.Decode(rawPub)
+	if blockPub == nil || blockPub.Type != "PUBLIC KEY" {
+		return w, errors.New("cannot decode public key from PEM format")
+	}
+	pub, err := x509.ParsePKIXPublicKey(blockPub.Bytes)
+	if err != nil {
+		return w, err
+	}
+	blockPrv, _ := pem.Decode(rawPrv)
+	if blockPrv == nil || blockPrv.Type != "PRIVATE KEY" {
+		return w, errors.New("cannot decode private key from PEM format")
+	}
+	prv, err := x509.ParsePKCS8PrivateKey(blockPrv.Bytes)
+	if err != nil {
+		return w, err
+	}
+	var ok bool
+	w.Public, ok = pub.(ed25519.PublicKey)
+	if !ok {
+		return w, errors.New("cannot cast x509 decoded parsed key to ed25519 public key")
+	}
+	w.Private, ok = prv.(ed25519.PrivateKey)
+	if !ok {
+		return w, errors.New("cannot cast x509 decoded parsed key to ed25519 private key")
+	}
+	return w, nil
 }
 
 // DecodeGOBWallet tries to decode Wallet from gob representation or returns error otherwise.
