@@ -284,7 +284,7 @@ func (sub *subscriber) validateData(data []byte) error {
 func (sub *subscriber) appendToBuffer(status string, trx transaction.Transaction) {
 	var m Measurement
 	if err := json.Unmarshal(trx.Data, &m); err != nil {
-		pterm.Error.Printf("Failed to marshal mesuremet due to: %s", err)
+		pterm.Error.Printf("Failed to marshal measurement due to: %s", err)
 		return
 	}
 	sub.buffer = append(sub.buffer, Message{
