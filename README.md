@@ -1172,8 +1172,10 @@ import "github.com/bartossh/Computantis/fileoperations"
 - [type Config](<#Config>)
 - [type Helper](<#Helper>)
   - [func New\(cfg Config, s Sealer\) Helper](<#New>)
+  - [func \(h Helper\) ReadFromPem\(filepath string\) \(wallet.Wallet, error\)](<#Helper.ReadFromPem>)
   - [func \(h Helper\) ReadWallet\(\) \(wallet.Wallet, error\)](<#Helper.ReadWallet>)
-  - [func \(h Helper\) SaveWallet\(w wallet.Wallet\) error](<#Helper.SaveWallet>)
+  - [func \(h Helper\) SaveToPem\(w \*wallet.Wallet, filepath string\) error](<#Helper.SaveToPem>)
+  - [func \(h Helper\) SaveWallet\(w \*wallet.Wallet\) error](<#Helper.SaveWallet>)
 - [type Sealer](<#Sealer>)
 
 
@@ -1209,26 +1211,44 @@ func New(cfg Config, s Sealer) Helper
 
 New creates new Helper.
 
+<a name="Helper.ReadFromPem"></a>
+### func \(Helper\) [ReadFromPem](<https://github.com/bartossh/Computantis/blob/main/fileoperations/wallet.go#L105>)
+
+```go
+func (h Helper) ReadFromPem(filepath string) (wallet.Wallet, error)
+```
+
+ReadFromPem creates Wallet from PEM format file. Uses both private and public key. Provide the path to a file without specifying the extension : \<your/path/name".
+
 <a name="Helper.ReadWallet"></a>
-### func \(Helper\) [ReadWallet](<https://github.com/bartossh/Computantis/blob/main/fileoperations/wallet.go#L17>)
+### func \(Helper\) [ReadWallet](<https://github.com/bartossh/Computantis/blob/main/fileoperations/wallet.go#L22>)
 
 ```go
 func (h Helper) ReadWallet() (wallet.Wallet, error)
 ```
 
-RereadWallet reads wallet from the file.
+RereadWallet reads wallet from the file from GOB format. It uses decryption key to perform wallet decoding.
 
-<a name="Helper.SaveWallet"></a>
-### func \(Helper\) [SaveWallet](<https://github.com/bartossh/Computantis/blob/main/fileoperations/wallet.go#L41>)
+<a name="Helper.SaveToPem"></a>
+### func \(Helper\) [SaveToPem](<https://github.com/bartossh/Computantis/blob/main/fileoperations/wallet.go#L76>)
 
 ```go
-func (h Helper) SaveWallet(w wallet.Wallet) error
+func (h Helper) SaveToPem(w *wallet.Wallet, filepath string) error
 ```
 
-SaveWallet saves wallet to the file.
+SaveToPem saves wallet private and public key to the PEM format file. Saved files are like in the example: \- PRIVATE: "your/path/name" \- PUBLIC: "your/path/name.pub" Pem saved wallet is not sealed cryptographically and keys can be seen by anyone having access to the machine.
+
+<a name="Helper.SaveWallet"></a>
+### func \(Helper\) [SaveWallet](<https://github.com/bartossh/Computantis/blob/main/fileoperations/wallet.go#L51>)
+
+```go
+func (h Helper) SaveWallet(w *wallet.Wallet) error
+```
+
+SaveWallet saves wallet to the file in GOB format. GOB file is secured cryptographically by the key, so it is safer option to move your wallet between machines in that format. This wallet can only be red by the Go wallet implementation. For transferring wallet to other implementations use PEM format.
 
 <a name="Sealer"></a>
-## type [Sealer](<https://github.com/bartossh/Computantis/blob/main/fileoperations/wallet.go#L11-L14>)
+## type [Sealer](<https://github.com/bartossh/Computantis/blob/main/fileoperations/wallet.go#L15-L18>)
 
 Sealer offers behaviour to seal the bytes returning the signature on the data.
 
@@ -3131,11 +3151,9 @@ import "github.com/bartossh/Computantis/wallet"
 - [type Wallet](<#Wallet>)
   - [func DecodeGOBWallet\(data \[\]byte\) \(Wallet, error\)](<#DecodeGOBWallet>)
   - [func New\(\) \(Wallet, error\)](<#New>)
-  - [func ReadFromPem\(filepath string\) \(Wallet, error\)](<#ReadFromPem>)
   - [func \(w \*Wallet\) Address\(\) string](<#Wallet.Address>)
   - [func \(w \*Wallet\) ChecksumLength\(\) int](<#Wallet.ChecksumLength>)
   - [func \(w \*Wallet\) EncodeGOB\(\) \(\[\]byte, error\)](<#Wallet.EncodeGOB>)
-  - [func \(w \*Wallet\) SaveToPem\(filepath string\) error](<#Wallet.SaveToPem>)
   - [func \(w \*Wallet\) Sign\(message \[\]byte\) \(digest \[32\]byte, signature \[\]byte\)](<#Wallet.Sign>)
   - [func \(w \*Wallet\) Verify\(message, signature \[\]byte, hash \[32\]byte\) bool](<#Wallet.Verify>)
   - [func \(w \*Wallet\) Version\(\) byte](<#Wallet.Version>)
@@ -3178,19 +3196,19 @@ func (h Helper) Verify(message, signature []byte, hash [32]byte, address string)
 Verify verifies if message is signed by given key and hash is equal.
 
 <a name="Wallet"></a>
-## type [Wallet](<https://github.com/bartossh/Computantis/blob/main/wallet/wallet.go#L24-L27>)
+## type [Wallet](<https://github.com/bartossh/Computantis/blob/main/wallet/wallet.go#L20-L23>)
 
 Wallet holds public and private key of the wallet owner.
 
 ```go
 type Wallet struct {
-    Private ed25519.PrivateKey `json:"private" bson:"private"`
+    Private ed25519.PrivateKey `json:"private" bson:"private"` // TODO: Make ephemaral structure with public filelds for json, bson encoding and make this fields private.
     Public  ed25519.PublicKey  `json:"public" bson:"public"`
 }
 ```
 
 <a name="DecodeGOBWallet"></a>
-### func [DecodeGOBWallet](<https://github.com/bartossh/Computantis/blob/main/wallet/wallet.go#L111>)
+### func [DecodeGOBWallet](<https://github.com/bartossh/Computantis/blob/main/wallet/wallet.go#L35>)
 
 ```go
 func DecodeGOBWallet(data []byte) (Wallet, error)
@@ -3199,7 +3217,7 @@ func DecodeGOBWallet(data []byte) (Wallet, error)
 DecodeGOBWallet tries to decode Wallet from gob representation or returns error otherwise.
 
 <a name="New"></a>
-### func [New](<https://github.com/bartossh/Computantis/blob/main/wallet/wallet.go#L30>)
+### func [New](<https://github.com/bartossh/Computantis/blob/main/wallet/wallet.go#L26>)
 
 ```go
 func New() (Wallet, error)
@@ -3207,17 +3225,8 @@ func New() (Wallet, error)
 
 New tries to creates a new Wallet or returns error otherwise.
 
-<a name="ReadFromPem"></a>
-### func [ReadFromPem](<https://github.com/bartossh/Computantis/blob/main/wallet/wallet.go#L71>)
-
-```go
-func ReadFromPem(filepath string) (Wallet, error)
-```
-
-ReadFromPem creates Wallet from PEM format file. Uses both private and public key. Provide the path to a file without specifying the extension : \<your/path/name".
-
 <a name="Wallet.Address"></a>
-### func \(\*Wallet\) [Address](<https://github.com/bartossh/Computantis/blob/main/wallet/wallet.go#L146>)
+### func \(\*Wallet\) [Address](<https://github.com/bartossh/Computantis/blob/main/wallet/wallet.go#L70>)
 
 ```go
 func (w *Wallet) Address() string
@@ -3226,7 +3235,7 @@ func (w *Wallet) Address() string
 Address creates address from the public key that contains wallet version and checksum.
 
 <a name="Wallet.ChecksumLength"></a>
-### func \(\*Wallet\) [ChecksumLength](<https://github.com/bartossh/Computantis/blob/main/wallet/wallet.go#L136>)
+### func \(\*Wallet\) [ChecksumLength](<https://github.com/bartossh/Computantis/blob/main/wallet/wallet.go#L60>)
 
 ```go
 func (w *Wallet) ChecksumLength() int
@@ -3235,7 +3244,7 @@ func (w *Wallet) ChecksumLength() int
 ChecksumLength returns checksum length.
 
 <a name="Wallet.EncodeGOB"></a>
-### func \(\*Wallet\) [EncodeGOB](<https://github.com/bartossh/Computantis/blob/main/wallet/wallet.go#L123>)
+### func \(\*Wallet\) [EncodeGOB](<https://github.com/bartossh/Computantis/blob/main/wallet/wallet.go#L47>)
 
 ```go
 func (w *Wallet) EncodeGOB() ([]byte, error)
@@ -3243,17 +3252,8 @@ func (w *Wallet) EncodeGOB() ([]byte, error)
 
 EncodeGOB tries to encodes Wallet in to the gob representation or returns error otherwise.
 
-<a name="Wallet.SaveToPem"></a>
-### func \(\*Wallet\) [SaveToPem](<https://github.com/bartossh/Computantis/blob/main/wallet/wallet.go#L42>)
-
-```go
-func (w *Wallet) SaveToPem(filepath string) error
-```
-
-SaveToPem saves wallet private and public key to the PEM format file. Saved files are like in the example: \- PRIVATE: "your/path/name" \- PUBLIC: "your/path/name.pub"
-
 <a name="Wallet.Sign"></a>
-### func \(\*Wallet\) [Sign](<https://github.com/bartossh/Computantis/blob/main/wallet/wallet.go#L158>)
+### func \(\*Wallet\) [Sign](<https://github.com/bartossh/Computantis/blob/main/wallet/wallet.go#L82>)
 
 ```go
 func (w *Wallet) Sign(message []byte) (digest [32]byte, signature []byte)
@@ -3262,7 +3262,7 @@ func (w *Wallet) Sign(message []byte) (digest [32]byte, signature []byte)
 Sign signs the message with Ed25519 signature. Returns digest hash sha256 and signature.
 
 <a name="Wallet.Verify"></a>
-### func \(\*Wallet\) [Verify](<https://github.com/bartossh/Computantis/blob/main/wallet/wallet.go#L166>)
+### func \(\*Wallet\) [Verify](<https://github.com/bartossh/Computantis/blob/main/wallet/wallet.go#L90>)
 
 ```go
 func (w *Wallet) Verify(message, signature []byte, hash [32]byte) bool
@@ -3271,7 +3271,7 @@ func (w *Wallet) Verify(message, signature []byte, hash [32]byte) bool
 Verify verifies message ED25519 signature and hash. Uses hashing sha256.
 
 <a name="Wallet.Version"></a>
-### func \(\*Wallet\) [Version](<https://github.com/bartossh/Computantis/blob/main/wallet/wallet.go#L141>)
+### func \(\*Wallet\) [Version](<https://github.com/bartossh/Computantis/blob/main/wallet/wallet.go#L65>)
 
 ```go
 func (w *Wallet) Version() byte
@@ -3779,7 +3779,7 @@ WalletReadSaver allows to read and save the wallet.
 ```go
 type WalletReadSaver interface {
     ReadWallet() (wallet.Wallet, error)
-    SaveWallet(w wallet.Wallet) error
+    SaveWallet(w *wallet.Wallet) error
 }
 ```
 
@@ -4038,6 +4038,16 @@ import "github.com/bartossh/Computantis/cmd/generator"
 
 ```go
 import "github.com/bartossh/Computantis/cmd/validator"
+```
+
+## Index
+
+
+
+# wallet
+
+```go
+import "github.com/bartossh/Computantis/cmd/wallet"
 ```
 
 ## Index

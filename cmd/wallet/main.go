@@ -71,9 +71,7 @@ func main() {
 					if err := run(acctionNewWallet, pem, cfg.FileOperator); err != nil {
 						return err
 					}
-					pterm.Info.Println("----------")
-					pterm.Info.Println(" SUCCESS !")
-					pterm.Info.Println("----------")
+					printSuccess()
 					return nil
 				},
 			},
@@ -89,9 +87,7 @@ func main() {
 					if err := run(actionFromGobToPem, pem, cfg.FileOperator); err != nil {
 						return err
 					}
-					pterm.Info.Println("----------")
-					pterm.Info.Println(" SUCCESS !")
-					pterm.Info.Println("----------")
+					printSuccess()
 					return nil
 				},
 			},
@@ -107,9 +103,7 @@ func main() {
 					if err := run(actionFromPemToGob, pem, cfg.FileOperator); err != nil {
 						return err
 					}
-					pterm.Info.Println("----------")
-					pterm.Info.Println(" SUCCESS !")
-					pterm.Info.Println("----------")
+					printSuccess()
 					return nil
 				},
 			},
@@ -161,4 +155,10 @@ func run(action int, pem string, cfg fileoperations.Config) error {
 		return errors.New("unimplemented action")
 
 	}
+}
+
+func printSuccess() {
+	pterm.Info.Println("----------")
+	pterm.Info.Println(" SUCCESS !")
+	pterm.Info.Println("----------")
 }
