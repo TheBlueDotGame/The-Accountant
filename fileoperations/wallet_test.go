@@ -5,11 +5,13 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/bartossh/Computantis/aeswrapper"
 	"github.com/bartossh/Computantis/wallet"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestSaveReadWalletEncodeDecodeSuccess(t *testing.T) {
@@ -29,7 +31,7 @@ func TestSaveReadWalletEncodeDecodeSuccess(t *testing.T) {
 			w0, err := wallet.New()
 			assert.Nil(t, err)
 
-			err = helper.SaveWallet(w0)
+			err = helper.SaveWallet(&w0)
 			assert.Nil(t, err)
 			w1, err := helper.ReadWallet()
 			assert.Nil(t, err)
@@ -62,7 +64,7 @@ func TestSaveReadWalletEncodeDecodeEncryptDecryptSuccess(t *testing.T) {
 
 			d0, s0 := w0.Sign(testMessage)
 
-			err = helper.SaveWallet(w0)
+			err = helper.SaveWallet(&w0)
 			assert.Nil(t, err)
 			w1, err := helper.ReadWallet()
 			assert.Nil(t, err)
@@ -73,9 +75,30 @@ func TestSaveReadWalletEncodeDecodeEncryptDecryptSuccess(t *testing.T) {
 
 			assert.Equal(t, d0, d2)
 			assert.Equal(t, s0, s2)
-
 		})
 	}
+}
+
+func TestSaveAndReadPEM(t *testing.T) {
+	h := New(Config{}, aeswrapper.New())
+	testPath := "./wallet"
+	w, err := wallet.New()
+	assert.Nil(t, err)
+	assert.NotNil(t, w.Private)
+	assert.NotNil(t, w.Public)
+
+	err = h.SaveToPem(&w, testPath)
+	assert.Nil(t, err)
+
+	nw, err := h.ReadFromPem(testPath)
+	assert.Nil(t, err)
+	assert.Equal(t, w.Private, nw.Private)
+	assert.Equal(t, w.Public, nw.Public)
+
+	err = os.Remove(testPath)
+	assert.Nil(t, err)
+	err = os.Remove(testPath + ".pub")
+	assert.Nil(t, err)
 }
 
 func BenchmarkSaveReadWalletEncodeDecodeSuccess(b *testing.B) {
@@ -91,7 +114,7 @@ func BenchmarkSaveReadWalletEncodeDecodeSuccess(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		w0, err := wallet.New()
 		assert.Nil(b, err)
-		err = helper.SaveWallet(w0)
+		err = helper.SaveWallet(&w0)
 		assert.Nil(b, err)
 		_, err = helper.ReadWallet()
 		assert.Nil(b, err)

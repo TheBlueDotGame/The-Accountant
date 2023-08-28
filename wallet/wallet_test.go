@@ -2,7 +2,6 @@ package wallet
 
 import (
 	"math"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -78,27 +77,6 @@ func TestAddressLength(t *testing.T) {
 		}
 	}
 	assert.Less(t, 48, smallest)
-}
-
-func TestSaveAndReadPEM(t *testing.T) {
-	testPath := "./wallet"
-	w, err := New()
-	assert.Nil(t, err)
-	assert.NotNil(t, w.Private)
-	assert.NotNil(t, w.Public)
-
-	err = w.SaveToPem(testPath)
-	assert.Nil(t, err)
-
-	nw, err := ReadFromPem(testPath)
-	assert.Nil(t, err)
-	assert.Equal(t, w.Private, nw.Private)
-	assert.Equal(t, w.Public, nw.Public)
-
-	err = os.Remove(testPath)
-	assert.Nil(t, err)
-	err = os.Remove(testPath + ".pub")
-	assert.Nil(t, err)
 }
 
 func BenchmarkVerifyLargeMessage(b *testing.B) {

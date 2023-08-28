@@ -22,7 +22,7 @@ const (
 // WalletReadSaver allows to read and save the wallet.
 type WalletReadSaver interface {
 	ReadWallet() (wallet.Wallet, error)
-	SaveWallet(w wallet.Wallet) error
+	SaveWallet(w *wallet.Wallet) error
 }
 
 // NewWalletCreator is a function that creates a new SignValidator.
@@ -400,7 +400,7 @@ func (c *Client) SaveWalletToFile() error {
 		return httpclient.ErrWalletNotReady
 	}
 
-	return c.wrs.SaveWallet(c.w)
+	return c.wrs.SaveWallet(&c.w)
 }
 
 // ReadWalletFromFile reads the wallet from the file in the path.
