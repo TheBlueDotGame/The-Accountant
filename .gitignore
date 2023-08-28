@@ -42,3 +42,6 @@ server_settings.yml
 # c dependencies
 c/client-node/packages/
 
+# test_wallet
+./artefacts/test_wallet
+
