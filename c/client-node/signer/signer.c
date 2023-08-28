@@ -1,11 +1,21 @@
-#include "signer.h"
-#include <openssl/evp.h>
-#include <openssl/pem.h>
-#include <openssl/sha.h>
+///
+/// Copyright (C) 2023 by Computantis
+///
+/// Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without l> imitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+/// 
+/// The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+///
+/// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+///
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#include <openssl/evp.h>
+#include <openssl/pem.h>
+#include <openssl/sha.h>
+#include "signer.h"
+#include "../signature/signature.h"
 
 Signer Signer_new()
 {
@@ -98,7 +108,12 @@ RawCryptoKey Signer_get_private_key(Signer *s)
     raw_key.buffer = malloc(KEY_LEN);
     raw_key.len = KEY_LEN;
 
-    EVP_PKEY_get_raw_private_key(s->evpkey, raw_key.buffer, &(raw_key.len));
+    int success = EVP_PKEY_get_raw_private_key(s->evpkey, raw_key.buffer, &(raw_key.len));
+    if (success != 1)
+    {
+        printf("Writing raw private key failed failed\n");
+        exit(1);
+    }
 
     return raw_key;
 }
@@ -113,9 +128,24 @@ RawCryptoKey Signer_get_public_key(Signer *s)
 
     raw_key.buffer = malloc(KEY_LEN);
     raw_key.len = KEY_LEN;
-    EVP_PKEY_get_raw_public_key(s->evpkey, raw_key.buffer, &(raw_key.len));
+    int success = EVP_PKEY_get_raw_public_key(s->evpkey, raw_key.buffer, &(raw_key.len));
+    if (success != 1)
+    {
+        printf("Writing raw public key failed failed\n");
+        exit(1);
+    }
 
     return raw_key;
+}
+
+EVP_PKEY *RawCryptoKey_get_evp_public_key(RawCryptoKey *r)
+{
+    return EVP_PKEY_new_raw_public_key(EVP_PKEY_ED25519, NULL, r->buffer, r->len);
+}
+
+EVP_PKEY *RawCryptoKey_get_evp_private_key(RawCryptoKey *r)
+{
+    return EVP_PKEY_new_raw_private_key(EVP_PKEY_ED25519, NULL, r->buffer, r->len);
 }
 
 void RawCryptoKey_free(RawCryptoKey *r)
@@ -148,7 +178,7 @@ Signature Signer_sign(Signer *s, unsigned char *msg, size_t len)
     }
     if (len == 0)
     {
-        printf("message of zero length cannot be signed\n");
+        printf("Message of zero length cannot be signed\n");
         exit(1);
     }
 
@@ -156,28 +186,28 @@ Signature Signer_sign(Signer *s, unsigned char *msg, size_t len)
     unsigned char *digest = malloc(sizeof(unsigned char) * digest_len);
     if (digest == NULL)
     {
-        printf("allocating memory of size [ %li ] bytes for digest buffer failed\n", digest_len);
+        printf("Allocating memory of size [ %li ] bytes for digest buffer failed\n", digest_len);
         exit(1);
     }
 
     unsigned char *flag = SHA256(msg, len, digest);
     if (flag == NULL)
     {
-        printf("hashing message failed\n");
+        printf("Hashing message failed\n");
         exit(1);
     } 
 
     EVP_MD_CTX *mdctx = EVP_MD_CTX_create();
     if (mdctx == NULL)
     {
-        printf("context allocation failed\n");
+        printf("Context allocation failed\n");
         exit(1);
     }
     
     int success = EVP_DigestSignInit(mdctx, NULL, NULL, NULL, s->evpkey);
     if (success != 1)
     {
-        printf("digest sign allocation failed\n");
+        printf("Digest sign allocation failed\n");
         exit(1);
     }
     
@@ -185,20 +215,20 @@ Signature Signer_sign(Signer *s, unsigned char *msg, size_t len)
     success =  EVP_DigestSign(mdctx, NULL, &sig_len, digest, digest_len);
     if (success != 1)
     {
-        printf("calculating signature length failed\n");
+        printf("Calculating signature length failed\n");
         exit(1);
     }
 
     unsigned char *signature = OPENSSL_zalloc(sizeof(unsigned char) * sig_len);
     if (signature == NULL)
     {
-        printf("signature allocation failed\n");
+        printf("Signature allocation failed\n");
         exit(1);
     }
     success = EVP_DigestSign(mdctx, signature, &sig_len, digest, digest_len);
     if (success != 1)
     {
-        printf("signing digest failed\n");
+        printf("Signing digest failed\n");
         exit(1);
     }
 
@@ -207,26 +237,5 @@ Signature Signer_sign(Signer *s, unsigned char *msg, size_t len)
     Signature sig = (Signature){ .digest_buffer = digest, .digest_len = digest_len, .signature_buffer = signature, .signature_len = sig_len };
 
     return sig;
-}
-
-void Signature_free(Signature *sig)
-{
-    if (sig == NULL)
-    {
-        return;
-    }
-    if (sig->signature_buffer != NULL)
-    {
-        OPENSSL_free(sig->signature_buffer);
-        sig->signature_buffer = NULL;
-    }
-    if (sig->digest_buffer != NULL)
-    {
-        free(sig->digest_buffer);
-        sig->digest_buffer = NULL;
-    }
-    sig->signature_len = 0;
-    sig->digest_len = 0;
-    return;
 }
 

@@ -1,10 +1,20 @@
+///
+/// Copyright (C) 2023 by Computantis
+///
+/// Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without l> imitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+/// 
+/// The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+///
+/// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+///
 #ifndef SIGNER_H
 #define SIGNER_H
 #define KEY_LEN 32
 
-#include <openssl/evp.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <openssl/evp.h>
+#include "../signature/signature.h"
 
 ///
 /// Signer type allows to perform cryptographic operations on the given bytes buffer.
@@ -22,16 +32,6 @@ typedef struct {
     unsigned char *buffer;
     size_t len;
 } RawCryptoKey;
-
-/// 
-/// Signature is an entity holding the signature and digest of the message that was a subject of signing.
-///
-typedef struct {
-    unsigned char *digest_buffer;
-    unsigned char *signature_buffer;
-    size_t digest_len;
-    size_t signature_len;
-} Signature;
 
 ///
 /// Signer_new creates a new Signer and returns a copy of that entity.
@@ -65,6 +65,19 @@ RawCryptoKey Signer_get_private_key(Signer *s);
 ///
 RawCryptoKey Signer_get_public_key(Signer *s);
 
+
+/// 
+/// RawCryptoKey_get_evp_public_key returns pointer to EVP_PKEY
+/// from openssl.evp.h library that is a public key.
+///
+EVP_PKEY *RawCryptoKey_get_evp_public_key(RawCryptoKey *r);
+
+/// 
+/// RawCryptoKey_get_evp_private_key returns pointer to EVP_PKEY
+/// from openssl.evp.h library that is a private key.
+///
+EVP_PKEY *RawCryptoKey_get_evp_private_key(RawCryptoKey *r);
+
 ///
 /// RawCryptoKey_free frees the RawCryptoKey;
 ///
@@ -83,10 +96,5 @@ void RawCryptoKey_free(RawCryptoKey *r);
 /// For the ed25519 algorithm digest is 32 bytes long and signature is 64 bytes long.
 ///
 Signature Signer_sign(Signer *s, unsigned char *msg, size_t len);
-
-///
-/// Signature_free frees the signature.
-///
-void Signature_free(Signature *sig);
 
 #endif

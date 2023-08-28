@@ -287,6 +287,16 @@ Install govulncheck to perform vulnerability scanning  `go install golang.org/x/
 
 ### Development
 
+C version of client-node isn't cross platform.
+This software is developed to be used with Linux and is tested for x86_64 Linux 5.15.0-76-generic kernel version.
+This software was tested with `gcc` compiler and while it might work with `clan`, `g++` or `c++` it is highly recommended to not use them.
+The `gcc` compiler used for the test and development is `gcc version 9.4.0`.
+
+1. Install dependencies:
+
+- Install build essentials.
+- Install openssl library.
+
 #### Tests
 
 In `c/` folder contains protocol implementation for client node written in C. 
