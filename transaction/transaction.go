@@ -127,7 +127,10 @@ func (t *Transaction) Sign(receiver Signer, v Verifier) ([32]byte, error) {
 
 // GeMessage returns message used for signature validation.
 func (t *Transaction) GetMessage() []byte {
-	message := append([]byte(t.Subject), t.Data...)
+	msgLen := len(t.Subject) + len(t.Data) + len(t.IssuerAddress) + len(t.ReceiverAddress) + 8
+	message := make([]byte, 0, msgLen)
+	message = append(message, []byte(t.Subject)...)
+	message = append(message, t.Data...)
 	message = append(message, []byte(t.IssuerAddress)...)
 	message = append(message, []byte(t.ReceiverAddress)...)
 	b := make([]byte, 8)
