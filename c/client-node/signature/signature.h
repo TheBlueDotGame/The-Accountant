@@ -19,10 +19,10 @@
 /// Signature is an entity holding the signature and digest of the message.
 ///
 typedef struct {
-    unsigned char *digest_buffer;
-    unsigned char *signature_buffer;
-    size_t digest_len;
-    size_t signature_len;
+    unsigned char   *digest_buffer;
+    unsigned char   *signature_buffer;
+    size_t          digest_len;
+    size_t          signature_len;
 } Signature;
 
 ///

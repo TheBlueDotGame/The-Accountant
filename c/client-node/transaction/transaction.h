@@ -7,30 +7,24 @@
 ///
 /// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ///
-#ifndef ADDRESS_H
-#define ADDRESS_H
-#define PUBLIC_KEY_LEN 32
-#define ADDRESS_LEN 51
+#ifndef TRANSACTION_H
+#define TRANSACTION_H
 
-#include <ctype.h>
-#include <stdbool.h>
-
-///
-/// encode_address_from_raw encodes new public address string from raw buffer.
-/// Encoder uses base58 encoding algorithm and returns pointer to nullable string.
-/// Caller takes responsibility of freeing the returned string. 
-///
-char *encode_address_from_raw(unsigned char *raw, size_t len);
+#include <sys/time.h>
+#include <unistd.h>
 
 /// 
-/// decode_address_to_raw decodes nullable string to raw bytes.
-/// unsigned char **raw bytes array represents the variable that points to the array of bytes that the key will be decoded to.
-/// It will override the underlining unsigned char *raw bytes array.
-/// Best practice is to pass unsigned char **raw as a pointer to NULL pointer.
-/// Decoder uses base58 decoding algorithm.
-/// Returns length of unsigned char *raw bytes array.
-/// Caller takes the responsibility to free the unsigned char *raw bytes array.
+/// Transaction seals the embedded data cryptographically.
 ///
-int decode_address_to_raw(char *str, unsigned char **raw);
+typedef struct {
+    struct timeval  created_at;
+    char            *issuer_address;
+    char            *receiver_address;
+    char            *subject;
+    unsigned char   *data;
+    unsigned char   [64]issuer_signature;
+    unsigned char   [64]receiver_signature;
+    unsigned char   [32]hash;
+} Transaction;
 
 #endif
