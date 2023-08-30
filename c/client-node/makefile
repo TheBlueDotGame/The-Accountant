@@ -24,6 +24,9 @@ PACKAGES += ./signature/*.c
 PACKAGES += ./config/*.c
 PACKAGES += ./*.c
 
+# Used to test static functions.
+UTFLAGS = -DUNIT_TEST
+
 .PHONY: test
 test: tests.out
 	@./tests.out
@@ -41,5 +44,5 @@ clean:
 
 tests.out: ./*.c ./*.h
 	@echo Compiling $@
-	@$(CC) $(CFLAGS) $(TEST_PACKAGES) $(PACKAGES) -o tests.out $(LIBS)
+	@$(CC) $(CFLAGS) $(UTFLAGS) $(TEST_PACKAGES) $(PACKAGES) -o tests.out $(LIBS)
 

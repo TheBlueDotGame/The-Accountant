@@ -11,8 +11,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
-#include <ctype.h> 
+#include <ctype.h>
+#include <regex.h>
 #include "config.h"
+#include "../unit-test.h"
 
 #define MAX_LINE_LENGTH 32768
 #define MAX_TOKEN_NAME_LENGTH 8192
@@ -43,6 +45,19 @@ static char *trim_white_space(char *str)
     return str;
 }
 
+unit_static bool is_valid_url(char *url)
+{
+    regex_t re;
+    // url_re matches http|https + :// + one or more non-white-space-characters + : + port number between 1 and 65535.
+    if (regcomp(&re, "^https?:\\/\\/\\S+:([1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$", REG_EXTENDED) != 0) {
+        return false;
+    }
+    if (regexec(&re, url, 0, NULL, 0) != 0) {
+        return false;
+    }
+    return true;
+}
+
 static bool assign_to_config(Config *cfg, char *name, char *token)
 {
     char *name_trimed = trim_white_space(name);
@@ -56,18 +71,28 @@ static bool assign_to_config(Config *cfg, char *name, char *token)
 
     if (strcmp("port", name_trimed) == 0)
     {
-        cfg->port = atoi(token_trimed);
+        int port = atoi(token_trimed);
+        if (port < 1 || port > 65535) {
+            return false;
+        }
+        cfg->port = port;
         return true;
     }
     
     if (strcmp("node_public_url", name_trimed) == 0)
     {
+        if (!is_valid_url(token_trimed)) {
+            return false;
+        }
         strncpy(cfg->node_public_url, token_trimed, len);
         return true;
     }
 
     if (strcmp("validator_url", name_trimed) == 0)
     {
+        if (!is_valid_url(token_trimed)) {
+            return false;
+        }
         strncpy(cfg->validator_url, token_trimed, len);
         return true;
     }
@@ -115,7 +140,7 @@ Config Config_new_from_file(char *file_path)
                 bool ok = assign_to_config(&cfg, name, token);
                 if (!ok)
                 {
-                    printf("Given key name %s with value %s assign to congig failed\n", name, token);
+                    printf("Given key name %s with value %s assign to config failed\n", name, token);
                     exit(1);
                 }
             }
