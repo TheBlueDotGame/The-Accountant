@@ -21,6 +21,7 @@ TEST_PACKAGES = test-framework/unity.c
 PACKAGES = ./signer/*.c
 PACKAGES += ./address/*.c
 PACKAGES += ./signature/*.c
+PACKAGES += ./config/*.c
 PACKAGES += ./*.c
 
 .PHONY: test

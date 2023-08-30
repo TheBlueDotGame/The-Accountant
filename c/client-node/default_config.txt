@@ -1,0 +1,4 @@
+port : 8080
+node_public_url : http://client-node:8080
+validator_url : http://validator-node:8000
+pem_file : ed25519.pem

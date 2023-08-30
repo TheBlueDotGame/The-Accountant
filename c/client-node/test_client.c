@@ -16,6 +16,7 @@
 #include "./signer/signer.h"
 #include "./address/address.h"
 #include "./signature/signature.h"
+#include "./config/config.h"
 
 
 void setUp(void)
@@ -56,7 +57,7 @@ static void test_signer_public_key()
     TEST_ASSERT_NULL(raw_key.buffer);
     TEST_ASSERT_EQUAL_UINT(0, raw_key.len);
     
-    // Prepare clenup
+    // Prepare cleanup
     Signer_free(&s);
     TEST_ASSERT_NULL(s.evpkey);
 }
@@ -97,7 +98,7 @@ static void test_signer_save_read_pem(void)
     TEST_ASSERT_TRUE(ok);
     TEST_ASSERT_NOT_NULL(s1.evpkey);
 
-    // Prepare clenup
+    // Prepare cleanup
     Signer_free(&s0);
     TEST_ASSERT_NULL(s0.evpkey);
     Signer_free(&s1);
@@ -158,7 +159,7 @@ static void test_signer_sign(void)
 
     Signature_free(&sig);
 
-    // Prepare clenup
+    // Prepare cleanup
     Signer_free(&s);
     TEST_ASSERT_NULL(s.evpkey);
 }
@@ -190,7 +191,7 @@ static void test_signer_verify_signature_success(void)
     Signature_free(&sig);
     EVP_PKEY_free(pkey);
 
-    // Prepare clenup
+    // Prepare cleanup
     RawCryptoKey_free(&raw_pub_key);
     TEST_ASSERT_NULL(raw_pub_key.buffer);
     TEST_ASSERT_EQUAL_UINT(0, raw_pub_key.len);
@@ -231,7 +232,7 @@ static void test_signer_verify_signature_failure_wrong_pub_key(void)
     Signature_free(&sig);
     EVP_PKEY_free(pkey);
 
-    // Prepare clenup
+    // Prepare cleanup
     RawCryptoKey_free(&raw_pub_key);
     TEST_ASSERT_NULL(raw_pub_key.buffer);
     TEST_ASSERT_EQUAL_UINT(0, raw_pub_key.len);
@@ -279,7 +280,7 @@ static void test_signer_verify_signature_failure_corrupted_msg(void)
     Signature_free(&sig);
     EVP_PKEY_free(pkey);
 
-    // Prepare clenup
+    // Prepare cleanup
     RawCryptoKey_free(&raw_pub_key);
     TEST_ASSERT_NULL(raw_pub_key.buffer);
     TEST_ASSERT_EQUAL_UINT(0, raw_pub_key.len);
@@ -319,12 +320,24 @@ static void test_signer_verify_signature_failure_corrupted_digest(void)
     Signature_free(&sig);
     EVP_PKEY_free(pkey);
 
-    // Prepare clenup
+    // Prepare cleanup
     RawCryptoKey_free(&raw_pub_key);
     TEST_ASSERT_NULL(raw_pub_key.buffer);
     TEST_ASSERT_EQUAL_UINT(0, raw_pub_key.len);
     Signer_free(&s);
     TEST_ASSERT_NULL(s.evpkey);
+}
+
+static void test_read_config()
+{
+    Config cfg = Config_new_from_file("./default_config.txt");
+    TEST_ASSERT_EQUAL_INT(8080, cfg.port);
+    TEST_ASSERT_EQUAL_INT(23, (int)strlen(cfg.node_public_url));
+    TEST_ASSERT_EQUAL_INT(26, (int)strlen(cfg.validator_url));
+    TEST_ASSERT_EQUAL_INT(11, (int)strlen(cfg.pem_file));
+    TEST_ASSERT_EQUAL_CHAR_ARRAY("http://client-node:8080", cfg.node_public_url, 23);
+    TEST_ASSERT_EQUAL_CHAR_ARRAY("http://validator-node:8000", cfg.validator_url, 26);
+    TEST_ASSERT_EQUAL_CHAR_ARRAY("ed25519.pem", cfg.pem_file, 11);
 }
 
 int main(void)
@@ -342,6 +355,7 @@ int main(void)
     RUN_TEST(test_signer_verify_signature_failure_wrong_pub_key);
     RUN_TEST(test_signer_verify_signature_failure_corrupted_msg);
     RUN_TEST(test_signer_verify_signature_failure_corrupted_digest);
+    RUN_TEST(test_read_config);
 
     return UnityEnd();
 }

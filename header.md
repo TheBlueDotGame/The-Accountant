@@ -295,7 +295,28 @@ The `gcc` compiler used for the test and development is `gcc version 9.4.0`.
 1. Install dependencies:
 
 - Install build essentials.
+
+```sh
+sudo apt install build-essential
+```
+
 - Install openssl library.
+
+```sh
+sudo apt install openssl
+```
+
+- Install autoconf
+
+```sh
+sudo apt-get install autoconf
+```
+
+- Install libtool
+
+```sh
+sudo apt install libtool
+```
 
 #### Tests
 
