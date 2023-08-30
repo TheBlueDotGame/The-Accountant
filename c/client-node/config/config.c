@@ -49,10 +49,12 @@ unit_static bool is_valid_url(char *url)
 {
     regex_t re;
     // url_re matches http|https + :// + one or more non-white-space-characters + : + port number between 1 and 65535.
-    if (regcomp(&re, "^https?:\\/\\/\\S+:([1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$", REG_EXTENDED) != 0) {
+    if (regcomp(&re, "^https?:\\/\\/\\S+:([1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$", REG_EXTENDED) != 0)
+    {
         return false;
     }
-    if (regexec(&re, url, 0, NULL, 0) != 0) {
+    if (regexec(&re, url, 0, NULL, 0) != 0)
+    {
         return false;
     }
     return true;
@@ -72,7 +74,8 @@ static bool assign_to_config(Config *cfg, char *name, char *token)
     if (strcmp("port", name_trimed) == 0)
     {
         int port = atoi(token_trimed);
-        if (port < 1 || port > 65535) {
+        if (port < 1 || port > 65535)
+        {
             return false;
         }
         cfg->port = port;
@@ -81,7 +84,8 @@ static bool assign_to_config(Config *cfg, char *name, char *token)
     
     if (strcmp("node_public_url", name_trimed) == 0)
     {
-        if (!is_valid_url(token_trimed)) {
+        if (!is_valid_url(token_trimed))
+        {
             return false;
         }
         strncpy(cfg->node_public_url, token_trimed, len);
@@ -90,7 +94,8 @@ static bool assign_to_config(Config *cfg, char *name, char *token)
 
     if (strcmp("validator_url", name_trimed) == 0)
     {
-        if (!is_valid_url(token_trimed)) {
+        if (!is_valid_url(token_trimed))
+        {
             return false;
         }
         strncpy(cfg->validator_url, token_trimed, len);
