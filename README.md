@@ -2905,7 +2905,7 @@ func New(subject string, data []byte, receiverAddress string, issuer Signer) (Tr
 New creates new transaction signed by the issuer.
 
 <a name="Transaction.GetMessage"></a>
-### func \(\*Transaction\) [GetMessage](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L123>)
+### func \(\*Transaction\) [GetMessage](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L129>)
 
 ```go
 func (t *Transaction) GetMessage() []byte
@@ -2914,7 +2914,7 @@ func (t *Transaction) GetMessage() []byte
 GeMessage returns message used for signature validation.
 
 <a name="Transaction.Sign"></a>
-### func \(\*Transaction\) [Sign](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L90>)
+### func \(\*Transaction\) [Sign](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L93>)
 
 ```go
 func (t *Transaction) Sign(receiver Signer, v Verifier) ([32]byte, error)
