@@ -22,6 +22,7 @@ PACKAGES = ./signer/*.c
 PACKAGES += ./address/*.c
 PACKAGES += ./signature/*.c
 PACKAGES += ./config/*.c
+PACKAGES += ./transaction/*.c
 PACKAGES += ./*.c
 
 # Used to test static functions.

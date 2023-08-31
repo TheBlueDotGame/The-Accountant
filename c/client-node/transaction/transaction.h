@@ -13,48 +13,48 @@
 #include <sys/time.h>
 #include <unistd.h>
 #include <openssl/sha.h>
-#include <../signer/signer.h>
-#include <../address/address.h>
-#include <../signature/signature.h>
+#include "../signer/signer.h"
+#include "../address/address.h"
+#include "../signature/signature.h"
 
 /// 
 /// Transaction seals the embedded data cryptographically.
 ///
 typedef struct {
     struct timeval  created_at;
-    char            issuer_address[ADDRESS_LEN];
-    char            receiver_address[ADDRESS_LEN];
+    char            *issuer_address;
+    char            *receiver_address;
     char            *subject;
     unsigned char   *data;
-    unsigned char   [SIGNATURE_LEN]issuer_signature;
-    unsigned char   [SIGNATURE_LEN]receiver_signature;
-    unsigned char   [SHA256_DIGEST_LENGTH]hash;
+    unsigned char   *issuer_signature;
+    unsigned char   *receiver_signature;
+    unsigned char   *hash;
 } Transaction;
 
 ///
 /// Transaction_new creates new transaction signing the timestamp, subject, message and the receiver.
 /// The receiver_address is in base58 encoded format.
 ///
-Transaction Transaction_new(char *subject, const unsigned char *data, const char *receiver_address, Signer *s);
+Transaction *Transaction_new(const char *subject, const unsigned char *data, const char *receiver_address, Signer *s);
 
 /// 
 /// Transaction_receiver_sign signs transaction by the receiver only if message digest is correct and issuer signature is valid,
 /// otherwise returns false.
-/// the data string and receiver_address are compied.
-/// Function caller is responsible for cleaning the data and receiver_address string by itself.
+/// The data string and receiver_address are copied.
+/// Function caller is responsible to free the data and receiver_address string arguments.
 ///
-bool Transaction_receiver_sign(Transaction *trx, signer_f signer_sign, Signer *s);
+bool Transaction_receiver_sign(Transaction *trx, Signer *s);
 
 ///
 /// Transaction_get_data returns underlining data as a copy.
 /// Allows to free Transaction still keeping valid data.
-/// Function caller is required to free data string itself.
+/// Function caller is required to free received copy of data string.
 ///
 unsigned char *Transaction_get_data(Transaction *trx);
 
 ///
 /// Transaction_free frees the transaction and all underlining data.
 ///
-void Transaction_free(Transaction *trx);
+void Transaction_free(Transaction **trx);
 
 #endif
