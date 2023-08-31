@@ -10,6 +10,7 @@
 #ifndef SIGNATURE_H
 #define SIGNATURE_H
 #define KEY_LEN 32
+#define SIGNATURE_LEN 64;
 
 #include <openssl/evp.h>
 #include <stdbool.h>
