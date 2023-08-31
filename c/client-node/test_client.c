@@ -7,6 +7,7 @@
 ///
 /// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ///
+
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
@@ -17,7 +18,7 @@
 #include "./address/address.h"
 #include "./signature/signature.h"
 #include "./config/config.h"
-
+#include "unit-test.h"
 
 void setUp(void)
 {
@@ -340,6 +341,26 @@ static void test_read_config()
     TEST_ASSERT_EQUAL_CHAR_ARRAY("ed25519.pem", cfg.pem_file, 11);
 }
 
+static void test_handle_erroneous_config()
+{
+    // A valid url.
+    TEST_ASSERT_TRUE(is_valid_url("http://central-node:65535"));
+    // Invalid urls.
+    const char* invalid_urls[] = {
+        "ftp://central-node:8080",
+        "http:/central-node:8080",
+        "http:central-node:8080",
+        "http//central-node:8080",
+        "http://:8080",
+        "http://central-node:",
+        "http://central-node8080",
+        "http://central-node:0",
+        "http://central-node:65536"};
+    for (size_t i = 0; i < (sizeof(invalid_urls)/sizeof(char *)); i++) {
+        TEST_ASSERT_FALSE(is_valid_url((char*)invalid_urls[i]));
+    }
+}
+
 int main(void)
 {
     UnityBegin("test_client.c");
@@ -356,6 +377,7 @@ int main(void)
     RUN_TEST(test_signer_verify_signature_failure_corrupted_msg);
     RUN_TEST(test_signer_verify_signature_failure_corrupted_digest);
     RUN_TEST(test_read_config);
+    RUN_TEST(test_handle_erroneous_config);
 
     return UnityEnd();
 }
