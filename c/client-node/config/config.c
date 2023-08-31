@@ -51,12 +51,15 @@ unit_static bool is_valid_url(char *url)
     // url_re matches http|https + :// + one or more non-white-space-characters + : + port number between 1 and 65535.
     if (regcomp(&re, "^https?:\\/\\/\\S+:([1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$", REG_EXTENDED) != 0)
     {
+        regfree(&re);
         return false;
     }
     if (regexec(&re, url, 0, NULL, 0) != 0)
     {
+        regfree(&re);
         return false;
     }
+        regfree(&re);
     return true;
 }
 

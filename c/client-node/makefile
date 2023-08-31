@@ -34,7 +34,7 @@ test: tests.out
 .PHONY: memcheck
 memcheck: ./*.c ./*.h
 	@echo Compiling $@
-	@$(CC) $(ASANFLAGS) $(CFLAGS) $(TEST_PACKAGES) $(PACKAGES) -o memcheck.out $(LIBS)
+	@$(CC) $(ASANFLAGS) $(CFLAGS) $(UTFLAGS) $(TEST_PACKAGES) $(PACKAGES) -o memcheck.out $(LIBS)
 	@./memcheck.out
 	@echo "Memory check passed"
 
