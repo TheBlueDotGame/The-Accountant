@@ -11,14 +11,63 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stdio.h>
+#include <openssl/sha.h>
 #include "address.h"
 #include "libbase58.h"
 
-char *encode_address_from_raw(unsigned char *raw, size_t len)
+static void checksum(unsigned char *payload, unsigned char *dest, size_t payload_len, size_t dest_len)
+{
+    if (dest_len > SHA256_DIGEST_LENGTH)
+    {
+        printf("checksum payload cannot be performad on destination length bigger than [ %i ] \n", SHA256_DIGEST_LENGTH);
+        exit(1);
+    }
+    unsigned char digest_0[SHA256_DIGEST_LENGTH];
+    unsigned char *flag = SHA256(payload, payload_len, digest_0);
+    if (flag == NULL)
+    {
+        printf("Hashing payload failed\n");
+        exit(1);
+    }
+
+    unsigned char digest_1[SHA256_DIGEST_LENGTH];
+    flag = SHA256(digest_0, (size_t)SHA256_DIGEST_LENGTH, digest_1);
+    if (flag == NULL)
+    {
+        printf("Hashing digest_0 failed\n");
+        exit(1);
+    }
+
+   void *flag_m = memcpy(dest, digest_1, dest_len);
+    if (flag_m == NULL)
+    {
+        printf("Copying checksum failed\n");
+        exit(1);
+    }
+
+    return;
+}
+
+char *encode_address_from_raw(unsigned char version, unsigned char *raw, size_t len)
 {
     if (len != PUBLIC_KEY_LEN)
     {
-        printf("Public private key length is not valid, expected: [ %i ], got: [ %zi ]\n", PUBLIC_KEY_LEN, len);
+        printf("Public private key length is not valid, expected: [ %i ], got: [ %li ]\n", PUBLIC_KEY_LEN, len);
+        exit(1);
+    }
+
+    unsigned char encode[(size_t)1+PUBLIC_KEY_LEN+CHECKSUM_LEN];
+    encode[0] = version;
+    void *flag = memcpy(encode+1, raw, (size_t)PUBLIC_KEY_LEN);
+    if (flag == NULL)
+    {
+        printf("Copying public key failed\n");
+        exit(1);
+    }
+    flag = memcpy(encode+1+(int)PUBLIC_KEY_LEN, raw, (size_t)CHECKSUM_LEN);
+    if (flag == NULL)
+    {
+        printf("Copying public key failed\n");
         exit(1);
     }
 
@@ -30,7 +79,7 @@ char *encode_address_from_raw(unsigned char *raw, size_t len)
         exit(1);
     }
     
-    bool ok = b58enc(b58, &b58_len, (void *)raw, len);
+    bool ok = b58enc(b58, &b58_len, (void *)encode, (size_t)1+PUBLIC_KEY_LEN+CHECKSUM_LEN);
     if (!ok)
     {
         printf("Base58 encoding faild\n");
@@ -40,21 +89,63 @@ char *encode_address_from_raw(unsigned char *raw, size_t len)
     return b58;
 }
 
-int decode_address_to_raw(char *str, unsigned char **raw)
+int decode_address_to_raw(unsigned char version, char *str, unsigned char **raw)
 {
-    size_t len = PUBLIC_KEY_LEN;
-    *raw = malloc(sizeof(unsigned char)*len);
-    if (*raw == NULL)
-    {
-        printf("Failed to allocate [ %li ] bytes\n", len);
-        exit(1);
-    }
-    
-    bool ok = b58tobin(*raw, &len, str, strlen(str));
+    size_t len = PUBLIC_KEY_LEN+CHECKSUM_LEN+1;
+    unsigned char decoded[PUBLIC_KEY_LEN+CHECKSUM_LEN+1]; 
+    bool ok = b58tobin(decoded, &len, str, strlen(str));
     if (!ok)
     {
         printf("Base58 decoding faild\n");
         exit(1);
+    }
+
+    unsigned char actual_checksum[CHECKSUM_LEN];
+    void *flag = memcpy(actual_checksum, decoded + 1 + PUBLIC_KEY_LEN, CHECKSUM_LEN);
+    if (flag == NULL)
+    {
+        printf("Copying checksum failed\n");
+        exit(1);
+    }
+
+    unsigned char vrs = decoded[0];
+    if (vrs != version)
+    {
+        return 0;
+    }
+
+    *raw = malloc(sizeof(unsigned char) * (size_t)PUBLIC_KEY_LEN);
+    if (*raw == NULL)
+    {
+        printf("Failed to allocate [ %i ] bytes\n", PUBLIC_KEY_LEN);
+        exit(1);
+    }
+
+    flag = memcpy(*raw, decoded + 1, (size_t)PUBLIC_KEY_LEN);
+    if (flag == NULL)
+    {
+        printf("Copying public key failed failed\n");
+        exit(1);
+    }
+
+    unsigned char pub_key_vrs[1+PUBLIC_KEY_LEN];
+    pub_key_vrs[0] = version;
+    flag = memcpy(pub_key_vrs+1, *raw, (size_t)PUBLIC_KEY_LEN);
+    if (flag == NULL)
+    {
+        printf("Copying public key failed failed\n");
+        exit(1);
+    }
+
+    unsigned char target_checksum[CHECKSUM_LEN];
+    checksum(pub_key_vrs, target_checksum, 1+PUBLIC_KEY_LEN, CHECKSUM_LEN);
+
+    int equality = strncmp((char *)actual_checksum, (char *)target_checksum, (size_t)CHECKSUM_LEN);
+    if (equality == 0)
+    {
+        free(*raw);
+        *raw = NULL;
+        return 0;
     }
 
     return len;

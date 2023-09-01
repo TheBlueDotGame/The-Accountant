@@ -10,7 +10,8 @@
 #ifndef ADDRESS_H
 #define ADDRESS_H
 #define PUBLIC_KEY_LEN 32
-#define ADDRESS_LEN 51
+#define ADDRESS_LEN 56
+#define CHECKSUM_LEN 4
 
 #include <ctype.h>
 #include <stdbool.h>
@@ -20,7 +21,7 @@
 /// Encoder uses base58 encoding algorithm and returns pointer to nullable string.
 /// Caller takes responsibility of freeing the returned string. 
 ///
-char *encode_address_from_raw(unsigned char  *raw, size_t len);
+char *encode_address_from_raw(unsigned char version, unsigned char  *raw, size_t len);
 
 /// 
 /// decode_address_to_raw decodes nullable string to raw bytes.
@@ -31,6 +32,6 @@ char *encode_address_from_raw(unsigned char  *raw, size_t len);
 /// Returns length of unsigned char *raw bytes array.
 /// Caller takes the responsibility to free the unsigned char *raw bytes array.
 ///
-int decode_address_to_raw(char *str, unsigned char **raw);
+int decode_address_to_raw(unsigned char version, char *str, unsigned char **raw);
 
 #endif
