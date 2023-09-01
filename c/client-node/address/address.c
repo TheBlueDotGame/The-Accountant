@@ -31,7 +31,7 @@ static void checksum(unsigned char *payload, unsigned char *dest, size_t payload
     }
 
     unsigned char digest_1[SHA256_DIGEST_LENGTH];
-    flag = SHA256(digest_0, (size_t)SHA256_DIGEST_LENGTH, digest_1);
+    flag = SHA256(digest_0, SHA256_DIGEST_LENGTH, digest_1);
     if (flag == NULL)
     {
         printf("Hashing digest_0 failed\n");
@@ -56,15 +56,15 @@ char *encode_address_from_raw(unsigned char version, unsigned char *raw, size_t 
         exit(1);
     }
 
-    unsigned char encode[(size_t)1+PUBLIC_KEY_LEN+CHECKSUM_LEN];
+    unsigned char encode[1+PUBLIC_KEY_LEN+CHECKSUM_LEN];
     encode[0] = version;
-    void *flag = memcpy(encode+1, raw, (size_t)PUBLIC_KEY_LEN);
+    void *flag = memcpy(encode+1, raw, PUBLIC_KEY_LEN);
     if (flag == NULL)
     {
         printf("Copying public key failed\n");
         exit(1);
     }
-    flag = memcpy(encode+1+(int)PUBLIC_KEY_LEN, raw, (size_t)CHECKSUM_LEN);
+    flag = memcpy(encode+1+PUBLIC_KEY_LEN, raw, CHECKSUM_LEN);
     if (flag == NULL)
     {
         printf("Copying public key failed\n");
@@ -79,7 +79,7 @@ char *encode_address_from_raw(unsigned char version, unsigned char *raw, size_t 
         exit(1);
     }
     
-    bool ok = b58enc(b58, &b58_len, (void *)encode, (size_t)1+PUBLIC_KEY_LEN+CHECKSUM_LEN);
+    bool ok = b58enc(b58, &b58_len, (void *)encode, 1+PUBLIC_KEY_LEN+CHECKSUM_LEN);
     if (!ok)
     {
         printf("Base58 encoding faild\n");
@@ -114,14 +114,14 @@ int decode_address_to_raw(unsigned char version, char *str, unsigned char **raw)
         return 0;
     }
 
-    *raw = malloc(sizeof(unsigned char) * (size_t)PUBLIC_KEY_LEN);
+    *raw = malloc(sizeof(unsigned char) * PUBLIC_KEY_LEN);
     if (*raw == NULL)
     {
         printf("Failed to allocate [ %i ] bytes\n", PUBLIC_KEY_LEN);
         exit(1);
     }
 
-    flag = memcpy(*raw, decoded + 1, (size_t)PUBLIC_KEY_LEN);
+    flag = memcpy(*raw, decoded + 1, PUBLIC_KEY_LEN);
     if (flag == NULL)
     {
         printf("Copying public key failed failed\n");
@@ -130,7 +130,7 @@ int decode_address_to_raw(unsigned char version, char *str, unsigned char **raw)
 
     unsigned char pub_key_vrs[1+PUBLIC_KEY_LEN];
     pub_key_vrs[0] = version;
-    flag = memcpy(pub_key_vrs+1, *raw, (size_t)PUBLIC_KEY_LEN);
+    flag = memcpy(pub_key_vrs+1, *raw, PUBLIC_KEY_LEN);
     if (flag == NULL)
     {
         printf("Copying public key failed failed\n");
@@ -140,7 +140,7 @@ int decode_address_to_raw(unsigned char version, char *str, unsigned char **raw)
     unsigned char target_checksum[CHECKSUM_LEN];
     checksum(pub_key_vrs, target_checksum, 1+PUBLIC_KEY_LEN, CHECKSUM_LEN);
 
-    int equality = strncmp((char *)actual_checksum, (char *)target_checksum, (size_t)CHECKSUM_LEN);
+    int equality = strncmp((char *)actual_checksum, (char *)target_checksum, CHECKSUM_LEN);
     if (equality == 0)
     {
         free(*raw);
