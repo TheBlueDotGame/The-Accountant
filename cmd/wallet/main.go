@@ -1,7 +1,10 @@
 package main
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
+	"fmt"
 	"os"
 
 	"github.com/pterm/pterm"
@@ -23,19 +26,54 @@ const (
 const usage = `Wallet CLI tool allows to create a new Wallet or act on the local Wallet by using keys from different formats and transforming them between formats.
 Use with the best seciurity practices. GOBINARY is safer to move between machines as this file format is encrypted with AES key.`
 
+const configFlagDescryption = `Load configuration from 'FILE',
+configuration file is required to be in yaml format.
+In case configuration file isn't provided,
+GOB binary is saved to 'artefacts/wallet' file,
+and PEM public and private keys are seved to 'artefacts/ed25519' file.
+Wallet password is in hex format.
+Please provide arguments like the example:
+--- YAML FILE EXAMPLE ---
+file_operator:
+    wallet_path: "test_wallet"
+    wallet_passwd: "dc6b5b1635453e0eb57344ffb6cb293e8300fc4001fad3518e721d548459c09d"
+    pem_path: "ed25519"
+--- YAML FILE EXAMPLE ---
+`
+
 func main() {
 	logo.Display()
 
-	var pem, config string
+	var configFilePath string
 
 	configurator := func() (configuration.Configuration, error) {
-		if config == "" {
-			return configuration.Configuration{}, errors.New("please specify configuration file path with -c <path to file>")
-		}
+		var cfg configuration.Configuration
+		var err error
 
-		cfg, err := configuration.Read(config)
-		if err != nil {
-			return cfg, err
+		switch configFilePath {
+		case "":
+			cfg.FileOperator.WalletPath = "./artefacts/wallet"
+			cfg.FileOperator.WalletPemPath = "./artefacts/ed25519"
+			b := make([]byte, 32)
+			if _, err := rand.Read(b); err != nil {
+				return cfg, fmt.Errorf("failed to generate password: %w", err)
+			}
+			cfg.FileOperator.WalletPasswd = hex.EncodeToString(b)
+			pterm.Warning.Println("Wallet creator is using default configuration.")
+			pterm.Warning.Printf("Wallet GOB file path: [ %s ].\n", cfg.FileOperator.WalletPath)
+			pterm.Warning.Printf("Wallet GOB password: [ %s ]. SAVE ME SOMEWHERE SAFE!\n", cfg.FileOperator.WalletPasswd)
+			pterm.Warning.Printf("Wallet PEM file path: [ %s ].\n", cfg.FileOperator.WalletPemPath)
+		default:
+			cfg, err = configuration.Read(configFilePath)
+			if err != nil {
+				return cfg, err
+			}
+			if cfg.FileOperator.WalletPath == "" || cfg.FileOperator.WalletPemPath == "" || cfg.FileOperator.WalletPasswd == "" {
+				return cfg, errors.New("cannot read arguments from the configuration file, validate file format, argument names and values")
+			}
+			pterm.Info.Printf("Wallet creator is using given configuration from file [ %s ].\n", configFilePath)
+			pterm.Info.Printf("Wallet GOB file path: [ %s ].\n", cfg.FileOperator.WalletPath)
+			pterm.Info.Printf("Wallet PEM file path: [ %s ].\n", cfg.FileOperator.WalletPemPath)
 		}
 
 		return cfg, nil
@@ -46,16 +84,10 @@ func main() {
 		Usage: usage,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:        "pem",
-				Aliases:     []string{"p"},
-				Usage:       "Load wallet from PEM `FILE` path. Your path shall look like that 'path/to/wallet' and the files are 'wallet' and 'wallet.pem'.",
-				Destination: &pem,
-			},
-			&cli.StringFlag{
 				Name:        "config",
 				Aliases:     []string{"c"},
-				Usage:       "Load configuration from `FILE`",
-				Destination: &config,
+				Usage:       configFlagDescryption,
+				Destination: &configFilePath,
 			},
 		},
 		Commands: []*cli.Command{
@@ -68,7 +100,7 @@ func main() {
 					if err != nil {
 						return err
 					}
-					if err := run(acctionNewWallet, pem, cfg.FileOperator); err != nil {
+					if err := run(acctionNewWallet, cfg.FileOperator); err != nil {
 						return err
 					}
 					printSuccess()
@@ -84,7 +116,7 @@ func main() {
 					if err != nil {
 						return err
 					}
-					if err := run(actionFromGobToPem, pem, cfg.FileOperator); err != nil {
+					if err := run(actionFromGobToPem, cfg.FileOperator); err != nil {
 						return err
 					}
 					printSuccess()
@@ -100,7 +132,7 @@ func main() {
 					if err != nil {
 						return err
 					}
-					if err := run(actionFromPemToGob, pem, cfg.FileOperator); err != nil {
+					if err := run(actionFromPemToGob, cfg.FileOperator); err != nil {
 						return err
 					}
 					printSuccess()
@@ -115,7 +147,7 @@ func main() {
 	}
 }
 
-func run(action int, pem string, cfg fileoperations.Config) error {
+func run(action int, cfg fileoperations.Config) error {
 	switch action {
 	case acctionNewWallet:
 		w, err := wallet.New()
@@ -126,7 +158,7 @@ func run(action int, pem string, cfg fileoperations.Config) error {
 		if err := h.SaveWallet(&w); err != nil {
 			return err
 		}
-		if err := h.SaveToPem(&w, pem); err != nil {
+		if err := h.SaveToPem(&w); err != nil {
 			return err
 		}
 		return nil
@@ -136,14 +168,14 @@ func run(action int, pem string, cfg fileoperations.Config) error {
 		if err != nil {
 			return err
 		}
-		if err := h.SaveToPem(&w, pem); err != nil {
+		if err := h.SaveToPem(&w); err != nil {
 			return err
 		}
 		return nil
 
 	case actionFromPemToGob:
 		h := fileoperations.New(cfg, aeswrapper.New())
-		w, err := h.ReadFromPem(pem)
+		w, err := h.ReadFromPem()
 		if err != nil {
 			return err
 		}

@@ -80,24 +80,23 @@ func TestSaveReadWalletEncodeDecodeEncryptDecryptSuccess(t *testing.T) {
 }
 
 func TestSaveAndReadPEM(t *testing.T) {
-	h := New(Config{}, aeswrapper.New())
-	testPath := "./wallet"
+	h := New(Config{WalletPemPath: "./wallet"}, aeswrapper.New())
 	w, err := wallet.New()
 	assert.Nil(t, err)
 	assert.NotNil(t, w.Private)
 	assert.NotNil(t, w.Public)
 
-	err = h.SaveToPem(&w, testPath)
+	err = h.SaveToPem(&w)
 	assert.Nil(t, err)
 
-	nw, err := h.ReadFromPem(testPath)
+	nw, err := h.ReadFromPem()
 	assert.Nil(t, err)
 	assert.Equal(t, w.Private, nw.Private)
 	assert.Equal(t, w.Public, nw.Public)
 
-	err = os.Remove(testPath)
+	err = os.Remove(h.cfg.WalletPemPath)
 	assert.Nil(t, err)
-	err = os.Remove(testPath + ".pub")
+	err = os.Remove(h.cfg.WalletPemPath + ".pub")
 	assert.Nil(t, err)
 }
 
@@ -108,8 +107,9 @@ func BenchmarkSaveReadWalletEncodeDecodeSuccess(b *testing.B) {
 	_, err := io.ReadFull(rand.Reader, key)
 	assert.Nil(b, err)
 	helper := New(Config{
-		WalletPath:   "../artefacts/test_wallet",
-		WalletPasswd: hex.EncodeToString(key),
+		WalletPath:    "../artefacts/test_wallet",
+		WalletPasswd:  hex.EncodeToString(key),
+		WalletPemPath: "../artefacts/ed25519",
 	}, s)
 	for i := 0; i < b.N; i++ {
 		w0, err := wallet.New()

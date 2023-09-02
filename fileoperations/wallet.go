@@ -73,7 +73,7 @@ func (h Helper) SaveWallet(w *wallet.Wallet) error {
 // - PUBLIC: "your/path/name.pub"
 // Pem saved wallet is not sealed cryptographically and keys can be seen
 // by anyone having access to the machine.
-func (h Helper) SaveToPem(w *wallet.Wallet, filepath string) error {
+func (h Helper) SaveToPem(w *wallet.Wallet) error {
 	prv, err := x509.MarshalPKCS8PrivateKey(w.Private)
 	if err != nil {
 		return err
@@ -90,10 +90,10 @@ func (h Helper) SaveToPem(w *wallet.Wallet, filepath string) error {
 		Type:  "PUBLIC KEY",
 		Bytes: pub,
 	}
-	if err := os.WriteFile(filepath, pem.EncodeToMemory(blockPrv), 0644); err != nil {
+	if err := os.WriteFile(h.cfg.WalletPemPath, pem.EncodeToMemory(blockPrv), 0644); err != nil {
 		return err
 	}
-	if err := os.WriteFile(filepath+".pub", pem.EncodeToMemory(blockPub), 0644); err != nil {
+	if err := os.WriteFile(h.cfg.WalletPemPath+".pub", pem.EncodeToMemory(blockPub), 0644); err != nil {
 		return err
 	}
 	return nil
@@ -101,14 +101,13 @@ func (h Helper) SaveToPem(w *wallet.Wallet, filepath string) error {
 
 // ReadFromPem creates Wallet from PEM format file.
 // Uses both private and public key.
-// Provide the path to a file without specifying the extension : <your/path/name".
-func (h Helper) ReadFromPem(filepath string) (wallet.Wallet, error) {
+func (h Helper) ReadFromPem() (wallet.Wallet, error) {
 	var w wallet.Wallet
-	rawPub, err := os.ReadFile(filepath + ".pub")
+	rawPub, err := os.ReadFile(h.cfg.WalletPemPath + ".pub")
 	if err != nil {
 		return w, err
 	}
-	rawPrv, err := os.ReadFile(filepath)
+	rawPrv, err := os.ReadFile(h.cfg.WalletPemPath)
 	if err != nil {
 		return w, err
 	}
