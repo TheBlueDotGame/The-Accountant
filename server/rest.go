@@ -35,7 +35,7 @@ func (s *server) discover(c *fiber.Ctx) error {
 	t := time.Now()
 	defer s.tele.RecordHistogramTime(discoverCentralNodeTelemetryHistogram, time.Since(t))
 
-	sockets, err := s.repo.ReadRegisteredNodesAddresses(c.Context())
+	sockets, err := s.register.ReadRegisteredNodesAddresses(c.Context())
 	if err != nil {
 		return fiber.ErrInternalServerError
 	}
@@ -63,7 +63,7 @@ func (s *server) address(c *fiber.Ctx) error {
 		s.log.Error(fmt.Sprintf("address endpoint, failed to parse request body: %s", err.Error()))
 		return fiber.ErrBadRequest
 	}
-	results, err := s.repo.FindAddress(c.Context(), req.Address, queryLimit)
+	results, err := s.addressProv.FindAddress(c.Context(), req.Address, queryLimit)
 	if err != nil {
 		s.log.Error(fmt.Sprintf("address endpoint, failed to find address: %s", err.Error()))
 		return fiber.ErrNotFound
@@ -96,7 +96,7 @@ func (s *server) trxInBlock(c *fiber.Ctx) error {
 		return fiber.ErrBadRequest
 	}
 
-	if ok, err := s.repo.IsAddressSuspended(c.Context(), req.Address); err != nil || ok {
+	if ok, err := s.addressProv.IsAddressSuspended(c.Context(), req.Address); err != nil || ok {
 		if err != nil {
 			s.log.Error(fmt.Sprintf("failed to check address: %s", err.Error()))
 			return fiber.ErrForbidden
@@ -105,7 +105,7 @@ func (s *server) trxInBlock(c *fiber.Ctx) error {
 		return fiber.ErrForbidden
 	}
 
-	res, err := s.repo.FindTransactionInBlockHash(c.Context(), req.RawTrxHash)
+	res, err := s.trxProv.FindTransactionInBlockHash(c.Context(), req.RawTrxHash)
 	if err != nil {
 		s.log.Error(fmt.Sprintf("trx_in_block endpoint, failed to find transaction in block: %s", err.Error()))
 		return fiber.ErrNotFound
@@ -143,7 +143,7 @@ func (s *server) propose(c *fiber.Ctx) error {
 		return fiber.ErrBadRequest
 	}
 
-	if ok, err := s.repo.IsAddressSuspended(c.Context(), req.Transaction.IssuerAddress); err != nil || ok {
+	if ok, err := s.addressProv.IsAddressSuspended(c.Context(), req.Transaction.IssuerAddress); err != nil || ok {
 		if err != nil {
 			s.log.Error(fmt.Sprintf("failed to check address: %s", err.Error()))
 			return fiber.ErrForbidden
@@ -176,7 +176,7 @@ func (s *server) confirm(c *fiber.Ctx) error {
 		return fiber.ErrBadRequest
 	}
 
-	if ok, err := s.repo.IsAddressSuspended(c.Context(), trx.IssuerAddress); err != nil || ok {
+	if ok, err := s.addressProv.IsAddressSuspended(c.Context(), trx.IssuerAddress); err != nil || ok {
 		if err != nil {
 			s.log.Error(fmt.Sprintf("failed to check address: %s", err.Error()))
 			return fiber.ErrForbidden
@@ -185,7 +185,7 @@ func (s *server) confirm(c *fiber.Ctx) error {
 		return fiber.ErrForbidden
 	}
 
-	if ok, err := s.repo.IsAddressSuspended(c.Context(), trx.ReceiverAddress); err != nil || ok {
+	if ok, err := s.addressProv.IsAddressSuspended(c.Context(), trx.ReceiverAddress); err != nil || ok {
 		if err != nil {
 			s.log.Error(fmt.Sprintf("failed to check address: %s", err.Error()))
 			return fiber.ErrForbidden
@@ -238,7 +238,7 @@ func (s *server) reject(c *fiber.Ctx) error {
 		return fiber.ErrForbidden
 	}
 
-	if ok, err := s.repo.IsAddressSuspended(c.Context(), req.Address); err != nil || ok {
+	if ok, err := s.addressProv.IsAddressSuspended(c.Context(), req.Address); err != nil || ok {
 		if err != nil {
 			s.log.Error(fmt.Sprintf("failed to check address: %s", err.Error()))
 			return fiber.ErrForbidden
@@ -260,7 +260,7 @@ func (s *server) reject(c *fiber.Ctx) error {
 		}
 	}
 
-	if err := s.repo.RejectTransactions(c.Context(), req.Address, trxsReject); err != nil {
+	if err := s.trxProv.RejectTransactions(c.Context(), req.Address, trxsReject); err != nil {
 		return c.JSON(TransactionsRejectResponse{Success: false, TrxHashes: nil})
 	}
 
@@ -305,7 +305,7 @@ func (s *server) awaited(c *fiber.Ctx) error {
 		return fiber.ErrForbidden
 	}
 
-	if ok, err := s.repo.IsAddressSuspended(c.Context(), req.Address); err != nil || ok {
+	if ok, err := s.addressProv.IsAddressSuspended(c.Context(), req.Address); err != nil || ok {
 		if err != nil {
 			s.log.Error(fmt.Sprintf("awaited transactions endpoint, failed to check address: %s", err.Error()))
 			return fiber.ErrForbidden
@@ -320,7 +320,7 @@ func (s *server) awaited(c *fiber.Ctx) error {
 		return fiber.ErrForbidden
 	}
 
-	trxs, err := s.repo.ReadAwaitingTransactionsByReceiver(c.Context(), req.Address)
+	trxs, err := s.trxProv.ReadAwaitingTransactionsByReceiver(c.Context(), req.Address)
 	if err != nil {
 		s.log.Error(
 			fmt.Sprintf("awaited transactions endpoint, failed to read awaiting transactions for address: %s, %s",
@@ -358,7 +358,7 @@ func (s *server) issued(c *fiber.Ctx) error {
 		return fiber.ErrForbidden
 	}
 
-	if ok, err := s.repo.IsAddressSuspended(c.Context(), req.Address); err != nil || ok {
+	if ok, err := s.addressProv.IsAddressSuspended(c.Context(), req.Address); err != nil || ok {
 		if err != nil {
 			s.log.Error(fmt.Sprintf("issued transactions endpoint, failed to check address: %s", err.Error()))
 			return fiber.ErrForbidden
@@ -373,7 +373,7 @@ func (s *server) issued(c *fiber.Ctx) error {
 		return fiber.ErrForbidden
 	}
 
-	trxs, err := s.repo.ReadRejectedTransactionsPagginate(c.Context(), req.Address, req.Offset, req.Limit)
+	trxs, err := s.trxProv.ReadRejectedTransactionsPagginate(c.Context(), req.Address, req.Offset, req.Limit)
 	if err != nil {
 		s.log.Error(fmt.Sprintf("issued transactions endpoint, failed to read issued transactions for address: %s, %s",
 			req.Address, err.Error()))
@@ -410,7 +410,7 @@ func (s *server) rejected(c *fiber.Ctx) error {
 		return fiber.ErrForbidden
 	}
 
-	if ok, err := s.repo.IsAddressSuspended(c.Context(), req.Address); err != nil || ok {
+	if ok, err := s.addressProv.IsAddressSuspended(c.Context(), req.Address); err != nil || ok {
 		if err != nil {
 			s.log.Error(fmt.Sprintf("rejected transactions endpoint, failed to check address: %s", err.Error()))
 			return fiber.ErrForbidden
@@ -425,7 +425,7 @@ func (s *server) rejected(c *fiber.Ctx) error {
 		return fiber.ErrForbidden
 	}
 
-	trxs, err := s.repo.ReadRejectedTransactionsPagginate(c.Context(), req.Address, req.Offset, req.Limit)
+	trxs, err := s.trxProv.ReadRejectedTransactionsPagginate(c.Context(), req.Address, req.Offset, req.Limit)
 	if err != nil {
 		s.log.Error(fmt.Sprintf("rejected transactions endpoint, failed to read issued transactions for address: %s, %s",
 			req.Address, err.Error()))
@@ -462,7 +462,7 @@ func (s *server) approved(c *fiber.Ctx) error {
 		return fiber.ErrForbidden
 	}
 
-	if ok, err := s.repo.IsAddressSuspended(c.Context(), req.Address); err != nil || ok {
+	if ok, err := s.addressProv.IsAddressSuspended(c.Context(), req.Address); err != nil || ok {
 		if err != nil {
 			s.log.Error(fmt.Sprintf("approved transactions endpoint, failed to check address: %s", err.Error()))
 			return fiber.ErrForbidden
@@ -477,7 +477,7 @@ func (s *server) approved(c *fiber.Ctx) error {
 		return fiber.ErrForbidden
 	}
 
-	trxs, err := s.repo.ReadApprovedTransactions(c.Context(), req.Address, req.Offset, req.Limit)
+	trxs, err := s.trxProv.ReadApprovedTransactions(c.Context(), req.Address, req.Offset, req.Limit)
 	if err != nil {
 		s.log.Error(fmt.Sprintf("approved transactions endpoint, failed to read issued transactions for address: %s, %s",
 			req.Address, err.Error()))
@@ -547,7 +547,7 @@ func (s *server) addressCreate(c *fiber.Ctx) error {
 		return fiber.ErrForbidden
 	}
 
-	if ok, err := s.repo.CheckToken(c.Context(), req.Token); !ok || err != nil {
+	if ok, err := s.tokenProv.CheckToken(c.Context(), req.Token); !ok || err != nil {
 		if err != nil {
 			s.log.Error(fmt.Sprintf("address create endpoint, address: %s, failed to check token: %s", req.Address, err.Error()))
 			return fiber.ErrGone
@@ -556,7 +556,7 @@ func (s *server) addressCreate(c *fiber.Ctx) error {
 		return fiber.ErrForbidden
 	}
 
-	if err := s.repo.InvalidateToken(c.Context(), req.Token); err != nil {
+	if err := s.tokenProv.InvalidateToken(c.Context(), req.Token); err != nil {
 		s.log.Error(fmt.Sprintf("address create endpoint, failed to invalidate token: %s, %s", req.Token, err.Error()))
 		return fiber.ErrGone
 	}
@@ -567,7 +567,7 @@ func (s *server) addressCreate(c *fiber.Ctx) error {
 		return fiber.ErrForbidden
 	}
 
-	if ok, err := s.repo.CheckAddressExists(c.Context(), req.Address); ok || err != nil {
+	if ok, err := s.addressProv.CheckAddressExists(c.Context(), req.Address); ok || err != nil {
 		if err != nil {
 			s.log.Error(fmt.Sprintf("address create endpoint, failed to check address: %s,%s", req.Address, err.Error()))
 			return fiber.ErrGone
@@ -576,7 +576,7 @@ func (s *server) addressCreate(c *fiber.Ctx) error {
 		return fiber.ErrConflict
 	}
 
-	if err := s.repo.WriteAddress(c.Context(), req.Address); err != nil {
+	if err := s.addressProv.WriteAddress(c.Context(), req.Address); err != nil {
 		s.log.Error(fmt.Sprintf("address create endpoint, failed to write address: %s, %s", req.Address, err.Error()))
 		return fiber.ErrConflict
 	}
@@ -616,7 +616,7 @@ func (s *server) tokenGenerate(c *fiber.Ctx) error {
 		return fiber.ErrForbidden
 	}
 
-	if ok, err := s.repo.IsAddressAdmin(c.Context(), req.Address); !ok || err != nil {
+	if ok, err := s.addressProv.IsAddressAdmin(c.Context(), req.Address); !ok || err != nil {
 		if err != nil {
 			s.log.Error(fmt.Sprintf("token generate, failed to check address: %s,%s", req.Address, err.Error()))
 			return fiber.ErrGone
@@ -631,7 +631,7 @@ func (s *server) tokenGenerate(c *fiber.Ctx) error {
 		return fiber.ErrInternalServerError
 	}
 
-	if err := s.repo.WriteToken(c.Context(), req.Address, req.Expiration); err != nil {
+	if err := s.tokenProv.WriteToken(c.Context(), req.Address, req.Expiration); err != nil {
 		s.log.Error(fmt.Sprintf("token generate, failed to write token: %s, %s", req.Address, err.Error()))
 		return fiber.ErrConflict
 	}

@@ -79,7 +79,7 @@ func run(cfg configuration.Configuration) {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 
-	db, err := repository.Connect(ctx, cfg.Database)
+	statusDB, err := repository.Connect(ctx, cfg.StorageConfig.ValidatorStatusDatabase)
 	if err != nil {
 		fmt.Println(err)
 		c <- os.Interrupt
@@ -87,7 +87,7 @@ func run(cfg configuration.Configuration) {
 	}
 	ctxx, cancelClose := context.WithTimeout(context.Background(), time.Second*1)
 	defer cancelClose()
-	defer db.Disconnect(ctxx)
+	defer statusDB.Disconnect(ctxx)
 
 	callbackOnErr := func(err error) {
 		fmt.Println("logger error: ", err)
@@ -104,7 +104,7 @@ func run(cfg configuration.Configuration) {
 		return
 	}
 
-	log := logging.New(callbackOnErr, callbackOnFatal, db, stdoutwriter.Logger{}, &zinc)
+	log := logging.New(callbackOnErr, callbackOnFatal, stdoutwriter.Logger{}, &zinc)
 
 	go func() {
 		<-c
@@ -132,7 +132,7 @@ func run(cfg configuration.Configuration) {
 		return
 	}
 
-	if err := validator.Run(ctx, cfg.Validator, db, log, verify, wh, &wl, dataProvider); err != nil {
+	if err := validator.Run(ctx, cfg.Validator, statusDB, log, verify, wh, &wl, dataProvider); err != nil {
 		log.Error(err.Error())
 	}
 }

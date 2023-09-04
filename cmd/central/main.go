@@ -88,22 +88,56 @@ func run(cfg configuration.Configuration) {
 		cancel()
 	}()
 
-	db, err := repository.Connect(ctx, cfg.Database)
-	if err != nil {
-		fmt.Println(err)
-		c <- os.Interrupt
-		return
-	}
-	sub, err := repository.Subscribe(ctx, cfg.Database)
-	if err != nil {
-		fmt.Println(err)
-		c <- os.Interrupt
-		return
-	}
-
 	ctxx, cancelClose := context.WithTimeout(context.Background(), time.Second*1)
 	defer cancelClose()
-	defer db.Disconnect(ctxx)
+
+	trxDB, err := repository.Connect(ctx, cfg.StorageConfig.TransactionDatabase)
+	if err != nil {
+		fmt.Println(err)
+		c <- os.Interrupt
+		return
+	}
+	defer trxDB.Disconnect(ctxx)
+
+	blockchainDB, err := repository.Connect(ctx, cfg.StorageConfig.BlockchainDatabase)
+	if err != nil {
+		fmt.Println(err)
+		c <- os.Interrupt
+		return
+	}
+	defer blockchainDB.Disconnect(ctxx)
+
+	blockchainNotifier, err := repository.Subscribe(ctx, cfg.StorageConfig.BlockchainDatabase)
+	if err != nil {
+		fmt.Println(err)
+		c <- os.Interrupt
+		return
+	}
+	defer blockchainNotifier.Close()
+
+	nodeRegisterDB, err := repository.Connect(ctx, cfg.StorageConfig.NodeRegisterDatabase)
+	if err != nil {
+		fmt.Println(err)
+		c <- os.Interrupt
+		return
+	}
+	defer nodeRegisterDB.Disconnect(ctxx)
+
+	addressDB, err := repository.Connect(ctx, cfg.StorageConfig.AddressDatabase)
+	if err != nil {
+		fmt.Println(err)
+		c <- os.Interrupt
+		return
+	}
+	defer addressDB.Disconnect(ctxx)
+
+	tokenDB, err := repository.Connect(ctx, cfg.StorageConfig.TokenDatabase)
+	if err != nil {
+		fmt.Println(err)
+		c <- os.Interrupt
+		return
+	}
+	defer tokenDB.Disconnect(ctxx)
 
 	callbackOnErr := func(err error) {
 		fmt.Println("Error with logger: ", err)
@@ -120,13 +154,13 @@ func run(cfg configuration.Configuration) {
 		return
 	}
 
-	log := logging.New(callbackOnErr, callbackOnFatal, db, stdoutwriter.Logger{}, &zinc)
+	log := logging.New(callbackOnErr, callbackOnFatal, stdoutwriter.Logger{}, &zinc)
 
-	if err := blockchain.GenesisBlock(ctx, db); err != nil {
+	if err := blockchain.GenesisBlock(ctx, blockchainDB); err != nil {
 		fmt.Printf("Mining genesis block error: %s\n", err)
 	}
 
-	blc, err := blockchain.New(ctx, db)
+	blc, err := blockchain.New(ctx, blockchainDB)
 	if err != nil {
 		log.Error(err.Error())
 		c <- os.Interrupt
@@ -137,7 +171,9 @@ func run(cfg configuration.Configuration) {
 	rxBlock := reactive.New[block.Block](rxBufferSize)
 	rxTrxIssuer := reactive.New[string](rxBufferSize)
 
-	ladger, err := bookkeeping.New(cfg.Bookkeeper, blc, db, db, verifier, db, log, rxBlock, rxTrxIssuer, sub)
+	ladger, err := bookkeeping.New(
+		cfg.Bookkeeper, trxDB, blc, nodeRegisterDB, blockchainNotifier,
+		addressDB, verifier, log, rxBlock, rxTrxIssuer)
 	if err != nil {
 		log.Error(err.Error())
 		c <- os.Interrupt
@@ -153,7 +189,9 @@ func run(cfg configuration.Configuration) {
 		return
 	}
 
-	err = server.Run(ctx, cfg.Server, db, ladger, dataProvider, tele, log, rxBlock.Subscribe(), rxTrxIssuer.Subscribe())
+	err = server.Run(
+		ctx, cfg.Server, trxDB, nodeRegisterDB, addressDB, tokenDB, ladger,
+		dataProvider, tele, log, rxBlock.Subscribe(), rxTrxIssuer.Subscribe())
 	if err != nil {
 		log.Error(err.Error())
 	}
