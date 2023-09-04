@@ -114,10 +114,31 @@ server:
   port: 8080 # Port on which the central node REST API is exposed.
   data_size_bytes: 15000000 # Size of bytes allowed in a single transaction, all above that will be rejected.
   websocket_address: "ws://localhost:8080/ws" # This is the external address of the central node needed to register for other central nodes to use to inform validators.
-database:
-  conn_str: "postgres://computantis:computantis@localhost:5432" # Database connection string. For now only PostgreSQL is supported.
-  database_name: "computantis" # Database name to store all the computantis related data.
-  is_ssl: false # Set to true if database requires SSL or to false otherwise, On production SSL true is a must. 
+storage_config: # Collection of settings for dedicated repositories for entities.
+  transaction_database:
+    conn_str: "postgres://computantis:computantis@postgres:5432"  # Database connection string. For now only PostgreSQL is supported.
+    database_name: "computantis" # Database name to store all the computantis related data.
+    is_ssl: false # Set to true if database requires SSL or to false otherwise, On production SSL true is a must. 
+  blockchain_database:
+    conn_str: "postgres://computantis:computantis@postgres:5432" # Database connection string. For now only PostgreSQL is supported.
+    database_name: "computantis" # Database name to store all the computantis related data.
+    is_ssl: false # Set to true if database requires SSL or to false otherwise, On production SSL true is a must. 
+  node_register_database:
+    conn_str: "postgres://computantis:computantis@postgres:5432" # Database connection string. For now only PostgreSQL is supported.
+    database_name: "computantis" # Database name to store all the computantis related data.
+    is_ssl: false # Set to true if database requires SSL or to false otherwise, On production SSL true is a must. 
+  address_database:
+    conn_str: "postgres://computantis:computantis@postgres:5432" # Database connection string. For now only PostgreSQL is supported.
+    database_name: "computantis" # Database name to store all the computantis related data.
+    is_ssl: false # Set to true if database requires SSL or to false otherwise, On production SSL true is a must. 
+  token_database:
+    conn_str: "postgres://computantis:computantis@postgres:5432" # Database connection string. For now only PostgreSQL is supported.
+    database_name: "computantis" # Database name to store all the computantis related data.
+    is_ssl: false # Set to true if database requires SSL or to false otherwise, On production SSL true is a must. 
+  validator_status_database:
+    conn_str: "postgres://computantis:computantis@postgres:5432" # Database connection string. For now only PostgreSQL is supported.
+    database_name: "computantis" # Database name to store all the computantis related data.
+    is_ssl: false # Set to true if database requires SSL or to false otherwise, On production SSL true is a must.
 dataprovider:
   longevity: 300 # Data provider provides the data to be signed by the wallet holder in order to verify the wallet public key. This is a time [ s ] describing how long data are valid.
 zinc_logger: # Zinc search (elastic-search like service) for convenient access to logs. 
