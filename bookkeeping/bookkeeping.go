@@ -111,9 +111,9 @@ type TrxIssuedReactivePunlisher interface {
 
 // Config is a configuration of the Ledger.
 type Config struct {
-	Difficulty            uint64 `json:"difficulty"              bson:"difficulty"              yaml:"difficulty"`
-	BlockWriteTimestamp   uint64 `json:"block_write_timestamp"   bson:"block_write_timestamp"   yaml:"block_write_timestamp"`
-	BlockTransactionsSize int    `json:"block_transactions_size" bson:"block_transactions_size" yaml:"block_transactions_size"`
+	Difficulty            uint64 `json:"difficulty"              sql:"difficulty"              yaml:"difficulty"`
+	BlockWriteTimestamp   uint64 `json:"block_write_timestamp"   sql:"block_write_timestamp"   yaml:"block_write_timestamp"`
+	BlockTransactionsSize int    `json:"block_transactions_size" sql:"block_transactions_size" yaml:"block_transactions_size"`
 }
 
 // Validate validates the Ledger configuration.
