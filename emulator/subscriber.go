@@ -39,17 +39,17 @@ type Message struct {
 	Status      string                  `json:"status"`
 	Transaction transaction.Transaction `json:"transaction"`
 	Timestamp   int64                   `json:"timestamp"`
-	Volts       int                     `json:"volts"`
-	MiliAmps    int                     `json:"mili_amps"`
-	Power       int                     `json:"power"`
+	Volts       int64                   `json:"volts"`
+	MiliAmps    int64                   `json:"mili_amps"`
+	Power       int64                   `json:"power"`
 }
 
 type subscriber struct {
-	buffer               []Message
 	mux                  sync.Mutex
 	lastTransactionTime  time.Time
-	allowedIssuerAddress string
 	pub                  publisher
+	allowedIssuerAddress string
+	buffer               []Message
 	allowdMeasurements   [2]Measurement
 }
 

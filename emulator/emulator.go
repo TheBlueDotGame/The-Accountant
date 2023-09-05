@@ -12,7 +12,7 @@ type Config struct {
 
 // Measurement is data structure containing measurements received in a single transaction.
 type Measurement struct {
-	Volts int `json:"volts"`
-	Mamps int `json:"m_amps"`
-	Power int `json:"power"`
+	Volts int64 `json:"volts"`
+	Mamps int64 `json:"m_amps"`
+	Power int64 `json:"power"`
 }

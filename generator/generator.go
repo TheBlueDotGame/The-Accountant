@@ -3,22 +3,23 @@ package generator
 import (
 	"encoding/json"
 	"errors"
-	"io/ioutil"
 	"math/rand"
+	"os"
 
 	"github.com/bartossh/Computantis/emulator"
 )
 
 // GenerateToFile generates data to file in json format.
-func GenerateToFile(filePath string, count, vMin, vMax, maMin, maMax int) error {
+func GenerateToFile(filePath string, count, vMin, vMax, maMin, maMax int64) error {
 	if vMin >= vMax || maMin >= maMax || count == 0 {
 		return errors.New("wrong parameter")
 	}
 
 	data := make([]emulator.Measurement, 0, count)
-	for i := 0; i < count; i++ {
-		volts := rand.Intn(vMax-vMin) + vMin
-		mamps := rand.Intn(maMax-maMin) + maMin
+	var i int64 = 0
+	for ; i < count; i++ {
+		volts := rand.Int63n(vMax-vMin) + vMin
+		mamps := rand.Int63n(maMax-maMin) + maMin
 		m := emulator.Measurement{
 			Volts: volts,
 			Mamps: mamps,
@@ -33,5 +34,5 @@ func GenerateToFile(filePath string, count, vMin, vMax, maMin, maMax int) error 
 		return err
 	}
 
-	return ioutil.WriteFile(filePath, file, 0644)
+	return os.WriteFile(filePath, file, 0644)
 }

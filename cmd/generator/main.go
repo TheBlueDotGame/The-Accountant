@@ -3,10 +3,11 @@ package main
 import (
 	"os"
 
-	"github.com/bartossh/Computantis/generator"
-	"github.com/bartossh/Computantis/logo"
 	"github.com/pterm/pterm"
 	"github.com/urfave/cli/v2"
+
+	"github.com/bartossh/Computantis/generator"
+	"github.com/bartossh/Computantis/logo"
 )
 
 func main() {
@@ -53,7 +54,7 @@ func main() {
 			},
 		},
 		Action: func(cCtx *cli.Context) error {
-			return generator.GenerateToFile(file, count, vmin, vmax, mamin, mamax)
+			return generator.GenerateToFile(file, int64(count), int64(vmin), int64(vmax), int64(mamin), int64(mamax))
 		},
 	}
 

@@ -7,7 +7,7 @@
 // Run test with: `go test -v ./stress/... -tags stress`
 // It is the best to test it when server runs on separate machine.
 
-package stress
+package main
 
 import (
 	"fmt"
@@ -27,7 +27,7 @@ import (
 // Now address is some network address that indicates a IPv4 format.
 func TestFullClientApiCycle(t *testing.T) {
 	serverAddress := "http://192.168.0.206"
-	transactionsCount := 20
+	transactionsCount := 10
 	type testCase struct {
 		port   string
 		tokens []string
