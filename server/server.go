@@ -115,14 +115,8 @@ type TokenWriteInvalidateChecker interface {
 	InvalidateToken(ctx context.Context, token string) error
 }
 
-// Repository is the interface that wraps the basic CRUD and Search methods.
-// Repository should be properly indexed to allow for transaction and block hash.
-// as well as address public keys to be and unique and the hash lookup should be fast.
-// Repository holds the blocks and transaction that are part of the blockchain.
-type Repository interface {
-	Register
-	AddressReaderWriterModifier
-	TokenWriteInvalidateChecker
+// TransactiontrxProvsitory is the interface that wraps the basic CRUD operations for Transaction operations on permanent repository.
+type TrxWriteReadRejectApprover interface {
 	FindTransactionInBlockHash(ctx context.Context, trxBlockHash [32]byte) ([32]byte, error)
 	ReadAwaitingTransactionsByIssuer(ctx context.Context, address string) ([]transaction.Transaction, error)
 	ReadAwaitingTransactionsByReceiver(ctx context.Context, address string) ([]transaction.Transaction, error)
@@ -173,7 +167,10 @@ type Config struct {
 }
 
 type server struct {
-	repo         Repository
+	trxProv      TrxWriteReadRejectApprover
+	register     Register
+	addressProv  AddressReaderWriterModifier
+	tokenProv    TokenWriteInvalidateChecker
 	bookkeeping  Bookkeeper
 	randDataProv RandomDataProvideValidator
 	tele         providers.HistogramProvider
@@ -187,9 +184,10 @@ type server struct {
 // Run initializes routing and runs the server. To stop the server cancel the context.
 // It blocks until the context is canceled.
 func Run(
-	ctx context.Context, c Config, repo Repository,
-	bookkeeping Bookkeeper, pv RandomDataProvideValidator, tele providers.HistogramProvider,
-	log logger.Logger, rxBlock ReactiveBlock, rxTrxIssued ReactiveTrxIssued,
+	ctx context.Context, c Config, trxProv TrxWriteReadRejectApprover, register Register,
+	addressProv AddressReaderWriterModifier, tokenProv TokenWriteInvalidateChecker, bookkeeping Bookkeeper,
+	pv RandomDataProvideValidator, tele providers.HistogramProvider, log logger.Logger,
+	rxBlock ReactiveBlock, rxTrxIssued ReactiveTrxIssued,
 ) error {
 	var err error
 	ctxx, cancel := context.WithCancel(ctx)
@@ -200,11 +198,14 @@ func Run(
 	}
 
 	id := primitive.NewObjectID().Hex()
-	repo.RegisterNode(ctxx, id, c.WebsocketAddress)
+	register.RegisterNode(ctxx, id, c.WebsocketAddress)
 
 	s := &server{
 		dataSize:     c.DataSizeBytes,
-		repo:         repo,
+		trxProv:      trxProv,
+		register:     register,
+		addressProv:  addressProv,
+		tokenProv:    tokenProv,
 		bookkeeping:  bookkeeping,
 		randDataProv: pv,
 		tele:         tele,
@@ -291,7 +292,7 @@ func Run(
 
 	ctxxx, cancelx := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancelx()
-	if err := repo.UnregisterNode(ctxxx, id); err != nil {
+	if err := register.UnregisterNode(ctxxx, id); err != nil {
 		log.Fatal(err.Error())
 	}
 
@@ -364,8 +365,8 @@ func (s *server) runControlCentralNodesRegistration(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
-		case <-tc.C: // TODO: introduce repository table subscription to react to change
-			count, err := s.repo.CountRegistered(ctx)
+		case <-tc.C: // TODO: introduce trxProvsitory table subscription to react to change
+			count, err := s.register.CountRegistered(ctx)
 			if err != nil {
 				s.log.Error(err.Error())
 				continue
@@ -382,7 +383,7 @@ func (s *server) runControlCentralNodesRegistration(ctx context.Context) {
 }
 
 func (s *server) broadcastSockets(ctx context.Context) error {
-	sockets, err := s.repo.ReadRegisteredNodesAddresses(ctx)
+	sockets, err := s.register.ReadRegisteredNodesAddresses(ctx)
 	if err != nil {
 		return err
 	}
