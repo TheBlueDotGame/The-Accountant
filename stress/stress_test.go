@@ -22,8 +22,9 @@ import (
 	"github.com/bartossh/Computantis/walletmiddleware"
 )
 
-// Run two central nodes for this test, one on port 8000 and second on 8088.
-// Create corresponding tokens to be valid in database.
+// Run adjusting serverAddress and port of each testCase.
+// This allows to have multiple nodes on the same address but different port.
+// Now address is some network address that indicates a IPv4 format.
 func TestFullClientApiCycle(t *testing.T) {
 	serverAddress := "http://192.168.0.206"
 	transactionsCount := 20
