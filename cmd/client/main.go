@@ -16,7 +16,6 @@ import (
 	"github.com/bartossh/Computantis/fileoperations"
 	"github.com/bartossh/Computantis/logging"
 	"github.com/bartossh/Computantis/logo"
-	"github.com/bartossh/Computantis/repository"
 	"github.com/bartossh/Computantis/stdoutwriter"
 	"github.com/bartossh/Computantis/telemetry"
 	"github.com/bartossh/Computantis/wallet"
@@ -83,16 +82,6 @@ func run(cfg configuration.Configuration) {
 		cancel()
 	}()
 
-	db, err := repository.Connect(ctx, cfg.Database)
-	if err != nil {
-		fmt.Println(err)
-		c <- os.Interrupt
-		return
-	}
-	ctxx, cancelClose := context.WithTimeout(context.Background(), time.Second*1)
-	defer cancelClose()
-	defer db.Disconnect(ctxx)
-
 	callbackOnErr := func(err error) {
 		fmt.Println("error with logger: ", err)
 	}
@@ -108,7 +97,7 @@ func run(cfg configuration.Configuration) {
 		return
 	}
 
-	log := logging.New(callbackOnErr, callbackOnFatal, db, stdoutwriter.Logger{}, &zinc)
+	log := logging.New(callbackOnErr, callbackOnFatal, stdoutwriter.Logger{}, &zinc)
 
 	seal := aeswrapper.New()
 	fo := fileoperations.New(cfg.FileOperator, seal)
@@ -122,7 +111,7 @@ func run(cfg configuration.Configuration) {
 		return
 	}
 
-	err = walletapi.Run(ctx, cfg.Client, log, timeout, verify, fo, wallet.New)
+	err = walletapi.Run(ctx, cfg.Client, log, timeout, verify, fo, wallet.New) // TODO: Indicate the client wallet source: (new, pem, gob)
 
 	if err != nil {
 		log.Error(err.Error())
