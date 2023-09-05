@@ -5,11 +5,13 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/bartossh/Computantis/aeswrapper"
 	"github.com/bartossh/Computantis/wallet"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestSaveReadWalletEncodeDecodeSuccess(t *testing.T) {
@@ -29,7 +31,7 @@ func TestSaveReadWalletEncodeDecodeSuccess(t *testing.T) {
 			w0, err := wallet.New()
 			assert.Nil(t, err)
 
-			err = helper.SaveWallet(w0)
+			err = helper.SaveWallet(&w0)
 			assert.Nil(t, err)
 			w1, err := helper.ReadWallet()
 			assert.Nil(t, err)
@@ -62,7 +64,7 @@ func TestSaveReadWalletEncodeDecodeEncryptDecryptSuccess(t *testing.T) {
 
 			d0, s0 := w0.Sign(testMessage)
 
-			err = helper.SaveWallet(w0)
+			err = helper.SaveWallet(&w0)
 			assert.Nil(t, err)
 			w1, err := helper.ReadWallet()
 			assert.Nil(t, err)
@@ -73,9 +75,29 @@ func TestSaveReadWalletEncodeDecodeEncryptDecryptSuccess(t *testing.T) {
 
 			assert.Equal(t, d0, d2)
 			assert.Equal(t, s0, s2)
-
 		})
 	}
+}
+
+func TestSaveAndReadPEM(t *testing.T) {
+	h := New(Config{WalletPemPath: "./wallet"}, aeswrapper.New())
+	w, err := wallet.New()
+	assert.Nil(t, err)
+	assert.NotNil(t, w.Private)
+	assert.NotNil(t, w.Public)
+
+	err = h.SaveToPem(&w)
+	assert.Nil(t, err)
+
+	nw, err := h.ReadFromPem()
+	assert.Nil(t, err)
+	assert.Equal(t, w.Private, nw.Private)
+	assert.Equal(t, w.Public, nw.Public)
+
+	err = os.Remove(h.cfg.WalletPemPath)
+	assert.Nil(t, err)
+	err = os.Remove(h.cfg.WalletPemPath + ".pub")
+	assert.Nil(t, err)
 }
 
 func BenchmarkSaveReadWalletEncodeDecodeSuccess(b *testing.B) {
@@ -85,13 +107,14 @@ func BenchmarkSaveReadWalletEncodeDecodeSuccess(b *testing.B) {
 	_, err := io.ReadFull(rand.Reader, key)
 	assert.Nil(b, err)
 	helper := New(Config{
-		WalletPath:   "../artefacts/test_wallet",
-		WalletPasswd: hex.EncodeToString(key),
+		WalletPath:    "../artefacts/test_wallet",
+		WalletPasswd:  hex.EncodeToString(key),
+		WalletPemPath: "../artefacts/ed25519",
 	}, s)
 	for i := 0; i < b.N; i++ {
 		w0, err := wallet.New()
 		assert.Nil(b, err)
-		err = helper.SaveWallet(w0)
+		err = helper.SaveWallet(&w0)
 		assert.Nil(b, err)
 		_, err = helper.ReadWallet()
 		assert.Nil(b, err)

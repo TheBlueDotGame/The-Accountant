@@ -6,10 +6,31 @@ server:
   port: 8000
   data_size_bytes: 15000000
   websocket_address: "ws://central-node:8000/ws"
-database:
-  conn_str: "postgres://computantis:computantis@postgres:5432"
-  database_name: "computantis"
-  is_ssl: false
+storage_config:
+  transaction_database:
+    conn_str: "postgres://computantis:computantis@postgres:5432"
+    database_name: "computantis"
+    is_ssl: false
+  blockchain_database:
+    conn_str: "postgres://computantis:computantis@postgres:5432"
+    database_name: "computantis"
+    is_ssl: false
+  node_register_database:
+    conn_str: "postgres://computantis:computantis@postgres:5432"
+    database_name: "computantis"
+    is_ssl: false
+  address_database:
+    conn_str: "postgres://computantis:computantis@postgres:5432"
+    database_name: "computantis"
+    is_ssl: false
+  token_database:
+    conn_str: "postgres://computantis:computantis@postgres:5432"
+    database_name: "computantis"
+    is_ssl: false
+  validator_status_database:
+    conn_str: "postgres://computantis:computantis@postgres:5432"
+    database_name: "computantis"
+    is_ssl: false
 dataprovider:
   longevity: 300
 validator:
@@ -19,6 +40,7 @@ validator:
 file_operator:
   wallet_path: "test_wallet"
   wallet_passwd: "dc6b5b1635453e0eb57344ffb6cb293e8300fc4001fad3518e721d548459c09d"
+  pem_path: "ed25519"
 client:
   port: 8000
   central_node_url: "http://central-node:8000"

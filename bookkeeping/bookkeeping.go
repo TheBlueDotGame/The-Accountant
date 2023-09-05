@@ -17,11 +17,11 @@ const (
 	minDifficulty = 1
 	maxDifficulty = 124
 
-	minBlockWriteTimestamp = time.Second
+	minBlockWriteTimestamp = time.Second   // less then a second will impose large amount of computations
 	maxBlockWriteTimestamp = time.Hour * 4 // value is picked arbitrary
 
 	minBlockTransactionsSize = 1
-	maxBlockTransactionsSize = 60000 // calculated to be below 16MB of a block size, it is a limit of single document in mongodb
+	maxBlockTransactionsSize = 60000
 )
 
 var (
@@ -60,10 +60,11 @@ type BlockWriter interface {
 	WriteBlock(ctx context.Context, block block.Block) error
 }
 
-// BlockReadWriter provides block read and write methods.
-type BlockReadWriter interface {
+// BlockReadWriteFinder provides block read and write methods.
+type BlockReadWriteFinder interface {
 	BlockReader
 	BlockWriter
+	BlockFinder
 }
 
 // AddressChecker provides address existence check method.
@@ -78,8 +79,8 @@ type SignatureVerifier interface {
 	Verify(message, signature []byte, hash [32]byte, address string) error
 }
 
-// BlockFindWriter provides block find and write method.
-type BlockFindWriter interface {
+// BlockFinder provides block find and write method.
+type BlockFinder interface {
 	FindTransactionInBlockHash(ctx context.Context, trxHash [32]byte) ([32]byte, error)
 }
 
@@ -88,10 +89,9 @@ type NodeRegister interface {
 	CountRegistered(ctx context.Context) (int, error)
 }
 
-// DataBaseProvider abstracts all the methods that are expected from repository.
-type DataBaseProvider interface {
+// NodeSyncRegister abstracts all the methods that are expected from repository.
+type NodeSyncRegister interface {
 	Synchronizer
-	TrxWriteReadMover
 	NodeRegister
 }
 
@@ -138,15 +138,16 @@ func (c Config) Validate() error {
 // It performs all the actions on the transactions and blockchain.
 // Ladger seals all the transaction actions in the blockchain.
 type Ledger struct {
-	db           DataBaseProvider
-	bc           BlockReadWriter
+	trx          TrxWriteReadMover
+	nsc          NodeSyncRegister
+	sub          BlockchainLockSubscriber
+	brwf         BlockReadWriteFinder
 	ac           AddressChecker
 	vr           SignatureVerifier
-	tf           BlockFindWriter
+	tf           BlockFinder
 	log          logger.Logger
 	blcPub       BlockReactivePublisher
 	trxIssuedPub TrxIssuedReactivePunlisher
-	sub          BlockchainLockSubscriber
 	hashes       map[[32]byte]struct{}
 	hashC        chan [32]byte
 	id           string
@@ -156,15 +157,15 @@ type Ledger struct {
 // New creates new Ledger if config is valid or returns error otherwise.
 func New(
 	config Config,
-	bc BlockReadWriter,
-	db DataBaseProvider,
+	trx TrxWriteReadMover,
+	brwf BlockReadWriteFinder,
+	nsc NodeSyncRegister,
+	sub BlockchainLockSubscriber,
 	ac AddressChecker,
 	vr SignatureVerifier,
-	tf BlockFindWriter,
 	log logger.Logger,
 	blcPub BlockReactivePublisher,
 	trxIssuedPub TrxIssuedReactivePunlisher,
-	sub BlockchainLockSubscriber,
 ) (*Ledger, error) {
 	if err := config.Validate(); err != nil {
 		return nil, err
@@ -175,15 +176,15 @@ func New(
 		config:       config,
 		hashC:        make(chan [32]byte, config.BlockTransactionsSize),
 		hashes:       make(map[[32]byte]struct{}),
-		db:           db,
-		bc:           bc,
+		trx:          trx,
+		nsc:          nsc,
+		sub:          sub,
+		brwf:         brwf,
 		ac:           ac,
 		vr:           vr,
-		tf:           tf,
 		log:          log,
 		blcPub:       blcPub,
 		trxIssuedPub: trxIssuedPub,
-		sub:          sub,
 	}, nil
 }
 
@@ -191,7 +192,7 @@ func New(
 // Run starts a goroutine and can be stopped by cancelling the context.
 // It is non-blocking and concurrent safe.
 func (l *Ledger) Run(ctx context.Context) error {
-	count, err := l.db.CountRegistered(ctx)
+	count, err := l.nsc.CountRegistered(ctx)
 	if err != nil {
 		return fmt.Errorf("looking for registerd nodes failed, %w", err)
 	}
@@ -245,7 +246,7 @@ func (l *Ledger) WriteIssuerSignedTransactionForReceiver(
 		return err
 	}
 
-	if err := l.db.WriteIssuerSignedTransactionForReceiver(ctx, trx); err != nil {
+	if err := l.trx.WriteIssuerSignedTransactionForReceiver(ctx, trx); err != nil {
 		return err
 	}
 
@@ -263,7 +264,7 @@ func (l *Ledger) WriteCandidateTransaction(ctx context.Context, trx *transaction
 		return err
 	}
 
-	if err := l.db.MoveTransactionFromAwaitingToTemporary(ctx, trx); err != nil {
+	if err := l.trx.MoveTransactionFromAwaitingToTemporary(ctx, trx); err != nil {
 		return err
 	}
 
@@ -279,7 +280,7 @@ func (l *Ledger) VerifySignature(message, signature []byte, hash [32]byte, addre
 
 func (l *Ledger) forgeTemporaryTrxs(ctx context.Context) error {
 	for {
-		trxs, err := l.db.ReadTemporaryTransactions(ctx, 0, l.config.BlockTransactionsSize)
+		trxs, err := l.trx.ReadTemporaryTransactions(ctx, 0, l.config.BlockTransactionsSize)
 		if err != nil {
 			return err
 		}
@@ -298,7 +299,7 @@ func (l *Ledger) forgeTemporaryTrxs(ctx context.Context) error {
 
 func (l *Ledger) forge(ctx context.Context) error {
 	defer l.cleanHashes()
-	sync := newSync(l.id, l.db, l.sub)
+	sync := newSync(l.id, l.nsc, l.sub)
 	if err := sync.waitInQueueForLock(ctx); err != nil {
 		return err
 	}
@@ -313,7 +314,7 @@ func (l *Ledger) forge(ctx context.Context) error {
 		return err
 	}
 
-	if err := l.db.MoveTransactionsFromTemporaryToPermanent(ctx, blcHash, hashes); err != nil {
+	if err := l.trx.MoveTransactionsFromTemporaryToPermanent(ctx, blcHash, hashes); err != nil {
 		return errors.Join(errMovingTransactions, err)
 	}
 	if err := sync.releaseLock(ctx); err != nil {
@@ -327,7 +328,7 @@ func (l *Ledger) cleanHashes() {
 }
 
 func (l *Ledger) savePublishNewBlock(ctx context.Context, hashes [][32]byte) ([32]byte, error) {
-	h, idx, err := l.bc.LastBlockHashIndex(ctx)
+	h, idx, err := l.brwf.LastBlockHashIndex(ctx)
 	if err != nil {
 		return [32]byte{}, errors.Join(errSavingBlock, err)
 	}
@@ -335,7 +336,7 @@ func (l *Ledger) savePublishNewBlock(ctx context.Context, hashes [][32]byte) ([3
 	idx++
 	nb := block.New(l.config.Difficulty, idx, h, hashes)
 
-	if err := l.bc.WriteBlock(ctx, nb); err != nil {
+	if err := l.brwf.WriteBlock(ctx, nb); err != nil {
 		return [32]byte{}, errors.Join(errSavingBlock, err)
 	}
 

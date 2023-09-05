@@ -20,7 +20,7 @@ const (
 	nonceSize = 12
 )
 
-// Helper wraps eas encryption and decryption.
+// Helper wraps EAS encryption and decryption.
 // Uses Galois Counter Mode (GCM) for encryption and decryption.
 type Helper struct{}
 
