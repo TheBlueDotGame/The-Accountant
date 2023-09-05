@@ -1,14 +1,11 @@
 //go:build integration
 
-package repopository
+package repository
 
 import (
 	"context"
-	"fmt"
-	"os"
 	"testing"
 
-	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -16,12 +13,13 @@ func TestConnection(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	godotenv.Load("../.env")
-	user := os.Getenv("POSTGRES_DB_USER")
-	passwd := os.Getenv("POSTGRES_DB_PASSWORD")
-	dbName := os.Getenv("POSTGRES_DB_NAME")
+	cfg := DBConfig{
+		ConnStr:      "postgres://computantis:computantis@localhost:5432",
+		DatabaseName: "computantis",
+		IsSSL:        false,
+	}
 
-	db, err := Connect(ctx, fmt.Sprintf("postgres://%s:%s@localhost:5432", user, passwd), dbName)
+	db, err := Connect(ctx, cfg)
 	assert.Nil(t, err)
 
 	err = db.Ping(ctx)
