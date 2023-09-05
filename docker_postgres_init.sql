@@ -165,4 +165,4 @@ INSERT INTO tokens (token, valid, expiration_date) VALUES ('e3b0c44298fc1c149afb
 INSERT INTO tokens (token, valid, expiration_date) VALUES ('7147a8f255f49cb7693dcd19b6b46e139680d48a03e0a075ea237deb7e6bac11', true, 9223372036854775807);
 INSERT INTO tokens (token, valid, expiration_date) VALUES ('11b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b543', true, 9223372036854775807);
 
-INSERT INTO addresses (public_key, access_level) VALUES ('1AGb92ohiRtHFzrsVbMswxwARe5KeLBYkUzVgq9fTgUsAnmpyh', 'trusted');
+INSERT INTO addresses (public_key, access_level) VALUES ('12DFLxYQZZK9r8xntrSQqiwEqtZZyLjTjSutMwTcdzc6rwgLkM', 'trusted');
