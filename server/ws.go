@@ -46,13 +46,16 @@ type Message struct {
 }
 
 type socket struct {
-	hub     *hub
-	conn    *websocket.Conn
-	send    chan []byte
-	repo    Repository
-	tele    providers.HistogramProvider
-	log     logger.Logger
-	address string
+	hub         *hub
+	conn        *websocket.Conn
+	send        chan []byte
+	trxProv     TrxWriteReadRejectApprover
+	register    Register
+	addressProv AddressReaderWriterModifier
+	tokenProv   TokenWriteInvalidateChecker
+	tele        providers.HistogramProvider
+	log         logger.Logger
+	address     string
 }
 
 func (s *server) wsWrapper(ctx context.Context, c *fiber.Ctx) error {
@@ -65,7 +68,7 @@ func (s *server) wsWrapper(ctx context.Context, c *fiber.Ctx) error {
 		return fiber.ErrForbidden
 	}
 
-	if ok, err := s.repo.CheckToken(c.Context(), token); !ok || err != nil {
+	if ok, err := s.tokenProv.CheckToken(c.Context(), token); !ok || err != nil {
 		if err != nil {
 			s.log.Error(fmt.Sprintf("failed to check token: %s", err.Error()))
 			return fiber.ErrForbidden
@@ -81,12 +84,12 @@ func (s *server) wsWrapper(ctx context.Context, c *fiber.Ctx) error {
 		return fiber.ErrForbidden
 	}
 
-	if ok, err := s.repo.IsAddressTrusted(c.Context(), addr); err != nil || !ok {
+	if ok, err := s.addressProv.IsAddressTrusted(c.Context(), addr); err != nil || !ok {
 		if err != nil {
 			s.log.Error(fmt.Sprintf("failed to check address: %s", err.Error()))
 			return fiber.ErrForbidden
 		}
-		s.log.Error(fmt.Sprintf("address %s does not exist in the repository", addr))
+		s.log.Error(fmt.Sprintf("address %s does not exist in the trxProvsitory", addr))
 		return fiber.ErrForbidden
 	}
 
@@ -127,13 +130,16 @@ func (s *server) wsWrapper(ctx context.Context, c *fiber.Ctx) error {
 	}
 
 	client := &socket{
-		address: addr,
-		hub:     s.hub,
-		conn:    nil,
-		send:    make(chan []byte, clientMessageChannelsBufferSize),
-		repo:    s.repo,
-		tele:    s.tele,
-		log:     s.log,
+		address:     addr,
+		hub:         s.hub,
+		conn:        nil,
+		send:        make(chan []byte, clientMessageChannelsBufferSize),
+		trxProv:     s.trxProv,
+		register:    s.register,
+		addressProv: s.addressProv,
+		tokenProv:   s.tokenProv,
+		tele:        s.tele,
+		log:         s.log,
 	}
 
 	ctxx, cancel := context.WithCancel(ctx)
@@ -310,7 +316,7 @@ func (c *socket) echo(_ context.Context, msg *Message) error {
 }
 
 func (c *socket) socketList(ctx context.Context, msg *Message) error {
-	sockets, err := c.repo.ReadRegisteredNodesAddresses(ctx)
+	sockets, err := c.register.ReadRegisteredNodesAddresses(ctx)
 	if err != nil {
 		return err
 	}
