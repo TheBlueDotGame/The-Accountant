@@ -11,5 +11,5 @@ func Display() {
 		putils.LettersFromStringWithStyle("omputantis", pterm.FgLightMagenta.ToStyle())).Srender()
 	pterm.DefaultCenter.Println(s)
 	pterm.DefaultCenter.WithCenterEachLineSeparately().
-		Println("This software belongs to\nComputantis Project\n and was build with passion.")
+		Println("This software belongs to\nThe Computantis Project\n(C) 2023.")
 }

@@ -452,7 +452,7 @@ var (
 <a name="Helper"></a>
 ## type [Helper](<https://github.com/bartossh/Computantis/blob/main/aeswrapper/aeswrapper.go#L25>)
 
-Helper wraps eas encryption and decryption. Uses Galois Counter Mode \(GCM\) for encryption and decryption.
+Helper wraps EAS encryption and decryption. Uses Galois Counter Mode \(GCM\) for encryption and decryption.
 
 ```go
 type Helper struct{}
@@ -1172,8 +1172,10 @@ import "github.com/bartossh/Computantis/fileoperations"
 - [type Config](<#Config>)
 - [type Helper](<#Helper>)
   - [func New\(cfg Config, s Sealer\) Helper](<#New>)
+  - [func \(h Helper\) ReadFromPem\(filepath string\) \(wallet.Wallet, error\)](<#Helper.ReadFromPem>)
   - [func \(h Helper\) ReadWallet\(\) \(wallet.Wallet, error\)](<#Helper.ReadWallet>)
-  - [func \(h Helper\) SaveWallet\(w wallet.Wallet\) error](<#Helper.SaveWallet>)
+  - [func \(h Helper\) SaveToPem\(w \*wallet.Wallet, filepath string\) error](<#Helper.SaveToPem>)
+  - [func \(h Helper\) SaveWallet\(w \*wallet.Wallet\) error](<#Helper.SaveWallet>)
 - [type Sealer](<#Sealer>)
 
 
@@ -1209,26 +1211,44 @@ func New(cfg Config, s Sealer) Helper
 
 New creates new Helper.
 
+<a name="Helper.ReadFromPem"></a>
+### func \(Helper\) [ReadFromPem](<https://github.com/bartossh/Computantis/blob/main/fileoperations/wallet.go#L105>)
+
+```go
+func (h Helper) ReadFromPem(filepath string) (wallet.Wallet, error)
+```
+
+ReadFromPem creates Wallet from PEM format file. Uses both private and public key. Provide the path to a file without specifying the extension : \<your/path/name".
+
 <a name="Helper.ReadWallet"></a>
-### func \(Helper\) [ReadWallet](<https://github.com/bartossh/Computantis/blob/main/fileoperations/wallet.go#L17>)
+### func \(Helper\) [ReadWallet](<https://github.com/bartossh/Computantis/blob/main/fileoperations/wallet.go#L22>)
 
 ```go
 func (h Helper) ReadWallet() (wallet.Wallet, error)
 ```
 
-RereadWallet reads wallet from the file.
+RereadWallet reads wallet from the file from GOB format. It uses decryption key to perform wallet decoding.
 
-<a name="Helper.SaveWallet"></a>
-### func \(Helper\) [SaveWallet](<https://github.com/bartossh/Computantis/blob/main/fileoperations/wallet.go#L41>)
+<a name="Helper.SaveToPem"></a>
+### func \(Helper\) [SaveToPem](<https://github.com/bartossh/Computantis/blob/main/fileoperations/wallet.go#L76>)
 
 ```go
-func (h Helper) SaveWallet(w wallet.Wallet) error
+func (h Helper) SaveToPem(w *wallet.Wallet, filepath string) error
 ```
 
-SaveWallet saves wallet to the file.
+SaveToPem saves wallet private and public key to the PEM format file. Saved files are like in the example: \- PRIVATE: "your/path/name" \- PUBLIC: "your/path/name.pub" Pem saved wallet is not sealed cryptographically and keys can be seen by anyone having access to the machine.
+
+<a name="Helper.SaveWallet"></a>
+### func \(Helper\) [SaveWallet](<https://github.com/bartossh/Computantis/blob/main/fileoperations/wallet.go#L51>)
+
+```go
+func (h Helper) SaveWallet(w *wallet.Wallet) error
+```
+
+SaveWallet saves wallet to the file in GOB format. GOB file is secured cryptographically by the key, so it is safer option to move your wallet between machines in that format. This wallet can only be red by the Go wallet implementation. For transferring wallet to other implementations use PEM format.
 
 <a name="Sealer"></a>
-## type [Sealer](<https://github.com/bartossh/Computantis/blob/main/fileoperations/wallet.go#L11-L14>)
+## type [Sealer](<https://github.com/bartossh/Computantis/blob/main/fileoperations/wallet.go#L15-L18>)
 
 Sealer offers behaviour to seal the bytes returning the signature on the data.
 
@@ -3182,7 +3202,7 @@ Wallet holds public and private key of the wallet owner.
 
 ```go
 type Wallet struct {
-    Private ed25519.PrivateKey `json:"private" bson:"private"`
+    Private ed25519.PrivateKey `json:"private" bson:"private"` // TODO: Make ephemaral structure with public filelds for json, bson encoding and make this fields private.
     Public  ed25519.PublicKey  `json:"public" bson:"public"`
 }
 ```
@@ -3759,7 +3779,7 @@ WalletReadSaver allows to read and save the wallet.
 ```go
 type WalletReadSaver interface {
     ReadWallet() (wallet.Wallet, error)
-    SaveWallet(w wallet.Wallet) error
+    SaveWallet(w *wallet.Wallet) error
 }
 ```
 
@@ -4018,6 +4038,16 @@ import "github.com/bartossh/Computantis/cmd/generator"
 
 ```go
 import "github.com/bartossh/Computantis/cmd/validator"
+```
+
+## Index
+
+
+
+# wallet
+
+```go
+import "github.com/bartossh/Computantis/cmd/wallet"
 ```
 
 ## Index

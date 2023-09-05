@@ -18,7 +18,7 @@ const (
 
 // Wallet holds public and private key of the wallet owner.
 type Wallet struct {
-	Private ed25519.PrivateKey `json:"private" bson:"private"`
+	Private ed25519.PrivateKey `json:"private" bson:"private"` // TODO: Make ephemaral structure with public filelds for json, bson encoding and make this fields private.
 	Public  ed25519.PublicKey  `json:"public" bson:"public"`
 }
 

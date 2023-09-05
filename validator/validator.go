@@ -301,11 +301,12 @@ func (a *app) processMessage(ctx context.Context, m *server.Message, remoteAddre
 }
 
 func (a *app) processBlock(_ context.Context, b *block.Block, remoteAddress string) {
+	lastBlockIndex := a.lastBlock.Index
 	err := a.validateBlock(b)
 	if err != nil {
 		a.log.Error(fmt.Sprintf("remote node address [ %s ], %s ", remoteAddress, err.Error()))
 	}
-	a.log.Info(fmt.Sprintf("block from [ %s ] :: last idx [ %v ] :: new idx [ %v ] \n", remoteAddress, a.lastBlock.Index, b.Index))
+	a.log.Info(fmt.Sprintf("block from [ %s ] :: last idx [ %v ] :: new idx [ %v ] \n", remoteAddress, lastBlockIndex, b.Index))
 	go a.wh.PostWebhookBlock(b) // post concurrently
 }
 
