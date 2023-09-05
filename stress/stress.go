@@ -16,6 +16,7 @@ import (
 
 func main() {
 	serverAddress := "http://192.168.0.206"
+	var timestep time.Duration = 100 // [ ms ]
 	type connection struct {
 		port   string
 		tokens []string
@@ -116,7 +117,7 @@ func main() {
 				cancel()
 			}
 
-			tc := time.NewTicker(time.Millisecond * 3000)
+			tc := time.NewTicker(time.Millisecond * timestep)
 			defer tc.Stop()
 		Trxs:
 			for {
