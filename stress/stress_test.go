@@ -26,8 +26,8 @@ import (
 // This allows to have multiple nodes on the same address but different port.
 // Now address is some network address that indicates a IPv4 format.
 func TestFullClientApiCycle(t *testing.T) {
-	serverAddress := "http://192.168.0.206"
-	transactionsCount := 10
+	serverAddress := "http://localhost" // plesase set your test to point in to the node you are testing against before running it
+	transactionsCount := 10             // please specify number of transaction to be run agains the central node by each process
 	type testCase struct {
 		port   string
 		tokens []string
