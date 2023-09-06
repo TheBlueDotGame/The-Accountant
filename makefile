@@ -1,28 +1,28 @@
 build-local:
-	CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/dedicated/central -ldflags="-s -w" cmd/central/main.go
-	CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/dedicated/validator -ldflags="-s -w" cmd/validator/main.go
-	CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/dedicated/client -ldflags="-s -w" cmd/client/main.go
-	CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/dedicated/emulator -ldflags="-s -w" cmd/emulator/main.go
+	CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/dedicated/central -ldflags="-s -w" -gcflags -m cmd/central/main.go
+	CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/dedicated/validator -ldflags="-s -w" -gcflags -m -pgo=./default_validator.pgo cmd/validator/main.go
+	CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/dedicated/client -ldflags="-s -w" -gcflags -m cmd/client/main.go
+	CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/dedicated/emulator -ldflags="-s -w" -gcflags -m cmd/emulator/main.go
 
 build-all: build-local
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/linux_x86/central -ldflags="-s -w" cmd/central/main.go
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/linux_x86/validator -ldflags="-s -w" cmd/validator/main.go
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/linux_x86/validator -ldflags="-s -w" -pgo=./default_validator.pgo cmd/validator/main.go
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/linux_x86/client -ldflags="-s -w" cmd/client/main.go
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/linux_x86/emulator -ldflags="-s -w" cmd/emulator/main.go
 
 	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/linux_arm/central -ldflags="-s -w" cmd/central/main.go
-	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/linux_arm/validator -ldflags="-s -w" cmd/validator/main.go
+	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/linux_arm/validator -ldflags="-s -w" -pgo=./default_validator.pgo cmd/validator/main.go
 	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/linux_arm/client -ldflags="-s -w" cmd/client/main.go
 	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/linux_arm/emulator -ldflags="-s -w" cmd/emulator/main.go
 
 	GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/darwin_arm/central -ldflags="-s -w" cmd/central/main.go
-	GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/darwin_arm/validator -ldflags="-s -w" cmd/validator/main.go
+	GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/darwin_arm/validator -ldflags="-s -w" -pgo=./default_validator.pgo cmd/validator/main.go
 	GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/darwin_arm/client -ldflags="-s -w" cmd/client/main.go
 	GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/darwin_arm/emulator -ldflags="-s -w" cmd/emulator/main.go
 
 build-tools:
-	CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/dedicated/generator -ldflags="-s -w" cmd/generator/main.go
-	CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/dedicated/wallet -ldflags="-s -w" cmd/wallet/main.go
+	CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/dedicated/generator -ldflags="-s -w" -gcflags -m cmd/generator/main.go
+	CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/dedicated/wallet -ldflags="-s -w" -gcflags -m cmd/wallet/main.go
 
 build-tools-all: build-tools
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/linux_x86/generator -ldflags="-s -w" cmd/generator/main.go

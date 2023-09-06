@@ -29,6 +29,7 @@ type Configuration struct {
 	Emulator      emulator.Config       `yaml:"emulator"`
 	DataProvider  dataprovider.Config   `yaml:"data_provider"`
 	Bookkeeper    bookkeeping.Config    `yaml:"bookkeeper"`
+	IsProfiling   bool                  `yaml:"is_profiling"` // Indicates if node server is running in profiling mode and will create `default.pgo` file.
 }
 
 type StorageConfig struct {
