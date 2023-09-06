@@ -120,7 +120,7 @@ func main() {
 
 	spinner, _ := pterm.DefaultSpinner.Start(fmt.Sprintf("Starting [ %v ] independent connections to stress test central node", len(connections)))
 	time.Sleep(time.Second * 5)
-	spinner.UpdateText("Running test ...")
+	spinner.UpdateText("Running stress test ...")
 	for _, c := range connections {
 		go func(ctx context.Context, c connection) {
 			addr := fmt.Sprintf("http://%s:%v", cfg.CentralNodeIP, cfg.CentralNodePort)
