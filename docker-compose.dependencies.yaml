@@ -10,6 +10,18 @@ volumes:
   zincsearch_data_container:
 
 services:
+  nats:
+    container_name: nats
+    image: nats
+    command: "-c /etc/nats/nats.conf"
+    volumes:
+       - ./config/:/etc/nats
+    ports:
+      - "6222:6222"
+    restart: unless-stopped
+    networks:
+      - computantis_network
+  
   postgres:
     container_name: postgres
     image: postgres:latest
