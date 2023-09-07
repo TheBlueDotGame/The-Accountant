@@ -1,16 +1,14 @@
 //go:build integration
 
-package repopostgre
+package repository
 
 import (
 	"context"
 	"fmt"
-	"os"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/joho/godotenv"
 	"github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 )
@@ -20,12 +18,13 @@ func TestNotifierCycle(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 
-	godotenv.Load("../.env")
-	user := os.Getenv("POSTGRES_DB_USER")
-	passwd := os.Getenv("POSTGRES_DB_PASSWORD")
-	dbName := os.Getenv("POSTGRES_DB_NAME")
+	cfg := DBConfig{
+		ConnStr:      "postgres://computantis:computantis@localhost:5432",
+		DatabaseName: "computantis",
+		IsSSL:        false,
+	}
 
-	db, err := Connect(ctx, fmt.Sprintf("postgres://%s:%s@localhost:5432", user, passwd), dbName)
+	db, err := Connect(ctx, cfg)
 	assert.Nil(t, err)
 
 	err = db.Ping(ctx)
@@ -37,7 +36,7 @@ func TestNotifierCycle(t *testing.T) {
 		}
 	}
 
-	listener, err := Listen(fmt.Sprintf("postgres://%s:%s@localhost:5432", user, passwd), reportProblem)
+	listener, err := Listen(cfg.ConnStr, reportProblem)
 	assert.Nil(t, err)
 
 	c := make(chan bool)
@@ -69,12 +68,13 @@ func TestNotifierCycleManySubscribers(t *testing.T) {
 		nodeIDStr := fmt.Sprintf("node_%d", nodeID)
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 
-		godotenv.Load("../.env")
-		user := os.Getenv("POSTGRES_DB_USER")
-		passwd := os.Getenv("POSTGRES_DB_PASSWORD")
-		dbName := os.Getenv("POSTGRES_DB_NAME")
+		cfg := DBConfig{
+			ConnStr:      "postgres://computantis:computantis@localhost:5432",
+			DatabaseName: "computantis",
+			IsSSL:        false,
+		}
 
-		db, err := Connect(ctx, fmt.Sprintf("postgres://%s:%s@localhost:5432", user, passwd), dbName)
+		db, err := Connect(ctx, cfg)
 		assert.Nil(t, err)
 
 		err = db.Ping(ctx)
@@ -86,7 +86,7 @@ func TestNotifierCycleManySubscribers(t *testing.T) {
 			}
 		}
 
-		listener, err := Listen(fmt.Sprintf("postgres://%s:%s@localhost:5432", user, passwd), reportProblem)
+		listener, err := Listen(cfg.ConnStr, reportProblem)
 		assert.Nil(t, err)
 
 		c := make(chan bool)

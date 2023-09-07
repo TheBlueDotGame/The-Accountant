@@ -7,10 +7,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/bartossh/Computantis/aeswrapper"
 	"github.com/bartossh/Computantis/fileoperations"
 	"github.com/bartossh/Computantis/wallet"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestAlive(t *testing.T) {
