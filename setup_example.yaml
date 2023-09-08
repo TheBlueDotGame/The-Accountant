@@ -6,6 +6,10 @@ server:
   port: 8000
   data_size_bytes: 15000000
   websocket_address: "ws://central-node:8000/ws"
+nats:
+  server_address: "nats://locallhost:6222"
+  client_name: "notary-1"
+  token: "D9pHfuiEQPXtqPqPdyxozi8kU2FlHqC0FlSRIzpwDI0="
 storage_config:
   transaction_database:
     conn_str: "postgres://computantis:computantis@postgres:5432"

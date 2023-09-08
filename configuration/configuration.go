@@ -10,6 +10,7 @@ import (
 	"github.com/bartossh/Computantis/dataprovider"
 	"github.com/bartossh/Computantis/emulator"
 	"github.com/bartossh/Computantis/fileoperations"
+	"github.com/bartossh/Computantis/natsclient"
 	"github.com/bartossh/Computantis/repository"
 	"github.com/bartossh/Computantis/server"
 	"github.com/bartossh/Computantis/validator"
@@ -21,6 +22,7 @@ import (
 // that holds the configuration.
 type Configuration struct {
 	Server        server.Config         `yaml:"server"`
+	Nats          natsclient.Config     `yaml:"nats"`
 	StorageConfig StorageConfig         `yaml:"storage_config"`
 	Client        walletapi.Config      `yaml:"client"`
 	FileOperator  fileoperations.Config `yaml:"file_operator"`
