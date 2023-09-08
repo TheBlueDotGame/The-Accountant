@@ -134,5 +134,6 @@ func run(cfg configuration.Configuration) {
 
 	if err := validator.Run(ctx, cfg.Validator, statusDB, log, verify, wh, &wl, dataProvider); err != nil {
 		log.Error(err.Error())
+		time.Sleep(time.Second)
 	}
 }
