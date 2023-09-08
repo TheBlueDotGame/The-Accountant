@@ -15,7 +15,7 @@ services:
     image: nats
     command: "-c /etc/nats/nats.conf"
     volumes:
-       - ./config/:/etc/nats
+       - ./nats_config/:/etc/nats
     ports:
       - "6222:6222"
     restart: unless-stopped
