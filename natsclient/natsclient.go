@@ -6,6 +6,10 @@ import (
 	"github.com/nats-io/nats.go"
 )
 
+const (
+	PubSubNewBlock string = "new_block"
+)
+
 // Config contains all arguments required to connect to the nats setvice
 type Config struct {
 	Address string `yaml:"server_address"`
