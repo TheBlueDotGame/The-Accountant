@@ -9,7 +9,7 @@ import (
 
 // Publisher provides functionality to push messages to the pub/sub queue
 type Publisher struct {
-	socket
+	*socket
 }
 
 // PublisherConnect connects publisher to the pub/sub queue using provided config

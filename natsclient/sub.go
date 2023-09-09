@@ -13,7 +13,7 @@ import (
 
 // Subscriber provides functionality to pull messages from the pub/sub queue.
 type Subscriber struct {
-	socket
+	*socket
 	subs map[string]*nats.Subscription
 	mux  sync.RWMutex
 }

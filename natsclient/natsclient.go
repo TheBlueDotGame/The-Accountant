@@ -21,15 +21,15 @@ type socket struct {
 	conn *nats.Conn
 }
 
-func connect(cfg Config) (socket, error) {
-	var s socket
+func connect(cfg Config) (*socket, error) {
 	var err error
 	_, err = url.Parse(cfg.Address)
 	if err != nil {
-		return s, err
+		return nil, err
 	}
+	var s socket
 	s.conn, err = nats.Connect(cfg.Address, nats.Name(cfg.Name), nats.Token(cfg.Token))
-	return s, err
+	return &s, err
 }
 
 // Disconnect drains the message queue and disconnects from the pub/sub.
