@@ -195,6 +195,19 @@ Required services setup:
  - Exporter node
  - Prometheus node
  - Zincsearch node
+ - Nats node
+
+
+Install protobuf generator: 
+```sh
+go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+```
+
+Generate protobuf files with:
+```sh
+protoc --proto_path=protobuf --go_out=protobufcompiled --go_opt=paths=source_relative block.proto
+```
+
 
 Run in terminal to run services in separate docker containers:
 
@@ -436,8 +449,8 @@ Address holds information about unique PublicKey.
 
 ```go
 type Address struct {
-    ID        any    `json:"-"          bson:"_id,omitempty" db:"id"`
-    PublicKey string `json:"public_key" bson:"public_key"    db:"public_key"`
+    ID        any    `json:"-"          sql:"id"         db:"id"`
+    PublicKey string `json:"public_key" sql:"public_key" db:"public_key"`
 }
 ```
 
@@ -526,14 +539,14 @@ Block holds block information. Block is a part of a blockchain assuring immutabi
 
 ```go
 type Block struct {
-    ID         any        `json:"-"          bson:"_id"        db:"id"`
-    TrxHashes  [][32]byte `json:"trx_hashes" bson:"trx_hashes" db:"trx_hashes"`
-    Hash       [32]byte   `json:"hash"       bson:"hash"       db:"hash"`
-    PrevHash   [32]byte   `json:"prev_hash"  bson:"prev_hash"  db:"prev_hash"`
-    Index      uint64     `json:"index"      bson:"index"      db:"index"`
-    Timestamp  uint64     `json:"timestamp"  bson:"timestamp"  db:"timestamp"`
-    Nonce      uint64     `json:"nonce"      bson:"nonce"      db:"nonce"`
-    Difficulty uint64     `json:"difficulty" bson:"difficulty" db:"difficulty"`
+    ID         any        `json:"-"          sql:"id"         db:"id"           protobuf:"-"`
+    TrxHashes  [][32]byte `json:"trx_hashes" sql:"trx_hashes" db:"trx_hashes"   protobuf:"trx_hashes"`
+    Hash       [32]byte   `json:"hash"       sql:"hash"       db:"hash"         protobuf:"hash"`
+    PrevHash   [32]byte   `json:"prev_hash"  sql:"prev_hash"  db:"prev_hash"    protobuf:"prev_hash"`
+    Index      uint64     `json:"index"      sql:"index"      db:"index"        protobuf:"index"`
+    Timestamp  uint64     `json:"timestamp"  sql:"timestamp"  db:"timestamp"    protobuf:"timestamp"`
+    Nonce      uint64     `json:"nonce"      sql:"nonce"      db:"nonce"        protobuf:"nonce"`
+    Difficulty uint64     `json:"difficulty" sql:"difficulty" db:"difficulty"   protobuf:"difficulty"`
 }
 ```
 
@@ -856,9 +869,9 @@ Config is a configuration of the Ledger.
 
 ```go
 type Config struct {
-    Difficulty            uint64 `json:"difficulty"              bson:"difficulty"              yaml:"difficulty"`
-    BlockWriteTimestamp   uint64 `json:"block_write_timestamp"   bson:"block_write_timestamp"   yaml:"block_write_timestamp"`
-    BlockTransactionsSize int    `json:"block_transactions_size" bson:"block_transactions_size" yaml:"block_transactions_size"`
+    Difficulty            uint64 `json:"difficulty"              sql:"difficulty"              yaml:"difficulty"`
+    BlockWriteTimestamp   uint64 `json:"block_write_timestamp"   sql:"block_write_timestamp"   yaml:"block_write_timestamp"`
+    BlockTransactionsSize int    `json:"block_transactions_size" sql:"block_transactions_size" yaml:"block_transactions_size"`
 }
 ```
 
@@ -1015,13 +1028,14 @@ import "github.com/bartossh/Computantis/configuration"
 
 
 <a name="Configuration"></a>
-## type [Configuration](<https://github.com/bartossh/Computantis/blob/main/configuration/configuration.go#L22-L32>)
+## type [Configuration](<https://github.com/bartossh/Computantis/blob/main/configuration/configuration.go#L23-L34>)
 
 Configuration is the main configuration of the application that corresponds to the \*.yaml file that holds the configuration.
 
 ```go
 type Configuration struct {
     Server        server.Config         `yaml:"server"`
+    Nats          natsclient.Config     `yaml:"nats"`
     StorageConfig StorageConfig         `yaml:"storage_config"`
     Client        walletapi.Config      `yaml:"client"`
     FileOperator  fileoperations.Config `yaml:"file_operator"`
@@ -1034,7 +1048,7 @@ type Configuration struct {
 ```
 
 <a name="Read"></a>
-### func [Read](<https://github.com/bartossh/Computantis/blob/main/configuration/configuration.go#L44>)
+### func [Read](<https://github.com/bartossh/Computantis/blob/main/configuration/configuration.go#L46>)
 
 ```go
 func Read(path string) (Configuration, error)
@@ -1043,7 +1057,7 @@ func Read(path string) (Configuration, error)
 Read reads the configuration from the file and returns the Configuration with set fields according to the yaml setup.
 
 <a name="StorageConfig"></a>
-## type [StorageConfig](<https://github.com/bartossh/Computantis/blob/main/configuration/configuration.go#L34-L41>)
+## type [StorageConfig](<https://github.com/bartossh/Computantis/blob/main/configuration/configuration.go#L36-L43>)
 
 
 
@@ -1200,9 +1214,9 @@ Measurement is data structure containing measurements received in a single trans
 
 ```go
 type Measurement struct {
-    Volts int `json:"volts"`
-    Mamps int `json:"m_amps"`
-    Power int `json:"power"`
+    Volts int64 `json:"volts"`
+    Mamps int64 `json:"m_amps"`
+    Power int64 `json:"power"`
 }
 ```
 
@@ -1216,9 +1230,9 @@ type Message struct {
     Status      string                  `json:"status"`
     Transaction transaction.Transaction `json:"transaction"`
     Timestamp   int64                   `json:"timestamp"`
-    Volts       int                     `json:"volts"`
-    MiliAmps    int                     `json:"mili_amps"`
-    Power       int                     `json:"power"`
+    Volts       int64                   `json:"volts"`
+    MiliAmps    int64                   `json:"mili_amps"`
+    Power       int64                   `json:"power"`
 }
 ```
 
@@ -1233,27 +1247,28 @@ import "github.com/bartossh/Computantis/fileoperations"
 - [type Config](<#Config>)
 - [type Helper](<#Helper>)
   - [func New\(cfg Config, s Sealer\) Helper](<#New>)
-  - [func \(h Helper\) ReadFromPem\(filepath string\) \(wallet.Wallet, error\)](<#Helper.ReadFromPem>)
+  - [func \(h Helper\) ReadFromPem\(\) \(wallet.Wallet, error\)](<#Helper.ReadFromPem>)
   - [func \(h Helper\) ReadWallet\(\) \(wallet.Wallet, error\)](<#Helper.ReadWallet>)
-  - [func \(h Helper\) SaveToPem\(w \*wallet.Wallet, filepath string\) error](<#Helper.SaveToPem>)
+  - [func \(h Helper\) SaveToPem\(w \*wallet.Wallet\) error](<#Helper.SaveToPem>)
   - [func \(h Helper\) SaveWallet\(w \*wallet.Wallet\) error](<#Helper.SaveWallet>)
 - [type Sealer](<#Sealer>)
 
 
 <a name="Config"></a>
-## type [Config](<https://github.com/bartossh/Computantis/blob/main/fileoperations/fileoperations.go#L4-L7>)
+## type [Config](<https://github.com/bartossh/Computantis/blob/main/fileoperations/fileoperations.go#L4-L8>)
 
 Config holds configuration of the file operator Helper.
 
 ```go
 type Config struct {
-    WalletPath   string `yaml:"wallet_path"`   // wallet path to the wallet file
-    WalletPasswd string `yaml:"wallet_passwd"` // wallet password to the wallet file in hex format
+    WalletPath    string `yaml:"wallet_path"`   // wpath to the wallet gob file
+    WalletPasswd  string `yaml:"wallet_passwd"` // password to the wallet gob file in hex format
+    WalletPemPath string `yaml:"pem_path"`      // path to ed25519 pem file
 }
 ```
 
 <a name="Helper"></a>
-## type [Helper](<https://github.com/bartossh/Computantis/blob/main/fileoperations/fileoperations.go#L10-L13>)
+## type [Helper](<https://github.com/bartossh/Computantis/blob/main/fileoperations/fileoperations.go#L11-L14>)
 
 Helper holds all file operation methods.
 
@@ -1264,7 +1279,7 @@ type Helper struct {
 ```
 
 <a name="New"></a>
-### func [New](<https://github.com/bartossh/Computantis/blob/main/fileoperations/fileoperations.go#L16>)
+### func [New](<https://github.com/bartossh/Computantis/blob/main/fileoperations/fileoperations.go#L17>)
 
 ```go
 func New(cfg Config, s Sealer) Helper
@@ -1273,13 +1288,13 @@ func New(cfg Config, s Sealer) Helper
 New creates new Helper.
 
 <a name="Helper.ReadFromPem"></a>
-### func \(Helper\) [ReadFromPem](<https://github.com/bartossh/Computantis/blob/main/fileoperations/wallet.go#L105>)
+### func \(Helper\) [ReadFromPem](<https://github.com/bartossh/Computantis/blob/main/fileoperations/wallet.go#L104>)
 
 ```go
-func (h Helper) ReadFromPem(filepath string) (wallet.Wallet, error)
+func (h Helper) ReadFromPem() (wallet.Wallet, error)
 ```
 
-ReadFromPem creates Wallet from PEM format file. Uses both private and public key. Provide the path to a file without specifying the extension : \<your/path/name".
+ReadFromPem creates Wallet from PEM format file. Uses both private and public key.
 
 <a name="Helper.ReadWallet"></a>
 ### func \(Helper\) [ReadWallet](<https://github.com/bartossh/Computantis/blob/main/fileoperations/wallet.go#L22>)
@@ -1294,7 +1309,7 @@ RereadWallet reads wallet from the file from GOB format. It uses decryption key 
 ### func \(Helper\) [SaveToPem](<https://github.com/bartossh/Computantis/blob/main/fileoperations/wallet.go#L76>)
 
 ```go
-func (h Helper) SaveToPem(w *wallet.Wallet, filepath string) error
+func (h Helper) SaveToPem(w *wallet.Wallet) error
 ```
 
 SaveToPem saves wallet private and public key to the PEM format file. Saved files are like in the example: \- PRIVATE: "your/path/name" \- PUBLIC: "your/path/name.pub" Pem saved wallet is not sealed cryptographically and keys can be seen by anyone having access to the machine.
@@ -1328,14 +1343,14 @@ import "github.com/bartossh/Computantis/generator"
 
 ## Index
 
-- [func GenerateToFile\(filePath string, count, vMin, vMax, maMin, maMax int\) error](<#GenerateToFile>)
+- [func GenerateToFile\(filePath string, count, vMin, vMax, maMin, maMax int64\) error](<#GenerateToFile>)
 
 
 <a name="GenerateToFile"></a>
 ## func [GenerateToFile](<https://github.com/bartossh/Computantis/blob/main/generator/generator.go#L13>)
 
 ```go
-func GenerateToFile(filePath string, count, vMin, vMax, maMin, maMax int) error
+func GenerateToFile(filePath string, count, vMin, vMax, maMin, maMax int64) error
 ```
 
 GenerateToFile generates data to file in json format.
@@ -1429,10 +1444,10 @@ Log is log marshaled and written in to the io.Writer of the helper implementing 
 
 ```go
 type Log struct {
-    ID        any       `json:"_id"        bson:"_id"        db:"id"`
-    CreatedAt time.Time `json:"created_at" bson:"created_at" db:"created_at"`
-    Level     string    `jon:"level"       bson:"level"      db:"level"`
-    Msg       string    `json:"msg"        bson:"msg"        db:"msg"`
+    ID        any       `json:"_id"        sql:"id"        db:"id"`
+    CreatedAt time.Time `json:"created_at" sql:"created_at" db:"created_at"`
+    Level     string    `jon:"level"       sql:"level"      db:"level"`
+    Msg       string    `json:"msg"        sql:"msg"        db:"msg"`
 }
 ```
 
@@ -1549,6 +1564,273 @@ import "github.com/bartossh/Computantis/logo"
 
 ```go
 func Display()
+```
+
+
+
+# natsclient
+
+```go
+import "github.com/bartossh/Computantis/natsclient"
+```
+
+## Index
+
+- [Constants](<#constants>)
+- [type BlockSubscriberCallback](<#BlockSubscriberCallback>)
+- [type Config](<#Config>)
+- [type Publisher](<#Publisher>)
+  - [func PublisherConnect\(cfg Config\) \(\*Publisher, error\)](<#PublisherConnect>)
+  - [func \(p \*Publisher\) PublishNewBlock\(blk block.Block\) error](<#Publisher.PublishNewBlock>)
+- [type Subscriber](<#Subscriber>)
+  - [func SubscriberConnect\(cfg Config\) \(\*Subscriber, error\)](<#SubscriberConnect>)
+  - [func \(s \*Subscriber\) SubscribeNewBlock\(call BlockSubscriberCallback, log logger.Logger\) error](<#Subscriber.SubscribeNewBlock>)
+
+
+## Constants
+
+<a name="PubSubNewBlock"></a>
+
+```go
+const (
+    PubSubNewBlock string = "new_block"
+)
+```
+
+<a name="BlockSubscriberCallback"></a>
+## type [BlockSubscriberCallback](<https://github.com/bartossh/Computantis/blob/main/natsclient/sub.go#L21>)
+
+
+
+```go
+type BlockSubscriberCallback func(blk *block.Block)
+```
+
+<a name="Config"></a>
+## type [Config](<https://github.com/bartossh/Computantis/blob/main/natsclient/natsclient.go#L14-L18>)
+
+Config contains all arguments required to connect to the nats setvice
+
+```go
+type Config struct {
+    Address string `yaml:"server_address"`
+    Name    string `yaml:"client_name"`
+    Token   string `yaml:"token"`
+}
+```
+
+<a name="Publisher"></a>
+## type [Publisher](<https://github.com/bartossh/Computantis/blob/main/natsclient/pub.go#L11-L13>)
+
+Publisher provides functionality to push messages to the pub/sub queue
+
+```go
+type Publisher struct {
+    // contains filtered or unexported fields
+}
+```
+
+<a name="PublisherConnect"></a>
+### func [PublisherConnect](<https://github.com/bartossh/Computantis/blob/main/natsclient/pub.go#L16>)
+
+```go
+func PublisherConnect(cfg Config) (*Publisher, error)
+```
+
+PublisherConnect connects publisher to the pub/sub queue using provided config
+
+<a name="Publisher.PublishNewBlock"></a>
+### func \(\*Publisher\) [PublishNewBlock](<https://github.com/bartossh/Computantis/blob/main/natsclient/pub.go#L24>)
+
+```go
+func (p *Publisher) PublishNewBlock(blk block.Block) error
+```
+
+PublishNewBlock publishes new block.
+
+<a name="Subscriber"></a>
+## type [Subscriber](<https://github.com/bartossh/Computantis/blob/main/natsclient/sub.go#L15-L19>)
+
+Subscriber provides functionality to pull messages from the pub/sub queue.
+
+```go
+type Subscriber struct {
+    // contains filtered or unexported fields
+}
+```
+
+<a name="SubscriberConnect"></a>
+### func [SubscriberConnect](<https://github.com/bartossh/Computantis/blob/main/natsclient/sub.go#L24>)
+
+```go
+func SubscriberConnect(cfg Config) (*Subscriber, error)
+```
+
+SubscriberConnect connects publisher to the pub/sub queue using provided config
+
+<a name="Subscriber.SubscribeNewBlock"></a>
+### func \(\*Subscriber\) [SubscribeNewBlock](<https://github.com/bartossh/Computantis/blob/main/natsclient/sub.go#L33>)
+
+```go
+func (s *Subscriber) SubscribeNewBlock(call BlockSubscriberCallback, log logger.Logger) error
+```
+
+SubscribeNewBlock subscribes to pub/sub queue for a new block read.
+
+# protobufcompiled
+
+```go
+import "github.com/bartossh/Computantis/protobufcompiled"
+```
+
+## Index
+
+- [Variables](<#variables>)
+- [type Block](<#Block>)
+  - [func \(\*Block\) Descriptor\(\) \(\[\]byte, \[\]int\)](<#Block.Descriptor>)
+  - [func \(x \*Block\) GetDifficulty\(\) uint64](<#Block.GetDifficulty>)
+  - [func \(x \*Block\) GetHash\(\) \[\]byte](<#Block.GetHash>)
+  - [func \(x \*Block\) GetIndex\(\) uint64](<#Block.GetIndex>)
+  - [func \(x \*Block\) GetNonce\(\) uint64](<#Block.GetNonce>)
+  - [func \(x \*Block\) GetPrevHash\(\) \[\]byte](<#Block.GetPrevHash>)
+  - [func \(x \*Block\) GetTimestamp\(\) uint64](<#Block.GetTimestamp>)
+  - [func \(x \*Block\) GetTrxHashes\(\) \[\]\[\]byte](<#Block.GetTrxHashes>)
+  - [func \(\*Block\) ProtoMessage\(\)](<#Block.ProtoMessage>)
+  - [func \(x \*Block\) ProtoReflect\(\) protoreflect.Message](<#Block.ProtoReflect>)
+  - [func \(x \*Block\) Reset\(\)](<#Block.Reset>)
+  - [func \(x \*Block\) String\(\) string](<#Block.String>)
+
+
+## Variables
+
+<a name="File_block_proto"></a>
+
+```go
+var File_block_proto protoreflect.FileDescriptor
+```
+
+<a name="Block"></a>
+## type [Block](<https://github.com/bartossh/Computantis/blob/main/protobufcompiled/block.pb.go#L23-L35>)
+
+
+
+```go
+type Block struct {
+    TrxHashes  [][]byte `protobuf:"bytes,1,rep,name=trx_hashes,json=trxHashes,proto3" json:"trx_hashes,omitempty"`
+    Hash       []byte   `protobuf:"bytes,2,opt,name=hash,proto3" json:"hash,omitempty"`
+    PrevHash   []byte   `protobuf:"bytes,3,opt,name=prev_hash,json=prevHash,proto3" json:"prev_hash,omitempty"`
+    Index      uint64   `protobuf:"varint,4,opt,name=index,proto3" json:"index,omitempty"`
+    Timestamp  uint64   `protobuf:"varint,5,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+    Nonce      uint64   `protobuf:"varint,6,opt,name=nonce,proto3" json:"nonce,omitempty"`
+    Difficulty uint64   `protobuf:"varint,7,opt,name=difficulty,proto3" json:"difficulty,omitempty"`
+    // contains filtered or unexported fields
+}
+```
+
+<a name="Block.Descriptor"></a>
+### func \(\*Block\) [Descriptor](<https://github.com/bartossh/Computantis/blob/main/protobufcompiled/block.pb.go#L65>)
+
+```go
+func (*Block) Descriptor() ([]byte, []int)
+```
+
+Deprecated: Use Block.ProtoReflect.Descriptor instead.
+
+<a name="Block.GetDifficulty"></a>
+### func \(\*Block\) [GetDifficulty](<https://github.com/bartossh/Computantis/blob/main/protobufcompiled/block.pb.go#L111>)
+
+```go
+func (x *Block) GetDifficulty() uint64
+```
+
+
+
+<a name="Block.GetHash"></a>
+### func \(\*Block\) [GetHash](<https://github.com/bartossh/Computantis/blob/main/protobufcompiled/block.pb.go#L76>)
+
+```go
+func (x *Block) GetHash() []byte
+```
+
+
+
+<a name="Block.GetIndex"></a>
+### func \(\*Block\) [GetIndex](<https://github.com/bartossh/Computantis/blob/main/protobufcompiled/block.pb.go#L90>)
+
+```go
+func (x *Block) GetIndex() uint64
+```
+
+
+
+<a name="Block.GetNonce"></a>
+### func \(\*Block\) [GetNonce](<https://github.com/bartossh/Computantis/blob/main/protobufcompiled/block.pb.go#L104>)
+
+```go
+func (x *Block) GetNonce() uint64
+```
+
+
+
+<a name="Block.GetPrevHash"></a>
+### func \(\*Block\) [GetPrevHash](<https://github.com/bartossh/Computantis/blob/main/protobufcompiled/block.pb.go#L83>)
+
+```go
+func (x *Block) GetPrevHash() []byte
+```
+
+
+
+<a name="Block.GetTimestamp"></a>
+### func \(\*Block\) [GetTimestamp](<https://github.com/bartossh/Computantis/blob/main/protobufcompiled/block.pb.go#L97>)
+
+```go
+func (x *Block) GetTimestamp() uint64
+```
+
+
+
+<a name="Block.GetTrxHashes"></a>
+### func \(\*Block\) [GetTrxHashes](<https://github.com/bartossh/Computantis/blob/main/protobufcompiled/block.pb.go#L69>)
+
+```go
+func (x *Block) GetTrxHashes() [][]byte
+```
+
+
+
+<a name="Block.ProtoMessage"></a>
+### func \(\*Block\) [ProtoMessage](<https://github.com/bartossh/Computantis/blob/main/protobufcompiled/block.pb.go#L50>)
+
+```go
+func (*Block) ProtoMessage()
+```
+
+
+
+<a name="Block.ProtoReflect"></a>
+### func \(\*Block\) [ProtoReflect](<https://github.com/bartossh/Computantis/blob/main/protobufcompiled/block.pb.go#L52>)
+
+```go
+func (x *Block) ProtoReflect() protoreflect.Message
+```
+
+
+
+<a name="Block.Reset"></a>
+### func \(\*Block\) [Reset](<https://github.com/bartossh/Computantis/blob/main/protobufcompiled/block.pb.go#L37>)
+
+```go
+func (x *Block) Reset()
+```
+
+
+
+<a name="Block.String"></a>
+### func \(\*Block\) [String](<https://github.com/bartossh/Computantis/blob/main/protobufcompiled/block.pb.go#L46>)
+
+```go
+func (x *Block) String() string
 ```
 
 
@@ -2724,8 +3006,6 @@ func (l Logger) Write(p []byte) (n int, err error)
 import "github.com/bartossh/Computantis/stress"
 ```
 
-Stress is a package that provides a simple way to stress test your code on the full cycle of transaction processing.
-
 ## Index
 
 
@@ -3260,8 +3540,8 @@ Wallet holds public and private key of the wallet owner.
 
 ```go
 type Wallet struct {
-    Private ed25519.PrivateKey `json:"private" bson:"private"` // TODO: Make ephemaral structure with public filelds for json, bson encoding and make this fields private.
-    Public  ed25519.PublicKey  `json:"public" bson:"public"`
+    Private ed25519.PrivateKey `gob:"private"`
+    Public  ed25519.PublicKey  `gob:"public"`
 }
 ```
 

@@ -13,11 +13,11 @@ type Publisher struct {
 }
 
 // PublisherConnect connects publisher to the pub/sub queue using provided config
-func PublisherConnect(cfg Config) (Publisher, error) {
+func PublisherConnect(cfg Config) (*Publisher, error) {
 	var p Publisher
 	var err error
 	p.socket, err = connect(cfg)
-	return p, err
+	return &p, err
 }
 
 // PublishNewBlock publishes new block.

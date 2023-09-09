@@ -12,16 +12,29 @@ import (
 	"github.com/bartossh/Computantis/stdoutwriter"
 )
 
-func TestPubSubCycle(t *testing.T) {
-	var idx uint64 = 111
+func natsPubSubTestHelper(tb testing.TB) (*Publisher, *Subscriber) {
 	cfg := Config{
 		Address: "nats://127.0.0.1:4222",
 		Name:    "integration-test-1",
 		Token:   "D9pHfuiEQPXtqPqPdyxozi8kU2FlHqC0FlSRIzpwDI0=",
 	}
+
+	p, err := PublisherConnect(cfg)
+	assert.Nil(tb, err)
+
+	s, err := SubscriberConnect(cfg)
+	assert.Nil(tb, err)
+
+	return p, s
+}
+
+func TestPubSubCycle(t *testing.T) {
+	var idx uint64 = 111
 	testBlk := block.Block{
 		Index: idx,
 	}
+
+	p, s := natsPubSubTestHelper(t)
 
 	callbackOnErr := func(err error) {
 		fmt.Println("Error with logger: ", err)
@@ -33,13 +46,7 @@ func TestPubSubCycle(t *testing.T) {
 
 	log := logging.New(callbackOnErr, callbackOnFatal, stdoutwriter.Logger{})
 
-	p, err := PublisherConnect(cfg)
-	assert.Nil(t, err)
-
-	s, err := SubscriberConnect(cfg)
-	assert.Nil(t, err)
-
-	err = p.PublishNewBlock(testBlk)
+	err := p.PublishNewBlock(testBlk)
 	assert.Nil(t, err)
 
 	var wg sync.WaitGroup
@@ -58,4 +65,34 @@ func TestPubSubCycle(t *testing.T) {
 	assert.Nil(t, err)
 	err = s.Disconnect()
 	assert.Nil(t, err)
+}
+
+func BenchmarkNatsConnection(b *testing.B) {
+	var idx uint64 = 111
+	testBlk := block.Block{
+		Index: idx,
+	}
+
+	p, s := natsPubSubTestHelper(b)
+
+	callbackOnErr := func(err error) {
+		fmt.Println("Error with logger: ", err)
+	}
+
+	callbackOnFatal := func(err error) {
+		panic(fmt.Sprintf("Error with logger: %s", err))
+	}
+
+	log := logging.New(callbackOnErr, callbackOnFatal, stdoutwriter.Logger{})
+
+	call := func(blk *block.Block) {
+		assert.Equal(b, idx, blk.Index)
+	}
+	err := s.SubscribeNewBlock(call, log)
+	assert.Nil(b, err)
+
+	for n := 0; n < b.N; n++ {
+		err := p.PublishNewBlock(testBlk)
+		assert.Nil(b, err)
+	}
 }
