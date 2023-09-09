@@ -18,9 +18,10 @@ import (
 	"github.com/bartossh/Computantis/dataprovider"
 	"github.com/bartossh/Computantis/logging"
 	"github.com/bartossh/Computantis/logo"
+	"github.com/bartossh/Computantis/natsclient"
+	"github.com/bartossh/Computantis/notaryserver"
 	"github.com/bartossh/Computantis/reactive"
 	"github.com/bartossh/Computantis/repository"
-	"github.com/bartossh/Computantis/server"
 	"github.com/bartossh/Computantis/stdoutwriter"
 	"github.com/bartossh/Computantis/telemetry"
 	"github.com/bartossh/Computantis/wallet"
@@ -31,8 +32,8 @@ const (
 	rxBufferSize = 100
 )
 
-const usage = `The Central Computantis API server is responsible for validating, storing transactions and
-forging blocks in immutable blockchain history. The Central Computantis Node is a heart of the whole Computantis system.`
+const usage = `The Notary Computantis API server is responsible for validating, storing transactions and
+forging blocks in immutable blockchain history. The Notary Computantis Node is a heart of the whole Computantis system.`
 
 func main() {
 	logo.Display()
@@ -189,8 +190,20 @@ func run(cfg configuration.Configuration) {
 		return
 	}
 
-	err = server.Run(
-		ctx, cfg.Server, trxDB, nodeRegisterDB, addressDB, tokenDB, ladger,
+	pub, err := natsclient.PublisherConnect(cfg.Nats)
+	if err != nil {
+		log.Error(err.Error())
+		c <- os.Interrupt
+		return
+	}
+	defer func() {
+		if err := pub.Disconnect(); err != nil {
+			log.Error(err.Error())
+		}
+	}()
+
+	err = notaryserver.Run(
+		ctx, cfg.NotaryServer, trxDB, pub, addressDB, tokenDB, ladger,
 		dataProvider, tele, log, rxBlock.Subscribe(), rxTrxIssuer.Subscribe())
 	if err != nil {
 		log.Error(err.Error())

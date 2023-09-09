@@ -7,7 +7,8 @@ import (
 )
 
 const (
-	PubSubNewBlock string = "new_block"
+	PubSubNewBlock     string = "new_block"
+	PubSubAwaitingTrxs string = "awaiting_trxs_for_addresses"
 )
 
 // Config contains all arguments required to connect to the nats setvice

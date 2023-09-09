@@ -1,4 +1,4 @@
-package server
+package notaryserver
 
 import (
 	"context"
@@ -19,11 +19,12 @@ import (
 
 const (
 	checkForRegisteredNodesInterval = 5 * time.Second
+	transactionsUpdateTick          = time.Millisecond * 100
 )
 
 const (
 	ApiVersion = "1.0.0"
-	Header     = "Computantis-Central"
+	Header     = "Computantis-Notary"
 )
 
 const (
@@ -64,22 +65,21 @@ const (
 )
 
 const (
-	MetricsURL              = "/metrics"                        // URL to check service metrics
-	AliveURL                = "/alive"                          // URL to check if server is alive and version.
-	DiscoverCentralNodesURL = "/discover"                       // URL to discover all running central nodes.
-	SearchAddressURL        = searchGroupURL + addressURL       // URL to search for address.
-	SearchBlockURL          = searchGroupURL + blockURL         // URL to search for block that contains transaction hash.
-	ProposeTransactionURL   = transactionGroupURL + proposeURL  // URL to propose transaction signed by the issuer.
-	ConfirmTransactionURL   = transactionGroupURL + confirmURL  // URL to confirm transaction signed by the receiver.
-	RejectTransactionURL    = transactionGroupURL + rejectURL   // URL to reject transaction signed only by issuer.
-	AwaitedTransactionURL   = transactionGroupURL + awaitedURL  // URL to get awaited transactions for the receiver.
-	IssuedTransactionURL    = transactionGroupURL + issuedURL   // URL to get issued transactions for the issuer.
-	RejectedTransactionURL  = transactionGroupURL + rejectedURL // URL to get rejected transactions for given address.
-	ApprovedTransactionURL  = transactionGroupURL + approvedURL // URL to get approved transactions for given address.
-	DataToValidateURL       = validatorGroupURL + dataURL       // URL to get data to validate address by signing rew message.
-	CreateAddressURL        = addressGroupURL + createURL       // URL to create new address.
-	GenerateTokenURL        = tokenGroupURL + generateURL       // URL to generate new token.
-	WsURL                   = "/ws"                             // URL to connect to websocket.
+	MetricsURL             = "/metrics"                        // URL to check service metrics
+	AliveURL               = "/alive"                          // URL to check if server is alive and version.
+	SearchAddressURL       = searchGroupURL + addressURL       // URL to search for address.
+	SearchBlockURL         = searchGroupURL + blockURL         // URL to search for block that contains transaction hash.
+	ProposeTransactionURL  = transactionGroupURL + proposeURL  // URL to propose transaction signed by the issuer.
+	ConfirmTransactionURL  = transactionGroupURL + confirmURL  // URL to confirm transaction signed by the receiver.
+	RejectTransactionURL   = transactionGroupURL + rejectURL   // URL to reject transaction signed only by issuer.
+	AwaitedTransactionURL  = transactionGroupURL + awaitedURL  // URL to get awaited transactions for the receiver.
+	IssuedTransactionURL   = transactionGroupURL + issuedURL   // URL to get issued transactions for the issuer.
+	RejectedTransactionURL = transactionGroupURL + rejectedURL // URL to get rejected transactions for given address.
+	ApprovedTransactionURL = transactionGroupURL + approvedURL // URL to get approved transactions for given address.
+	DataToValidateURL      = validatorGroupURL + dataURL       // URL to get data to validate address by signing rew message.
+	CreateAddressURL       = addressGroupURL + createURL       // URL to create new address.
+	GenerateTokenURL       = tokenGroupURL + generateURL       // URL to generate new token.
+	WsURL                  = "/ws"                             // URL to connect to websocket.
 )
 
 const queryLimit = 100
@@ -88,14 +88,6 @@ var (
 	ErrWrongPortSpecified = errors.New("port must be between 1 and 65535")
 	ErrWrongMessageSize   = errors.New("message size must be between 1024 and 15000000")
 )
-
-// Register abstracts node registration operations.
-type Register interface {
-	RegisterNode(ctx context.Context, n, ws string) error
-	UnregisterNode(ctx context.Context, n string) error
-	ReadRegisteredNodesAddresses(ctx context.Context) ([]string, error)
-	CountRegistered(ctx context.Context) (int, error)
-}
 
 // AddressReaderWriterModifier abstracts address operations.
 type AddressReaderWriterModifier interface {
@@ -159,6 +151,12 @@ type ReactiveTrxIssued interface {
 	Channel() <-chan string
 }
 
+// NodesComunicationPublisher provides facade access to communication between nodes publisher endpoint.
+type NodesComunicationPublisher interface {
+	PublishNewBlock(blk block.Block) error
+	PublishAddressesAwaitingTrxs(addresses []string) error
+}
+
 // Config contains configuration of the server.
 type Config struct {
 	WebsocketAddress string `yaml:"websocket_address"` // Address of the websocket server.
@@ -168,13 +166,12 @@ type Config struct {
 
 type server struct {
 	trxProv      TrxWriteReadRejectApprover
-	register     Register
+	pub          NodesComunicationPublisher
 	addressProv  AddressReaderWriterModifier
 	tokenProv    TokenWriteInvalidateChecker
 	bookkeeping  Bookkeeper
 	randDataProv RandomDataProvideValidator
 	tele         providers.HistogramProvider
-	hub          *hub
 	log          logger.Logger
 	rxBlock      ReactiveBlock
 	rxTrxIssued  ReactiveTrxIssued
@@ -184,7 +181,7 @@ type server struct {
 // Run initializes routing and runs the server. To stop the server cancel the context.
 // It blocks until the context is canceled.
 func Run(
-	ctx context.Context, c Config, trxProv TrxWriteReadRejectApprover, register Register,
+	ctx context.Context, c Config, trxProv TrxWriteReadRejectApprover, pub NodesComunicationPublisher,
 	addressProv AddressReaderWriterModifier, tokenProv TokenWriteInvalidateChecker, bookkeeping Bookkeeper,
 	pv RandomDataProvideValidator, tele providers.HistogramProvider, log logger.Logger,
 	rxBlock ReactiveBlock, rxTrxIssued ReactiveTrxIssued,
@@ -198,18 +195,16 @@ func Run(
 	}
 
 	id := primitive.NewObjectID().Hex()
-	register.RegisterNode(ctxx, id, c.WebsocketAddress)
 
 	s := &server{
 		dataSize:     c.DataSizeBytes,
+		pub:          pub,
 		trxProv:      trxProv,
-		register:     register,
 		addressProv:  addressProv,
 		tokenProv:    tokenProv,
 		bookkeeping:  bookkeeping,
 		randDataProv: pv,
 		tele:         tele,
-		hub:          newHub(log),
 		log:          log,
 		rxBlock:      rxBlock,
 		rxTrxIssued:  rxTrxIssued,
@@ -228,7 +223,6 @@ func Run(
 	router.Use(recover.New())
 	router.Get(MetricsURL, monitor.New(monitor.Config{Title: fmt.Sprintf("Central Node %s", id)}))
 	router.Get(AliveURL, s.alive)
-	router.Get(DiscoverCentralNodesURL, s.discover)
 
 	search := router.Group(searchGroupURL)
 	search.Post(addressURL, s.address)
@@ -267,8 +261,6 @@ func Run(
 	s.tele.CreateUpdateObservableHistogtram(tokenGenerateTelemetryHistogram, "Generate token endpoint request duration on [ ms ].")
 	s.tele.CreateUpdateObservableHistogtram(wsSocketListTelemetryHistogram, "Websocket read socket list endpoint request duration on [ ms ].")
 
-	router.Group(WsURL, func(c *fiber.Ctx) error { return s.wsWrapper(ctxx, c) })
-
 	go func() {
 		if err := bookkeeping.Run(ctxx); err != nil {
 			log.Error(err.Error())
@@ -280,20 +272,12 @@ func Run(
 			cancel()
 		}
 	}()
-	go s.hub.run(ctxx)
 	go s.runSubscriber(ctxx)
-	go s.runControlCentralNodesRegistration(ctxx)
 
 	<-ctxx.Done()
 
 	if errx := router.Shutdown(); errx != nil {
 		err = errors.Join(err, errx)
-	}
-
-	ctxxx, cancelx := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancelx()
-	if err := register.UnregisterNode(ctxxx, id); err != nil {
-		log.Fatal(err.Error())
 	}
 
 	return err
@@ -314,7 +298,7 @@ func validateConfig(c *Config) error {
 func (s *server) runSubscriber(ctx context.Context) {
 	defer s.rxBlock.Cancel()
 	defer s.rxTrxIssued.Cancel()
-	ticker := time.NewTicker(time.Second)
+	ticker := time.NewTicker(transactionsUpdateTick)
 	defer ticker.Stop()
 
 	receiverAddrSet := make(map[string]struct{}, 100)
@@ -324,13 +308,8 @@ func (s *server) runSubscriber(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case b := <-s.rxBlock.Channel():
-			m := Message{
-				Command:               CommandNewBlock,
-				Error:                 "",
-				Block:                 b,
-				IssuedTrxForAddresses: []string{},
-			}
-			s.hub.broadcast <- &m
+			_ = b
+			// TODO: broadcast block
 		case recAddr := <-s.rxTrxIssued.Channel():
 			receiverAddrSet[recAddr] = struct{}{}
 		case <-ticker.C:
@@ -343,56 +322,9 @@ func (s *server) runSubscriber(ctx context.Context) {
 				addresses = append(addresses, addr)
 			}
 
-			m := Message{
-				Command:               CommandNewTrxIssued,
-				Error:                 "",
-				Block:                 block.Block{},
-				IssuedTrxForAddresses: addresses,
-			}
+			// TODO: broadcast transactions
 
-			s.hub.broadcast <- &m
-
-			receiverAddrSet = make(map[string]struct{}, 100)
+			receiverAddrSet = make(map[string]struct{}, 1000)
 		}
 	}
-}
-
-func (s *server) runControlCentralNodesRegistration(ctx context.Context) {
-	socketCount := 0
-	tc := time.NewTicker(checkForRegisteredNodesInterval)
-	defer tc.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-tc.C: // TODO: introduce trxProvsitory table subscription to react to change
-			count, err := s.register.CountRegistered(ctx)
-			if err != nil {
-				s.log.Error(err.Error())
-				continue
-			}
-			if socketCount != count {
-				err = s.broadcastSockets(ctx)
-				if err != nil {
-					s.log.Error(err.Error())
-				}
-				socketCount = count
-			}
-		}
-	}
-}
-
-func (s *server) broadcastSockets(ctx context.Context) error {
-	sockets, err := s.register.ReadRegisteredNodesAddresses(ctx)
-	if err != nil {
-		return err
-	}
-	s.hub.broadcast <- &Message{
-		Command:               CommandSocketList,
-		Error:                 "",
-		Block:                 block.Block{},
-		IssuedTrxForAddresses: []string{},
-		Sockets:               sockets,
-	}
-	return nil
 }

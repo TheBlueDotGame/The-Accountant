@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package tutorial;
+package computantis;
 
 option go_package = "github.com/bartossh/Computantis/protobufcompiled";
 
@@ -13,4 +13,3 @@ message Block {
   uint64 nonce = 6;
   uint64 difficulty = 7;
 }
-

@@ -23,6 +23,9 @@ var (
 	ErrAddressIsInvalid                 = errors.New("address is invalid")
 )
 
+// TrxAddressesSubscriberCallback is a method or function performing compoutantion on the transactions addresses.
+type TrxAddressesSubscriberCallback func(addresses []string)
+
 // Signer provides signing and address methods.
 type Signer interface {
 	Sign(message []byte) (digest [32]byte, signature []byte)

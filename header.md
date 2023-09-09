@@ -205,7 +205,7 @@ go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
 
 Generate protobuf files with:
 ```sh
-protoc --proto_path=protobuf --go_out=protobufcompiled --go_opt=paths=source_relative block.proto
+protoc --proto_path=protobuf --go_out=protobufcompiled --go_opt=paths=source_relative block.proto addresses.proto
 ```
 
 

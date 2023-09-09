@@ -5,11 +5,11 @@ import (
 	"errors"
 	"time"
 
-	"github.com/bartossh/Computantis/validator"
+	"github.com/bartossh/Computantis/helperserver"
 )
 
 // WriteValidatorStatus writes validator status to the database.
-func (db DataBase) WriteValidatorStatus(ctx context.Context, vs *validator.Status) error {
+func (db DataBase) WriteValidatorStatus(ctx context.Context, vs *helperserver.Status) error {
 	timestamp := vs.CreatedAt.UnixMicro()
 	_, err := db.inner.ExecContext(ctx,
 		`INSERT INTO 
@@ -22,16 +22,16 @@ func (db DataBase) WriteValidatorStatus(ctx context.Context, vs *validator.Statu
 }
 
 // ReadLastNValidatorStatuses reads last validator statuses from the database.
-func (db DataBase) ReadLastNValidatorStatuses(ctx context.Context, last int64) ([]validator.Status, error) {
+func (db DataBase) ReadLastNValidatorStatuses(ctx context.Context, last int64) ([]helperserver.Status, error) {
 	rows, err := db.inner.QueryContext(ctx, "SELECT * FROM validator_status ORDER BY index DESC LIMIT $1", last)
 	if err != nil {
 		return nil, errors.Join(ErrSelectFailed, err)
 	}
 	defer rows.Close()
 
-	var results []validator.Status
+	var results []helperserver.Status
 	for rows.Next() {
-		var vs validator.Status
+		var vs helperserver.Status
 		var timestamp int64
 		if err := rows.Scan(&vs.ID, &vs.Index, &vs.Valid, &timestamp); err != nil {
 			return nil, errors.Join(ErrScanFailed, err)

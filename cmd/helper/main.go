@@ -15,18 +15,19 @@ import (
 	"github.com/bartossh/Computantis/configuration"
 	"github.com/bartossh/Computantis/dataprovider"
 	"github.com/bartossh/Computantis/fileoperations"
+	"github.com/bartossh/Computantis/helperserver"
 	"github.com/bartossh/Computantis/logging"
 	"github.com/bartossh/Computantis/logo"
+	"github.com/bartossh/Computantis/natsclient"
 	"github.com/bartossh/Computantis/repository"
 	"github.com/bartossh/Computantis/stdoutwriter"
 	"github.com/bartossh/Computantis/telemetry"
-	"github.com/bartossh/Computantis/validator"
 	"github.com/bartossh/Computantis/wallet"
 	"github.com/bartossh/Computantis/webhooks"
 	"github.com/bartossh/Computantis/zincaddapter"
 )
 
-const usage = `The Validator Computantis API server validates transactions and blocks. In additions Validator offers
+const usage = `The Helper Computantis API server validates transactions and blocks. In additions Helper offers
 web-hook endpoint where any application with valid address can register to listen for new blocks or transactions for 
 given wallet public address.`
 
@@ -79,7 +80,7 @@ func run(cfg configuration.Configuration) {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 
-	statusDB, err := repository.Connect(ctx, cfg.StorageConfig.ValidatorStatusDatabase)
+	statusDB, err := repository.Connect(ctx, cfg.StorageConfig.HelperStatusDatabase)
 	if err != nil {
 		fmt.Println(err)
 		c <- os.Interrupt
@@ -132,7 +133,19 @@ func run(cfg configuration.Configuration) {
 		return
 	}
 
-	if err := validator.Run(ctx, cfg.Validator, statusDB, log, verify, wh, &wl, dataProvider); err != nil {
+	sub, err := natsclient.SubscriberConnect(cfg.Nats)
+	if err != nil {
+		log.Error(err.Error())
+		c <- os.Interrupt
+		return
+	}
+	defer func() {
+		if err := sub.Disconnect(); err != nil {
+			log.Error(err.Error())
+		}
+	}()
+
+	if err := helperserver.Run(ctx, cfg.HelperServer, sub, statusDB, log, verify, wh, &wl, dataProvider); err != nil {
 		log.Error(err.Error())
 	}
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/bartossh/Computantis/block"
 	"github.com/bartossh/Computantis/logger"
 	"github.com/bartossh/Computantis/protobufcompiled"
+	"github.com/bartossh/Computantis/transaction"
 )
 
 // Subscriber provides functionality to pull messages from the pub/sub queue.
@@ -17,8 +18,6 @@ type Subscriber struct {
 	subs map[string]*nats.Subscription
 	mux  sync.RWMutex
 }
-
-type BlockSubscriberCallback func(blk *block.Block)
 
 // SubscriberConnect connects publisher to the pub/sub queue using provided config
 func SubscriberConnect(cfg Config) (*Subscriber, error) {
@@ -30,7 +29,7 @@ func SubscriberConnect(cfg Config) (*Subscriber, error) {
 }
 
 // SubscribeNewBlock subscribes to pub/sub queue for a new block read.
-func (s *Subscriber) SubscribeNewBlock(call BlockSubscriberCallback, log logger.Logger) error {
+func (s *Subscriber) SubscribeNewBlock(call block.BlockSubscriberCallback, log logger.Logger) error {
 	sub, err := s.conn.Subscribe(PubSubNewBlock, func(m *nats.Msg) {
 		var protoBlk protobufcompiled.Block
 		if err := proto.Unmarshal(m.Data, &protoBlk); err != nil {
@@ -59,6 +58,27 @@ func (s *Subscriber) SubscribeNewBlock(call BlockSubscriberCallback, log logger.
 	s.mux.Lock()
 	defer s.mux.Unlock()
 	s.subs[PubSubNewBlock] = sub
+
+	return nil
+}
+
+// SubscribeNewTransactionsForAddresses subscribes to pub/sub queue for a addresses awaitng transactions.
+func (s *Subscriber) SubscribeNewTransactionsForAddresses(call transaction.TrxAddressesSubscriberCallback, log logger.Logger) error {
+	sub, err := s.conn.Subscribe(PubSubAwaitingTrxs, func(m *nats.Msg) {
+		var protoAddresses protobufcompiled.Addresses
+		if err := proto.Unmarshal(m.Data, &protoAddresses); err != nil {
+			log.Error(err.Error())
+			return
+		}
+		call(protoAddresses.Array)
+	})
+	if err != nil {
+		sub.Unsubscribe()
+		return err
+	}
+	s.mux.Lock()
+	defer s.mux.Unlock()
+	s.subs[PubSubAwaitingTrxs] = sub
 
 	return nil
 }

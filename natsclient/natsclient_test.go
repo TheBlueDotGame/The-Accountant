@@ -4,7 +4,6 @@ package natsclient
 
 import (
 	"fmt"
-	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -51,17 +50,46 @@ func TestPubSubCycle(t *testing.T) {
 	err := p.PublishNewBlock(testBlk)
 	assert.Nil(t, err)
 
-	var wg sync.WaitGroup
-	wg.Add(1)
-
 	call := func(blk *block.Block) {
 		assert.Equal(t, idx, blk.Index)
-		wg.Done()
 	}
 	err = s.SubscribeNewBlock(call, log)
 	assert.Nil(t, err)
 
-	wg.Wait()
+	err = p.Disconnect()
+	assert.Nil(t, err)
+	err = s.Disconnect()
+	assert.Nil(t, err)
+}
+
+func TestSingleProducerMultipleConsumerPattern(t *testing.T) {
+	var idx uint64 = 111
+	testBlk := block.Block{
+		Index: idx,
+	}
+
+	p, s := natsPubSubTestHelper(t)
+
+	callbackOnErr := func(err error) {
+		fmt.Println("Error with logger: ", err)
+	}
+
+	callbackOnFatal := func(err error) {
+		panic(fmt.Sprintf("Error with logger: %s", err))
+	}
+
+	log := logging.New(callbackOnErr, callbackOnFatal, stdoutwriter.Logger{})
+
+	err := p.PublishNewBlock(testBlk)
+	assert.Nil(t, err)
+
+	for i := 0; i < 1000; i++ {
+		call := func(blk *block.Block) {
+			assert.Equal(t, idx, blk.Index)
+		}
+		err = s.SubscribeNewBlock(call, log)
+		assert.Nil(t, err)
+	}
 
 	err = p.Disconnect()
 	assert.Nil(t, err)

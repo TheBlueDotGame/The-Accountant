@@ -1,4 +1,4 @@
-package validator
+package helperserver
 
 import (
 	"github.com/bartossh/Computantis/block"

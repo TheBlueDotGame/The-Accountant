@@ -44,3 +44,18 @@ func (p *Publisher) PublishNewBlock(blk block.Block) error {
 
 	return nil
 }
+
+// PublishAddressesAwaitingTrxs publishes addresses of the clients that have awaiting transactions.
+func (p *Publisher) PublishAddressesAwaitingTrxs(addresses []string) error {
+	protoAddresses := protobufcompiled.Addresses{}
+	protoAddresses.Array = addresses
+	msg, err := proto.Marshal(&protoAddresses)
+	if err != nil {
+		return err
+	}
+	if err := p.conn.Publish(PubSubAwaitingTrxs, msg); err != nil {
+		return err
+	}
+
+	return nil
+}

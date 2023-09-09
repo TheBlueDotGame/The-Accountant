@@ -11,6 +11,9 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+// BlockSubscriberCallback is a method or function than will be called on the received Block.
+type BlockSubscriberCallback func(blk *Block)
+
 var separator = []byte{}
 
 // Block holds block information.

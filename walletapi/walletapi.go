@@ -7,21 +7,22 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/bartossh/Computantis/logger"
-	"github.com/bartossh/Computantis/server"
-	"github.com/bartossh/Computantis/transaction"
-	"github.com/bartossh/Computantis/validator"
-	"github.com/bartossh/Computantis/walletmiddleware"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/monitor"
 	"github.com/gofiber/fiber/v2/middleware/recover"
+
+	"github.com/bartossh/Computantis/helperserver"
+	"github.com/bartossh/Computantis/logger"
+	"github.com/bartossh/Computantis/notaryserver"
+	"github.com/bartossh/Computantis/transaction"
+	"github.com/bartossh/Computantis/walletmiddleware"
 )
 
-// Config is the configuration for the server
+// Config is the configuration for the notaryserver
 type Config struct {
-	Port             string `yaml:"port"`
-	CentralNodeURL   string `yaml:"central_node_url"`
-	ValidatorNodeURL string `yaml:"validator_node_url"`
+	Port          string `yaml:"port"`
+	NotaryNodeURL string `yaml:"notary_node_url"`
+	HelperNodeURL string `yaml:"helper_node_url"`
 }
 
 type app struct {
@@ -36,8 +37,8 @@ const (
 )
 
 const (
-	MetricsURL              = server.MetricsURL                       // URL serves service metrics.
-	Alive                   = server.AliveURL                         // URL allows to check if server is alive and if sign service is of the same version.
+	MetricsURL              = notaryserver.MetricsURL                 // URL serves service metrics.
+	Alive                   = notaryserver.AliveURL                   // URL allows to check if server is alive and if sign service is of the same version.
 	Address                 = "/address"                              // URL allows to check wallet public address
 	IssueTransaction        = "/transactions/issue"                   // URL allows to issue transaction signed by the issuer.
 	ConfirmTransaction      = "/transaction/sign"                     // URL allows to sign transaction received by the receiver.
@@ -56,18 +57,19 @@ const (
 // Run runs the service application that exposes the API for creating, validating and signing transactions.
 // This blocks until the context is canceled.
 func Run(ctx context.Context, cfg Config, log logger.Logger, timeout time.Duration, fw transaction.Verifier,
-	wrs walletmiddleware.WalletReadSaver, walletCreator walletmiddleware.NewSignValidatorCreator) error {
+	wrs walletmiddleware.WalletReadSaver, walletCreator walletmiddleware.NewSignValidatorCreator,
+) error {
 	ctxx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	c := walletmiddleware.NewClient(cfg.CentralNodeURL, timeout, fw, wrs, walletCreator)
+	c := walletmiddleware.NewClient(cfg.NotaryNodeURL, timeout, fw, wrs, walletCreator)
 	defer c.FlushWalletFromMemory()
 
 	if err := c.ReadWalletFromFile(); err != nil {
 		log.Info(fmt.Sprintf("error with reading wallet from file: %s", err))
 	}
 
-	v := walletmiddleware.NewClient(cfg.ValidatorNodeURL, timeout, fw, wrs, walletCreator)
+	v := walletmiddleware.NewClient(cfg.HelperNodeURL, timeout, fw, wrs, walletCreator)
 	defer v.FlushWalletFromMemory()
 
 	if err := v.ReadWalletFromFile(); err != nil {
@@ -82,8 +84,8 @@ func Run(ctx context.Context, cfg Config, log logger.Logger, timeout time.Durati
 		StrictRouting: true,
 		ReadTimeout:   time.Second * 5,
 		WriteTimeout:  time.Second * 5,
-		ServerHeader:  server.Header,
-		AppName:       server.ApiVersion,
+		ServerHeader:  notaryserver.Header,
+		AppName:       notaryserver.ApiVersion,
 		Concurrency:   1024,
 	})
 	router.Use(recover.New())
@@ -123,7 +125,7 @@ func Run(ctx context.Context, cfg Config, log logger.Logger, timeout time.Durati
 }
 
 // AliveResponse is containing server alive data such as ApiVersion and APIHeader.
-type AliveResponse server.AliveResponse
+type AliveResponse notaryserver.AliveResponse
 
 func (a *app) alive(c *fiber.Ctx) error {
 	if err := a.centralNodeClient.ValidateApiVersion(); err != nil {
@@ -132,8 +134,8 @@ func (a *app) alive(c *fiber.Ctx) error {
 	return c.JSON(
 		AliveResponse{
 			Alive:      true,
-			APIVersion: server.ApiVersion,
-			APIHeader:  server.Header,
+			APIVersion: notaryserver.ApiVersion,
+			APIHeader:  notaryserver.Header,
 		})
 }
 
@@ -393,7 +395,7 @@ func (a *app) createUpdateWebHook(c *fiber.Ctx) error {
 		a.log.Error(err.Error())
 		return errors.Join(fiber.ErrBadRequest, err)
 	}
-	var res validator.CreateRemoveUpdateHookResponse
+	var res helperserver.CreateRemoveUpdateHookResponse
 
 	if err := a.validatorNodeClient.CreateWebhook(req.URL); err != nil {
 		res.Ok = false

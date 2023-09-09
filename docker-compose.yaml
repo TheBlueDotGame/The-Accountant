@@ -59,12 +59,12 @@ services:
     networks:
       - computantis_network
 
-  central-node:
-    container_name: central-node
+  notary-node:
+    container_name: notary-node
     build: 
       dockerfile: Dockerfile
       args: 
-        - "APPLICATION=central"
+        - "APPLICATION=notary"
     restart: unless-stopped
     ports:
       - "8000:8000"
@@ -74,19 +74,19 @@ services:
       postgres:
         condition: service_healthy
  
-  validator-node:
-    container_name: validator-node
+  helper-node:
+    container_name: helper-node
     build: 
       dockerfile: Dockerfile
       args: 
-        - "APPLICATION=validator"
+        - "APPLICATION=helper"
     restart: unless-stopped
     ports:
       - "8010:8000"
     networks:
       - computantis_network
     depends_on:
-      central-node:
+      notary-node:
         condition: service_started
   
   client-node:
@@ -101,7 +101,7 @@ services:
     networks:
       - computantis_network
     depends_on:
-      validator-node:
+      helper-node:
         condition: service_started
 
   # demo only
@@ -120,7 +120,7 @@ services:
     networks:
       - computantis_network
     depends_on:
-      validator-node:
+      helper-node:
         condition: service_started
 
   # demo only
@@ -160,7 +160,7 @@ services:
     networks:
       - computantis_network
     depends_on:
-      central-node:
+      notary-node:
         condition: service_started
 
   prometheus:
@@ -183,7 +183,7 @@ services:
     networks:
       - computantis_network
     depends_on:
-      central-node:
+      notary-node:
         condition: service_started
 
   grafana:
