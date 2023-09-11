@@ -48,7 +48,7 @@ static void checksum(unsigned char *payload, unsigned char *dest, size_t payload
     return;
 }
 
-char *encode_address_from_raw(unsigned char version, unsigned char *raw, size_t len)
+char *encode_address_from_raw(unsigned char wallet_version, unsigned char *raw, size_t len)
 {
     if (len != PUBLIC_KEY_LEN)
     {
@@ -57,7 +57,7 @@ char *encode_address_from_raw(unsigned char version, unsigned char *raw, size_t 
     }
 
     unsigned char encode[1+PUBLIC_KEY_LEN+CHECKSUM_LEN];
-    encode[0] = version;
+    encode[0] = wallet_version;
     void *flag = memcpy(encode+1, raw, PUBLIC_KEY_LEN);
     if (flag == NULL)
     {
@@ -89,7 +89,7 @@ char *encode_address_from_raw(unsigned char version, unsigned char *raw, size_t 
     return b58;
 }
 
-int decode_address_to_raw(unsigned char version, char *str, unsigned char **raw)
+int decode_address_to_raw(unsigned char wallet_version, char *str, unsigned char **raw)
 {
     size_t len = PUBLIC_KEY_LEN+CHECKSUM_LEN+1;
     unsigned char decoded[PUBLIC_KEY_LEN+CHECKSUM_LEN+1]; 
@@ -109,7 +109,7 @@ int decode_address_to_raw(unsigned char version, char *str, unsigned char **raw)
     }
 
     unsigned char vrs = decoded[0];
-    if (vrs != version)
+    if (vrs != wallet_version)
     {
         return 0;
     }
@@ -129,7 +129,7 @@ int decode_address_to_raw(unsigned char version, char *str, unsigned char **raw)
     }
 
     unsigned char pub_key_vrs[1+PUBLIC_KEY_LEN];
-    pub_key_vrs[0] = version;
+    pub_key_vrs[0] = wallet_version;
     flag = memcpy(pub_key_vrs+1, *raw, PUBLIC_KEY_LEN);
     if (flag == NULL)
     {

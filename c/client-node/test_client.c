@@ -21,13 +21,7 @@
 #include "./signature/signature.h"
 #include "./config/config.h"
 #include "./transaction/transaction.h"
-
-///
-/// Version is current wallet version.
-/// Any wallet upgrades needs to upgrade wallet version.
-/// Wallet version shall stay consistant with the Go Wallet implementation.
-///
-const unsigned char version = 0x00; // TODO: Move to wallet package when created.
+#include "./wallet/wallet.h"
 
 void setUp(void)
 {
@@ -126,12 +120,12 @@ static void test_encode_decode_public_address()
     TEST_ASSERT_EQUAL_UINT(32, raw_key.len); 
 
     // Test
-    char *address = encode_address_from_raw(version, raw_key.buffer, raw_key.len);
+    char *address = encode_address_from_raw(WalletVersion, raw_key.buffer, raw_key.len);
     TEST_ASSERT_NOT_NULL(address);
     TEST_ASSERT_GREATER_OR_EQUAL_size_t(48, strlen(address));
 
     RawCryptoKey new_raw_key = (RawCryptoKey){ .buffer = NULL, .len = 0};
-    new_raw_key.len = decode_address_to_raw(version, address, &new_raw_key.buffer);
+    new_raw_key.len = decode_address_to_raw(WalletVersion, address, &new_raw_key.buffer);
     TEST_ASSERT_NOT_NULL(new_raw_key.buffer);
     TEST_ASSERT_EQUAL_UINT((size_t)1+PUBLIC_KEY_LEN+CHECKSUM_LEN, new_raw_key.len);
 
@@ -384,7 +378,7 @@ static void test_transaction_new_success()
     TEST_ASSERT_NOT_NULL(receiver_raw_key.buffer);
     TEST_ASSERT_EQUAL_UINT(32, receiver_raw_key.len);
 
-    char *receiver_address = encode_address_from_raw(receiver_raw_key.buffer, receiver_raw_key.len);
+    char *receiver_address = encode_address_from_raw(WalletVersion, receiver_raw_key.buffer, receiver_raw_key.len);
     TEST_ASSERT_NOT_NULL(receiver_address);
     TEST_ASSERT_GREATER_OR_EQUAL_size_t(32, strlen(receiver_address));
 

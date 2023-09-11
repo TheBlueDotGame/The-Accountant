@@ -21,7 +21,7 @@
 /// Encoder uses base58 encoding algorithm and returns pointer to nullable string.
 /// Caller takes responsibility of freeing the returned string. 
 ///
-char *encode_address_from_raw(unsigned char version, unsigned char  *raw, size_t len);
+char *encode_address_from_raw(unsigned char wallet_version, unsigned char  *raw, size_t len);
 
 /// 
 /// decode_address_to_raw decodes nullable string to raw bytes.
@@ -32,6 +32,6 @@ char *encode_address_from_raw(unsigned char version, unsigned char  *raw, size_t
 /// Returns length of unsigned char *raw bytes array.
 /// Caller takes the responsibility to free the unsigned char *raw bytes array.
 ///
-int decode_address_to_raw(unsigned char version, char *str, unsigned char **raw);
+int decode_address_to_raw(unsigned char wallet_version, char *str, unsigned char **raw);
 
 #endif
