@@ -64,7 +64,11 @@ char *encode_address_from_raw(unsigned char wallet_version, unsigned char *raw, 
         printf("Copying public key failed\n");
         exit(1);
     }
-    flag = memcpy(encode+1+PUBLIC_KEY_LEN, raw, CHECKSUM_LEN);
+
+    unsigned char actual_checksum[CHECKSUM_LEN];
+    checksum(encode, actual_checksum, 1+PUBLIC_KEY_LEN, CHECKSUM_LEN);
+
+    flag = memcpy(encode+1+PUBLIC_KEY_LEN, actual_checksum, CHECKSUM_LEN);
     if (flag == NULL)
     {
         printf("Copying public key failed\n");
@@ -124,7 +128,7 @@ int decode_address_to_raw(unsigned char wallet_version, char *str, unsigned char
     flag = memcpy(*raw, decoded + 1, PUBLIC_KEY_LEN);
     if (flag == NULL)
     {
-        printf("Copying public key failed failed\n");
+        printf("Copying public key failed\n");
         exit(1);
     }
 
@@ -133,7 +137,7 @@ int decode_address_to_raw(unsigned char wallet_version, char *str, unsigned char
     flag = memcpy(pub_key_vrs+1, *raw, PUBLIC_KEY_LEN);
     if (flag == NULL)
     {
-        printf("Copying public key failed failed\n");
+        printf("Copying public key failed\n");
         exit(1);
     }
 
@@ -141,8 +145,9 @@ int decode_address_to_raw(unsigned char wallet_version, char *str, unsigned char
     checksum(pub_key_vrs, target_checksum, 1+PUBLIC_KEY_LEN, CHECKSUM_LEN);
 
     int equality = strncmp((char *)actual_checksum, (char *)target_checksum, CHECKSUM_LEN);
-    if (equality == 0)
+    if (equality != 0)
     {
+        printf("Checksum differs, address is corrupted\n");
         free(*raw);
         *raw = NULL;
         return 0;

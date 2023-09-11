@@ -15,6 +15,7 @@
 
 #include <ctype.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 ///
 /// encode_address_from_raw encodes new public address string from raw buffer.
@@ -23,14 +24,10 @@
 ///
 char *encode_address_from_raw(unsigned char wallet_version, unsigned char  *raw, size_t len);
 
-/// 
-/// decode_address_to_raw decodes nullable string to raw bytes.
-/// unsigned char **raw bytes array represents the variable that points to the array of bytes that the key will be decoded to.
-/// It will override the underlining unsigned char *raw bytes array.
-/// Best practice is to pass unsigned char **raw as a pointer to NULL pointer.
-/// Decoder uses base58 decoding algorithm.
-/// Returns length of unsigned char *raw bytes array.
-/// Caller takes the responsibility to free the unsigned char *raw bytes array.
+///
+/// decode_address_to_raw decodes a public address string into a raw buffer/bytes array.
+/// It returns the number of bytes in the raw buffer, or 0 on error.
+/// On a successful invocation, the caller is responsible to free the unsigned char *raw bytes array.
 ///
 int decode_address_to_raw(unsigned char wallet_version, char *str, unsigned char **raw);
 
