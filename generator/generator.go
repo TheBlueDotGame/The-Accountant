@@ -9,8 +9,8 @@ import (
 	"github.com/bartossh/Computantis/emulator"
 )
 
-// GenerateToFile generates data to file in json format.
-func GenerateToFile(filePath string, count, vMin, vMax, maMin, maMax int64) error {
+// ToJSONFile generates data to file in json format.
+func ToJSONFile(filePath string, count, vMin, vMax, maMin, maMax int64) error {
 	if vMin >= vMax || maMin >= maMax || count == 0 {
 		return errors.New("wrong parameter")
 	}
