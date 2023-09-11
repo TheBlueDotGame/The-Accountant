@@ -92,7 +92,7 @@ CREATE INDEX validator_created_at ON validatorStatus USING BTREE (created_at);
 
 CREATE TABLE IF NOT EXISTS nodes (
    id serial PRIMARY KEY,
-   node VARCHAR ( 64 ) UNIQUE NOT NULL,
+   node VARCHAR ( 64 ) UNIQUE NOT NULL
 );
 
 CREATE INDEX nodes_index ON nodes USING HASH (node);

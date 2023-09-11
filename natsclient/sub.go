@@ -36,7 +36,7 @@ func (s *Subscriber) SubscribeNewBlock(call block.BlockSubscriberCallback, log l
 			log.Error(err.Error())
 			return
 		}
-		var blk block.Block
+		blk := &block.Block{}
 		blk.TrxHashes = make([][32]byte, 0, len(protoBlk.TrxHashes))
 		for _, h := range protoBlk.TrxHashes {
 			var a [32]byte
@@ -49,7 +49,7 @@ func (s *Subscriber) SubscribeNewBlock(call block.BlockSubscriberCallback, log l
 		blk.Timestamp = protoBlk.Timestamp
 		blk.Nonce = protoBlk.Nonce
 		blk.Difficulty = protoBlk.Difficulty
-		call(&blk)
+		call(blk)
 	})
 	if err != nil {
 		sub.Unsubscribe()
