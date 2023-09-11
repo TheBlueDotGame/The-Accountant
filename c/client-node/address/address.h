@@ -20,7 +20,7 @@
 /// Encoder uses base58 encoding algorithm and returns pointer to nullable string.
 /// Caller takes responsibility of freeing the returned string. 
 ///
-char *encode_address_from_raw(unsigned char  *raw, size_t len);
+char *encode_address_from_raw(unsigned char *raw, size_t len);
 
 /// 
 /// decode_address_to_raw decodes nullable string to raw bytes.

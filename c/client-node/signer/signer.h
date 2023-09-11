@@ -29,8 +29,8 @@ typedef struct {
 /// RawCryprographicKey holds the raw key as bytes buffer;
 ///
 typedef struct {
-    unsigned char *buffer;
-    size_t len;
+    unsigned char   *buffer;
+    size_t          len;
 } RawCryptoKey;
 
 ///
