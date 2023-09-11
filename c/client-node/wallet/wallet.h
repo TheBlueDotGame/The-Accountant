@@ -12,4 +12,4 @@
 #define WALLET_H
 #define WalletVersion 0x00
 
-#endif // DEBUG
+#endif
