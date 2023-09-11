@@ -161,6 +161,7 @@ func run(action int, cfg fileoperations.Config) error {
 		if err := h.SaveToPem(&w); err != nil {
 			return err
 		}
+		printWalletPublicAddress(w.Address())
 		return nil
 	case actionFromGobToPem:
 		h := fileoperations.New(cfg, aeswrapper.New())
@@ -171,6 +172,7 @@ func run(action int, cfg fileoperations.Config) error {
 		if err := h.SaveToPem(&w); err != nil {
 			return err
 		}
+		printWalletPublicAddress(w.Address())
 		return nil
 
 	case actionFromPemToGob:
@@ -182,11 +184,16 @@ func run(action int, cfg fileoperations.Config) error {
 		if err := h.SaveWallet(&w); err != nil {
 			return err
 		}
+		printWalletPublicAddress(w.Address())
 		return nil
 	default:
 		return errors.New("unimplemented action")
 
 	}
+}
+
+func printWalletPublicAddress(address string) {
+	pterm.Info.Printf("Wallet public address is [ %s ]\n", address)
 }
 
 func printSuccess() {
