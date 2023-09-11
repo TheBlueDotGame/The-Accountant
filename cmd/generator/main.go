@@ -54,7 +54,7 @@ func main() {
 			},
 		},
 		Action: func(cCtx *cli.Context) error {
-			return generator.GenerateToFile(file, int64(count), int64(vmin), int64(vmax), int64(mamin), int64(mamax))
+			return generator.ToJSONFile(file, int64(count), int64(vmin), int64(vmax), int64(mamin), int64(mamax))
 		},
 	}
 

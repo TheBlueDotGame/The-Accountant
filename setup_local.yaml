@@ -1,42 +1,42 @@
-is_profiling: true
+is_profiling: false
 bookkeeper:
   difficulty: 1
   block_write_timestamp: 300
   block_transactions_size: 1000
 server:
-  port: 8000
+  port: 8888
   data_size_bytes: 15000000
   websocket_address: "ws://central-node:8000/ws"
 storage_config:
   transaction_database:
-    conn_str: "postgres://computantis:computantis@postgres:5432"
+    conn_str: "postgres://computantis:computantis@localhost:5432"
     database_name: "computantis"
     is_ssl: false
   blockchain_database:
-    conn_str: "postgres://computantis:computantis@postgres:5432"
+    conn_str: "postgres://computantis:computantis@localhost:5432"
     database_name: "computantis"
     is_ssl: false
   node_register_database:
-    conn_str: "postgres://computantis:computantis@postgres:5432"
+    conn_str: "postgres://computantis:computantis@localhost:5432"
     database_name: "computantis"
     is_ssl: false
   address_database:
-    conn_str: "postgres://computantis:computantis@postgres:5432"
+    conn_str: "postgres://computantis:computantis@localhost:5432"
     database_name: "computantis"
     is_ssl: false
   token_database:
-    conn_str: "postgres://computantis:computantis@postgres:5432"
+    conn_str: "postgres://computantis:computantis@localhost:5432"
     database_name: "computantis"
     is_ssl: false
   validator_status_database:
-    conn_str: "postgres://computantis:computantis@postgres:5432"
+    conn_str: "postgres://computantis:computantis@localhost:5432"
     database_name: "computantis"
     is_ssl: false
 dataprovider:
   longevity: 300
 validator:
-  central_node_address: "http://central-node:8000"
-  port: 8000
+  central_node_address: "http://localhost:8888"
+  port: 8008
   token: "jykkeD6Tr6xikkYwC805kVoFThm8VGEHStTFk1lIU6RgEf7p3vjFpPQFI3VP9SYeARjYh2jecMSYsmgddjZZcy32iySHijJQ"
 file_operator:
   wallet_path: "test_wallet"
@@ -54,6 +54,6 @@ emulator:
   port: "8060"
   public_url: "http://subscriber-node:8060" # If running emulators locally, best to set it up as your local network machine IP.
 zinc_logger:
-  address: http://zincsearch:4080 
+  address: http://localhost:4080 
   index: central
   token: Basic YWRtaW46emluY3NlYXJjaA==

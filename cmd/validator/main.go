@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"runtime/pprof"
 	"time"
 
 	"github.com/pterm/pterm"
@@ -74,6 +75,12 @@ func main() {
 }
 
 func run(cfg configuration.Configuration) {
+	if cfg.IsProfiling {
+		f, _ := os.Create("default_validator.pgo")
+		defer f.Close()
+		pprof.StartCPUProfile(f)
+		defer pprof.StopCPUProfile()
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	c := make(chan os.Signal, 1)
