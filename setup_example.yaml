@@ -5,11 +5,10 @@ bookkeeper:
 notary_server:
   port: 8000
   data_size_bytes: 15000000
-  websocket_address: "ws://notary-node:8000/ws"
 helper_server:
   port: 8000
 nats:
-  server_address: "nats://localhost:6222"
+  server_address: "nats://nats:4222"
   client_name: "notary-1"
   token: "D9pHfuiEQPXtqPqPdyxozi8kU2FlHqC0FlSRIzpwDI0="
 storage_config:

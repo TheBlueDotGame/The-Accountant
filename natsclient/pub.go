@@ -21,7 +21,7 @@ func PublisherConnect(cfg Config) (*Publisher, error) {
 }
 
 // PublishNewBlock publishes new block.
-func (p *Publisher) PublishNewBlock(blk block.Block) error {
+func (p *Publisher) PublishNewBlock(blk *block.Block) error {
 	protoBlk := protobufcompiled.Block{}
 	protoBlk.TrxHashes = make([][]byte, 0, len(blk.TrxHashes))
 	for _, h := range blk.TrxHashes {

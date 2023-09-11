@@ -168,8 +168,8 @@ type IssueTransactionRequest struct {
 
 // IssueTransactionResponse is response to issued transaction.
 type IssueTransactionResponse struct {
-	Ok  bool   `json:"ok"`
 	Err string `json:"err"`
+	Ok  bool   `json:"ok"`
 }
 
 func (a *app) issueTransaction(c *fiber.Ctx) error {
@@ -195,8 +195,8 @@ type ConfirmTransactionRequest struct {
 
 // ConfirmTransactionResponse is response of confirming transaction.
 type ConfirmTransactionResponse struct {
-	Ok  bool   `json:"ok"`
 	Err string `json:"err"`
+	Ok  bool   `json:"ok"`
 }
 
 func (a *app) confirmReceivedTransaction(c *fiber.Ctx) error {
@@ -223,9 +223,9 @@ type RejectTransactionsRequest struct {
 
 // RejectTransactionsResponse is response of rejecting transactions.
 type RejectTransactionsResponse struct {
-	Ok         bool       `json:"ok"`
 	Err        string     `json:"err"`
 	TrxsHashes [][32]byte `json:"trxs_hashes"`
+	Ok         bool       `json:"ok"`
 }
 
 func (a *app) rejectTransactions(c *fiber.Ctx) error {
@@ -249,9 +249,9 @@ func (a *app) rejectTransactions(c *fiber.Ctx) error {
 
 // IssuedTransactionResponse is a response of issued transactions.
 type IssuedTransactionResponse struct {
-	Ok           bool                      `json:"ok"`
 	Err          string                    `json:"err"`
 	Transactions []transaction.Transaction `json:"transactions"`
+	Ok           bool                      `json:"ok"`
 }
 
 func (a *app) issuedTransactions(c *fiber.Ctx) error {
@@ -266,9 +266,9 @@ func (a *app) issuedTransactions(c *fiber.Ctx) error {
 
 // ReceivedTransactionResponse is a response of issued transactions.
 type ReceivedTransactionResponse struct {
-	Ok           bool                      `json:"ok"`
 	Err          string                    `json:"err"`
 	Transactions []transaction.Transaction `json:"transactions"`
+	Ok           bool                      `json:"ok"`
 }
 
 func (a *app) receivedTransactions(c *fiber.Ctx) error {
@@ -283,9 +283,9 @@ func (a *app) receivedTransactions(c *fiber.Ctx) error {
 
 // RejectedTransactionResponse is a response of rejected transactions.
 type RejectedTransactionResponse struct {
-	Ok           bool                      `json:"ok"`
 	Err          string                    `json:"err"`
 	Transactions []transaction.Transaction `json:"transactions"`
+	Ok           bool                      `json:"ok"`
 }
 
 func (a *app) rejectedTransactions(c *fiber.Ctx) error {
@@ -314,9 +314,9 @@ func (a *app) rejectedTransactions(c *fiber.Ctx) error {
 
 // ApprovedTransactionResponse is a response of approved transactions.
 type ApprovedTransactionResponse struct {
-	Ok           bool                      `json:"ok"`
 	Err          string                    `json:"err"`
 	Transactions []transaction.Transaction `json:"transactions"`
+	Ok           bool                      `json:"ok"`
 }
 
 func (a *app) approvedTransactions(c *fiber.Ctx) error {
@@ -350,8 +350,8 @@ type CreateWalletRequest struct {
 
 // CreateWalletResponse is response to create wallet.
 type CreateWalletResponse struct {
-	Ok  bool   `json:"ok"`
 	Err string `json:"err"`
+	Ok  bool   `json:"ok"`
 }
 
 func (a *app) createWallet(c *fiber.Ctx) error {
@@ -384,8 +384,8 @@ type CreateWebHookRequest struct {
 
 // CreateWebhookResponse is a response describing effect of creating a web hook
 type CreateWebhookResponse struct {
-	Ok  bool   `json:"ok"`
 	Err string `json:"error"`
+	Ok  bool   `json:"ok"`
 }
 
 func (a *app) createUpdateWebHook(c *fiber.Ctx) error {
@@ -409,9 +409,9 @@ func (a *app) createUpdateWebHook(c *fiber.Ctx) error {
 
 // ReadWalletPublicAddressResponse is a response to read wallet public address.
 type ReadWalletPublicAddressResponse struct {
-	Ok      bool   `json:"ok"`
 	Err     string `json:"err"`
 	Address string `json:"address"`
+	Ok      bool   `json:"ok"`
 }
 
 func (a *app) readWalletPublicAddress(c *fiber.Ctx) error {

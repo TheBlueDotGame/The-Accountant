@@ -153,15 +153,14 @@ type ReactiveTrxIssued interface {
 
 // NodesComunicationPublisher provides facade access to communication between nodes publisher endpoint.
 type NodesComunicationPublisher interface {
-	PublishNewBlock(blk block.Block) error
+	PublishNewBlock(blk *block.Block) error
 	PublishAddressesAwaitingTrxs(addresses []string) error
 }
 
 // Config contains configuration of the server.
 type Config struct {
-	WebsocketAddress string `yaml:"websocket_address"` // Address of the websocket server.
-	Port             int    `yaml:"port"`              // Port to listen on.
-	DataSizeBytes    int    `yaml:"data_size_bytes"`   // Size of the data to be stored in the transaction.
+	Port          int `yaml:"port"`            // Port to listen on.
+	DataSizeBytes int `yaml:"data_size_bytes"` // Size of the data to be stored in the transaction.
 }
 
 type server struct {
@@ -308,8 +307,7 @@ func (s *server) runSubscriber(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case b := <-s.rxBlock.Channel():
-			_ = b
-			// TODO: broadcast block
+			s.pub.PublishNewBlock(&b)
 		case recAddr := <-s.rxTrxIssued.Channel():
 			receiverAddrSet[recAddr] = struct{}{}
 		case <-ticker.C:
@@ -322,7 +320,7 @@ func (s *server) runSubscriber(ctx context.Context) {
 				addresses = append(addresses, addr)
 			}
 
-			// TODO: broadcast transactions
+			s.pub.PublishAddressesAwaitingTrxs(addresses)
 
 			receiverAddrSet = make(map[string]struct{}, 1000)
 		}
