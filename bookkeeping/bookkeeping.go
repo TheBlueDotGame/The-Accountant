@@ -87,6 +87,8 @@ type BlockFinder interface {
 // NodeRegister abstracts node registration operations.
 type NodeRegister interface {
 	CountRegistered(ctx context.Context) (int, error)
+	RegisterNode(ctx context.Context, n string) error
+	UnregisterNode(ctx context.Context, n string) error
 }
 
 // NodeSyncRegister abstracts all the methods that are expected from repository.
@@ -192,20 +194,30 @@ func New(
 // Run starts a goroutine and can be stopped by cancelling the context.
 // It is non-blocking and concurrent safe.
 func (l *Ledger) Run(ctx context.Context) error {
+	if err := l.nsc.RegisterNode(ctx, l.id); err != nil {
+		return fmt.Errorf("bookkeeper node [ %v ] failed, %w", l.id, err)
+	}
 	count, err := l.nsc.CountRegistered(ctx)
 	if err != nil {
-		return fmt.Errorf("looking for registerd nodes failed, %w", err)
+		return fmt.Errorf("bookkeeper node [ %v ] looking for registerd nodes failed, %w", l.id, err)
 	}
 	if count == 1 {
 		if err := l.forgeTemporaryTrxs(ctx); err != nil {
-			return fmt.Errorf("forging temporary failed, %w", err)
+			return fmt.Errorf("bookkeeper node [ %v ], forging temporary failed, %w", l.id, err)
 		}
-		l.log.Info("forging temporary transactions finished")
+		l.log.Info(fmt.Sprintf("bookkeeper node [ %v ], forging temporary transactions finished", l.id))
 	}
 
 	go func(ctx context.Context) {
 		ticker := time.NewTicker(time.Duration(l.config.BlockWriteTimestamp) * time.Second)
 		defer ticker.Stop()
+		defer func() {
+			ctxxx, cancelx := context.WithTimeout(context.Background(), time.Second*5)
+			defer cancelx()
+			if err := l.nsc.UnregisterNode(ctxxx, l.id); err != nil {
+				l.log.Fatal(err.Error())
+			}
+		}()
 		for {
 			select {
 			case <-ctx.Done():
