@@ -78,9 +78,6 @@ services:
       - "9100:9100"
     networks:
       - computantis_network
-    depends_on:
-      central-node:
-        condition: service_started
 
   prometheus:
     image: prom/prometheus:latest
@@ -101,9 +98,6 @@ services:
       - "9090:9090"
     networks:
       - computantis_network
-    depends_on:
-      central-node:
-        condition: service_started
 
   grafana:
     image: grafana/grafana:latest
