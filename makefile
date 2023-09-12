@@ -87,6 +87,12 @@ docker-down:
 docker-logs:
 	docker compose logs -f
 
+docker-restart-notary:
+	docker-compose up -d --no-deps --build notary-node
+
+docker-restart-helper:
+	docker-compose up -d --no-deps --build helper-node
+
 docker-build-all: docker-build-notary docker-build-helper docker-build-client docker-build-subscriber docker-build-publisher
 
 docker-build-notary:

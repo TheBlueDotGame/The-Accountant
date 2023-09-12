@@ -1,7 +1,7 @@
 is_profiling: false
 bookkeeper:
   difficulty: 1
-  block_write_timestamp: 300
+  block_write_timestamp: 30
   block_transactions_size: 1000
 server:
   port: 8888

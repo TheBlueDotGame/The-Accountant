@@ -1,4 +1,4 @@
-//go:build integrations
+//go:build integration
 
 package natsclient
 
@@ -41,6 +41,9 @@ func natsPubSubTestHelper(tb testing.TB) (*Publisher, *Subscriber) {
 	}
 
 	p, err := PublisherConnect(cfg)
+	if err != nil {
+		fmt.Println(err)
+	}
 	assert.NilError(tb, err)
 
 	s, err := SubscriberConnect(cfg)

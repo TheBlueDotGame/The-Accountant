@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/binary"
+	"fmt"
 	"math"
 	"math/big"
 	"time"
@@ -60,18 +61,21 @@ func New(difficulty, next uint64, prevHash [32]byte, trxHashes [][32]byte) Block
 // Validate validates the Block.
 // Validations goes in the same order like Block hashing algorithm,
 // just the proof of work part is not required as Nonce is already known.
-func (b *Block) Validate(trxHashes [][32]byte) bool {
-	if !b.validateTransactionsHashesMatch(trxHashes) {
-		return false
+func (b *Block) Validate(trxHashes [][32]byte) error {
+	if err := b.validateTransactionsHashesMatch(trxHashes); err != nil {
+		return err
 	}
 	trxHash := b.hashTrxs()
 	proof := newProof(b)
-	return proof.validate(trxHash)
+	if !proof.validate(trxHash) {
+		return fmt.Errorf("transaction proof isn't valid, nonce value of [ %v ] is corrupted", b.Nonce)
+	}
+	return nil
 }
 
-func (b *Block) validateTransactionsHashesMatch(trxHashes [][32]byte) bool {
+func (b *Block) validateTransactionsHashesMatch(trxHashes [][32]byte) error {
 	if len(trxHashes) != len(b.TrxHashes) {
-		return false
+		return fmt.Errorf("given trxs hashes differs in length, has: [ %v ], got [ %v ]", len(b.TrxHashes), len(trxHashes))
 	}
 
 	set := make(map[[32]byte]struct{})
@@ -80,16 +84,15 @@ func (b *Block) validateTransactionsHashesMatch(trxHashes [][32]byte) bool {
 	}
 
 	if len(set) != len(b.TrxHashes) {
-		return false
+		return fmt.Errorf("given trxs hashes are not unique, got total: [ %v ], has unique: [ %v ]", len(trxHashes), len(set))
 	}
 
 	for _, h := range trxHashes {
 		if _, ok := set[h]; !ok {
-			return false
+			return fmt.Errorf("there is no such hash in the block [ %v ]", h)
 		}
 	}
-
-	return true
+	return nil
 }
 
 func (b *Block) hashTrxs() [32]byte {
