@@ -24,8 +24,8 @@ build-all: build-local
 	GOOS=linux GOARCH=arm GOARM=5 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/raspberry_pi_zero/helper -ldflags="-s -w" cmd/helper/main.go
  
 build-tools:
-	CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/dedicated/generator -ldflags="-s -w" cmd/generator/main.go
-	CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/dedicated/wallet -ldflags="-s -w" cmd/wallet/main.go
+	CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/dedicated/generator -ldflags="-s -w" -gcflags -m cmd/generator/main.go
+	CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/dedicated/wallet -ldflags="-s -w" -gcflags -m cmd/wallet/main.go
 
 build-tools-all: build-tools
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/linux_x86/generator -ldflags="-s -w" cmd/generator/main.go

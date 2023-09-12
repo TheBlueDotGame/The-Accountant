@@ -48,6 +48,34 @@ func read(path string) (config, error) {
 	return cfg, err
 }
 
+func reporter(ctx context.Context, spinner *pterm.SpinnerPrinter) chan struct{} {
+	ch := make(chan struct{}, 1000)
+	start := time.Now()
+	var total, counter uint64
+	go func(ctx context.Context, spinner *pterm.SpinnerPrinter, ch <-chan struct{}) {
+		t := time.NewTicker(time.Second)
+		defer t.Stop()
+	Loop:
+		for {
+			select {
+			case <-t.C:
+				now := time.Now()
+				timeDiffTotal := now.Sub(start)
+				avr := total / uint64(timeDiffTotal.Seconds())
+				spinner.UpdateText(fmt.Sprintf("In last second the system handled [ %v ] full cycle of transactions, on average [ %v ] per second.", counter, avr))
+				counter = 0
+			case <-ch:
+				total++
+				counter++
+			case <-ctx.Done():
+				break Loop
+			}
+		}
+	}(ctx, spinner, ch)
+
+	return ch
+}
+
 func main() {
 	cfg, err := read("stress_test_setup.yaml")
 	if err != nil {
@@ -121,8 +149,12 @@ func main() {
 	spinner, _ := pterm.DefaultSpinner.Start(fmt.Sprintf("Starting [ %v ] independent connections to stress test central node", len(connections)))
 	time.Sleep(time.Second * 5)
 	spinner.UpdateText("Running stress test ...")
+
+	ch := reporter(ctx, spinner)
+	defer close(ch)
+
 	for _, c := range connections {
-		go func(ctx context.Context, c connection) {
+		go func(ctx context.Context, c connection, ch chan<- struct{}) {
 			addr := fmt.Sprintf("http://%s:%v", cfg.CentralNodeIP, cfg.CentralNodePort)
 			issuer := walletmiddleware.NewClient(addr, 5*time.Second, wallet.Helper{}, fileoperations.Helper{}, wallet.New)
 			err := issuer.ValidateApiVersion()
@@ -181,12 +213,13 @@ func main() {
 							cancel()
 						}
 					}
+					ch <- struct{}{}
 				}
 			}
 
 			issuer.FlushWalletFromMemory()
 			receiver.FlushWalletFromMemory()
-		}(ctx, c)
+		}(ctx, c, ch)
 	}
 
 	<-ctx.Done()

@@ -12,13 +12,16 @@
 #include <stdio.h>
 #include <string.h>
 #include <openssl/evp.h>
+#include <sys/time.h>
 #include "test-framework/unity.h"
+#include "unit-test.h"
 #include "client.h"
 #include "./signer/signer.h"
 #include "./address/address.h"
 #include "./signature/signature.h"
 #include "./config/config.h"
-#include "unit-test.h"
+#include "./transaction/transaction.h"
+#include "./wallet/wallet.h"
 
 void setUp(void)
 {
@@ -117,14 +120,14 @@ static void test_encode_decode_public_address()
     TEST_ASSERT_EQUAL_UINT(32, raw_key.len); 
 
     // Test
-    char *address = encode_address_from_raw(raw_key.buffer, raw_key.len);
+    char *address = encode_address_from_raw(WalletVersion, raw_key.buffer, raw_key.len);
     TEST_ASSERT_NOT_NULL(address);
-    TEST_ASSERT_GREATER_OR_EQUAL_size_t(32, strlen(address));
+    TEST_ASSERT_GREATER_OR_EQUAL_size_t(48, strlen(address));
 
     RawCryptoKey new_raw_key = (RawCryptoKey){ .buffer = NULL, .len = 0};
-    new_raw_key.len = decode_address_to_raw(address, &new_raw_key.buffer);
+    new_raw_key.len = decode_address_to_raw(WalletVersion, address, &new_raw_key.buffer);
     TEST_ASSERT_NOT_NULL(new_raw_key.buffer);
-    TEST_ASSERT_EQUAL_UINT(32, new_raw_key.len);
+    TEST_ASSERT_EQUAL_UINT((size_t)1+PUBLIC_KEY_LEN+CHECKSUM_LEN, new_raw_key.len);
 
     TEST_ASSERT_EQUAL_CHAR_ARRAY(raw_key.buffer, new_raw_key.buffer, raw_key.len);
 
@@ -141,6 +144,7 @@ static void test_encode_decode_public_address()
     TEST_ASSERT_EQUAL_UINT(0, new_raw_key.len);
 
     Signer_free(&s);
+#include <sys/time.h>
     TEST_ASSERT_NULL(s.evpkey);
 }
 
@@ -271,7 +275,7 @@ static void test_signer_verify_signature_failure_corrupted_msg(void)
     EVP_PKEY *pkey = RawCryptoKey_get_evp_public_key(&raw_pub_key);
     TEST_ASSERT_NOT_NULL(pkey);
 
-    // corrupt message
+    // Corrupt message
 
     msg[3] = 'S';
     
@@ -310,7 +314,7 @@ static void test_signer_verify_signature_failure_corrupted_digest(void)
     EVP_PKEY *pkey = RawCryptoKey_get_evp_public_key(&raw_pub_key);
     TEST_ASSERT_NOT_NULL(pkey);
 
-    // corrupt message
+    // Corrupt message
 
     sig.digest_buffer[3] = 'X';
     sig.digest_buffer[4] = 'X';
@@ -361,6 +365,59 @@ static void test_handle_erroneous_config()
     }
 }
 
+static void test_transaction_new_success()
+{
+    // Prepare
+    Signer issuer = Signer_new();
+    TEST_ASSERT_NOT_NULL(issuer.evpkey);
+
+    Signer receiver = Signer_new();
+    TEST_ASSERT_NOT_NULL(receiver.evpkey);
+
+    RawCryptoKey receiver_raw_key = Signer_get_public_key(&receiver);
+    TEST_ASSERT_NOT_NULL(receiver_raw_key.buffer);
+    TEST_ASSERT_EQUAL_UINT(32, receiver_raw_key.len);
+
+    char *receiver_address = encode_address_from_raw(WalletVersion, receiver_raw_key.buffer, receiver_raw_key.len);
+    TEST_ASSERT_NOT_NULL(receiver_address);
+    TEST_ASSERT_GREATER_OR_EQUAL_size_t(32, strlen(receiver_address));
+
+    char subject[9] = "greeting\0";
+    unsigned char data[39] = "Sending greetings from the Computantis\0";
+
+    struct timeval now;
+    gettimeofday(&now, NULL);
+    long long now_time = now.tv_sec + now.tv_usec;
+
+    // Test
+    Transaction *trx = Transaction_new(subject, data, receiver_address, &issuer);
+    TEST_ASSERT_NOT_NULL(trx);
+    long long created_at = trx->created_at.tv_sec + trx->created_at.tv_usec;
+    TEST_ASSERT_GREATER_OR_EQUAL_INT64(now_time, created_at);
+    TEST_ASSERT_NOT_NULL(trx->subject);
+    TEST_ASSERT_NOT_NULL(trx->data);
+    TEST_ASSERT_NOT_NULL(trx->issuer_address);
+    TEST_ASSERT_NOT_NULL(trx->receiver_address);
+    TEST_ASSERT_NOT_NULL(trx->issuer_signature);
+    TEST_ASSERT_NULL(trx->receiver_signature);
+    TEST_ASSERT_NOT_NULL(trx->hash);
+
+    // Test cleanup
+    Transaction_free(&trx);
+    TEST_ASSERT_NULL(trx);
+
+    // Cleanup
+    RawCryptoKey_free(&receiver_raw_key);
+    TEST_ASSERT_NULL(receiver_raw_key.buffer);
+    TEST_ASSERT_EQUAL_UINT(0, receiver_raw_key.len);
+
+    Signer_free(&issuer);
+    TEST_ASSERT_NULL(issuer.evpkey);
+    Signer_free(&receiver);
+    TEST_ASSERT_NULL(receiver.evpkey);
+    free(receiver_address);
+}
+
 int main(void)
 {
     UnityBegin("test_client.c");
@@ -378,6 +435,7 @@ int main(void)
     RUN_TEST(test_signer_verify_signature_failure_corrupted_digest);
     RUN_TEST(test_read_config);
     RUN_TEST(test_handle_erroneous_config);
+    RUN_TEST(test_transaction_new_success);
 
     return UnityEnd();
 }

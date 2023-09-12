@@ -533,7 +533,7 @@ func (s *server) addressCreate(c *fiber.Ctx) error {
 	if ok, err := s.tokenProv.CheckToken(c.Context(), req.Token); !ok || err != nil {
 		if err != nil {
 			s.log.Error(fmt.Sprintf("address create endpoint, address: %s, failed to check token: %s", req.Address, err.Error()))
-			return fiber.ErrGone
+			return fiber.ErrInternalServerError
 		}
 		s.log.Error(fmt.Sprintf("address create endpoint, token: %s not found in the repository", req.Token))
 		return fiber.ErrForbidden
@@ -541,7 +541,7 @@ func (s *server) addressCreate(c *fiber.Ctx) error {
 
 	if err := s.tokenProv.InvalidateToken(c.Context(), req.Token); err != nil {
 		s.log.Error(fmt.Sprintf("address create endpoint, failed to invalidate token: %s, %s", req.Token, err.Error()))
-		return fiber.ErrGone
+		return fiber.ErrInternalServerError
 	}
 
 	if err := s.bookkeeping.VerifySignature(req.Data, req.Signature, req.Hash, req.Address); err != nil {
@@ -552,8 +552,8 @@ func (s *server) addressCreate(c *fiber.Ctx) error {
 
 	if ok, err := s.addressProv.CheckAddressExists(c.Context(), req.Address); ok || err != nil {
 		if err != nil {
-			s.log.Error(fmt.Sprintf("address create endpoint, failed to check address: %s,%s", req.Address, err.Error()))
-			return fiber.ErrGone
+			s.log.Error(fmt.Sprintf("address create endpoint, failed to check if address exists: %s,%s", req.Address, err.Error()))
+			return fiber.ErrInternalServerError
 		}
 		s.log.Error(fmt.Sprintf("address create endpoint, address already exists: %s", req.Address))
 		return fiber.ErrConflict
