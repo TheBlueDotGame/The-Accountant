@@ -45,3 +45,9 @@ c/client-node/packages/
 # test_wallet
 ./artefacts/test_wallet
 
+# pem files
+ed25519
+ed25519.pub
+
+
+
