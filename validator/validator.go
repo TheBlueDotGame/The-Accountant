@@ -123,10 +123,17 @@ func Run(
 	if !ok {
 		timeout = time.Second * 5
 	}
-	var res server.DiscoverResponse
-	httpclient.MakeGet(timeout, fmt.Sprintf("%s%s", cfg.CentralNodeAddress, server.DiscoverCentralNodesURL), &res)
 
-	a.processSocketList(ctxx, res.Sockets)
+	var res server.DiscoverResponse
+	if err := httpclient.MakeGet(timeout, fmt.Sprintf("%s%s", cfg.CentralNodeAddress, server.DiscoverCentralNodesURL), &res); err != nil {
+		cancel()
+		return err
+	}
+
+	if err := a.processSocketList(ctxx, res.Sockets); err != nil {
+		cancel()
+		return err
+	}
 
 	return a.runServer(ctxx, cancel)
 }
@@ -165,7 +172,7 @@ func (a *app) connectToSocket(ctx context.Context, address string) error {
 
 	go a.pullPump(ctxx, c, address)
 	go a.pushPump(ctxx, cancelx, c, address)
-	a.log.Info(fmt.Sprintf("validator connected to central node on address: %s", address))
+	a.log.Info(fmt.Sprintf("validator [ %s ] connected to central node on address: %s", a.wallet.Address(), address))
 
 	return nil
 }
@@ -294,7 +301,9 @@ func (a *app) processMessage(ctx context.Context, m *server.Message, remoteAddre
 	case server.CommandNewTrxIssued:
 		a.processNewTrxIssued(ctx, m.IssuedTrxForAddresses)
 	case server.CommandSocketList:
-		a.processSocketList(ctx, m.Sockets)
+		if err := a.processSocketList(ctx, m.Sockets); err != nil {
+			a.log.Error(err.Error())
+		}
 	default:
 		a.log.Error(fmt.Sprintf("validator received unknown command, %s", m.Command))
 	}
@@ -314,7 +323,7 @@ func (a *app) processNewTrxIssued(_ context.Context, receivers []string) {
 	go a.wh.PostWebhookNewTransaction(receivers) // post concurrently
 }
 
-func (a *app) processSocketList(ctx context.Context, sockets []string) {
+func (a *app) processSocketList(ctx context.Context, sockets []string) error {
 	var connect, remove []string
 	a.mux.RLock()
 	uniqueSockets := make(map[string]struct{})
@@ -332,11 +341,17 @@ func (a *app) processSocketList(ctx context.Context, sockets []string) {
 	a.mux.RUnlock()
 
 	for _, socket := range connect {
-		a.connectToSocket(ctx, socket)
+		if err := a.connectToSocket(ctx, socket); err != nil {
+			return err
+		}
 	}
 	for _, socket := range remove {
-		a.disconnectFromSocket(socket)
+		if err := a.disconnectFromSocket(socket); err != nil {
+			return err
+		}
 	}
+
+	return nil
 }
 
 func (s *app) alive(c *fiber.Ctx) error {
