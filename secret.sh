@@ -1,2 +1,1 @@
-hash=$(echo -n ${date +%s} | shasum -a 256)
-echo "hash: ${hash}"
+openssl rand -base64 32

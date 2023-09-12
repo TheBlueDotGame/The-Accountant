@@ -10,6 +10,21 @@ volumes:
   zincsearch_data_container:
 
 services:
+  nats:
+    container_name: nats
+    image: nats
+    command: "-c /etc/nats/nats.conf"
+    volumes:
+       - ./nats_config/:/etc/nats
+    ports:
+      - "6222:6222"
+      - "4222:4222"
+    expose:
+      - 4222
+    restart: unless-stopped
+    networks:
+      - computantis_network
+  
   postgres:
     container_name: postgres
     image: postgres:latest
@@ -63,9 +78,6 @@ services:
       - "9100:9100"
     networks:
       - computantis_network
-    depends_on:
-      central-node:
-        condition: service_started
 
   prometheus:
     image: prom/prometheus:latest
@@ -86,9 +98,6 @@ services:
       - "9090:9090"
     networks:
       - computantis_network
-    depends_on:
-      central-node:
-        condition: service_started
 
   grafana:
     image: grafana/grafana:latest

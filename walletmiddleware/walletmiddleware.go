@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/bartossh/Computantis/helperserver"
 	"github.com/bartossh/Computantis/httpclient"
-	"github.com/bartossh/Computantis/server"
+	"github.com/bartossh/Computantis/notaryserver"
 	"github.com/bartossh/Computantis/token"
 	"github.com/bartossh/Computantis/transaction"
-	"github.com/bartossh/Computantis/validator"
 	"github.com/bartossh/Computantis/wallet"
 )
 
@@ -54,18 +54,18 @@ func NewClient(
 // If API version not much it is returning an error as accessing the API server with different API version
 // may lead to unexpected results.
 func (c *Client) ValidateApiVersion() error {
-	var alive server.AliveResponse
-	url := fmt.Sprintf("%s%s", c.apiRoot, server.AliveURL)
+	var alive notaryserver.AliveResponse
+	url := fmt.Sprintf("%s%s", c.apiRoot, notaryserver.AliveURL)
 	if err := httpclient.MakeGet(c.timeout, url, &alive); err != nil {
 		return err
 	}
 
-	if alive.APIVersion != server.ApiVersion {
-		return errors.Join(httpclient.ErrApiVersionMismatch, fmt.Errorf("expected %s but got %s", server.ApiVersion, alive.APIVersion))
+	if alive.APIVersion != notaryserver.ApiVersion {
+		return errors.Join(httpclient.ErrApiVersionMismatch, fmt.Errorf("expected %s but got %s", notaryserver.ApiVersion, alive.APIVersion))
 	}
 
-	if alive.APIHeader != server.Header {
-		return errors.Join(httpclient.ErrApiHeaderMismatch, fmt.Errorf("expected %s but got %s", server.Header, alive.APIHeader))
+	if alive.APIHeader != notaryserver.Header {
+		return errors.Join(httpclient.ErrApiHeaderMismatch, fmt.Errorf("expected %s but got %s", notaryserver.Header, alive.APIHeader))
 	}
 
 	return nil
@@ -99,15 +99,15 @@ func (c *Client) NewWallet(token string) error {
 
 	hash, signature := w.Sign(dataToSign.Data)
 
-	reqCreateAddr := server.CreateAddressRequest{
+	reqCreateAddr := notaryserver.CreateAddressRequest{
 		Address:   w.Address(),
 		Token:     token,
 		Data:      dataToSign.Data,
 		Hash:      hash,
 		Signature: signature,
 	}
-	var resCreateAddr server.CreateAddressResponse
-	url := fmt.Sprintf("%s%s", c.apiRoot, server.CreateAddressURL)
+	var resCreateAddr notaryserver.CreateAddressResponse
+	url := fmt.Sprintf("%s%s", c.apiRoot, notaryserver.CreateAddressURL)
 	if err := httpclient.MakePost(c.timeout, url, reqCreateAddr, &resCreateAddr); err != nil {
 		c.ready = false // reset wallet ready
 		return err
@@ -151,12 +151,12 @@ func (c *Client) ProposeTransaction(receiverAddr string, subject string, data []
 		return errors.Join(httpclient.ErrSigningFailed, err)
 	}
 
-	req := server.TransactionProposeRequest{
+	req := notaryserver.TransactionProposeRequest{
 		ReceiverAddr: receiverAddr,
 		Transaction:  trx,
 	}
-	var res server.TransactionConfirmProposeResponse
-	url := fmt.Sprintf("%s%s", c.apiRoot, server.ProposeTransactionURL)
+	var res notaryserver.TransactionConfirmProposeResponse
+	url := fmt.Sprintf("%s%s", c.apiRoot, notaryserver.ProposeTransactionURL)
 	if err := httpclient.MakePost(c.timeout, url, req, &res); err != nil {
 		return errors.Join(httpclient.ErrRejectedByServer, err)
 	}
@@ -183,8 +183,8 @@ func (c *Client) ConfirmTransaction(trx *transaction.Transaction) error {
 		return errors.Join(httpclient.ErrSigningFailed, err)
 	}
 
-	var res server.TransactionConfirmProposeResponse
-	url := fmt.Sprintf("%s%s", c.apiRoot, server.ConfirmTransactionURL)
+	var res notaryserver.TransactionConfirmProposeResponse
+	url := fmt.Sprintf("%s%s", c.apiRoot, notaryserver.ConfirmTransactionURL)
 	if err := httpclient.MakePost(c.timeout, url, trx, &res); err != nil {
 		return errors.Join(httpclient.ErrRejectedByServer, err)
 	}
@@ -215,7 +215,7 @@ func (c *Client) RejectTransactions(trxs []transaction.Transaction) ([][32]byte,
 	}
 
 	hash, signature := c.w.Sign(data.Data)
-	req := server.TransactionsRejectRequest{
+	req := notaryserver.TransactionsRejectRequest{
 		Address:      addr,
 		Data:         data.Data,
 		Hash:         hash,
@@ -223,8 +223,8 @@ func (c *Client) RejectTransactions(trxs []transaction.Transaction) ([][32]byte,
 		Transactions: trxs,
 	}
 
-	var res server.TransactionsRejectResponse
-	url := fmt.Sprintf("%s%s", c.apiRoot, server.RejectTransactionURL)
+	var res notaryserver.TransactionsRejectResponse
+	url := fmt.Sprintf("%s%s", c.apiRoot, notaryserver.RejectTransactionURL)
 	if err := httpclient.MakePost(c.timeout, url, req, &res); err != nil {
 		return nil, errors.Join(httpclient.ErrRejectedByServer, err)
 	}
@@ -247,14 +247,14 @@ func (c *Client) ReadWaitingTransactions() ([]transaction.Transaction, error) {
 	}
 
 	hash, signature := c.w.Sign(data.Data)
-	req := server.TransactionsRequest{
+	req := notaryserver.TransactionsRequest{
 		Address:   c.w.Address(),
 		Data:      data.Data,
 		Hash:      hash,
 		Signature: signature,
 	}
-	var res server.AwaitedTransactionsResponse
-	url := fmt.Sprintf("%s%s", c.apiRoot, server.AwaitedTransactionURL)
+	var res notaryserver.AwaitedTransactionsResponse
+	url := fmt.Sprintf("%s%s", c.apiRoot, notaryserver.AwaitedTransactionURL)
 	if err := httpclient.MakePost(c.timeout, url, req, &res); err != nil {
 		return nil, errors.Join(httpclient.ErrRejectedByServer, err)
 	}
@@ -277,14 +277,14 @@ func (c *Client) ReadIssuedTransactions() ([]transaction.Transaction, error) {
 	}
 
 	hash, signature := c.w.Sign(data.Data)
-	req := server.TransactionsRequest{
+	req := notaryserver.TransactionsRequest{
 		Address:   c.w.Address(),
 		Data:      data.Data,
 		Hash:      hash,
 		Signature: signature,
 	}
-	var res server.IssuedTransactionsResponse
-	url := fmt.Sprintf("%s%s", c.apiRoot, server.IssuedTransactionURL)
+	var res notaryserver.IssuedTransactionsResponse
+	url := fmt.Sprintf("%s%s", c.apiRoot, notaryserver.IssuedTransactionURL)
 	if err := httpclient.MakePost(c.timeout, url, req, &res); err != nil {
 		return nil, errors.Join(httpclient.ErrRejectedByServer, err)
 	}
@@ -308,7 +308,7 @@ func (c *Client) ReadRejectedTransactions(offset, limit int) ([]transaction.Tran
 	}
 
 	hash, signature := c.w.Sign(data.Data)
-	req := server.TransactionsRequest{
+	req := notaryserver.TransactionsRequest{
 		Address:   c.w.Address(),
 		Data:      data.Data,
 		Hash:      hash,
@@ -316,8 +316,8 @@ func (c *Client) ReadRejectedTransactions(offset, limit int) ([]transaction.Tran
 		Offset:    offset,
 		Limit:     limit,
 	}
-	var res server.RejectedTransactionsResponse
-	url := fmt.Sprintf("%s%s", c.apiRoot, server.RejectedTransactionURL)
+	var res notaryserver.RejectedTransactionsResponse
+	url := fmt.Sprintf("%s%s", c.apiRoot, notaryserver.RejectedTransactionURL)
 	if err := httpclient.MakePost(c.timeout, url, req, &res); err != nil {
 		return nil, errors.Join(httpclient.ErrRejectedByServer, err)
 	}
@@ -341,7 +341,7 @@ func (c *Client) ReadApprovedTransactions(offset, limit int) ([]transaction.Tran
 	}
 
 	hash, signature := c.w.Sign(data.Data)
-	req := server.TransactionsRequest{
+	req := notaryserver.TransactionsRequest{
 		Address:   c.w.Address(),
 		Data:      data.Data,
 		Hash:      hash,
@@ -349,8 +349,8 @@ func (c *Client) ReadApprovedTransactions(offset, limit int) ([]transaction.Tran
 		Offset:    offset,
 		Limit:     limit,
 	}
-	var res server.ApprovedTransactionsResponse
-	url := fmt.Sprintf("%s%s", c.apiRoot, server.RejectedTransactionURL)
+	var res notaryserver.ApprovedTransactionsResponse
+	url := fmt.Sprintf("%s%s", c.apiRoot, notaryserver.RejectedTransactionURL)
 	if err := httpclient.MakePost(c.timeout, url, req, &res); err != nil {
 		return nil, errors.Join(httpclient.ErrRejectedByServer, err)
 	}
@@ -374,7 +374,7 @@ func (c *Client) GenerateToken(t time.Time) (token.Token, error) {
 	}
 
 	hash, signature := c.w.Sign(data.Data)
-	req := server.GenerateTokenRequest{
+	req := notaryserver.GenerateTokenRequest{
 		Address:    c.w.Address(),
 		Data:       data.Data,
 		Hash:       hash,
@@ -382,8 +382,8 @@ func (c *Client) GenerateToken(t time.Time) (token.Token, error) {
 		Expiration: t.UnixMicro(),
 	}
 
-	var res server.GenerateTokenResponse
-	url := fmt.Sprintf("%s%s", c.apiRoot, server.GenerateTokenURL)
+	var res notaryserver.GenerateTokenResponse
+	url := fmt.Sprintf("%s%s", c.apiRoot, notaryserver.GenerateTokenURL)
 	if err := httpclient.MakePost(c.timeout, url, req, &res); err != nil {
 		return token.Token{}, errors.Join(httpclient.ErrRejectedByServer, err)
 	}
@@ -417,19 +417,19 @@ func (c *Client) ReadWalletFromFile() error {
 // DataToSign returns data to sign for the current wallet.
 // Data to sign are randomly generated bytes by the server and stored in pair with the address.
 // Signing this data is a proof that the signing public address is the owner of the wallet a making request.
-func (c *Client) DataToSign() (server.DataToSignResponse, error) {
+func (c *Client) DataToSign() (notaryserver.DataToSignResponse, error) {
 	addr, err := c.Address()
 	if err != nil {
-		return server.DataToSignResponse{}, err
+		return notaryserver.DataToSignResponse{}, err
 	}
 
-	req := server.DataToSignRequest{
+	req := notaryserver.DataToSignRequest{
 		Address: addr,
 	}
-	var resp server.DataToSignResponse
-	url := fmt.Sprintf("%s%s", c.apiRoot, server.DataToValidateURL)
+	var resp notaryserver.DataToSignResponse
+	url := fmt.Sprintf("%s%s", c.apiRoot, notaryserver.DataToValidateURL)
 	if err := httpclient.MakePost(c.timeout, url, req, &resp); err != nil {
-		return server.DataToSignResponse{}, err
+		return notaryserver.DataToSignResponse{}, err
 	}
 	return resp, nil
 }
@@ -463,7 +463,7 @@ func (c *Client) CreateWebhook(webHookURL string) error {
 		return err
 	}
 
-	req := validator.CreateRemoveUpdateHookRequest{
+	req := helperserver.CreateRemoveUpdateHookRequest{
 		URL:       webHookURL,
 		Address:   addr,
 		Data:      data.Data,
@@ -471,9 +471,9 @@ func (c *Client) CreateWebhook(webHookURL string) error {
 		Signature: signature,
 	}
 
-	var res validator.CreateRemoveUpdateHookResponse
+	var res helperserver.CreateRemoveUpdateHookResponse
 
-	url := fmt.Sprintf("%s%s", c.apiRoot, validator.TransactionHookURL)
+	url := fmt.Sprintf("%s%s", c.apiRoot, helperserver.TransactionHookURL)
 	if err := httpclient.MakePost(c.timeout, url, req, &res); err != nil {
 		return err
 	}

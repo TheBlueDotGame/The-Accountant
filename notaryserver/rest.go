@@ -1,4 +1,4 @@
-package server
+package notaryserver
 
 import (
 	"fmt"
@@ -24,23 +24,6 @@ func (s *server) alive(c *fiber.Ctx) error {
 			APIVersion: ApiVersion,
 			APIHeader:  Header,
 		})
-}
-
-// DiscoverResponse is a response containing all the central node registered in the current system.
-type DiscoverResponse struct {
-	Sockets []string `json:"sockets"`
-}
-
-func (s *server) discover(c *fiber.Ctx) error {
-	t := time.Now()
-	defer s.tele.RecordHistogramTime(discoverCentralNodeTelemetryHistogram, time.Since(t))
-
-	sockets, err := s.register.ReadRegisteredNodesAddresses(c.Context())
-	if err != nil {
-		return fiber.ErrInternalServerError
-	}
-
-	return c.JSON(DiscoverResponse{Sockets: sockets})
 }
 
 // SearchAddressRequest is a request to search for address.

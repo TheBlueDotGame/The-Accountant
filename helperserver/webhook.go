@@ -1,4 +1,4 @@
-package validator
+package helperserver
 
 // CreateRemoveUpdateHookRequest is the request send to create, remove or update the webhook.
 type CreateRemoveUpdateHookRequest struct {

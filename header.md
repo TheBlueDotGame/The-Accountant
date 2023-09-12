@@ -195,6 +195,19 @@ Required services setup:
  - Exporter node
  - Prometheus node
  - Zincsearch node
+ - Nats node
+
+
+Install protobuf generator: 
+```sh
+go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+```
+
+Generate protobuf files with:
+```sh
+protoc --proto_path=protobuf --go_out=protobufcompiled --go_opt=paths=source_relative block.proto addresses.proto
+```
+
 
 Run in terminal to run services in separate docker containers:
 

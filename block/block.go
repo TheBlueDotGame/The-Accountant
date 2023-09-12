@@ -11,6 +11,9 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+// BlockSubscriberCallback is a method or function than will be called on the received Block.
+type BlockSubscriberCallback func(blk *Block)
+
 var separator = []byte{}
 
 // Block holds block information.
@@ -18,14 +21,14 @@ var separator = []byte{}
 // Block mining difficulty may change if needed and is a part of a hash digest.
 // Block ensures that transactions hashes are valid and match the transactions stored in the repository.
 type Block struct {
-	ID         any        `json:"-"          sql:"id"         db:"id"`
-	TrxHashes  [][32]byte `json:"trx_hashes" sql:"trx_hashes" db:"trx_hashes"`
-	Hash       [32]byte   `json:"hash"       sql:"hash"       db:"hash"`
-	PrevHash   [32]byte   `json:"prev_hash"  sql:"prev_hash"  db:"prev_hash"`
-	Index      uint64     `json:"index"      sql:"index"      db:"index"`
-	Timestamp  uint64     `json:"timestamp"  sql:"timestamp"  db:"timestamp"`
-	Nonce      uint64     `json:"nonce"      sql:"nonce"      db:"nonce"`
-	Difficulty uint64     `json:"difficulty" sql:"difficulty" db:"difficulty"`
+	ID         any        `json:"-"          sql:"id"         db:"id"           protobuf:"-"`
+	TrxHashes  [][32]byte `json:"trx_hashes" sql:"trx_hashes" db:"trx_hashes"   protobuf:"trx_hashes"`
+	Hash       [32]byte   `json:"hash"       sql:"hash"       db:"hash"         protobuf:"hash"`
+	PrevHash   [32]byte   `json:"prev_hash"  sql:"prev_hash"  db:"prev_hash"    protobuf:"prev_hash"`
+	Index      uint64     `json:"index"      sql:"index"      db:"index"        protobuf:"index"`
+	Timestamp  uint64     `json:"timestamp"  sql:"timestamp"  db:"timestamp"    protobuf:"timestamp"`
+	Nonce      uint64     `json:"nonce"      sql:"nonce"      db:"nonce"        protobuf:"nonce"`
+	Difficulty uint64     `json:"difficulty" sql:"difficulty" db:"difficulty"   protobuf:"difficulty"`
 }
 
 // New creates a new Block hashing it with given difficulty.
