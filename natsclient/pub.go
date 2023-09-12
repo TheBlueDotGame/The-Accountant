@@ -24,8 +24,8 @@ func PublisherConnect(cfg Config) (*Publisher, error) {
 func (p *Publisher) PublishNewBlock(blk *block.Block) error {
 	protoBlk := protobufcompiled.Block{}
 	protoBlk.TrxHashes = make([][]byte, 0, len(blk.TrxHashes))
-	for _, h := range blk.TrxHashes {
-		protoBlk.TrxHashes = append(protoBlk.TrxHashes, h[:])
+	for i := range blk.TrxHashes {
+		protoBlk.TrxHashes = append(protoBlk.TrxHashes, blk.TrxHashes[i][:])
 	}
 	protoBlk.Hash = blk.Hash[:]
 	protoBlk.PrevHash = blk.PrevHash[:]

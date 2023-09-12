@@ -38,10 +38,10 @@ func (s *Subscriber) SubscribeNewBlock(call block.BlockSubscriberCallback, log l
 		}
 		blk := &block.Block{}
 		blk.TrxHashes = make([][32]byte, 0, len(protoBlk.TrxHashes))
-		for _, h := range protoBlk.TrxHashes {
-			var a [32]byte
-			copy(a[:], h)
-			blk.TrxHashes = append(blk.TrxHashes, a)
+		for i := range protoBlk.TrxHashes {
+			var h [32]byte
+			copy(h[:], protoBlk.TrxHashes[i])
+			blk.TrxHashes = append(blk.TrxHashes, h)
 		}
 		copy(blk.Hash[:], protoBlk.Hash)
 		copy(blk.PrevHash[:], protoBlk.PrevHash)

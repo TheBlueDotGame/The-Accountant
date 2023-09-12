@@ -7,6 +7,9 @@ import (
 )
 
 func (a *app) validateBlock(block *block.Block) error {
+	if block == nil {
+		return ErrBlockIsNil
+	}
 	a.mux.Lock()
 	defer a.mux.Unlock()
 	defer func() {
@@ -20,8 +23,8 @@ func (a *app) validateBlock(block *block.Block) error {
 			return errors.Join(ErrBlockIndexIsInvalid, errors.New("hash isn't matching"))
 		}
 	}
-	if !block.Validate(block.TrxHashes) {
-		return ErrProofBlockIsInvalid
+	if err := block.Validate(block.TrxHashes); err != nil {
+		return errors.Join(ErrProofBlockIsInvalid, err)
 	}
 	return nil
 }

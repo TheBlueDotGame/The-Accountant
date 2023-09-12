@@ -21,6 +21,7 @@ services:
       - "4222:4222"
     expose:
       - 4222
+      - 6222
     restart: unless-stopped
     networks:
       - computantis_network

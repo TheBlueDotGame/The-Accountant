@@ -12,7 +12,7 @@ require (
 	github.com/nats-io/nats.go v1.28.0
 	github.com/prometheus/client_golang v1.16.0
 	github.com/pterm/pterm v0.12.62
-	github.com/stretchr/testify v1.8.2
+	github.com/stretchr/testify v1.8.4
 	github.com/urfave/cli/v2 v2.25.4
 	github.com/valyala/fasthttp v1.45.0
 	go.mongodb.org/mongo-driver v1.11.4
@@ -65,4 +65,5 @@ require (
 	golang.org/x/text v0.9.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gotest.tools v2.2.0+incompatible // indirect
+	gotest.tools/v3 v3.5.0 // indirect
 )

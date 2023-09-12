@@ -5,34 +5,35 @@ import (
 	"fmt"
 	"testing"
 
+	"gotest.tools/v3/assert"
+
 	"github.com/bartossh/Computantis/transaction"
 	"github.com/bartossh/Computantis/wallet"
-	"github.com/stretchr/testify/assert"
 )
 
-// TODO: get test vectors for test
+// TODO: (to improve security and for certification) get test vectors for test, fuzzy testing
 
 func TestBlockCreate(t *testing.T) {
 	difficulty := uint64(1)
 
 	issuer, err := wallet.New()
-	assert.Nil(t, err)
+	assert.NilError(t, err)
 	receiver, err := wallet.New()
-	assert.Nil(t, err)
+	assert.NilError(t, err)
 
 	verifier := wallet.Helper{}
 
 	message := []byte("genesis transaction")
 	trx, err := transaction.New("genesis", message, receiver.Address(), &issuer)
-	assert.Nil(t, err)
+	assert.NilError(t, err)
 
 	trxHash, err := trx.Sign(&receiver, verifier)
-	assert.Nil(t, err)
-	assert.NotEmpty(t, trxHash)
+	assert.NilError(t, err)
+	assert.Equal(t, len(trxHash), 32)
 
 	blc := New(difficulty, 0, [32]byte{}, [][32]byte{trxHash})
 
-	assert.NotEmpty(t, blc.Hash)
+	assert.Equal(t, len(blc.Hash), 32)
 
 	blocksNum := 10
 	blockchain := make([]Block, 0, blocksNum)
@@ -42,10 +43,10 @@ func TestBlockCreate(t *testing.T) {
 		nextMsg := []byte(fmt.Sprintf("next message: %v", i))
 
 		ntrx, err := transaction.New("text", nextMsg, receiver.Address(), &issuer)
-		assert.Nil(t, err)
+		assert.NilError(t, err)
 
 		ntrxHash, err := ntrx.Sign(&receiver, verifier)
-		assert.Nil(t, err)
+		assert.NilError(t, err)
 		newBlck := New(difficulty, uint64(i), blockchain[i-1].Hash, [][32]byte{ntrxHash})
 		blockchain = append(blockchain, newBlck)
 	}
@@ -53,7 +54,7 @@ func TestBlockCreate(t *testing.T) {
 	prevHash := blockchain[len(blockchain)-1].PrevHash
 	for j := len(blockchain) - 2; j >= 0; j-- {
 		ok := bytes.Equal(prevHash[:], blockchain[j].Hash[:])
-		assert.True(t, ok)
+		assert.Equal(t, ok, true)
 		prevHash = blockchain[j].PrevHash
 	}
 }
@@ -62,47 +63,53 @@ func TestBlockValidateSuccess(t *testing.T) {
 	difficulty := uint64(1)
 
 	issuer, err := wallet.New()
-	assert.Nil(t, err)
+	assert.NilError(t, err)
 	receiver, err := wallet.New()
-	assert.Nil(t, err)
+	assert.NilError(t, err)
 
 	verifier := wallet.Helper{}
 
 	message := []byte("genesis transaction")
 	trx, err := transaction.New("genesis", message, receiver.Address(), &issuer)
-	assert.Nil(t, err)
+	assert.NilError(t, err)
 
 	trxHash, err := trx.Sign(&receiver, verifier)
-	assert.Nil(t, err)
-	assert.NotEmpty(t, trxHash)
+	assert.NilError(t, err)
+	assert.Equal(t, len(trxHash), 32)
 
 	blc := New(difficulty, 0, [32]byte{}, [][32]byte{trxHash})
 
-	assert.NotEmpty(t, blc.Hash)
+	assert.Equal(t, len(blc.Hash), 32)
 
 	blocksNum := 10
 	blockchain := make([]Block, 0, blocksNum)
 	blockchain = append(blockchain, blc)
 
 	for i := 1; i <= blocksNum; i++ {
-		nextMsg := []byte(fmt.Sprintf("next message: %v", i))
+		trxs := make([][32]byte, 0, 1000)
+		for j := 0; j < 1000; j++ {
+			nextMsg := []byte(fmt.Sprintf("next message: %v%v", i, j))
 
-		ntrx, err := transaction.New("text", nextMsg, receiver.Address(), &issuer)
-		assert.Nil(t, err)
+			ntrx, err := transaction.New("text", nextMsg, receiver.Address(), &issuer)
+			assert.NilError(t, err)
 
-		ntrxHash, err := ntrx.Sign(&receiver, verifier)
-		assert.Nil(t, err)
-		newBlck := New(difficulty, uint64(i), blockchain[i-1].Hash, [][32]byte{ntrxHash})
+			ntrxHash, err := ntrx.Sign(&receiver, verifier)
+			assert.NilError(t, err)
+
+			trxs = append(trxs, ntrxHash)
+		}
+		newBlck := New(difficulty, uint64(i), blockchain[i-1].Hash, trxs)
+
 		blockchain = append(blockchain, newBlck)
 	}
 
 	prevHash := blockchain[len(blockchain)-1].PrevHash
 	for j := len(blockchain) - 2; j >= 0; j-- {
 		ok := bytes.Equal(prevHash[:], blockchain[j].Hash[:])
-		assert.True(t, ok)
+		assert.Equal(t, ok, true)
 		prevHash = blockchain[j].PrevHash
-		ok = blockchain[j].Validate(blockchain[j].TrxHashes)
-		assert.True(t, ok)
+		err := blockchain[j].Validate(blockchain[j].TrxHashes)
+		assert.NilError(t, err)
 	}
 }
 
@@ -110,47 +117,54 @@ func TestBlockValidateFailure(t *testing.T) {
 	difficulty := uint64(1)
 
 	issuer, err := wallet.New()
-	assert.Nil(t, err)
+	assert.NilError(t, err)
 	receiver, err := wallet.New()
-	assert.Nil(t, err)
+	assert.NilError(t, err)
 
 	verifier := wallet.Helper{}
 
 	message := []byte("genesis transaction")
 	trx, err := transaction.New("genesis", message, receiver.Address(), &issuer)
-	assert.Nil(t, err)
+	assert.NilError(t, err)
 
 	trxHash, err := trx.Sign(&receiver, verifier)
-	assert.Nil(t, err)
-	assert.NotEmpty(t, trxHash)
+	assert.NilError(t, err)
+	assert.Equal(t, len(trxHash), 32)
 
 	blc := New(difficulty, 0, [32]byte{}, [][32]byte{trxHash})
 
-	assert.NotEmpty(t, blc.Hash)
+	assert.Equal(t, len(blc.Hash), 32)
 
 	blocksNum := 10
 	blockchain := make([]Block, 0, blocksNum)
 	blockchain = append(blockchain, blc)
 
 	for i := 1; i <= blocksNum; i++ {
-		nextMsg := []byte(fmt.Sprintf("next message: %v", i))
+		trxs := make([][32]byte, 0, 1000)
+		for j := 0; j < 1000; j++ {
+			nextMsg := []byte(fmt.Sprintf("next message: %v%v", i, j))
 
-		ntrx, err := transaction.New("text", nextMsg, receiver.Address(), &issuer)
-		assert.Nil(t, err)
+			ntrx, err := transaction.New("text", nextMsg, receiver.Address(), &issuer)
+			assert.NilError(t, err)
 
-		ntrxHash, err := ntrx.Sign(&receiver, verifier)
-		assert.Nil(t, err)
-		newBlck := New(difficulty, uint64(i), blockchain[i-1].Hash, [][32]byte{ntrxHash})
+			ntrxHash, err := ntrx.Sign(&receiver, verifier)
+			assert.NilError(t, err)
+
+			trxs = append(trxs, ntrxHash)
+		}
+		newBlck := New(difficulty, uint64(i), blockchain[i-1].Hash, trxs)
 		blockchain = append(blockchain, newBlck)
 	}
 
 	prevHash := blockchain[len(blockchain)-1].PrevHash
 	for j := len(blockchain) - 2; j >= 0; j-- {
 		ok := bytes.Equal(prevHash[:], blockchain[j+1].Hash[:])
-		assert.False(t, ok)
+		assert.Equal(t, ok, false)
 		prevHash = blockchain[j].PrevHash
-		ok = blockchain[j].Validate(blockchain[j+1].TrxHashes)
-		assert.False(t, ok)
+		err := blockchain[j].Validate(blockchain[j+1].TrxHashes)
+		if err == nil {
+			t.Error("error is nil")
+		}
 	}
 }
 
@@ -158,24 +172,24 @@ func Benchmark1000Blocks(b *testing.B) {
 	difficulty := uint64(5)
 
 	issuer, err := wallet.New()
-	assert.Nil(b, err)
+	assert.NilError(b, err)
 	receiver, err := wallet.New()
-	assert.Nil(b, err)
+	assert.NilError(b, err)
 
 	verifier := wallet.Helper{}
 
 	for n := 0; n < b.N; n++ {
 		message := []byte("genesis transaction")
 		trx, err := transaction.New("genesis", message, receiver.Address(), &issuer)
-		assert.Nil(b, err)
+		assert.NilError(b, err)
 
 		trxHash, err := trx.Sign(&receiver, verifier)
-		assert.Nil(b, err)
-		assert.NotEmpty(b, trxHash)
+		assert.NilError(b, err)
+		assert.Equal(b, len(trxHash), 32)
 
 		blc := New(difficulty, 0, [32]byte{}, [][32]byte{trxHash})
 
-		assert.NotEmpty(b, blc.Hash)
+		assert.Equal(b, len(blc.Hash), 32)
 
 		blocksNum := 1000
 		blockchain := make([]Block, 0, blocksNum)
@@ -185,10 +199,10 @@ func Benchmark1000Blocks(b *testing.B) {
 			nextMsg := []byte(fmt.Sprintf("next message: %v", i))
 
 			ntrx, err := transaction.New("text", nextMsg, receiver.Address(), &issuer)
-			assert.Nil(b, err)
+			assert.NilError(b, err)
 
 			ntrxHash, err := ntrx.Sign(&receiver, verifier)
-			assert.Nil(b, err)
+			assert.NilError(b, err)
 			newBlck := New(difficulty, 1, blockchain[i-1].Hash, [][32]byte{ntrxHash})
 			blockchain = append(blockchain, newBlck)
 		}
@@ -199,20 +213,20 @@ func Benchmark1_Block(b *testing.B) {
 	difficulty := uint64(5)
 
 	issuer, err := wallet.New()
-	assert.Nil(b, err)
+	assert.NilError(b, err)
 	receiver, err := wallet.New()
-	assert.Nil(b, err)
+	assert.NilError(b, err)
 
 	verifier := wallet.Helper{}
 
 	for n := 0; n < b.N; n++ {
 		message := []byte("genesis transaction")
 		trx, err := transaction.New("genesis", message, receiver.Address(), &issuer)
-		assert.Nil(b, err)
+		assert.NilError(b, err)
 
 		trxHash, err := trx.Sign(&receiver, verifier)
-		assert.Nil(b, err)
-		assert.NotEmpty(b, trxHash)
+		assert.NilError(b, err)
+		assert.Equal(b, len(trxHash), 32)
 
 		New(difficulty, 0, [32]byte{}, [][32]byte{trxHash})
 	}
@@ -222,9 +236,9 @@ func BenchmarkDifficulty(b *testing.B) {
 	difficulties := []uint64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
 
 	issuer, err := wallet.New()
-	assert.Nil(b, err)
+	assert.NilError(b, err)
 	receiver, err := wallet.New()
-	assert.Nil(b, err)
+	assert.NilError(b, err)
 
 	verifier := wallet.Helper{}
 
@@ -233,11 +247,11 @@ func BenchmarkDifficulty(b *testing.B) {
 			for n := 0; n < b.N; n++ {
 				message := []byte("genesis transaction")
 				trx, err := transaction.New("genesis", message, receiver.Address(), &issuer)
-				assert.Nil(b, err)
+				assert.NilError(b, err)
 
 				trxHash, err := trx.Sign(&receiver, verifier)
-				assert.Nil(b, err)
-				assert.NotEmpty(b, trxHash)
+				assert.NilError(b, err)
+				assert.Equal(b, len(trxHash), 32)
 
 				New(difficulty, 0, [32]byte{}, [][32]byte{trxHash})
 			}
@@ -263,7 +277,7 @@ func TestProofOfWorkSuccess(t *testing.T) {
 			blc.Nonce, blc.Hash = p.run(trxH)
 
 			ok := p.validate(trxH)
-			assert.True(t, ok)
+			assert.Equal(t, ok, true)
 		})
 	}
 }
@@ -284,14 +298,13 @@ func TestProofOfWorkFail(t *testing.T) {
 
 			p := newProof(&blc)
 
-			blc.Nonce, blc.Hash = p.run(trxH)
+			p.block.Nonce, p.block.Hash = p.run(trxH)
 
 			trxH[0] = 255
 
 			ok := p.validate(trxH)
-			assert.False(t, ok)
+			assert.Equal(t, ok, false)
 		})
-
 	}
 }
 
@@ -319,9 +332,9 @@ func FuzzProofOfWorkSuccess(f *testing.F) {
 		var h [32]byte
 		copy(h[:], trxH)
 
-		blc.Nonce, blc.Hash = p.run(h)
+		p.block.Nonce, p.block.Hash = p.run(h)
 
 		ok := p.validate(h)
-		assert.True(t, ok)
+		assert.Equal(t, ok, true)
 	})
 }

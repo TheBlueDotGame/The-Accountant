@@ -36,7 +36,7 @@ var (
 
 var (
 	errSavingBlock        = errors.New("saving block failed")
-	errMovingTransactions = errors.New("movinf transactions failed")
+	errMovingTransactions = errors.New("moving transactions failed")
 )
 
 // TrxWriteReadMover provides transactions write, read and move methods.

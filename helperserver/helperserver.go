@@ -31,9 +31,10 @@ const (
 )
 
 var (
-	ErrProofBlockIsInvalid    = fmt.Errorf("block proof is invalid")
-	ErrBlockIndexIsInvalid    = fmt.Errorf("block index is invalid")
-	ErrBlockPrevHashIsInvalid = fmt.Errorf("block previous hash is invalid")
+	ErrProofBlockIsInvalid    = errors.New("block proof is invalid")
+	ErrBlockIndexIsInvalid    = errors.New("block index is invalid")
+	ErrBlockPrevHashIsInvalid = errors.New("block previous hash is invalid")
+	ErrBlockIsNil             = errors.New("block is nil")
 )
 
 // Config contains configuration of the validator.
