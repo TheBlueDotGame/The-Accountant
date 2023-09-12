@@ -14,6 +14,7 @@
 #include "transaction.h"
 #include "../signer/signer.h"
 #include "../signature/signature.h"
+#include "../wallet/wallet.h"
 
 static void convertToCharArrayLittleEndian(unsigned char *arr, long long a)
 {
@@ -44,7 +45,7 @@ Transaction *Transaction_new(const char *subject, const unsigned char *data, con
     struct timeval now;
     gettimeofday(&now, NULL);
     RawCryptoKey raw_key = Signer_get_public_key(s);
-    char *issuer_address = encode_address_from_raw(raw_key.buffer, raw_key.len);
+    char *issuer_address = encode_address_from_raw(WalletVersion, raw_key.buffer, raw_key.len);
     if (issuer_address == NULL || strlen(issuer_address) == 0)
     {
         printf("Failed to read issuer address\n");
