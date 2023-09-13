@@ -6,19 +6,19 @@
 
 ### High level description and purpose.
 
-Secure and performant transaction broker hosting data in the private, redundant immutable repository. The system is guarded with observatory helpers nodes, that are independently controlling all the notary nodes.
+Secure and performant transaction broker hosting data in the private, redundant and immutable repository. The system is guarded with observatory helpers nodes, that are independently controlling all the notary nodes.
 It offers these key features:
  - Transaction immutability and uniqueness (no replay attack possible).
  - Transaction privacy outside the system.
- -  Transaction correctness. Cryptographic anti-corruption security of the transaction.
+ - Transaction correctness. Cryptographic anti-corruption security of the transaction.
  - Privacy. Data are owned by the private system.
  - Speed - fast and reliable transaction throughput.
- - Integrity - Only allowed wallets are able to participate in the transactions. Transaction forgery is secured with the highest cryptographic standards.
+ - Integrity - Only allowed wallets are able to participate in the transactions. Transaction anti-forgery is secured with the highest cryptographic standards.
  - Redundancy - Helper nodes are able to independently store data.
- - Lightess - The client node can be deployed on a Raspberry Pi Zero type of device with minimal RAM and CPU footprint (20MB RAM, low CPU usage)
+ - Lightness - The client node can be deployed on a Raspberry Pi Zero type of device with minimal RAM and CPU footprint (20MB RAM, low CPU usage)
 - Scalability - service scales horizontally and vertically. 
 - Immutability - Transactions are preserved in the blockchain repository that secures immutability. 
-- Maintainability - System shutdown or node failure has no effect on transaction integrity or transaction loss.
+- Maintainability - System shutdown or node failure has no effect over transaction integrity or transaction loss.
 
 ### Overview
 
