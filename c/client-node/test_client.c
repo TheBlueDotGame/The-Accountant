@@ -144,7 +144,6 @@ static void test_encode_decode_public_address()
     TEST_ASSERT_EQUAL_UINT(0, new_raw_key.len);
 
     Signer_free(&s);
-#include <sys/time.h>
     TEST_ASSERT_NULL(s.evpkey);
 }
 
