@@ -39,75 +39,60 @@ var (
 	errMovingTransactions = errors.New("moving transactions failed")
 )
 
-// TrxWriteReadMover provides transactions write, read and move methods.
-// It allows to access temporary, permanent and awaiting transactions.
-type TrxWriteReadMover interface {
+type transactionCacher interface {
+	WriteIssuerSignedTransactionForReceiver(trx *transaction.Transaction) error
+	CleanSignedTransactions(trxs []transaction.Transaction)
+}
+
+type trxWriteReadMover interface {
 	WriteIssuerSignedTransactionForReceiver(ctx context.Context, trx *transaction.Transaction) error
-	MoveTransactionsFromTemporaryToPermanent(ctx context.Context, blockHash [32]byte, hashes [][32]byte) error
 	MoveTransactionFromAwaitingToTemporary(ctx context.Context, trx *transaction.Transaction) error
-	ReadAwaitingTransactionsByReceiver(ctx context.Context, address string) ([]transaction.Transaction, error)
-	ReadAwaitingTransactionsByIssuer(ctx context.Context, address string) ([]transaction.Transaction, error)
+	MoveTransactionsFromTemporaryToPermanent(ctx context.Context, blockHash [32]byte, hashes [][32]byte) error
 	ReadTemporaryTransactions(ctx context.Context, offset, limit int) ([]transaction.Transaction, error)
 }
 
-// BlockReader provides block read methods.
-type BlockReader interface {
+type blockReader interface {
 	LastBlockHashIndex(ctx context.Context) ([32]byte, uint64, error)
 }
 
-// BlockWriter provides block write methods.
-type BlockWriter interface {
+type blockWriter interface {
 	WriteBlock(ctx context.Context, block block.Block) error
 }
 
-// BlockReadWriteFinder provides block read and write methods.
-type BlockReadWriteFinder interface {
-	BlockReader
-	BlockWriter
-	BlockFinder
-}
-
-// AddressChecker provides address existence check method.
-// If you use other repository than addresses repository, you can implement this interface
-// but address should be uniquely indexed in your repository implementation.
-type AddressChecker interface {
-	CheckAddressExists(ctx context.Context, address string) (bool, error)
-}
-
-// SignatureVerifier provides signature verification method.
-type SignatureVerifier interface {
-	Verify(message, signature []byte, hash [32]byte, address string) error
-}
-
-// BlockFinder provides block find and write method.
-type BlockFinder interface {
+type blockFinder interface {
 	FindTransactionInBlockHash(ctx context.Context, trxHash [32]byte) ([32]byte, error)
 }
 
-// NodeRegister abstracts node registration operations.
-type NodeRegister interface {
+type blockReadWriteFinder interface {
+	blockReader
+	blockWriter
+	blockFinder
+}
+
+type addressChecker interface {
+	CheckAddressExists(ctx context.Context, address string) (bool, error)
+}
+
+type signatureVerifier interface {
+	Verify(message, signature []byte, hash [32]byte, address string) error
+}
+
+type nodeRegister interface {
 	CountRegistered(ctx context.Context) (int, error)
 	RegisterNode(ctx context.Context, n string) error
 	UnregisterNode(ctx context.Context, n string) error
 }
 
-// NodeSyncRegister abstracts all the methods that are expected from repository.
-type NodeSyncRegister interface {
-	Synchronizer
-	NodeRegister
+type nodeSyncRegister interface {
+	synchronizer
+	nodeRegister
 }
 
-// BlockReactivePublisher provides block publishing method.
-// It uses reactive package. It you are using your own implementation of reactive package
-// take care of Publish method to be non-blocking.
-type BlockReactivePublisher interface {
+type blockReactivePublisher interface {
 	Publish(block.Block)
 }
 
-// IssuerTrxSubscription provides trx issuer address publishing method.
-// It uses reactive package. It you are using your own implementation of reactive package
-// take care of Publish method to be non-blocking.
-type TrxIssuedReactivePunlisher interface {
+type trxIssuedReactivePublisher interface {
 	Publish(string)
 }
 
@@ -140,16 +125,17 @@ func (c Config) Validate() error {
 // It performs all the actions on the transactions and blockchain.
 // Ladger seals all the transaction actions in the blockchain.
 type Ledger struct {
-	trx          TrxWriteReadMover
-	nsc          NodeSyncRegister
-	sub          BlockchainLockSubscriber
-	brwf         BlockReadWriteFinder
-	ac           AddressChecker
-	vr           SignatureVerifier
-	tf           BlockFinder
+	trxCache     transactionCacher
+	trx          trxWriteReadMover
+	nsc          nodeSyncRegister
+	sub          blockchainLockSubscriber
+	brwf         blockReadWriteFinder
+	ac           addressChecker
+	vr           signatureVerifier
+	tf           blockFinder
 	log          logger.Logger
-	blcPub       BlockReactivePublisher
-	trxIssuedPub TrxIssuedReactivePunlisher
+	blcPub       blockReactivePublisher
+	trxIssuedPub trxIssuedReactivePublisher
 	hashes       map[[32]byte]struct{}
 	hashC        chan [32]byte
 	id           string
@@ -159,15 +145,16 @@ type Ledger struct {
 // New creates new Ledger if config is valid or returns error otherwise.
 func New(
 	config Config,
-	trx TrxWriteReadMover,
-	brwf BlockReadWriteFinder,
-	nsc NodeSyncRegister,
-	sub BlockchainLockSubscriber,
-	ac AddressChecker,
-	vr SignatureVerifier,
+	trxCache transactionCacher,
+	trx trxWriteReadMover,
+	brwf blockReadWriteFinder,
+	nsc nodeSyncRegister,
+	sub blockchainLockSubscriber,
+	ac addressChecker,
+	vr signatureVerifier,
 	log logger.Logger,
-	blcPub BlockReactivePublisher,
-	trxIssuedPub TrxIssuedReactivePunlisher,
+	blcPub blockReactivePublisher,
+	trxIssuedPub trxIssuedReactivePublisher,
 ) (*Ledger, error) {
 	if err := config.Validate(); err != nil {
 		return nil, err
@@ -178,6 +165,7 @@ func New(
 		config:       config,
 		hashC:        make(chan [32]byte, config.BlockTransactionsSize),
 		hashes:       make(map[[32]byte]struct{}),
+		trxCache:     trxCache,
 		trx:          trx,
 		nsc:          nsc,
 		sub:          sub,
@@ -258,6 +246,10 @@ func (l *Ledger) WriteIssuerSignedTransactionForReceiver(
 		return err
 	}
 
+	if err := l.trxCache.WriteIssuerSignedTransactionForReceiver(trx); err != nil {
+		l.log.Error(fmt.Sprintf("bookkeeper cache failure, %s", err.Error()))
+	}
+
 	if err := l.trx.WriteIssuerSignedTransactionForReceiver(ctx, trx); err != nil {
 		return err
 	}
@@ -275,6 +267,8 @@ func (l *Ledger) WriteCandidateTransaction(ctx context.Context, trx *transaction
 	if err := l.validateFullyTransaction(ctx, trx); err != nil {
 		return err
 	}
+
+	go l.trxCache.CleanSignedTransactions([]transaction.Transaction{*trx})
 
 	if err := l.trx.MoveTransactionFromAwaitingToTemporary(ctx, trx); err != nil {
 		return err

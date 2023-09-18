@@ -11,25 +11,24 @@ var (
 	ErrSynchronizerStopped        = errors.New("synchronizer stopped")
 )
 
-type BlockchainLockSubscriber interface {
+type blockchainLockSubscriber interface {
 	SubscribeToLockBlockchainNotification(ctx context.Context, c chan<- bool, node string)
 }
 
-// Synchronizer abstracts blockchain synchronization operations.
-type Synchronizer interface {
+type synchronizer interface {
 	AddToBlockchainLockQueue(ctx context.Context, nodeID string) error
 	RemoveFromBlockchainLocks(ctx context.Context, nodeID string) error
 	CheckIsOnTopOfBlockchainsLocks(ctx context.Context, nodeID string) (bool, error)
 }
 
 type sync struct {
-	synchro   Synchronizer
-	subscribe BlockchainLockSubscriber
+	synchro   synchronizer
+	subscribe blockchainLockSubscriber
 	id        string
 }
 
 // newSync creates new sync.
-func newSync(id string, synchro Synchronizer, subscribe BlockchainLockSubscriber) sync {
+func newSync(id string, synchro synchronizer, subscribe blockchainLockSubscriber) sync {
 	return sync{id: id, synchro: synchro, subscribe: subscribe}
 }
 

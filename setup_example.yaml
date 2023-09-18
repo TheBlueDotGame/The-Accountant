@@ -6,6 +6,8 @@ bookkeeper:
 notary_server:
   port: 8000
   data_size_bytes: 15000000
+local_cache:
+  max_len: 5000
 helper_server:
   port: 8000
 nats:

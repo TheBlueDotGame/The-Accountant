@@ -11,6 +11,7 @@ import (
 	"github.com/bartossh/Computantis/emulator"
 	"github.com/bartossh/Computantis/fileoperations"
 	"github.com/bartossh/Computantis/helperserver"
+	"github.com/bartossh/Computantis/localcache"
 	"github.com/bartossh/Computantis/natsclient"
 	"github.com/bartossh/Computantis/notaryserver"
 	"github.com/bartossh/Computantis/repository"
@@ -31,6 +32,7 @@ type Configuration struct {
 	Emulator      emulator.Config       `yaml:"emulator"`
 	DataProvider  dataprovider.Config   `yaml:"data_provider"`
 	Bookkeeper    bookkeeping.Config    `yaml:"bookkeeper"`
+	Cache         localcache.Config     `yaml:"local_cache"`
 	IsProfiling   bool                  `yaml:"is_profiling"` // Indicates if node server is running in profiling mode and will create `default.pgo` file.
 }
 

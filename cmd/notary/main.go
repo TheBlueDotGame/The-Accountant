@@ -17,6 +17,7 @@ import (
 	"github.com/bartossh/Computantis/bookkeeping"
 	"github.com/bartossh/Computantis/configuration"
 	"github.com/bartossh/Computantis/dataprovider"
+	"github.com/bartossh/Computantis/localcache"
 	"github.com/bartossh/Computantis/logging"
 	"github.com/bartossh/Computantis/logo"
 	"github.com/bartossh/Computantis/natsclient"
@@ -180,8 +181,10 @@ func run(cfg configuration.Configuration) {
 	rxBlock := reactive.New[block.Block](rxBufferSize)
 	rxTrxIssuer := reactive.New[string](rxBufferSize)
 
+	cache := localcache.NewTransactionCache(cfg.Cache)
+
 	ladger, err := bookkeeping.New(
-		cfg.Bookkeeper, trxDB, blc, nodeRegisterDB, blockchainNotifier,
+		cfg.Bookkeeper, cache, trxDB, blc, nodeRegisterDB, blockchainNotifier,
 		addressDB, verifier, log, rxBlock, rxTrxIssuer)
 	if err != nil {
 		log.Error(err.Error())
@@ -211,7 +214,7 @@ func run(cfg configuration.Configuration) {
 	}()
 
 	err = notaryserver.Run(
-		ctx, cfg.NotaryServer, trxDB, pub, addressDB, tokenDB, ladger,
+		ctx, cfg.NotaryServer, cache, trxDB, pub, addressDB, tokenDB, ladger,
 		dataProvider, tele, log, rxBlock.Subscribe(), rxTrxIssuer.Subscribe())
 	if err != nil {
 		log.Error(err.Error())

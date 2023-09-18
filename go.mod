@@ -60,7 +60,8 @@ require (
 	github.com/valyala/tcplisten v1.0.0 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
-	golang.org/x/sys v0.8.0 // indirect
+	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
+	golang.org/x/sys v0.12.0 // indirect
 	golang.org/x/term v0.8.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
