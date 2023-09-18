@@ -95,6 +95,7 @@ services:
       dockerfile: Dockerfile
       args: 
         - "APPLICATION=client"
+    profiles: ["demo"]
     restart: unless-stopped
     ports:
       - "8020:8000"
@@ -127,7 +128,7 @@ services:
   publisher-node:
     container_name: publisher-node
     build:
-      dockerfile: Dockerfile-emulators
+      dockerfile: Dockerfile.emulators
       args:
         - "APPLICATION=emulator"
         - "ROLE=publisher"
@@ -138,6 +139,20 @@ services:
       - computantis_network
     depends_on:
       subscriber-node:
+        condition: service_started
+  
+  stress-node:
+    container_name: stress-node
+    build:
+      dockerfile: Dockerfile.stress
+      args:
+        - "APPLICATION=stress"
+    profiles: ["stress"]
+    restart: unless-stopped
+    networks:
+      - computantis_network
+    depends_on:
+      notary-node:
         condition: service_started
  
   node-exporter:

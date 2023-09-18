@@ -1,0 +1,15 @@
+FROM golang:latest AS builder
+ARG APPLICATION
+WORKDIR /app
+COPY . .
+RUN go mod tidy
+RUN CGO_ENABLED=0 go build -a -installsuffix cgo -o cmd/${APPLICATION}/main -ldflags="-s -w" stress/stress.go
+
+FROM alpine AS app
+ARG APPLICATION
+RUN apk --no-cache add ca-certificates
+WORKDIR /app
+COPY --from=builder /app/cmd/${APPLICATION}/main ./
+COPY --from=builder /app/stress_test_setup.yaml ./
+
+ENTRYPOINT ./main
