@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"net/url"
 	"time"
 
 	"github.com/bartossh/Computantis/helperserver"
@@ -236,7 +237,7 @@ func (c *Client) RejectTransactions(trxs []transaction.Transaction) ([][32]byte,
 }
 
 // ReadWaitingTransactions reads all waiting transactions belonging to current wallet from the API server.
-func (c *Client) ReadWaitingTransactions() ([]transaction.Transaction, error) {
+func (c *Client) ReadWaitingTransactions(notaryNodeURL string) ([]transaction.Transaction, error) {
 	if !c.ready {
 		return nil, httpclient.ErrWalletNotReady
 	}
@@ -253,8 +254,16 @@ func (c *Client) ReadWaitingTransactions() ([]transaction.Transaction, error) {
 		Hash:      hash,
 		Signature: signature,
 	}
+	rootURL := c.apiRoot
+	if notaryNodeURL != "" {
+		_, err := url.Parse(notaryNodeURL)
+		if err != nil {
+			rootURL = notaryNodeURL
+		}
+	}
+	url := fmt.Sprintf("%s%s", rootURL, notaryserver.AwaitedTransactionURL)
+
 	var res notaryserver.AwaitedTransactionsResponse
-	url := fmt.Sprintf("%s%s", c.apiRoot, notaryserver.AwaitedTransactionURL)
 	if err := httpclient.MakePost(c.timeout, url, req, &res); err != nil {
 		return nil, errors.Join(httpclient.ErrRejectedByServer, err)
 	}

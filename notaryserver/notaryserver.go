@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -153,28 +154,30 @@ type ReactiveTrxIssued interface {
 
 // NodesComunicationPublisher provides facade access to communication between nodes publisher endpoint.
 type NodesComunicationPublisher interface {
-	PublishNewBlock(blk *block.Block) error
-	PublishAddressesAwaitingTrxs(addresses []string) error
+	PublishNewBlock(blk *block.Block, notaryNodeURL string) error
+	PublishAddressesAwaitingTrxs(addresses []string, notaryNodeURL string) error
 }
 
 // Config contains configuration of the server.
 type Config struct {
-	Port          int `yaml:"port"`            // Port to listen on.
-	DataSizeBytes int `yaml:"data_size_bytes"` // Size of the data to be stored in the transaction.
+	NodePublicURL string `yaml:"node_public_url"` // Public URL at which node can be reached.
+	Port          int    `yaml:"port"`            // Port to listen on.
+	DataSizeBytes int    `yaml:"data_size_bytes"` // Size of the data to be stored in the transaction.
 }
 
 type server struct {
-	trxProv      TrxWriteReadRejectApprover
-	pub          NodesComunicationPublisher
-	addressProv  AddressReaderWriterModifier
-	tokenProv    TokenWriteInvalidateChecker
-	bookkeeping  Bookkeeper
-	randDataProv RandomDataProvideValidator
-	tele         providers.HistogramProvider
-	log          logger.Logger
-	rxBlock      ReactiveBlock
-	rxTrxIssued  ReactiveTrxIssued
-	dataSize     int
+	trxProv       TrxWriteReadRejectApprover
+	pub           NodesComunicationPublisher
+	addressProv   AddressReaderWriterModifier
+	tokenProv     TokenWriteInvalidateChecker
+	bookkeeping   Bookkeeper
+	randDataProv  RandomDataProvideValidator
+	tele          providers.HistogramProvider
+	log           logger.Logger
+	rxBlock       ReactiveBlock
+	rxTrxIssued   ReactiveTrxIssued
+	nodePublicURL string
+	dataSize      int
 }
 
 // Run initializes routing and runs the server. To stop the server cancel the context.
@@ -189,24 +192,29 @@ func Run(
 	ctxx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	if err := validateConfig(&c); err != nil {
+	if err = validateConfig(&c); err != nil {
+		return err
+	}
+
+	if _, err = url.Parse(c.NodePublicURL); err != nil {
 		return err
 	}
 
 	id := primitive.NewObjectID().Hex()
 
 	s := &server{
-		dataSize:     c.DataSizeBytes,
-		pub:          pub,
-		trxProv:      trxProv,
-		addressProv:  addressProv,
-		tokenProv:    tokenProv,
-		bookkeeping:  bookkeeping,
-		randDataProv: pv,
-		tele:         tele,
-		log:          log,
-		rxBlock:      rxBlock,
-		rxTrxIssued:  rxTrxIssued,
+		pub:           pub,
+		trxProv:       trxProv,
+		addressProv:   addressProv,
+		tokenProv:     tokenProv,
+		bookkeeping:   bookkeeping,
+		randDataProv:  pv,
+		tele:          tele,
+		log:           log,
+		rxBlock:       rxBlock,
+		rxTrxIssued:   rxTrxIssued,
+		nodePublicURL: c.NodePublicURL,
+		dataSize:      c.DataSizeBytes,
 	}
 
 	router := fiber.New(fiber.Config{
@@ -307,7 +315,7 @@ func (s *server) runSubscriber(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case b := <-s.rxBlock.Channel():
-			s.pub.PublishNewBlock(&b)
+			s.pub.PublishNewBlock(&b, s.nodePublicURL)
 		case recAddr := <-s.rxTrxIssued.Channel():
 			receiverAddrSet[recAddr] = struct{}{}
 		case <-ticker.C:
@@ -320,7 +328,7 @@ func (s *server) runSubscriber(ctx context.Context) {
 				addresses = append(addresses, addr)
 			}
 
-			s.pub.PublishAddressesAwaitingTrxs(addresses)
+			s.pub.PublishAddressesAwaitingTrxs(addresses, s.nodePublicURL)
 
 			receiverAddrSet = make(map[string]struct{}, 1000)
 		}

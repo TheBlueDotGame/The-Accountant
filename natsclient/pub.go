@@ -21,8 +21,9 @@ func PublisherConnect(cfg Config) (*Publisher, error) {
 }
 
 // PublishNewBlock publishes new block.
-func (p *Publisher) PublishNewBlock(blk *block.Block) error {
+func (p *Publisher) PublishNewBlock(blk *block.Block, notaryNodeURL string) error {
 	protoBlk := protobufcompiled.Block{}
+	protoBlk.NotaryNodeUrl = notaryNodeURL
 	protoBlk.TrxHashes = make([][]byte, 0, len(blk.TrxHashes))
 	for i := range blk.TrxHashes {
 		protoBlk.TrxHashes = append(protoBlk.TrxHashes, blk.TrxHashes[i][:])
@@ -46,9 +47,10 @@ func (p *Publisher) PublishNewBlock(blk *block.Block) error {
 }
 
 // PublishAddressesAwaitingTrxs publishes addresses of the clients that have awaiting transactions.
-func (p *Publisher) PublishAddressesAwaitingTrxs(addresses []string) error {
+func (p *Publisher) PublishAddressesAwaitingTrxs(addresses []string, notaryNodeURL string) error {
 	protoAddresses := protobufcompiled.Addresses{}
 	protoAddresses.Array = addresses
+	protoAddresses.NotaryUrl = notaryNodeURL
 	msg, err := proto.Marshal(&protoAddresses)
 	if err != nil {
 		return err
