@@ -163,7 +163,7 @@ func (a *app) processBlock(b *block.Block, notaryNodeURL string) {
 		a.log.Error(fmt.Sprintf("notary node URL: [ %s ], block hash: [ %v ], %s", notaryNodeURL, b.Hash, err.Error()))
 		return
 	}
-	a.log.Info(fmt.Sprintf("last block index: [ %v ] current block index: [ %v ] from notary node URL [ %s ] \n", lastBlockIndex, b.Index, notaryNodeURL))
+	a.log.Info(fmt.Sprintf("last block index: [ %v ] current block index: [ %v ] from notary node URL: [ %s ] \n", lastBlockIndex, b.Index, notaryNodeURL))
 	go a.wh.PostWebhookBlock(b) // post concurrently
 }
 
