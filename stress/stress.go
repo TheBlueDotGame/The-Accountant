@@ -200,7 +200,7 @@ func main() {
 						cancel()
 					}
 
-					awaitedTrx, err := receiver.ReadWaitingTransactions()
+					awaitedTrx, err := receiver.ReadWaitingTransactions("")
 					if err != nil {
 						fmt.Println(err)
 						cancel()

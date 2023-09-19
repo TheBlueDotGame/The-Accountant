@@ -13,7 +13,7 @@ import (
 )
 
 // BlockSubscriberCallback is a method or function than will be called on the received Block.
-type BlockSubscriberCallback func(blk *Block)
+type BlockSubscriberCallback func(blk *Block, notaryNodeURL string)
 
 var separator = []byte{}
 

@@ -95,7 +95,7 @@ func Run(ctx context.Context, cfg Config, log logger.Logger, timeout time.Durati
 	router.Get(Address, s.address)
 
 	router.Get(GetIssuedTransactions, s.issuedTransactions)
-	router.Get(GetReceivedTransactions, s.receivedTransactions)
+	router.Post(GetReceivedTransactions, s.receivedTransactions)
 	router.Get(GetRejectedTransactions, s.rejectedTransactions)
 	router.Get(GetApprovedTransactions, s.approvedTransactions)
 	router.Post(IssueTransaction, s.issueTransaction)
@@ -272,7 +272,13 @@ type ReceivedTransactionResponse struct {
 }
 
 func (a *app) receivedTransactions(c *fiber.Ctx) error {
-	transactions, err := a.centralNodeClient.ReadWaitingTransactions()
+	var notaryNodeURL string
+	if err := c.BodyParser(&notaryNodeURL); err != nil {
+		err := fmt.Errorf("error reading data: %v", err)
+		a.log.Error(err.Error())
+		return errors.Join(fiber.ErrBadRequest, err)
+	}
+	transactions, err := a.centralNodeClient.ReadWaitingTransactions("")
 	if err != nil {
 		err := fmt.Errorf("error getting issued transactions: %v", err)
 		a.log.Error(err.Error())

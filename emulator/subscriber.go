@@ -167,7 +167,7 @@ func (sub *subscriber) hookBlock(ctx *fiber.Ctx) error {
 func (sub *subscriber) hookTransaction(ctx *fiber.Ctx) error {
 	hookRes := make(map[string]bool)
 
-	var res webhooks.NewTransactionMessage
+	var res webhooks.AwaitingTransactionsMessage
 	if err := ctx.BodyParser(&res); err != nil {
 		pterm.Error.Println(err.Error())
 		hookRes["ack"] = false
@@ -187,20 +187,20 @@ func (sub *subscriber) hookTransaction(ctx *fiber.Ctx) error {
 
 	sub.lastTransactionTime = res.Time
 
-	go sub.actOnTransactions() // make actions concurrently
+	go sub.actOnTransactions(res.NotaryNodeURL) // make actions concurrently
 
 	hookRes["ack"] = true
 	hookRes["ok"] = true
 	return ctx.JSON(hookRes)
 }
 
-func (sub *subscriber) actOnTransactions() {
+func (sub *subscriber) actOnTransactions(notaryNodeURL string) {
 	sub.mux.Lock()
 	defer sub.mux.Unlock()
 
 	var resReceivedTransactions walletapi.ReceivedTransactionResponse
 	url := fmt.Sprintf("%s%s", sub.pub.clientURL, walletapi.GetReceivedTransactions)
-	if err := httpclient.MakeGet(sub.pub.timeout, url, &resReceivedTransactions); err != nil {
+	if err := httpclient.MakePost(sub.pub.timeout, url, notaryNodeURL, &resReceivedTransactions); err != nil {
 		pterm.Error.Println(err.Error())
 		return
 	}

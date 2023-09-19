@@ -15,7 +15,6 @@ import (
 	"github.com/bartossh/Computantis/logger"
 	"github.com/bartossh/Computantis/notaryserver"
 	"github.com/bartossh/Computantis/transaction"
-	"github.com/bartossh/Computantis/wallet"
 	"github.com/bartossh/Computantis/webhooks"
 )
 
@@ -63,7 +62,7 @@ type WebhookCreateRemovePoster interface {
 	CreateWebhook(trigger byte, address string, h webhooks.Hook) error
 	RemoveWebhook(trigger byte, address string, h webhooks.Hook) error
 	PostWebhookBlock(blc *block.Block)
-	PostWebhookNewTransaction(publicAddresses []string)
+	PostWebhookNewTransaction(publicAddresses []string, storingNodeURL string)
 }
 
 // NodesComunicationSubscriber provides facade access to communication between nodes publisher endpoint.
@@ -85,18 +84,16 @@ type app struct {
 	wh           WebhookCreateRemovePoster
 	randDataProv notaryserver.RandomDataProvideValidator
 	log          logger.Logger
-	wallet       *wallet.Wallet
 	lastBlock    block.Block
 }
 
 // Run initializes routing and runs the validator. To stop the validator cancel the context.
-// Validator connects to the central server via websocket and listens for new blocks.
 // It will block until the context is canceled.
 func Run(
 	ctx context.Context, cfg Config,
 	sub NodesComunicationSubscriber, srw StatusReadWriter,
 	log logger.Logger, ver Verifier, wh WebhookCreateRemovePoster,
-	wallet *wallet.Wallet, rdp notaryserver.RandomDataProvideValidator,
+	rdp notaryserver.RandomDataProvideValidator,
 ) error {
 	ctxx, cancel := context.WithCancel(ctx)
 	a := &app{
@@ -105,7 +102,6 @@ func Run(
 		log:          log,
 		ver:          ver,
 		wh:           wh,
-		wallet:       wallet,
 		randDataProv: rdp,
 		cancel:       cancel,
 	}
@@ -160,19 +156,19 @@ func (a *app) runServer(ctx context.Context, cancel context.CancelFunc, port int
 	return nil
 }
 
-func (a *app) processBlock(b *block.Block) {
+func (a *app) processBlock(b *block.Block, notaryNodeURL string) {
 	lastBlockIndex := a.lastBlock.Index
 	err := a.validateBlock(b)
 	if err != nil {
-		a.log.Error(err.Error())
+		a.log.Error(fmt.Sprintf("notary node URL: [ %s ], block hash: [ %v ], %s", notaryNodeURL, b.Hash, err.Error()))
 		return
 	}
-	a.log.Info(fmt.Sprintf("last block index: [ %v ] current block index: [ %v ]\n", lastBlockIndex, b.Index))
+	a.log.Info(fmt.Sprintf("last block index: [ %v ] current block index: [ %v ] from notary node URL: [ %s ] \n", lastBlockIndex, b.Index, notaryNodeURL))
 	go a.wh.PostWebhookBlock(b) // post concurrently
 }
 
-func (a *app) processNewTrxIssued(receivers []string) {
-	go a.wh.PostWebhookNewTransaction(receivers) // post concurrently
+func (a *app) processNewTrxIssued(receivers []string, storingNodeURL string) {
+	go a.wh.PostWebhookNewTransaction(receivers, storingNodeURL) // post concurrently
 }
 
 func (s *app) alive(c *fiber.Ctx) error {
