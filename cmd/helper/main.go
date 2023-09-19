@@ -12,10 +12,8 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/urfave/cli/v2"
 
-	"github.com/bartossh/Computantis/aeswrapper"
 	"github.com/bartossh/Computantis/configuration"
 	"github.com/bartossh/Computantis/dataprovider"
-	"github.com/bartossh/Computantis/fileoperations"
 	"github.com/bartossh/Computantis/helperserver"
 	"github.com/bartossh/Computantis/logging"
 	"github.com/bartossh/Computantis/logo"
@@ -121,15 +119,7 @@ func run(cfg configuration.Configuration) {
 
 	verify := wallet.NewVerifier()
 
-	seal := aeswrapper.New()
-	fo := fileoperations.New(cfg.FileOperator, seal)
-
 	wh := webhooks.New(log)
-
-	wl, err := fo.ReadWallet()
-	if err != nil {
-		log.Error(err.Error())
-	}
 
 	dataProvider := dataprovider.New(ctx, cfg.DataProvider)
 
@@ -152,7 +142,7 @@ func run(cfg configuration.Configuration) {
 		}
 	}()
 
-	if err := helperserver.Run(ctx, cfg.HelperServer, sub, statusDB, log, verify, wh, &wl, dataProvider); err != nil {
+	if err := helperserver.Run(ctx, cfg.HelperServer, sub, statusDB, log, verify, wh, dataProvider); err != nil {
 		log.Error(err.Error())
 		time.Sleep(time.Second)
 	}

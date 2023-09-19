@@ -128,85 +128,97 @@ It offers these key features:
 ## Setup
 
 All services are using the setup file in a YAML format:
-- The central node:
+- The notary node:
 ```yaml
+is_profiling: false
 bookkeeper:
-  difficulty: 1 # The mathematical complexity required to find the hash of the next block in the block chain. Higher the number more complex the problem.
-  block_write_timestamp: 300 # Time difference [ s ] between two clocks being forged when block transactions size isn't reached.
-  block_transactions_size: 1000 # Max transactions in block. When limit is reached and time difference isn't then new block is forged.
-server:
-  port: 8080 # Port on which the central node REST API is exposed.
-  data_size_bytes: 15000000 # Size of bytes allowed in a single transaction, all above that will be rejected.
-  websocket_address: "ws://localhost:8080/ws" # This is the external address of the central node needed to register for other central nodes to use to inform validators.
-storage_config: # Collection of settings for dedicated repositories for entities.
+  difficulty: 1
+  block_write_timestamp: 300
+  block_transactions_size: 1000
+notary_server:
+  node_public_url: notary-node:8000
+  port: 8000
+  data_size_bytes: 15000
+local_cache:
+  max_len: 5000
+nats:
+  server_address: "nats://nats:4222"
+  client_name: "notary-1"
+  token: "D9pHfuiEQPXtqPqPdyxozi8kU2FlHqC0FlSRIzpwDI0="
+storage_config:
   transaction_database:
-    conn_str: "postgres://computantis:computantis@postgres:5432"  # Database connection string. For now only PostgreSQL is supported.
-    database_name: "computantis" # Database name to store all the computantis related data.
-    is_ssl: false # Set to true if database requires SSL or to false otherwise, On production SSL true is a must. 
+    conn_str: "postgres://computantis:computantis@postgres:5432"
+    database_name: "computantis"
+    is_ssl: false
   blockchain_database:
-    conn_str: "postgres://computantis:computantis@postgres:5432" # Database connection string. For now only PostgreSQL is supported.
-    database_name: "computantis" # Database name to store all the computantis related data.
-    is_ssl: false # Set to true if database requires SSL or to false otherwise, On production SSL true is a must. 
+    conn_str: "postgres://computantis:computantis@postgres:5432"
+    database_name: "computantis"
+    is_ssl: false
   node_register_database:
-    conn_str: "postgres://computantis:computantis@postgres:5432" # Database connection string. For now only PostgreSQL is supported.
-    database_name: "computantis" # Database name to store all the computantis related data.
-    is_ssl: false # Set to true if database requires SSL or to false otherwise, On production SSL true is a must. 
+    conn_str: "postgres://computantis:computantis@postgres:5432"
+    database_name: "computantis"
+    is_ssl: false
   address_database:
-    conn_str: "postgres://computantis:computantis@postgres:5432" # Database connection string. For now only PostgreSQL is supported.
-    database_name: "computantis" # Database name to store all the computantis related data.
-    is_ssl: false # Set to true if database requires SSL or to false otherwise, On production SSL true is a must. 
+    conn_str: "postgres://computantis:computantis@postgres:5432"
+    database_name: "computantis"
+    is_ssl: false
   token_database:
-    conn_str: "postgres://computantis:computantis@postgres:5432" # Database connection string. For now only PostgreSQL is supported.
-    database_name: "computantis" # Database name to store all the computantis related data.
-    is_ssl: false # Set to true if database requires SSL or to false otherwise, On production SSL true is a must. 
-  validator_status_database:
-    conn_str: "postgres://computantis:computantis@postgres:5432" # Database connection string. For now only PostgreSQL is supported.
-    database_name: "computantis" # Database name to store all the computantis related data.
-    is_ssl: false # Set to true if database requires SSL or to false otherwise, On production SSL true is a must.
+    conn_str: "postgres://computantis:computantis@postgres:5432"
+    database_name: "computantis"
+    is_ssl: false
 dataprovider:
-  longevity: 300 # Data provider provides the data to be signed by the wallet holder in order to verify the wallet public key. This is a time [ s ] describing how long data are valid.
-zinc_logger: # Zinc search (elastic-search like service) for convenient access to logs. 
-  address: http://zincsearch:4080 # Zinc search address in computantis network.
-  index: central # Name of the micro-service for easy logs filtering.
-  token: Basic YWRtaW46emluY3NlYXJjaA== # Token allows to validate legitimacy of the service that is sending the log.
+  longevity: 300
+zinc_logger:
+  address: http://zincsearch:4080 
+  index: notary-1
+  token: Basic YWRtaW46emluY3NlYXJjaA==
 ```
 
-- The validator node:
+- The helper node specific:
 ```yaml
-validator:
-  central_node_address: "http://localhost:8080" # Address of the central node to get discovery information from.
-  port: 9090 # Port on which the validator REST API is exposed.
-  token: "jykkeD6Tr6xikkYwC805kVoFThm8VGEHStTFk1lIU6RgEf7p3vjFpPQFI3VP9SYeARjYh2jecMSYsmgddjZZcy32iySHijJQ" # Token required by the validator to connect to all the central nodes.
-zinc_logger: # Zinc search (elastic-search like service) for convenient access to logs. 
-  address: http://zincsearch:4080 # Zinc search address in computantis network.
-  index: validator # Name of the micro-service for easy logs filtering.
-  token: Basic YWRtaW46emluY3NlYXJjaA== # Token allows to validate legitimacy of the service that is sending the log.
+is_profiling: false
+helper_server:
+  port: 8000
+nats:
+  server_address: "nats://nats:4222"
+  client_name: "notary-1"
+  token: "D9pHfuiEQPXtqPqPdyxozi8kU2FlHqC0FlSRIzpwDI0="
+storage_config:
+  helper_status_database:
+    conn_str: "postgres://computantis:computantis@postgres:5432"
+    database_name: "computantis"
+    is_ssl: false
+zinc_logger:
+  address: http://zincsearch:4080 
+  index: helper-1
+  token: Basic YWRtaW46emluY3NlYXJjaA==
 ```
 
 - The client node:
 ```yaml
-file_operator:
-  wallet_path: "test_wallet" # File path where wallet is stored.
-  wallet_passwd: "dc6b5b1635453e0eb57344ffb6cb293e8300fc4001fad3518e721d548459c09d" # Key needed to decrypt the password.
-client:
-  port: 8095 # Port on which the wallet API is exposed.
-  central_node_url: "http://localhost:8080" # Root URL address of a central node or the proxy.
-  validator_node_url: "http://localhost:9090" # Root URL of specific validator node to create a Webhook with.
-zinc_logger: # Zinc search (elastic-search like service) for convenient access to logs. 
-  address: http://zincsearch:4080 # Zinc search address in computantis network.
-  index: wallet # Name of the micro-service for easy logs filtering.
-  token: Basic YWRtaW46emluY3NlYXJjaA== # Token allows to validate legitimacy of the service that is sending the log.
+file_operator: # file operator allows to read wallet in gob and pem format from the file
+  wallet_path: "test_wallet"
+  wallet_passwd: "dc6b5b1635453e0eb57344ffb6cb293e8300fc4001fad3518e721d548459c09d"
+  pem_path: "ed25519"
+notary:
+  port: 8095
+  central_node_url: "http://localhost:8080" 
+  validator_node_url: "http://localhost:9090" 
+zinc_logger:  
+  address: http://zincsearch:4080 
+  index: wallet-1 
+  token: Basic YWRtaW46emluY3NlYXJjaA== 
 ```
 
 - The emulator:
 ```yaml
-emulator:
-  timeout_seconds: 5 # Message timeout [ s ]
-  tick_seconds: 5 # Tick between publishing the message [ s ]
-  random: false # Is the message queue random or consecutive.
-  client_url: "http://localhost:8095" # The wallet client root URL.
-  port: "8060" # Port on which the emulator API is exposed. This is related to the public URL port.
-  public_url: "http://localhost:8060" # Public root URL of the emulator to create the validator Webhook with.
+emulator: # emulates data 
+  timeout_seconds: 20
+  tick_seconds: 1
+  random: false
+  client_url: "http://client-node:8000" # client node middleware URL
+  port: "8060"
+  public_url: "http://subscriber-node:8060" # If running emulators locally, best to set it up as your local network machine IP.
 ```
 
 ## Start locally all services

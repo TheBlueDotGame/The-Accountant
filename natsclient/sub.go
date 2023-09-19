@@ -49,7 +49,7 @@ func (s *Subscriber) SubscribeNewBlock(call block.BlockSubscriberCallback, log l
 		blk.Timestamp = protoBlk.Timestamp
 		blk.Nonce = protoBlk.Nonce
 		blk.Difficulty = protoBlk.Difficulty
-		call(blk)
+		call(blk, protoBlk.NotaryNodeUrl)
 	})
 	if err != nil {
 		sub.Unsubscribe()
@@ -70,7 +70,7 @@ func (s *Subscriber) SubscribeNewTransactionsForAddresses(call transaction.TrxAd
 			log.Error(err.Error())
 			return
 		}
-		call(protoAddresses.Array)
+		call(protoAddresses.GetArray(), protoAddresses.GetNotaryUrl())
 	})
 	if err != nil {
 		sub.Unsubscribe()

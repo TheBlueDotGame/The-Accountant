@@ -1,11 +1,12 @@
-is_profiling: true
+is_profiling: false
 bookkeeper:
   difficulty: 1
   block_write_timestamp: 300
   block_transactions_size: 1000
 notary_server:
+  node_public_url: notary-node:8000
   port: 8000
-  data_size_bytes: 15000000
+  data_size_bytes: 15000
 local_cache:
   max_len: 5000
 helper_server:

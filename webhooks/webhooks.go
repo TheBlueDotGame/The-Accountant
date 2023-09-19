@@ -30,11 +30,12 @@ const (
 	StateAcknowleged          // StateAcknowledged is a state ot the transaction meaning it is acknowledged and signed by the receiver.
 )
 
-// NewTransactionMessage is the message send to the webhook url about new transaction for given wallet address.
-type NewTransactionMessage struct {
-	Token string    `json:"token"`
-	Time  time.Time `json:"time"`
-	State byte      `json:"state"`
+// AwaitingTransactionsMessage is the message send to the webhook url about new transaction for given wallet address.
+type AwaitingTransactionsMessage struct {
+	Time          time.Time `json:"time"`
+	NotaryNodeURL string    `json:"notary_node_url"` // NotaryNodeURL tells the webhook creator where the transactions which notary node stores transactions.
+	Token         string    `json:"token"`
+	State         byte      `json:"state"`
 }
 
 // Hook is the hook that is used to trigger the webhook.
@@ -106,7 +107,7 @@ func (s *Service) PostWebhookBlock(blc *block.Block) {
 }
 
 // PostWebhookNewTransaction posts information to the corresponding public address.
-func (s *Service) PostWebhookNewTransaction(publicAddresses []string) {
+func (s *Service) PostWebhookNewTransaction(publicAddresses []string, storingNodeURL string) {
 	s.mux.RLock()
 	defer s.mux.RUnlock()
 	hs, ok := s.buffer[TriggerNewTransaction]
@@ -121,10 +122,11 @@ func (s *Service) PostWebhookNewTransaction(publicAddresses []string) {
 			continue
 		}
 
-		transactionMsg := NewTransactionMessage{
-			State: StateIssued,
-			Time:  time.Now(),
-			Token: h.Token,
+		transactionMsg := AwaitingTransactionsMessage{
+			NotaryNodeURL: storingNodeURL,
+			State:         StateIssued,
+			Time:          time.Now(),
+			Token:         h.Token,
 		}
 		if err := httpclient.MakePost(time.Second*5, h.URL, transactionMsg, &in); err != nil {
 			s.log.Error(fmt.Sprintf("webhook service error posting transaction to webhook url: %s, %s", h.URL, err.Error()))

@@ -65,10 +65,10 @@ func TestPubSubCycle(t *testing.T) {
 
 	log := logging.New(callbackOnErr, callbackOnFatal, stdoutwriter.Logger{})
 
-	err := p.PublishNewBlock(&testBlk)
+	err := p.PublishNewBlock(&testBlk, "http://localhost:888")
 	assert.NilError(t, err)
 
-	call := func(blk *block.Block) {
+	call := func(blk *block.Block, notarNodeURL string) {
 		assert.Equal(t, testBlk.Index, blk.Index)
 		assert.DeepEqual(t, testBlk.TrxHashes, blk.TrxHashes)
 		assert.Equal(t, testBlk.Hash, blk.Hash)
@@ -76,6 +76,7 @@ func TestPubSubCycle(t *testing.T) {
 		assert.Equal(t, testBlk.Timestamp, blk.Timestamp)
 		assert.Equal(t, testBlk.Nonce, blk.Nonce)
 		assert.Equal(t, testBlk.Difficulty, blk.Difficulty)
+		assert.Equal(t, notarNodeURL, "http://localhost:888")
 	}
 	err = s.SubscribeNewBlock(call, log)
 	assert.NilError(t, err)
@@ -99,11 +100,11 @@ func TestSingleProducerMultipleConsumerPattern(t *testing.T) {
 
 	log := logging.New(callbackOnErr, callbackOnFatal, stdoutwriter.Logger{})
 
-	err := p.PublishNewBlock(&testBlk)
+	err := p.PublishNewBlock(&testBlk, "http://localhost:888")
 	assert.NilError(t, err)
 
 	for i := 0; i < 1000; i++ {
-		call := func(blk *block.Block) {
+		call := func(blk *block.Block, notarNodeURL string) {
 			assert.Equal(t, testBlk.Index, blk.Index)
 			assert.DeepEqual(t, testBlk.TrxHashes, blk.TrxHashes)
 			assert.Equal(t, testBlk.Hash, blk.Hash)
@@ -111,6 +112,7 @@ func TestSingleProducerMultipleConsumerPattern(t *testing.T) {
 			assert.Equal(t, testBlk.Timestamp, blk.Timestamp)
 			assert.Equal(t, testBlk.Nonce, blk.Nonce)
 			assert.Equal(t, testBlk.Difficulty, blk.Difficulty)
+			assert.Equal(t, notarNodeURL, "http://localhost:888")
 		}
 		err = s.SubscribeNewBlock(call, log)
 		assert.NilError(t, err)

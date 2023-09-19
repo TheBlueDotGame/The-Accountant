@@ -24,7 +24,7 @@ var (
 )
 
 // TrxAddressesSubscriberCallback is a method or function performing compoutantion on the transactions addresses.
-type TrxAddressesSubscriberCallback func(addresses []string)
+type TrxAddressesSubscriberCallback func(addresses []string, storageNodeURL string)
 
 // Signer provides signing and address methods.
 type Signer interface {
