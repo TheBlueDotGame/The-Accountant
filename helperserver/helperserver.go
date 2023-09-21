@@ -187,6 +187,11 @@ func (a *app) data(c *fiber.Ctx) error {
 		return fiber.ErrBadRequest
 	}
 
+	if req.Address == "" {
+		a.log.Error("wrong JSON format for requesting data to sing")
+		return fiber.ErrBadRequest
+	}
+
 	d := a.randDataProv.ProvideData(req.Address)
 	return c.JSON(notaryserver.DataToSignResponse{Data: d})
 }
@@ -195,6 +200,11 @@ func (a *app) blocks(c *fiber.Ctx) error {
 	var req CreateRemoveUpdateHookRequest
 	if err := c.BodyParser(&req); err != nil {
 		a.log.Error(fmt.Sprintf("%s endpoint, failed to parse request body: %s", BlockHookURL, err.Error()))
+		return fiber.ErrBadRequest
+	}
+
+	if req.Address == "" || req.Data == nil || req.Signature == nil || req.URL == "" || req.Digest == [32]byte{} {
+		a.log.Error("wrong JSON format when requesting blocks")
 		return fiber.ErrBadRequest
 	}
 
@@ -227,6 +237,11 @@ func (a *app) transactions(c *fiber.Ctx) error {
 	var req CreateRemoveUpdateHookRequest
 	if err := c.BodyParser(&req); err != nil {
 		a.log.Error(fmt.Sprintf("%s endpoint, failed to parse request body: %s", TransactionHookURL, err.Error()))
+		return fiber.ErrBadRequest
+	}
+
+	if req.Address == "" || req.Data == nil || req.Signature == nil || req.URL == "" || req.Digest == [32]byte{} {
+		a.log.Error("wrong JSON format when requesting blocks")
 		return fiber.ErrBadRequest
 	}
 

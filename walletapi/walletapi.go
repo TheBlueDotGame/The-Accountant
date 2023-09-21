@@ -180,6 +180,11 @@ func (a *app) issueTransaction(c *fiber.Ctx) error {
 		return errors.Join(fiber.ErrBadRequest, err)
 	}
 
+	if req.Data == nil || req.Subject == "" || req.ReceiverAddress == "" {
+		a.log.Error("wrong JSON format when issuing transaction")
+		return fiber.ErrBadRequest
+	}
+
 	if err := a.centralNodeClient.ProposeTransaction(req.ReceiverAddress, req.Subject, req.Data); err != nil {
 		err := fmt.Errorf("error proposing transaction: %v", err)
 		a.log.Error(err.Error())
@@ -205,6 +210,13 @@ func (a *app) confirmReceivedTransaction(c *fiber.Ctx) error {
 		err := fmt.Errorf("error reading data: %v", err)
 		a.log.Error(err.Error())
 		return errors.Join(fiber.ErrBadRequest, err)
+	}
+
+	if req.Transaction.ReceiverAddress == "" || req.Transaction.Subject == "" ||
+		req.Transaction.Data == nil || req.Transaction.CreatedAt.IsZero() || req.Transaction.IssuerAddress == "" ||
+		req.Transaction.IssuerSignature == nil || req.Transaction.Hash == [32]byte{} {
+		a.log.Error("wrong JSON format to confirm transaction")
+		return fiber.ErrBadRequest
 	}
 
 	if err := a.centralNodeClient.ConfirmTransaction(&req.Transaction); err != nil {
@@ -234,6 +246,11 @@ func (a *app) rejectTransactions(c *fiber.Ctx) error {
 		err := fmt.Errorf("error reading data: %v", err)
 		a.log.Error(err.Error())
 		return errors.Join(fiber.ErrBadRequest, err)
+	}
+
+	if req.Transactions == nil {
+		a.log.Error("wrong JSON format when rejecting transactions")
+		return fiber.ErrBadRequest
 	}
 
 	hashes, err := a.centralNodeClient.RejectTransactions(req.Transactions)
@@ -278,6 +295,11 @@ func (a *app) receivedTransactions(c *fiber.Ctx) error {
 		a.log.Error(err.Error())
 		return errors.Join(fiber.ErrBadRequest, err)
 	}
+	if notaryNodeURL == "" {
+		a.log.Error("wrong message format, notary node URL is empty in the message")
+		return fiber.ErrBadRequest
+	}
+
 	transactions, err := a.centralNodeClient.ReadWaitingTransactions("")
 	if err != nil {
 		err := fmt.Errorf("error getting issued transactions: %v", err)
@@ -367,6 +389,10 @@ func (a *app) createWallet(c *fiber.Ctx) error {
 		a.log.Error(err.Error())
 		return errors.Join(fiber.ErrBadRequest, err)
 	}
+	if req.Token == "" {
+		a.log.Error("wrong JSON format when creating a wallet")
+		return fiber.ErrBadGateway
+	}
 
 	if err := a.centralNodeClient.NewWallet(req.Token); err != nil {
 		err := fmt.Errorf("error creating wallet: %v", err)
@@ -401,8 +427,13 @@ func (a *app) createUpdateWebHook(c *fiber.Ctx) error {
 		a.log.Error(err.Error())
 		return errors.Join(fiber.ErrBadRequest, err)
 	}
-	var res helperserver.CreateRemoveUpdateHookResponse
 
+	if req.URL == "" {
+		a.log.Error("wrong JSON format when creating a web hook")
+		return fiber.ErrBadGateway
+	}
+
+	var res helperserver.CreateRemoveUpdateHookResponse
 	if err := a.validatorNodeClient.CreateWebhook(req.URL); err != nil {
 		res.Ok = false
 		res.Err = err.Error()
