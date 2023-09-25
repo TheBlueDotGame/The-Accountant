@@ -22,7 +22,7 @@ build-all: build-local
 
 	GOOS=linux GOARCH=arm GOARM=5 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/raspberry_pi_zero/notary -ldflags="-s -w" cmd/notary/main.go
 	GOOS=linux GOARCH=arm GOARM=5 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/raspberry_pi_zero/helper -ldflags="-s -w" cmd/helper/main.go
- 
+
 build-tools:
 	CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/dedicated/generator -ldflags="-s -w" -gcflags -m cmd/generator/main.go
 	CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/dedicated/wallet -ldflags="-s -w" -gcflags -m cmd/wallet/main.go
@@ -30,13 +30,13 @@ build-tools:
 build-tools-all: build-tools
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/linux_x86/generator -ldflags="-s -w" cmd/generator/main.go
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/linux_x86/wallet -ldflags="-s -w" cmd/wallet/main.go
-	
+
 	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/linux_arm/generator -ldflags="-s -w" cmd/generator/main.go
 	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/linux_arm/wallet -ldflags="-s -w" cmd/wallet/main.go
-	
+
 	GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/darwin_arm/generator -ldflags="-s -w" cmd/generator/main.go
 	GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/darwin_arm/wallet -ldflags="-s -w" cmd/wallet/main.go
-	
+
 	GOOS=linux GOARCH=arm GOARM=5 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/raspberry_pi_zero/wallet -ldflags="-s -w" cmd/wallet/main.go
 
 documentation:
@@ -96,7 +96,7 @@ docker-restart-helper:
 docker-build-all: docker-build-notary docker-build-helper docker-build-client docker-build-subscriber docker-build-publisher
 
 docker-build-notary:
-	docker compose build central-node
+	docker compose build notary-node
 
 docker-build-helper:
 	docker compose build helper-node
