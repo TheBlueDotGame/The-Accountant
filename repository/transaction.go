@@ -45,7 +45,6 @@ func (db DataBase) WriteIssuerSignedTransactionForReceiver(
 		trx.ReceiverAddress, trx.Subject, trx.Data,
 		trx.IssuerSignature, trx.ReceiverSignature,
 		awaited, []byte{}); err != nil {
-
 		return errors.Join(ErrInsertFailed, err)
 	}
 	return nil

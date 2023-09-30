@@ -90,8 +90,7 @@ var (
 	ErrWrongMessageSize   = errors.New("message size must be between 1024 and 15000000")
 )
 
-// AddressReaderWriterModifier abstracts address operations.
-type AddressReaderWriterModifier interface {
+type addressReadWriteModdifier interface {
 	FindAddress(ctx context.Context, search string, limit int) ([]string, error)
 	CheckAddressExists(ctx context.Context, address string) (bool, error)
 	WriteAddress(ctx context.Context, address string) error
@@ -101,15 +100,19 @@ type AddressReaderWriterModifier interface {
 	IsAddressAdmin(ctx context.Context, addr string) (bool, error)
 }
 
-// TokenWriteInvalidateChecker abstracts token operations.
-type TokenWriteInvalidateChecker interface {
+type nodeWriteInvalidateChecker interface {
 	WriteToken(ctx context.Context, tkn string, expirationDate int64) error
 	CheckToken(ctx context.Context, token string) (bool, error)
 	InvalidateToken(ctx context.Context, token string) error
 }
 
-// TransactiontrxProvsitory is the interface that wraps the basic CRUD operations for Transaction operations on permanent repository.
-type TrxWriteReadRejectApprover interface {
+type transactionCacher interface {
+	ReadAwaitingTransactionsByIssuer(address string) ([]transaction.Transaction, error)
+	ReadAwaitingTransactionsByReceiver(address string) ([]transaction.Transaction, error)
+	CleanSignedTransactions(hashes []transaction.Transaction)
+}
+
+type trxReadWriteRejectApprover interface {
 	FindTransactionInBlockHash(ctx context.Context, trxBlockHash [32]byte) ([32]byte, error)
 	ReadAwaitingTransactionsByIssuer(ctx context.Context, address string) ([]transaction.Transaction, error)
 	ReadAwaitingTransactionsByReceiver(ctx context.Context, address string) ([]transaction.Transaction, error)
@@ -118,14 +121,12 @@ type TrxWriteReadRejectApprover interface {
 	RejectTransactions(ctx context.Context, receiver string, trxs []transaction.Transaction) error
 }
 
-// Verifier provides methods to verify the signature of the message.
-type Verifier interface {
+type verifier interface {
 	VerifySignature(message, signature []byte, hash [32]byte, address string) error
 }
 
-// Bookkeeper abstracts methods of the bookkeeping of a blockchain.
-type Bookkeeper interface {
-	Verifier
+type bookkeeper interface {
+	verifier
 	Run(ctx context.Context) error
 	WriteCandidateTransaction(ctx context.Context, tx *transaction.Transaction) error
 	WriteIssuerSignedTransactionForReceiver(ctx context.Context, trxBlock *transaction.Transaction) error
@@ -138,22 +139,17 @@ type RandomDataProvideValidator interface {
 	ValidateData(address string, data []byte) bool
 }
 
-// ReactiveBlock provides reactive subscription to the blockchain.
-// It allows to listen for the new blocks created by the Ladger.
-type ReactiveBlock interface {
+type reactiveBlock interface {
 	Cancel()
 	Channel() <-chan block.Block
 }
 
-// ReactiveTrxIssued provides reactive subscription to the issuer address.
-// It allows to listen for the new blocks created by the Ladger.
-type ReactiveTrxIssued interface {
+type reactiveTrxIssued interface {
 	Cancel()
 	Channel() <-chan string
 }
 
-// NodesComunicationPublisher provides facade access to communication between nodes publisher endpoint.
-type NodesComunicationPublisher interface {
+type nodeNetworkingPublisher interface {
 	PublishNewBlock(blk *block.Block, notaryNodeURL string) error
 	PublishAddressesAwaitingTrxs(addresses []string, notaryNodeURL string) error
 }
@@ -166,16 +162,17 @@ type Config struct {
 }
 
 type server struct {
-	trxProv       TrxWriteReadRejectApprover
-	pub           NodesComunicationPublisher
-	addressProv   AddressReaderWriterModifier
-	tokenProv     TokenWriteInvalidateChecker
-	bookkeeping   Bookkeeper
+	cache         transactionCacher
+	trxProv       trxReadWriteRejectApprover
+	pub           nodeNetworkingPublisher
+	addressProv   addressReadWriteModdifier
+	tokenProv     nodeWriteInvalidateChecker
+	bookkeeping   bookkeeper
 	randDataProv  RandomDataProvideValidator
 	tele          providers.HistogramProvider
 	log           logger.Logger
-	rxBlock       ReactiveBlock
-	rxTrxIssued   ReactiveTrxIssued
+	rxBlock       reactiveBlock
+	rxTrxIssued   reactiveTrxIssued
 	nodePublicURL string
 	dataSize      int
 }
@@ -183,10 +180,10 @@ type server struct {
 // Run initializes routing and runs the server. To stop the server cancel the context.
 // It blocks until the context is canceled.
 func Run(
-	ctx context.Context, c Config, trxProv TrxWriteReadRejectApprover, pub NodesComunicationPublisher,
-	addressProv AddressReaderWriterModifier, tokenProv TokenWriteInvalidateChecker, bookkeeping Bookkeeper,
+	ctx context.Context, c Config, cache transactionCacher, trxProv trxReadWriteRejectApprover, pub nodeNetworkingPublisher,
+	addressProv addressReadWriteModdifier, tokenProv nodeWriteInvalidateChecker, bookkeeping bookkeeper,
 	pv RandomDataProvideValidator, tele providers.HistogramProvider, log logger.Logger,
-	rxBlock ReactiveBlock, rxTrxIssued ReactiveTrxIssued,
+	rxBlock reactiveBlock, rxTrxIssued reactiveTrxIssued,
 ) error {
 	var err error
 	ctxx, cancel := context.WithCancel(ctx)
@@ -203,6 +200,7 @@ func Run(
 	id := primitive.NewObjectID().Hex()
 
 	s := &server{
+		cache:         cache,
 		pub:           pub,
 		trxProv:       trxProv,
 		addressProv:   addressProv,

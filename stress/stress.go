@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"strings"
 	"time"
 
 	"github.com/pterm/pterm"
@@ -22,6 +23,15 @@ type config struct {
 	ProcessTick     time.Duration `yaml:"process_tick_ms"`
 }
 
+func IsAllowdString(ip string) bool {
+	for _, s := range []string{"local", "node", "notary"} {
+		if strings.Contains(ip, s) {
+			return true
+		}
+	}
+	return false
+}
+
 func read(path string) (config, error) {
 	var cfg config
 	buf, err := os.ReadFile(path)
@@ -33,8 +43,10 @@ func read(path string) (config, error) {
 	if err != nil {
 		return cfg, fmt.Errorf("in file %q: %w", path, err)
 	}
-	if ip := net.ParseIP(cfg.CentralNodeIP); ip == nil {
-		return cfg, fmt.Errorf("provided ip [ %s ] is incorrect", cfg.CentralNodeIP)
+	if !IsAllowdString(cfg.CentralNodeIP) {
+		if ip := net.ParseIP(cfg.CentralNodeIP); ip == nil {
+			return cfg, fmt.Errorf("provided ip [ %s ] is incorrect", cfg.CentralNodeIP)
+		}
 	}
 
 	if cfg.CentralNodePort < 0 || cfg.CentralNodePort > 65535 {

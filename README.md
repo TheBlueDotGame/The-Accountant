@@ -139,8 +139,8 @@ notary_server:
   node_public_url: notary-node:8000
   port: 8000
   data_size_bytes: 15000
-helper_server:
-  port: 8000
+local_cache:
+  max_len: 5000
 nats:
   server_address: "nats://nats:4222"
   client_name: "notary-1"

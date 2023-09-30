@@ -7,6 +7,8 @@ notary_server:
   node_public_url: notary-node:8000
   port: 8000
   data_size_bytes: 15000
+local_cache:
+  max_len: 5000
 helper_server:
   port: 8000
 nats:

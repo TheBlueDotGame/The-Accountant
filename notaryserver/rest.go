@@ -243,6 +243,8 @@ func (s *server) reject(c *fiber.Ctx) error {
 		}
 	}
 
+	go s.cache.CleanSignedTransactions(trxsReject)
+
 	if err := s.trxProv.RejectTransactions(c.Context(), req.Address, trxsReject); err != nil {
 		return c.JSON(TransactionsRejectResponse{Success: false, TrxHashes: nil})
 	}
@@ -303,7 +305,18 @@ func (s *server) awaited(c *fiber.Ctx) error {
 		return fiber.ErrForbidden
 	}
 
-	trxs, err := s.trxProv.ReadAwaitingTransactionsByReceiver(c.Context(), req.Address)
+	trxs, err := s.cache.ReadAwaitingTransactionsByReceiver(req.Address)
+	if err == nil && len(trxs) > 0 {
+		return c.JSON(AwaitedTransactionsResponse{
+			Success:             true,
+			AwaitedTransactions: trxs,
+		})
+	}
+	if err != nil {
+		s.log.Info(fmt.Sprintf("notary server cache lookup failure with error: %s", err.Error()))
+	}
+
+	trxs, err = s.trxProv.ReadAwaitingTransactionsByReceiver(c.Context(), req.Address)
 	if err != nil {
 		s.log.Error(
 			fmt.Sprintf("awaited transactions endpoint, failed to read awaiting transactions for address: %s, %s",

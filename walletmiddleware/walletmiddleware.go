@@ -58,7 +58,7 @@ func (c *Client) ValidateApiVersion() error {
 	var alive notaryserver.AliveResponse
 	url := fmt.Sprintf("%s%s", c.apiRoot, notaryserver.AliveURL)
 	if err := httpclient.MakeGet(c.timeout, url, &alive); err != nil {
-		return err
+		return fmt.Errorf("check notary node alive on url: [ %s ], %w", url, err)
 	}
 
 	if alive.APIVersion != notaryserver.ApiVersion {
