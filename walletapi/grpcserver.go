@@ -67,7 +67,7 @@ func RunGRPC(ctx context.Context, cfg Config, log logger.Logger, timeout time.Du
 }
 
 // Alive implements wallet client API GRPC alive procedure.
-// Procedure informs about notary node the API version and the header.
+// Procedure informs about notary node API version and header.
 // This procedure allows to check is notary node alive, is client node alive
 // and are the client and notary nodes using compatible API version.
 func (a *app) Alive(context.Context, *emptypb.Empty) (*protobufcompiled.AliveInfo, error) {
@@ -79,4 +79,24 @@ func (a *app) Alive(context.Context, *emptypb.Empty) (*protobufcompiled.AliveInf
 	aliveResp.ApiVersion = notaryserver.ApiVersion
 	aliveResp.ApiHeader = notaryserver.Header
 	return &aliveResp, nil
+}
+
+// Address implements wallet client API GRPC address procedure.
+// Procedure returns client public address if the client API version is valid.
+// Address is in base58 format and contains wallet version and control sum.
+func (a *app) Address(context.Context, *emptypb.Empty) (*protobufcompiled.WalletPublicAddress, error) {
+	var walletResp protobufcompiled.WalletPublicAddress
+	if err := a.centralNodeClient.ValidateApiVersion(); err != nil {
+		walletResp.Info.Err = err.Error()
+		return &walletResp, err
+	}
+
+	addr, err := a.centralNodeClient.Address()
+	if err != nil {
+		walletResp.Info.Err = err.Error()
+		return &walletResp, err
+	}
+	walletResp.Info.Ok = true
+	walletResp.Address = addr
+	return &walletResp, nil
 }

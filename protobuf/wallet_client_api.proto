@@ -41,7 +41,7 @@ message CreateWebHook {
   string url = 1;
 }
 
-message ReadWalletPublicAddress {
+message WalletPublicAddress {
     ServerInfo info = 1;
     string address = 2;
 }
@@ -53,4 +53,5 @@ message Paggination {
 
 service WalletClientAPI {
   rpc Alive(google.protobuf.Empty) returns (AliveInfo) {}
+  rpc Address(google.protobuf.Empty) returns (WalletPublicAddress) {}
 }

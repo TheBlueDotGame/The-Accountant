@@ -20,7 +20,8 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	WalletClientAPI_Alive_FullMethodName = "/computantis.WalletClientAPI/Alive"
+	WalletClientAPI_Alive_FullMethodName   = "/computantis.WalletClientAPI/Alive"
+	WalletClientAPI_Address_FullMethodName = "/computantis.WalletClientAPI/Address"
 )
 
 // WalletClientAPIClient is the client API for WalletClientAPI service.
@@ -28,6 +29,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type WalletClientAPIClient interface {
 	Alive(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*AliveInfo, error)
+	Address(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*WalletPublicAddress, error)
 }
 
 type walletClientAPIClient struct {
@@ -47,11 +49,21 @@ func (c *walletClientAPIClient) Alive(ctx context.Context, in *emptypb.Empty, op
 	return out, nil
 }
 
+func (c *walletClientAPIClient) Address(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*WalletPublicAddress, error) {
+	out := new(WalletPublicAddress)
+	err := c.cc.Invoke(ctx, WalletClientAPI_Address_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // WalletClientAPIServer is the server API for WalletClientAPI service.
 // All implementations must embed UnimplementedWalletClientAPIServer
 // for forward compatibility
 type WalletClientAPIServer interface {
 	Alive(context.Context, *emptypb.Empty) (*AliveInfo, error)
+	Address(context.Context, *emptypb.Empty) (*WalletPublicAddress, error)
 	mustEmbedUnimplementedWalletClientAPIServer()
 }
 
@@ -61,6 +73,9 @@ type UnimplementedWalletClientAPIServer struct {
 
 func (UnimplementedWalletClientAPIServer) Alive(context.Context, *emptypb.Empty) (*AliveInfo, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Alive not implemented")
+}
+func (UnimplementedWalletClientAPIServer) Address(context.Context, *emptypb.Empty) (*WalletPublicAddress, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Address not implemented")
 }
 func (UnimplementedWalletClientAPIServer) mustEmbedUnimplementedWalletClientAPIServer() {}
 
@@ -93,6 +108,24 @@ func _WalletClientAPI_Alive_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _WalletClientAPI_Address_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WalletClientAPIServer).Address(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: WalletClientAPI_Address_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WalletClientAPIServer).Address(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // WalletClientAPI_ServiceDesc is the grpc.ServiceDesc for WalletClientAPI service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -103,6 +136,10 @@ var WalletClientAPI_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Alive",
 			Handler:    _WalletClientAPI_Alive_Handler,
+		},
+		{
+			MethodName: "Address",
+			Handler:    _WalletClientAPI_Address_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
