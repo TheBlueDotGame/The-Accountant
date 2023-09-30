@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package computantis;
+
+option go_package = "github.com/bartossh/Computantis/protobufcompiled";
+
+import "transaction.proto";
+
+message IssueTransaction {
+  string subject = 1;
+  bytes data = 2;
+  string receiver_address = 3;
+}
+
+message Reject {
+  repeated Transaction transactions = 1;
+}
+
+message ServerInfo {
+  bool ok = 1;
+  string err = 2;
+}
+
+message Transactions {
+  ServerInfo info = 1;
+  repeated Transaction transactions = 2;
+}
+
+message CreateWallet {
+  string token = 1;
+}
+
+message CreateWebHook {
+  string url = 1;
+}
+
+message ReadWalletPublicAddress {
+    ServerInfo info = 1;
+    string address = 2;
+}
+
+message Paggination {
+  int64 offset = 1;
+  int64 limit = 2;
+}

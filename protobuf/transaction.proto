@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package computantis;
+
+option go_package = "github.com/bartossh/Computantis/protobufcompiled";
+
+message Transaction {
+  string subject = 1;
+  bytes data = 2;
+  bytes hash = 3;
+  uint64 createrd_at = 4;
+  string receiver_address = 5;
+  string issuer_address = 6;
+  bytes receiver_signature = 7;
+  bytes issuer_signature = 8;
+}
