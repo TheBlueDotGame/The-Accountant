@@ -358,9 +358,9 @@ Install govulncheck to perform vulnerability scanning  `go install golang.org/x/
 ### Development
 
 C version of client-node isn't cross platform.
-This software is developed to be used with Linux and is tested for x86_64 Linux 5.15.0-76-generic kernel version.
+This software is developed to be run on Linux OS and is tested for x86_64 Linux 5.15.0-76-generic kernel version, but it runs on aarch64 architecture too.
 This software was tested with `gcc` compiler and while it might work with `clan`, `g++` or `c++` it is highly recommended to not use them.
-The `gcc` compiler used for the test and development is `gcc version 9.4.0`.
+The `gcc` compiler used for the test and development is `gcc version 11.4.0`.
 
 1. Install dependencies:
 
@@ -374,6 +374,12 @@ sudo apt install build-essential
 
 ```sh
 sudo apt install openssl
+```
+
+ - Install openssl development library.
+ 
+```sh
+sudo apt install libssl-dev
 ```
 
 - Install autoconf
