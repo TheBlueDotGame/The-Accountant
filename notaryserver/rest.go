@@ -41,9 +41,12 @@ func (s *server) address(c *fiber.Ctx) error {
 	defer s.tele.RecordHistogramTime(addressURLTelemetryHistogram, time.Since(t))
 
 	var req SearchAddressRequest
-
 	if err := c.BodyParser(&req); err != nil {
 		s.log.Error(fmt.Sprintf("address endpoint, failed to parse request body: %s", err.Error()))
+		return fiber.ErrBadRequest
+	}
+	if req.Address == "" {
+		s.log.Error("wrong JSON format for search address request")
 		return fiber.ErrBadRequest
 	}
 	results, err := s.addressProv.FindAddress(c.Context(), req.Address, queryLimit)
@@ -73,9 +76,13 @@ func (s *server) trxInBlock(c *fiber.Ctx) error {
 	defer s.tele.RecordHistogramTime(trxInBlockTelemetryHistogram, time.Since(t))
 
 	var req SearchBlockRequest
-
 	if err := c.BodyParser(&req); err != nil {
 		s.log.Error(fmt.Sprintf("trx_in_block endpoint, failed to parse request body: %s", err.Error()))
+		return fiber.ErrBadRequest
+	}
+
+	if req.Address == "" || req.RawTrxHash == [32]byte{} {
+		s.log.Error("wrong JSON format for search for trx in block")
 		return fiber.ErrBadRequest
 	}
 
@@ -121,6 +128,13 @@ func (s *server) propose(c *fiber.Ctx) error {
 		return fiber.ErrBadRequest
 	}
 
+	if req.Transaction.Subject == "" || req.Transaction.Data == nil || req.Transaction.IssuerAddress == "" ||
+		req.Transaction.ReceiverAddress == "" || req.Transaction.Hash == [32]byte{} ||
+		req.Transaction.CreatedAt.IsZero() || req.Transaction.IssuerSignature == nil {
+		s.log.Error("wrong JSON format for propose trx")
+		return fiber.ErrBadRequest
+	}
+
 	if len(req.Transaction.Data) == 0 || len(req.Transaction.Data) > s.dataSize {
 		s.log.Error(fmt.Sprintf("propose endpoint, invalid transaction data size: %d", len(req.Transaction.Data)))
 		return fiber.ErrBadRequest
@@ -156,6 +170,13 @@ func (s *server) confirm(c *fiber.Ctx) error {
 	var trx transaction.Transaction
 	if err := c.BodyParser(&trx); err != nil {
 		s.log.Error(fmt.Sprintf("confirm endpoint, failed to parse request body: %s", err.Error()))
+		return fiber.ErrBadRequest
+	}
+
+	if trx.Subject == "" || trx.Data == nil || trx.IssuerAddress == "" || trx.ReceiverAddress == "" ||
+		trx.Hash == [32]byte{} || trx.CreatedAt.IsZero() || trx.IssuerSignature == nil ||
+		trx.ReceiverSignature == nil {
+		s.log.Error("wrong address JSON format to confirm trx")
 		return fiber.ErrBadRequest
 	}
 
@@ -213,6 +234,11 @@ func (s *server) reject(c *fiber.Ctx) error {
 	var req TransactionsRejectRequest
 	if err := c.BodyParser(&req); err != nil {
 		s.log.Error(fmt.Sprintf("reject endpoint, failed to parse request body: %s", err.Error()))
+		return fiber.ErrBadRequest
+	}
+
+	if req.Address == "" || req.Transactions == nil || req.Data == nil || req.Signature == nil || req.Hash == [32]byte{} {
+		s.log.Error("wrong JSON format when rejecting transactions")
 		return fiber.ErrBadRequest
 	}
 
@@ -285,6 +311,11 @@ func (s *server) awaited(c *fiber.Ctx) error {
 		return fiber.ErrBadRequest
 	}
 
+	if req.Address == "" || req.Hash == [32]byte{} || req.Signature == nil || req.Data == nil {
+		s.log.Error("wrong JSON format when reading awaited transactions")
+		return fiber.ErrBadRequest
+	}
+
 	if ok := s.randDataProv.ValidateData(req.Address, req.Data); !ok {
 		s.log.Error(fmt.Sprintf("awaited transactions endpoint, failed to validate data for address: %s", req.Address))
 		return fiber.ErrForbidden
@@ -349,6 +380,11 @@ func (s *server) issued(c *fiber.Ctx) error {
 		return fiber.ErrBadRequest
 	}
 
+	if req.Address == "" || req.Hash == [32]byte{} || req.Signature == nil || req.Data == nil {
+		s.log.Error("wrong JSON format when reading issued transactions")
+		return fiber.ErrBadRequest
+	}
+
 	if ok := s.randDataProv.ValidateData(req.Address, req.Data); !ok {
 		s.log.Error(fmt.Sprintf("issued transactions endpoint, failed to validate data for address: %s", req.Address))
 		return fiber.ErrForbidden
@@ -401,6 +437,11 @@ func (s *server) rejected(c *fiber.Ctx) error {
 		return fiber.ErrBadRequest
 	}
 
+	if req.Address == "" || req.Hash == [32]byte{} || req.Signature == nil || req.Data == nil {
+		s.log.Error("wrong JSON format when reading rejected transactions")
+		return fiber.ErrBadRequest
+	}
+
 	if ok := s.randDataProv.ValidateData(req.Address, req.Data); !ok {
 		s.log.Error(fmt.Sprintf("rejected transactions endpoint, failed to validate data for address: %s", req.Address))
 		return fiber.ErrForbidden
@@ -450,6 +491,11 @@ func (s *server) approved(c *fiber.Ctx) error {
 	var req TransactionsRequest
 	if err := c.BodyParser(&req); err != nil {
 		s.log.Error(fmt.Sprintf("approved transactions endpoint, failed to parse request body: %s", err.Error()))
+		return fiber.ErrBadRequest
+	}
+
+	if req.Address == "" || req.Hash == [32]byte{} || req.Signature == nil || req.Data == nil {
+		s.log.Error("wrong JSON format when reading approved transactions")
 		return fiber.ErrBadRequest
 	}
 
@@ -509,6 +555,11 @@ func (s *server) data(c *fiber.Ctx) error {
 		return fiber.ErrBadRequest
 	}
 
+	if req.Address == "" {
+		s.log.Error("wrong JSON format when requesting data to sign")
+		return fiber.ErrBadRequest
+	}
+
 	d := s.randDataProv.ProvideData(req.Address)
 	return c.JSON(DataToSignResponse{Data: d})
 }
@@ -538,6 +589,11 @@ func (s *server) addressCreate(c *fiber.Ctx) error {
 		s.log.Error(fmt.Sprintf("address create endpoint, failed to parse request body: %s", err.Error()))
 		return fiber.ErrBadRequest
 	}
+	if req.Address == "" || req.Token == "" || req.Data == nil || req.Signature == nil || req.Hash == [32]byte{} {
+		s.log.Error("wrong JSON format when creating address")
+		return fiber.ErrBadRequest
+	}
+
 	if ok := s.randDataProv.ValidateData(req.Address, req.Data); !ok {
 		s.log.Error(fmt.Sprintf("address create endpoint, failed to validate data for address: %s", req.Address))
 		return fiber.ErrForbidden
@@ -599,6 +655,10 @@ func (s *server) tokenGenerate(c *fiber.Ctx) error {
 	var req GenerateTokenRequest
 	if err := c.BodyParser(&req); err != nil {
 		s.log.Error(fmt.Sprintf("token generate, failed to parse request body: %s", err.Error()))
+		return fiber.ErrBadRequest
+	}
+	if req.Address == "" || req.Signature == nil || req.Data == nil || req.Hash == [32]byte{} || req.Expiration == 0 {
+		s.log.Error("wrong JSON format to generate token")
 		return fiber.ErrBadRequest
 	}
 	if ok := s.randDataProv.ValidateData(req.Address, req.Data); !ok {
