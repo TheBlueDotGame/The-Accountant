@@ -9,6 +9,7 @@ package protobufcompiled
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	reflect "reflect"
 	sync "sync"
 )
@@ -19,6 +20,69 @@ const (
 	// Verify that runtime/protoimpl is sufficiently up-to-date.
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
+
+type AliveInfo struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	ApiVersion string `protobuf:"bytes,1,opt,name=api_version,json=apiVersion,proto3" json:"api_version,omitempty"`
+	ApiHeader  string `protobuf:"bytes,2,opt,name=api_header,json=apiHeader,proto3" json:"api_header,omitempty"`
+	Alive      bool   `protobuf:"varint,3,opt,name=alive,proto3" json:"alive,omitempty"`
+}
+
+func (x *AliveInfo) Reset() {
+	*x = AliveInfo{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_wallet_client_api_proto_msgTypes[0]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *AliveInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AliveInfo) ProtoMessage() {}
+
+func (x *AliveInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_wallet_client_api_proto_msgTypes[0]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AliveInfo.ProtoReflect.Descriptor instead.
+func (*AliveInfo) Descriptor() ([]byte, []int) {
+	return file_wallet_client_api_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *AliveInfo) GetApiVersion() string {
+	if x != nil {
+		return x.ApiVersion
+	}
+	return ""
+}
+
+func (x *AliveInfo) GetApiHeader() string {
+	if x != nil {
+		return x.ApiHeader
+	}
+	return ""
+}
+
+func (x *AliveInfo) GetAlive() bool {
+	if x != nil {
+		return x.Alive
+	}
+	return false
+}
 
 type IssueTransaction struct {
 	state         protoimpl.MessageState
@@ -33,7 +97,7 @@ type IssueTransaction struct {
 func (x *IssueTransaction) Reset() {
 	*x = IssueTransaction{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_wallet_client_api_proto_msgTypes[0]
+		mi := &file_wallet_client_api_proto_msgTypes[1]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -46,7 +110,7 @@ func (x *IssueTransaction) String() string {
 func (*IssueTransaction) ProtoMessage() {}
 
 func (x *IssueTransaction) ProtoReflect() protoreflect.Message {
-	mi := &file_wallet_client_api_proto_msgTypes[0]
+	mi := &file_wallet_client_api_proto_msgTypes[1]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -59,7 +123,7 @@ func (x *IssueTransaction) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IssueTransaction.ProtoReflect.Descriptor instead.
 func (*IssueTransaction) Descriptor() ([]byte, []int) {
-	return file_wallet_client_api_proto_rawDescGZIP(), []int{0}
+	return file_wallet_client_api_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *IssueTransaction) GetSubject() string {
@@ -94,7 +158,7 @@ type Reject struct {
 func (x *Reject) Reset() {
 	*x = Reject{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_wallet_client_api_proto_msgTypes[1]
+		mi := &file_wallet_client_api_proto_msgTypes[2]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -107,7 +171,7 @@ func (x *Reject) String() string {
 func (*Reject) ProtoMessage() {}
 
 func (x *Reject) ProtoReflect() protoreflect.Message {
-	mi := &file_wallet_client_api_proto_msgTypes[1]
+	mi := &file_wallet_client_api_proto_msgTypes[2]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -120,7 +184,7 @@ func (x *Reject) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Reject.ProtoReflect.Descriptor instead.
 func (*Reject) Descriptor() ([]byte, []int) {
-	return file_wallet_client_api_proto_rawDescGZIP(), []int{1}
+	return file_wallet_client_api_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *Reject) GetTransactions() []*Transaction {
@@ -142,7 +206,7 @@ type ServerInfo struct {
 func (x *ServerInfo) Reset() {
 	*x = ServerInfo{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_wallet_client_api_proto_msgTypes[2]
+		mi := &file_wallet_client_api_proto_msgTypes[3]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -155,7 +219,7 @@ func (x *ServerInfo) String() string {
 func (*ServerInfo) ProtoMessage() {}
 
 func (x *ServerInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_wallet_client_api_proto_msgTypes[2]
+	mi := &file_wallet_client_api_proto_msgTypes[3]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -168,7 +232,7 @@ func (x *ServerInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ServerInfo.ProtoReflect.Descriptor instead.
 func (*ServerInfo) Descriptor() ([]byte, []int) {
-	return file_wallet_client_api_proto_rawDescGZIP(), []int{2}
+	return file_wallet_client_api_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *ServerInfo) GetOk() bool {
@@ -197,7 +261,7 @@ type Transactions struct {
 func (x *Transactions) Reset() {
 	*x = Transactions{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_wallet_client_api_proto_msgTypes[3]
+		mi := &file_wallet_client_api_proto_msgTypes[4]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -210,7 +274,7 @@ func (x *Transactions) String() string {
 func (*Transactions) ProtoMessage() {}
 
 func (x *Transactions) ProtoReflect() protoreflect.Message {
-	mi := &file_wallet_client_api_proto_msgTypes[3]
+	mi := &file_wallet_client_api_proto_msgTypes[4]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -223,7 +287,7 @@ func (x *Transactions) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Transactions.ProtoReflect.Descriptor instead.
 func (*Transactions) Descriptor() ([]byte, []int) {
-	return file_wallet_client_api_proto_rawDescGZIP(), []int{3}
+	return file_wallet_client_api_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *Transactions) GetInfo() *ServerInfo {
@@ -251,7 +315,7 @@ type CreateWallet struct {
 func (x *CreateWallet) Reset() {
 	*x = CreateWallet{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_wallet_client_api_proto_msgTypes[4]
+		mi := &file_wallet_client_api_proto_msgTypes[5]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -264,7 +328,7 @@ func (x *CreateWallet) String() string {
 func (*CreateWallet) ProtoMessage() {}
 
 func (x *CreateWallet) ProtoReflect() protoreflect.Message {
-	mi := &file_wallet_client_api_proto_msgTypes[4]
+	mi := &file_wallet_client_api_proto_msgTypes[5]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -277,7 +341,7 @@ func (x *CreateWallet) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateWallet.ProtoReflect.Descriptor instead.
 func (*CreateWallet) Descriptor() ([]byte, []int) {
-	return file_wallet_client_api_proto_rawDescGZIP(), []int{4}
+	return file_wallet_client_api_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *CreateWallet) GetToken() string {
@@ -298,7 +362,7 @@ type CreateWebHook struct {
 func (x *CreateWebHook) Reset() {
 	*x = CreateWebHook{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_wallet_client_api_proto_msgTypes[5]
+		mi := &file_wallet_client_api_proto_msgTypes[6]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -311,7 +375,7 @@ func (x *CreateWebHook) String() string {
 func (*CreateWebHook) ProtoMessage() {}
 
 func (x *CreateWebHook) ProtoReflect() protoreflect.Message {
-	mi := &file_wallet_client_api_proto_msgTypes[5]
+	mi := &file_wallet_client_api_proto_msgTypes[6]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -324,7 +388,7 @@ func (x *CreateWebHook) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateWebHook.ProtoReflect.Descriptor instead.
 func (*CreateWebHook) Descriptor() ([]byte, []int) {
-	return file_wallet_client_api_proto_rawDescGZIP(), []int{5}
+	return file_wallet_client_api_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *CreateWebHook) GetUrl() string {
@@ -346,7 +410,7 @@ type ReadWalletPublicAddress struct {
 func (x *ReadWalletPublicAddress) Reset() {
 	*x = ReadWalletPublicAddress{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_wallet_client_api_proto_msgTypes[6]
+		mi := &file_wallet_client_api_proto_msgTypes[7]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -359,7 +423,7 @@ func (x *ReadWalletPublicAddress) String() string {
 func (*ReadWalletPublicAddress) ProtoMessage() {}
 
 func (x *ReadWalletPublicAddress) ProtoReflect() protoreflect.Message {
-	mi := &file_wallet_client_api_proto_msgTypes[6]
+	mi := &file_wallet_client_api_proto_msgTypes[7]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -372,7 +436,7 @@ func (x *ReadWalletPublicAddress) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReadWalletPublicAddress.ProtoReflect.Descriptor instead.
 func (*ReadWalletPublicAddress) Descriptor() ([]byte, []int) {
-	return file_wallet_client_api_proto_rawDescGZIP(), []int{6}
+	return file_wallet_client_api_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *ReadWalletPublicAddress) GetInfo() *ServerInfo {
@@ -401,7 +465,7 @@ type Paggination struct {
 func (x *Paggination) Reset() {
 	*x = Paggination{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_wallet_client_api_proto_msgTypes[7]
+		mi := &file_wallet_client_api_proto_msgTypes[8]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -414,7 +478,7 @@ func (x *Paggination) String() string {
 func (*Paggination) ProtoMessage() {}
 
 func (x *Paggination) ProtoReflect() protoreflect.Message {
-	mi := &file_wallet_client_api_proto_msgTypes[7]
+	mi := &file_wallet_client_api_proto_msgTypes[8]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -427,7 +491,7 @@ func (x *Paggination) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Paggination.ProtoReflect.Descriptor instead.
 func (*Paggination) Descriptor() ([]byte, []int) {
-	return file_wallet_client_api_proto_rawDescGZIP(), []int{7}
+	return file_wallet_client_api_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *Paggination) GetOffset() int64 {
@@ -450,7 +514,15 @@ var file_wallet_client_api_proto_rawDesc = []byte{
 	0x0a, 0x17, 0x77, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x5f, 0x63, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x5f,
 	0x61, 0x70, 0x69, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x12, 0x0b, 0x63, 0x6f, 0x6d, 0x70, 0x75,
 	0x74, 0x61, 0x6e, 0x74, 0x69, 0x73, 0x1a, 0x11, 0x74, 0x72, 0x61, 0x6e, 0x73, 0x61, 0x63, 0x74,
-	0x69, 0x6f, 0x6e, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0x6b, 0x0a, 0x10, 0x49, 0x73, 0x73,
+	0x69, 0x6f, 0x6e, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x1a, 0x1b, 0x67, 0x6f, 0x6f, 0x67, 0x6c,
+	0x65, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2f, 0x65, 0x6d, 0x70, 0x74, 0x79,
+	0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0x61, 0x0a, 0x09, 0x41, 0x6c, 0x69, 0x76, 0x65, 0x49,
+	0x6e, 0x66, 0x6f, 0x12, 0x1f, 0x0a, 0x0b, 0x61, 0x70, 0x69, 0x5f, 0x76, 0x65, 0x72, 0x73, 0x69,
+	0x6f, 0x6e, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0a, 0x61, 0x70, 0x69, 0x56, 0x65, 0x72,
+	0x73, 0x69, 0x6f, 0x6e, 0x12, 0x1d, 0x0a, 0x0a, 0x61, 0x70, 0x69, 0x5f, 0x68, 0x65, 0x61, 0x64,
+	0x65, 0x72, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x61, 0x70, 0x69, 0x48, 0x65, 0x61,
+	0x64, 0x65, 0x72, 0x12, 0x14, 0x0a, 0x05, 0x61, 0x6c, 0x69, 0x76, 0x65, 0x18, 0x03, 0x20, 0x01,
+	0x28, 0x08, 0x52, 0x05, 0x61, 0x6c, 0x69, 0x76, 0x65, 0x22, 0x6b, 0x0a, 0x10, 0x49, 0x73, 0x73,
 	0x75, 0x65, 0x54, 0x72, 0x61, 0x6e, 0x73, 0x61, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x18, 0x0a,
 	0x07, 0x73, 0x75, 0x62, 0x6a, 0x65, 0x63, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07,
 	0x73, 0x75, 0x62, 0x6a, 0x65, 0x63, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x64, 0x61, 0x74, 0x61, 0x18,
@@ -487,10 +559,15 @@ var file_wallet_client_api_proto_rawDesc = []byte{
 	0x69, 0x6f, 0x6e, 0x12, 0x16, 0x0a, 0x06, 0x6f, 0x66, 0x66, 0x73, 0x65, 0x74, 0x18, 0x01, 0x20,
 	0x01, 0x28, 0x03, 0x52, 0x06, 0x6f, 0x66, 0x66, 0x73, 0x65, 0x74, 0x12, 0x14, 0x0a, 0x05, 0x6c,
 	0x69, 0x6d, 0x69, 0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x03, 0x52, 0x05, 0x6c, 0x69, 0x6d, 0x69,
-	0x74, 0x42, 0x32, 0x5a, 0x30, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f,
-	0x62, 0x61, 0x72, 0x74, 0x6f, 0x73, 0x73, 0x68, 0x2f, 0x43, 0x6f, 0x6d, 0x70, 0x75, 0x74, 0x61,
-	0x6e, 0x74, 0x69, 0x73, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x63, 0x6f, 0x6d,
-	0x70, 0x69, 0x6c, 0x65, 0x64, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x74, 0x32, 0x4c, 0x0a, 0x0f, 0x57, 0x61, 0x6c, 0x6c, 0x65, 0x74, 0x43, 0x6c, 0x69, 0x65, 0x6e,
+	0x74, 0x41, 0x50, 0x49, 0x12, 0x39, 0x0a, 0x05, 0x41, 0x6c, 0x69, 0x76, 0x65, 0x12, 0x16, 0x2e,
+	0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e,
+	0x45, 0x6d, 0x70, 0x74, 0x79, 0x1a, 0x16, 0x2e, 0x63, 0x6f, 0x6d, 0x70, 0x75, 0x74, 0x61, 0x6e,
+	0x74, 0x69, 0x73, 0x2e, 0x41, 0x6c, 0x69, 0x76, 0x65, 0x49, 0x6e, 0x66, 0x6f, 0x22, 0x00, 0x42,
+	0x32, 0x5a, 0x30, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x62, 0x61,
+	0x72, 0x74, 0x6f, 0x73, 0x73, 0x68, 0x2f, 0x43, 0x6f, 0x6d, 0x70, 0x75, 0x74, 0x61, 0x6e, 0x74,
+	0x69, 0x73, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x63, 0x6f, 0x6d, 0x70, 0x69,
+	0x6c, 0x65, 0x64, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -505,28 +582,32 @@ func file_wallet_client_api_proto_rawDescGZIP() []byte {
 	return file_wallet_client_api_proto_rawDescData
 }
 
-var file_wallet_client_api_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_wallet_client_api_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_wallet_client_api_proto_goTypes = []interface{}{
-	(*IssueTransaction)(nil),        // 0: computantis.IssueTransaction
-	(*Reject)(nil),                  // 1: computantis.Reject
-	(*ServerInfo)(nil),              // 2: computantis.ServerInfo
-	(*Transactions)(nil),            // 3: computantis.Transactions
-	(*CreateWallet)(nil),            // 4: computantis.CreateWallet
-	(*CreateWebHook)(nil),           // 5: computantis.CreateWebHook
-	(*ReadWalletPublicAddress)(nil), // 6: computantis.ReadWalletPublicAddress
-	(*Paggination)(nil),             // 7: computantis.Paggination
-	(*Transaction)(nil),             // 8: computantis.Transaction
+	(*AliveInfo)(nil),               // 0: computantis.AliveInfo
+	(*IssueTransaction)(nil),        // 1: computantis.IssueTransaction
+	(*Reject)(nil),                  // 2: computantis.Reject
+	(*ServerInfo)(nil),              // 3: computantis.ServerInfo
+	(*Transactions)(nil),            // 4: computantis.Transactions
+	(*CreateWallet)(nil),            // 5: computantis.CreateWallet
+	(*CreateWebHook)(nil),           // 6: computantis.CreateWebHook
+	(*ReadWalletPublicAddress)(nil), // 7: computantis.ReadWalletPublicAddress
+	(*Paggination)(nil),             // 8: computantis.Paggination
+	(*Transaction)(nil),             // 9: computantis.Transaction
+	(*emptypb.Empty)(nil),           // 10: google.protobuf.Empty
 }
 var file_wallet_client_api_proto_depIdxs = []int32{
-	8, // 0: computantis.Reject.transactions:type_name -> computantis.Transaction
-	2, // 1: computantis.Transactions.info:type_name -> computantis.ServerInfo
-	8, // 2: computantis.Transactions.transactions:type_name -> computantis.Transaction
-	2, // 3: computantis.ReadWalletPublicAddress.info:type_name -> computantis.ServerInfo
-	4, // [4:4] is the sub-list for method output_type
-	4, // [4:4] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	9,  // 0: computantis.Reject.transactions:type_name -> computantis.Transaction
+	3,  // 1: computantis.Transactions.info:type_name -> computantis.ServerInfo
+	9,  // 2: computantis.Transactions.transactions:type_name -> computantis.Transaction
+	3,  // 3: computantis.ReadWalletPublicAddress.info:type_name -> computantis.ServerInfo
+	10, // 4: computantis.WalletClientAPI.Alive:input_type -> google.protobuf.Empty
+	0,  // 5: computantis.WalletClientAPI.Alive:output_type -> computantis.AliveInfo
+	5,  // [5:6] is the sub-list for method output_type
+	4,  // [4:5] is the sub-list for method input_type
+	4,  // [4:4] is the sub-list for extension type_name
+	4,  // [4:4] is the sub-list for extension extendee
+	0,  // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_wallet_client_api_proto_init() }
@@ -537,7 +618,7 @@ func file_wallet_client_api_proto_init() {
 	file_transaction_proto_init()
 	if !protoimpl.UnsafeEnabled {
 		file_wallet_client_api_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*IssueTransaction); i {
+			switch v := v.(*AliveInfo); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -549,7 +630,7 @@ func file_wallet_client_api_proto_init() {
 			}
 		}
 		file_wallet_client_api_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Reject); i {
+			switch v := v.(*IssueTransaction); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -561,7 +642,7 @@ func file_wallet_client_api_proto_init() {
 			}
 		}
 		file_wallet_client_api_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ServerInfo); i {
+			switch v := v.(*Reject); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -573,7 +654,7 @@ func file_wallet_client_api_proto_init() {
 			}
 		}
 		file_wallet_client_api_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Transactions); i {
+			switch v := v.(*ServerInfo); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -585,7 +666,7 @@ func file_wallet_client_api_proto_init() {
 			}
 		}
 		file_wallet_client_api_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*CreateWallet); i {
+			switch v := v.(*Transactions); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -597,7 +678,7 @@ func file_wallet_client_api_proto_init() {
 			}
 		}
 		file_wallet_client_api_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*CreateWebHook); i {
+			switch v := v.(*CreateWallet); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -609,7 +690,7 @@ func file_wallet_client_api_proto_init() {
 			}
 		}
 		file_wallet_client_api_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ReadWalletPublicAddress); i {
+			switch v := v.(*CreateWebHook); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -621,6 +702,18 @@ func file_wallet_client_api_proto_init() {
 			}
 		}
 		file_wallet_client_api_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ReadWalletPublicAddress); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_wallet_client_api_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Paggination); i {
 			case 0:
 				return &v.state
@@ -639,9 +732,9 @@ func file_wallet_client_api_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_wallet_client_api_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   8,
+			NumMessages:   9,
 			NumExtensions: 0,
-			NumServices:   0,
+			NumServices:   1,
 		},
 		GoTypes:           file_wallet_client_api_proto_goTypes,
 		DependencyIndexes: file_wallet_client_api_proto_depIdxs,

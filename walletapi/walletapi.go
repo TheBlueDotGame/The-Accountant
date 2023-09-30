@@ -14,6 +14,7 @@ import (
 	"github.com/bartossh/Computantis/helperserver"
 	"github.com/bartossh/Computantis/logger"
 	"github.com/bartossh/Computantis/notaryserver"
+	"github.com/bartossh/Computantis/protobufcompiled"
 	"github.com/bartossh/Computantis/transaction"
 	"github.com/bartossh/Computantis/walletmiddleware"
 )
@@ -29,6 +30,7 @@ type app struct {
 	log                 logger.Logger
 	centralNodeClient   walletmiddleware.Client
 	validatorNodeClient walletmiddleware.Client
+	protobufcompiled.UnimplementedWalletClientAPIServer
 }
 
 const (
