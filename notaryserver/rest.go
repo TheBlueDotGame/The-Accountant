@@ -313,7 +313,7 @@ func (s *server) awaited(c *fiber.Ctx) error {
 		})
 	}
 	if err != nil {
-		s.log.Info(fmt.Sprintf("notary server cache error: %s", err.Error()))
+		s.log.Info(fmt.Sprintf("notary server cache lookup failure with error: %s", err.Error()))
 	}
 
 	trxs, err = s.trxProv.ReadAwaitingTransactionsByReceiver(c.Context(), req.Address)
