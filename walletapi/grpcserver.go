@@ -2,8 +2,10 @@ package walletapi
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
+	"net/url"
 	"time"
 
 	"google.golang.org/grpc"
@@ -99,4 +101,256 @@ func (a *app) Address(context.Context, *emptypb.Empty) (*protobufcompiled.Wallet
 	walletResp.Info.Ok = true
 	walletResp.Address = addr
 	return &walletResp, nil
+}
+
+// IssuedTransactions implements wallet client API GRPC read issued transactions.
+// Procedure returns client issued transactions if exists in the system.
+func (a *app) IssuedTransactions(ctx context.Context, notaryNode *protobufcompiled.NotaryNode) (*protobufcompiled.Transactions, error) {
+	if notaryNode.Url == "" {
+		a.log.Error("notary node URL is empty in the message")
+		err := errors.New("empty notary node URL")
+		return &protobufcompiled.Transactions{
+			Transactions: nil,
+			Info: &protobufcompiled.ServerInfo{
+				Ok:  false,
+				Err: err.Error(),
+			},
+		}, err
+	}
+	if _, err := url.Parse(notaryNode.Url); err != nil {
+		a.log.Error(fmt.Sprintf("wrong URL format, notary node URL cannot be parsed, %s", err))
+		return &protobufcompiled.Transactions{
+			Transactions: nil,
+			Info: &protobufcompiled.ServerInfo{
+				Ok:  false,
+				Err: err.Error(),
+			},
+		}, err
+	}
+
+	transactions, err := a.centralNodeClient.ReadIssuedTransactions(notaryNode.Url)
+	if err != nil {
+		err := fmt.Errorf("error getting issued transactions: %v", err)
+		a.log.Error(err.Error())
+		return &protobufcompiled.Transactions{
+			Transactions: nil,
+			Info: &protobufcompiled.ServerInfo{
+				Ok:  false,
+				Err: err.Error(),
+			},
+		}, err
+	}
+
+	trxs := make([]*protobufcompiled.Transaction, 0, len(transactions))
+	for _, transaction := range transactions {
+		trxs = append(trxs, &protobufcompiled.Transaction{
+			Subject:           transaction.Subject,
+			Data:              transaction.Data,
+			Hash:              transaction.Hash[:],
+			CreaterdAt:        uint64(transaction.CreatedAt.UnixNano()),
+			IssuerAddress:     transaction.IssuerAddress,
+			ReceiverAddress:   transaction.ReceiverAddress,
+			IssuerSignature:   transaction.IssuerSignature,
+			ReceiverSignature: transaction.ReceiverSignature,
+		})
+	}
+
+	return &protobufcompiled.Transactions{
+		Transactions: trxs,
+		Info: &protobufcompiled.ServerInfo{
+			Ok: true,
+		},
+	}, nil
+}
+
+// ReceivedTransactions implements wallet client API GRPC read received transactions.
+// Procedure returns client awaiting transactions if exists in the system.
+func (a *app) ReceivedTransactions(ctx context.Context, notaryNode *protobufcompiled.NotaryNode) (*protobufcompiled.Transactions, error) {
+	if notaryNode.Url == "" {
+		a.log.Error("notary node URL is empty in the message")
+		err := errors.New("empty notary node URL")
+		return &protobufcompiled.Transactions{
+			Transactions: nil,
+			Info: &protobufcompiled.ServerInfo{
+				Ok:  false,
+				Err: err.Error(),
+			},
+		}, err
+	}
+	if _, err := url.Parse(notaryNode.Url); err != nil {
+		a.log.Error(fmt.Sprintf("wrong URL format, notary node URL cannot be parsed, %s", err))
+		return &protobufcompiled.Transactions{
+			Transactions: nil,
+			Info: &protobufcompiled.ServerInfo{
+				Ok:  false,
+				Err: err.Error(),
+			},
+		}, err
+	}
+
+	transactions, err := a.centralNodeClient.ReadWaitingTransactions(notaryNode.Url)
+	if err != nil {
+		err := fmt.Errorf("error getting waiting transactions: %v", err)
+		a.log.Error(err.Error())
+		return &protobufcompiled.Transactions{
+			Transactions: nil,
+			Info: &protobufcompiled.ServerInfo{
+				Ok:  false,
+				Err: err.Error(),
+			},
+		}, err
+	}
+
+	trxs := make([]*protobufcompiled.Transaction, 0, len(transactions))
+	for _, transaction := range transactions {
+		trxs = append(trxs, &protobufcompiled.Transaction{
+			Subject:           transaction.Subject,
+			Data:              transaction.Data,
+			Hash:              transaction.Hash[:],
+			CreaterdAt:        uint64(transaction.CreatedAt.UnixNano()),
+			IssuerAddress:     transaction.IssuerAddress,
+			ReceiverAddress:   transaction.ReceiverAddress,
+			IssuerSignature:   transaction.IssuerSignature,
+			ReceiverSignature: transaction.ReceiverSignature,
+		})
+	}
+
+	return &protobufcompiled.Transactions{
+		Transactions: trxs,
+		Info: &protobufcompiled.ServerInfo{
+			Ok: true,
+		},
+	}, nil
+}
+
+// ApprovedTransactions implements wallet client API GRPC read approved transactions.
+// Procedure returns client approved transactions if exists in the system.
+func (a *app) ApprovedTransactions(ctx context.Context, paggination *protobufcompiled.Paggination) (*protobufcompiled.Transactions, error) {
+	transactions, err := a.centralNodeClient.ReadApprovedTransactions(int(paggination.Offset), int(paggination.Limit))
+	if err != nil {
+		err := fmt.Errorf("error getting approved transactions: %v", err)
+		a.log.Error(err.Error())
+		return &protobufcompiled.Transactions{
+			Transactions: nil,
+			Info: &protobufcompiled.ServerInfo{
+				Ok:  false,
+				Err: err.Error(),
+			},
+		}, err
+	}
+
+	trxs := make([]*protobufcompiled.Transaction, 0, len(transactions))
+	for _, transaction := range transactions {
+		trxs = append(trxs, &protobufcompiled.Transaction{
+			Subject:           transaction.Subject,
+			Data:              transaction.Data,
+			Hash:              transaction.Hash[:],
+			CreaterdAt:        uint64(transaction.CreatedAt.UnixNano()),
+			IssuerAddress:     transaction.IssuerAddress,
+			ReceiverAddress:   transaction.ReceiverAddress,
+			IssuerSignature:   transaction.IssuerSignature,
+			ReceiverSignature: transaction.ReceiverSignature,
+		})
+	}
+
+	return &protobufcompiled.Transactions{
+		Transactions: trxs,
+		Info: &protobufcompiled.ServerInfo{
+			Ok: true,
+		},
+	}, nil
+}
+
+// RejectedTransactions implements wallet client API GRPC read rejected transactions.
+// Procedure returns client rejected transactions if exists in the system.
+func (a *app) RejectedTransactions(ctx context.Context, paggination *protobufcompiled.Paggination) (*protobufcompiled.Transactions, error) {
+	transactions, err := a.centralNodeClient.ReadRejectedTransactions(int(paggination.Offset), int(paggination.Limit))
+	if err != nil {
+		err := fmt.Errorf("error getting rejected transactions: %v", err)
+		a.log.Error(err.Error())
+		return &protobufcompiled.Transactions{
+			Transactions: nil,
+			Info: &protobufcompiled.ServerInfo{
+				Ok:  false,
+				Err: err.Error(),
+			},
+		}, err
+	}
+
+	trxs := make([]*protobufcompiled.Transaction, 0, len(transactions))
+	for _, transaction := range transactions {
+		trxs = append(trxs, &protobufcompiled.Transaction{
+			Subject:           transaction.Subject,
+			Data:              transaction.Data,
+			Hash:              transaction.Hash[:],
+			CreaterdAt:        uint64(transaction.CreatedAt.UnixNano()),
+			IssuerAddress:     transaction.IssuerAddress,
+			ReceiverAddress:   transaction.ReceiverAddress,
+			IssuerSignature:   transaction.IssuerSignature,
+			ReceiverSignature: transaction.ReceiverSignature,
+		})
+	}
+
+	return &protobufcompiled.Transactions{
+		Transactions: trxs,
+		Info: &protobufcompiled.ServerInfo{
+			Ok: true,
+		},
+	}, nil
+}
+
+// Wallet implements wallet client API GRPC create wallet.
+// Procedure returns server info containing error message.
+func (a *app) Wallet(ctx context.Context, wallet *protobufcompiled.CreateWallet) (*protobufcompiled.ServerInfo, error) {
+	if wallet.Token == "" {
+		err := errors.New("token is empty")
+		a.log.Error(err.Error())
+		return &protobufcompiled.ServerInfo{
+			Ok:  false,
+			Err: err.Error(),
+		}, err
+	}
+
+	if err := a.centralNodeClient.NewWallet(wallet.Token); err != nil {
+		err := fmt.Errorf("error creating wallet: %v", err)
+		a.log.Error(err.Error())
+		return &protobufcompiled.ServerInfo{
+			Ok:  false,
+			Err: err.Error(),
+		}, err
+	}
+
+	if err := a.centralNodeClient.SaveWalletToFile(); err != nil {
+		err := fmt.Errorf("error saving wallet to file: %v", err)
+		a.log.Error(err.Error())
+		return &protobufcompiled.ServerInfo{
+			Ok:  false,
+			Err: err.Error(),
+		}, err
+	}
+
+	return &protobufcompiled.ServerInfo{Ok: true}, nil
+}
+
+// WebHook implements wallet client API GRPC create web hook.
+// Procedure returns server info containing error message.
+func (a *app) WebHook(ctx context.Context, webHook *protobufcompiled.CreateWebHook) (*protobufcompiled.ServerInfo, error) {
+	if webHook.Url == "" {
+		err := errors.New("wrong JSON format when creating a web hook")
+		a.log.Error(err.Error())
+		return &protobufcompiled.ServerInfo{
+			Ok:  false,
+			Err: err.Error(),
+		}, err
+	}
+
+	if err := a.validatorNodeClient.CreateWebhook(webHook.Url); err != nil {
+		a.log.Error(err.Error())
+		return &protobufcompiled.ServerInfo{
+			Ok:  false,
+			Err: err.Error(),
+		}, err
+	}
+
+	return &protobufcompiled.ServerInfo{Ok: true}, nil
 }

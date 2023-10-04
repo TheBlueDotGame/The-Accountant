@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -197,7 +198,8 @@ func (a *app) issueTransaction(c *fiber.Ctx) error {
 
 // ConfirmTransactionRequest is a request to confirm transaction.
 type ConfirmTransactionRequest struct {
-	Transaction transaction.Transaction `json:"transaction"`
+	NotaryNodeURL string                  `json:"notary_node_url"`
+	Transaction   transaction.Transaction `json:"transaction"`
 }
 
 // ConfirmTransactionResponse is response of confirming transaction.
@@ -221,7 +223,7 @@ func (a *app) confirmReceivedTransaction(c *fiber.Ctx) error {
 		return fiber.ErrBadRequest
 	}
 
-	if err := a.centralNodeClient.ConfirmTransaction(&req.Transaction); err != nil {
+	if err := a.centralNodeClient.ConfirmTransaction(req.NotaryNodeURL, &req.Transaction); err != nil {
 		err := fmt.Errorf("error confirming transaction: %v", err)
 		a.log.Error(err.Error())
 		return c.JSON(ConfirmTransactionResponse{Ok: false, Err: err.Error()})
@@ -232,7 +234,8 @@ func (a *app) confirmReceivedTransaction(c *fiber.Ctx) error {
 
 // RejectTransactionsRequest is a request to reject transactions.
 type RejectTransactionsRequest struct {
-	Transactions []transaction.Transaction `json:"transactions"`
+	NotaryNodeURL string                    `json:"notary_node_url"`
+	Transactions  []transaction.Transaction `json:"transactions"`
 }
 
 // RejectTransactionsResponse is response of rejecting transactions.
@@ -255,7 +258,7 @@ func (a *app) rejectTransactions(c *fiber.Ctx) error {
 		return fiber.ErrBadRequest
 	}
 
-	hashes, err := a.centralNodeClient.RejectTransactions(req.Transactions)
+	hashes, err := a.centralNodeClient.RejectTransactions(req.NotaryNodeURL, req.Transactions)
 	ok := true
 	var errMsg string
 	if err != nil {
@@ -274,7 +277,22 @@ type IssuedTransactionResponse struct {
 }
 
 func (a *app) issuedTransactions(c *fiber.Ctx) error {
-	transactions, err := a.centralNodeClient.ReadIssuedTransactions()
+	var notaryNodeURL string
+	if err := c.BodyParser(&notaryNodeURL); err != nil {
+		err := fmt.Errorf("error reading data: %v", err)
+		a.log.Error(err.Error())
+		return errors.Join(fiber.ErrBadRequest, err)
+	}
+	if notaryNodeURL == "" {
+		a.log.Error("wrong message format, notary node URL is empty in the message")
+		return fiber.ErrBadRequest
+	}
+	if _, err := url.Parse(notaryNodeURL); err != nil {
+		a.log.Error(fmt.Sprintf("wrong URL format, notary node URL cannot be parsed, %s", err))
+		return fiber.ErrBadRequest
+	}
+
+	transactions, err := a.centralNodeClient.ReadIssuedTransactions(notaryNodeURL)
 	if err != nil {
 		err := fmt.Errorf("error getting issued transactions: %v", err)
 		a.log.Error(err.Error())
@@ -301,8 +319,12 @@ func (a *app) receivedTransactions(c *fiber.Ctx) error {
 		a.log.Error("wrong message format, notary node URL is empty in the message")
 		return fiber.ErrBadRequest
 	}
+	if _, err := url.Parse(notaryNodeURL); err != nil {
+		a.log.Error(fmt.Sprintf("wrong URL format, notary node URL cannot be parsed, %s", err))
+		return fiber.ErrBadRequest
+	}
 
-	transactions, err := a.centralNodeClient.ReadWaitingTransactions("")
+	transactions, err := a.centralNodeClient.ReadWaitingTransactions(notaryNodeURL)
 	if err != nil {
 		err := fmt.Errorf("error getting issued transactions: %v", err)
 		a.log.Error(err.Error())
@@ -414,12 +436,6 @@ func (a *app) createWallet(c *fiber.Ctx) error {
 // CreateWebHookRequest is a request to create a web hook
 type CreateWebHookRequest struct {
 	URL string `json:"url"`
-}
-
-// CreateWebhookResponse is a response describing effect of creating a web hook
-type CreateWebhookResponse struct {
-	Err string `json:"error"`
-	Ok  bool   `json:"ok"`
 }
 
 func (a *app) createUpdateWebHook(c *fiber.Ctx) error {

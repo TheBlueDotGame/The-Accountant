@@ -92,7 +92,7 @@ func (c *Client) NewWallet(token string) error {
 	c.w = w
 	c.ready = true
 
-	dataToSign, err := c.DataToSign()
+	dataToSign, err := c.DataToSign(c.apiRoot)
 	if err != nil {
 		c.ready = false // reset wallet ready
 		return errors.Join(httpclient.ErrRejectedByServer, err)
@@ -175,7 +175,7 @@ func (c *Client) ProposeTransaction(receiverAddr string, subject string, data []
 
 // ConfirmTransaction confirms transaction by signing it with the wallet
 // and then sending it to the API server.
-func (c *Client) ConfirmTransaction(trx *transaction.Transaction) error {
+func (c *Client) ConfirmTransaction(notaryNodeURL string, trx *transaction.Transaction) error {
 	if !c.ready {
 		return httpclient.ErrWalletNotReady
 	}
@@ -184,8 +184,16 @@ func (c *Client) ConfirmTransaction(trx *transaction.Transaction) error {
 		return errors.Join(httpclient.ErrSigningFailed, err)
 	}
 
+	rootURL := c.apiRoot
+	if notaryNodeURL != "" {
+		_, err := url.Parse(notaryNodeURL)
+		if err != nil {
+			rootURL = notaryNodeURL
+		}
+	}
+
 	var res notaryserver.TransactionConfirmProposeResponse
-	url := fmt.Sprintf("%s%s", c.apiRoot, notaryserver.ConfirmTransactionURL)
+	url := fmt.Sprintf("%s%s", rootURL, notaryserver.ConfirmTransactionURL)
 	if err := httpclient.MakePost(c.timeout, url, trx, &res); err != nil {
 		return errors.Join(httpclient.ErrRejectedByServer, err)
 	}
@@ -204,13 +212,21 @@ func (c *Client) ConfirmTransaction(trx *transaction.Transaction) error {
 // RejectTransactions rejects given transactions.
 // Transaction will be rejected if the transaction receiver is a given wellet public address.
 // Returns hashes of all the rejected transactions or error otherwise.
-func (c *Client) RejectTransactions(trxs []transaction.Transaction) ([][32]byte, error) {
+func (c *Client) RejectTransactions(notaryNodeURL string, trxs []transaction.Transaction) ([][32]byte, error) {
 	addr, err := c.Address()
 	if err != nil {
 		return nil, err
 	}
 
-	data, err := c.DataToSign()
+	rootURL := c.apiRoot
+	if notaryNodeURL != "" {
+		_, err := url.Parse(notaryNodeURL)
+		if err != nil {
+			rootURL = notaryNodeURL
+		}
+	}
+
+	data, err := c.DataToSign(rootURL)
 	if err != nil {
 		return nil, errors.Join(httpclient.ErrRejectedByServer, err)
 	}
@@ -225,7 +241,7 @@ func (c *Client) RejectTransactions(trxs []transaction.Transaction) ([][32]byte,
 	}
 
 	var res notaryserver.TransactionsRejectResponse
-	url := fmt.Sprintf("%s%s", c.apiRoot, notaryserver.RejectTransactionURL)
+	url := fmt.Sprintf("%s%s", rootURL, notaryserver.RejectTransactionURL)
 	if err := httpclient.MakePost(c.timeout, url, req, &res); err != nil {
 		return nil, errors.Join(httpclient.ErrRejectedByServer, err)
 	}
@@ -242,7 +258,15 @@ func (c *Client) ReadWaitingTransactions(notaryNodeURL string) ([]transaction.Tr
 		return nil, httpclient.ErrWalletNotReady
 	}
 
-	data, err := c.DataToSign()
+	rootURL := c.apiRoot
+	if notaryNodeURL != "" {
+		_, err := url.Parse(notaryNodeURL)
+		if err != nil {
+			rootURL = notaryNodeURL
+		}
+	}
+
+	data, err := c.DataToSign(rootURL)
 	if err != nil {
 		return nil, errors.Join(httpclient.ErrRejectedByServer, err)
 	}
@@ -253,13 +277,6 @@ func (c *Client) ReadWaitingTransactions(notaryNodeURL string) ([]transaction.Tr
 		Data:      data.Data,
 		Hash:      hash,
 		Signature: signature,
-	}
-	rootURL := c.apiRoot
-	if notaryNodeURL != "" {
-		_, err := url.Parse(notaryNodeURL)
-		if err != nil {
-			rootURL = notaryNodeURL
-		}
 	}
 	url := fmt.Sprintf("%s%s", rootURL, notaryserver.AwaitedTransactionURL)
 
@@ -275,12 +292,20 @@ func (c *Client) ReadWaitingTransactions(notaryNodeURL string) ([]transaction.Tr
 }
 
 // ReadIssuedTransactions reads all issued transactions belonging to current wallet from the API server.
-func (c *Client) ReadIssuedTransactions() ([]transaction.Transaction, error) {
+func (c *Client) ReadIssuedTransactions(notaryNodeURL string) ([]transaction.Transaction, error) {
 	if !c.ready {
 		return nil, httpclient.ErrWalletNotReady
 	}
 
-	data, err := c.DataToSign()
+	rootURL := c.apiRoot
+	if notaryNodeURL != "" {
+		_, err := url.Parse(notaryNodeURL)
+		if err != nil {
+			rootURL = notaryNodeURL
+		}
+	}
+
+	data, err := c.DataToSign(rootURL)
 	if err != nil {
 		return nil, errors.Join(httpclient.ErrRejectedByServer, err)
 	}
@@ -293,7 +318,7 @@ func (c *Client) ReadIssuedTransactions() ([]transaction.Transaction, error) {
 		Signature: signature,
 	}
 	var res notaryserver.IssuedTransactionsResponse
-	url := fmt.Sprintf("%s%s", c.apiRoot, notaryserver.IssuedTransactionURL)
+	url := fmt.Sprintf("%s%s", rootURL, notaryserver.IssuedTransactionURL)
 	if err := httpclient.MakePost(c.timeout, url, req, &res); err != nil {
 		return nil, errors.Join(httpclient.ErrRejectedByServer, err)
 	}
@@ -311,7 +336,7 @@ func (c *Client) ReadRejectedTransactions(offset, limit int) ([]transaction.Tran
 		return nil, httpclient.ErrWalletNotReady
 	}
 
-	data, err := c.DataToSign()
+	data, err := c.DataToSign(c.apiRoot)
 	if err != nil {
 		return nil, errors.Join(httpclient.ErrRejectedByServer, err)
 	}
@@ -344,7 +369,7 @@ func (c *Client) ReadApprovedTransactions(offset, limit int) ([]transaction.Tran
 		return nil, httpclient.ErrWalletNotReady
 	}
 
-	data, err := c.DataToSign()
+	data, err := c.DataToSign(c.apiRoot)
 	if err != nil {
 		return nil, errors.Join(httpclient.ErrRejectedByServer, err)
 	}
@@ -377,7 +402,7 @@ func (c *Client) GenerateToken(t time.Time) (token.Token, error) {
 		return token.Token{}, httpclient.ErrWalletNotReady
 	}
 
-	data, err := c.DataToSign()
+	data, err := c.DataToSign(c.apiRoot)
 	if err != nil {
 		return token.Token{}, errors.Join(httpclient.ErrRejectedByServer, err)
 	}
@@ -426,7 +451,7 @@ func (c *Client) ReadWalletFromFile() error {
 // DataToSign returns data to sign for the current wallet.
 // Data to sign are randomly generated bytes by the server and stored in pair with the address.
 // Signing this data is a proof that the signing public address is the owner of the wallet a making request.
-func (c *Client) DataToSign() (notaryserver.DataToSignResponse, error) {
+func (c *Client) DataToSign(notaryNodeURL string) (notaryserver.DataToSignResponse, error) {
 	addr, err := c.Address()
 	if err != nil {
 		return notaryserver.DataToSignResponse{}, err
@@ -436,7 +461,7 @@ func (c *Client) DataToSign() (notaryserver.DataToSignResponse, error) {
 		Address: addr,
 	}
 	var resp notaryserver.DataToSignResponse
-	url := fmt.Sprintf("%s%s", c.apiRoot, notaryserver.DataToValidateURL)
+	url := fmt.Sprintf("%s%s", notaryNodeURL, notaryserver.DataToValidateURL)
 	if err := httpclient.MakePost(c.timeout, url, req, &resp); err != nil {
 		return notaryserver.DataToSignResponse{}, err
 	}
@@ -454,7 +479,7 @@ func (c *Client) Sign(d []byte) (digest [32]byte, signature []byte, err error) {
 }
 
 func (c *Client) CreateWebhook(webHookURL string) error {
-	data, err := c.DataToSign()
+	data, err := c.DataToSign(c.apiRoot)
 	if err != nil {
 		return err
 	}
