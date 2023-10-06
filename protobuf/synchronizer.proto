@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package computantis;
+
+option go_package = "github.com/bartossh/Computantis/protobufcompiled";
+
+import "google/protobuf/empty.proto";
+
+message QueueStatus {
+  string id_of_first_node_in_queue = 1;
+  uint64 total_number_of_nodes_in_queue = 2;
+}
+
+message NodeInfo {
+  string id = 1;
+  string address = 2;
+  uint64 transactions_per_second = 3;
+}
+
+service Synchronizer {
+  rpc AddToQueue(NodeInfo) returns (QueueStatus) {}
+  rpc RemoveFromQueue(NodeInfo) returns (QueueStatus) {}
+}
+
+service QueueListener {
+  rpc QueueUpdate(QueueStatus) returns (google.protobuf.Empty) {}
+  rpc Ping(google.protobuf.Empty) returns (google.protobuf.Empty) {}
+}
