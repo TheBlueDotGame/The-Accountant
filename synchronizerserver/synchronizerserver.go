@@ -25,9 +25,10 @@ type server struct {
 	log   logger.Logger
 	queue *queue
 	token string
-	protobufcompiled.UnsafeSynchronizerServer
+	protobufcompiled.UnimplementedSynchronizerServer
 }
 
+// AddToQueue implements SynchronizerServer
 func (s *server) AddToQueue(ctx context.Context, info *protobufcompiled.NodeInfo) (*emptypb.Empty, error) {
 	if info.Token != s.token {
 		return nil, errors.New("invalid token, access denied")
@@ -35,6 +36,7 @@ func (s *server) AddToQueue(ctx context.Context, info *protobufcompiled.NodeInfo
 	return &emptypb.Empty{}, s.queue.addNode(info)
 }
 
+// RemoveFromQueue implements SynchronizerServer
 func (s *server) RemoveFromQueue(ctx context.Context, info *protobufcompiled.NodeInfo) (*emptypb.Empty, error) {
 	if info.Token != s.token {
 		return nil, errors.New("invalid token, access denied")

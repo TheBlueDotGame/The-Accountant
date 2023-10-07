@@ -83,6 +83,7 @@ func Run(ctx context.Context, cfg Config, log logger.Logger, id string) error {
 	return nil
 }
 
+// RegisterInQueue register node in the blockchain synchronizer queue.
 func (s *server) RegisterInQueue(ctx context.Context, transactionsPerSecond uint64) error {
 	_, err := s.client.AddToQueue(ctx, &protobufcompiled.NodeInfo{
 		Id:                    s.id,
@@ -93,6 +94,7 @@ func (s *server) RegisterInQueue(ctx context.Context, transactionsPerSecond uint
 	return err
 }
 
+// RemoveFromQueue removes node from the blockchain synchronizer queue.
 func (s *server) RemoveFromQueue(ctx context.Context) error {
 	_, err := s.client.RemoveFromQueue(ctx, &protobufcompiled.NodeInfo{
 		Id:    s.id,
@@ -101,10 +103,13 @@ func (s *server) RemoveFromQueue(ctx context.Context) error {
 	return err
 }
 
+// Done provides the channel that fires when node is ready to main the block.
+// Done means that node is done waiting in the queue, is firs in the queue to process block.
 func (s *server) Done() <-chan struct{} {
 	return s.done
 }
 
+// QueueUpdate implements GRPC QueueListenerServer.
 func (s *server) QueueUpdate(ctx context.Context, status *protobufcompiled.QueueStatus) (*emptypb.Empty, error) {
 	if status.Token != s.token || status.Id != s.id {
 		return nil, errors.New("invalid token, access denied")
@@ -113,6 +118,7 @@ func (s *server) QueueUpdate(ctx context.Context, status *protobufcompiled.Queue
 	return &emptypb.Empty{}, nil
 }
 
+// Ping implements GRPC QueueListenerServer.
 func (s *server) Ping(ctx context.Context, status *protobufcompiled.QueueStatus) (*emptypb.Empty, error) {
 	if status.Token != s.token || status.Id != s.id {
 		return nil, errors.New("invalid token, access denied")
