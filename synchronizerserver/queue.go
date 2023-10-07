@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"fmt"
+	"net/url"
 	"slices"
 	"sync"
 	"time"
@@ -12,7 +13,6 @@ import (
 	"github.com/bartossh/Computantis/protobufcompiled"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 type ping struct {
@@ -40,6 +40,7 @@ func (p *ping) unsetProcessing() {
 
 type node struct {
 	id     string
+	token  string
 	load   uint64
 	conn   *grpc.ClientConn
 	client protobufcompiled.QueueListenerClient
@@ -64,6 +65,10 @@ func newQueue(log logger.Logger) *queue {
 }
 
 func (q *queue) addNode(info *protobufcompiled.NodeInfo) error {
+	_, err := url.Parse(info.Address)
+	if err != nil {
+		return err
+	}
 	conn, err := grpc.Dial(info.Address, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return err
@@ -71,6 +76,7 @@ func (q *queue) addNode(info *protobufcompiled.NodeInfo) error {
 	client := protobufcompiled.NewQueueListenerClient(conn)
 	q.chAdd <- node{
 		id:     info.Id,
+		token:  info.Token,
 		load:   info.TransactionsPerSecond,
 		conn:   conn,
 		client: client,
@@ -105,8 +111,8 @@ func (q *queue) processRemoveNode(id string) (node, bool) {
 
 func (q *queue) processInformFirstNode(ctx context.Context, n node) {
 	_, err := n.client.QueueUpdate(ctx, &protobufcompiled.QueueStatus{
-		IdOfFirstNodeInQueue:      n.id,
-		TotalNumberOfNodesInQueue: uint64(len(q.nodesQueue)),
+		Id:    n.id,
+		Token: n.token,
 	})
 	if err != nil {
 		q.chRemove <- n.id
@@ -125,7 +131,7 @@ func (q *queue) processPing(ctx context.Context, p *ping, nodes []node) {
 		case <-ctx.Done():
 			return
 		default:
-			if _, err := n.client.Ping(ctx, &emptypb.Empty{}); err != nil {
+			if _, err := n.client.Ping(ctx, &protobufcompiled.QueueStatus{Id: n.id, Token: n.token}); err != nil {
 				q.log.Error(fmt.Sprintf("queue ping node [ %s ] error: %s", n.id, err))
 				q.chRemove <- n.id
 			}
@@ -146,6 +152,9 @@ func (q *queue) run(ctx context.Context, tick time.Duration) {
 			go q.processPing(ctx, &p, slices.Clone(q.nodesQueue))
 		case n := <-q.chAdd:
 			q.processAddNode(n)
+			if len(q.nodesQueue) == 1 {
+				q.processInformFirstNode(ctx, q.nodesQueue[0])
+			}
 		case id := <-q.chRemove:
 			if first, ok := q.processRemoveNode(id); ok {
 				q.processInformFirstNode(ctx, first)

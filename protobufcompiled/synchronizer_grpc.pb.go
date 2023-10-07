@@ -28,8 +28,8 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type SynchronizerClient interface {
-	AddToQueue(ctx context.Context, in *NodeInfo, opts ...grpc.CallOption) (*QueueStatus, error)
-	RemoveFromQueue(ctx context.Context, in *NodeInfo, opts ...grpc.CallOption) (*QueueStatus, error)
+	AddToQueue(ctx context.Context, in *NodeInfo, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	RemoveFromQueue(ctx context.Context, in *NodeInfo, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type synchronizerClient struct {
@@ -40,8 +40,8 @@ func NewSynchronizerClient(cc grpc.ClientConnInterface) SynchronizerClient {
 	return &synchronizerClient{cc}
 }
 
-func (c *synchronizerClient) AddToQueue(ctx context.Context, in *NodeInfo, opts ...grpc.CallOption) (*QueueStatus, error) {
-	out := new(QueueStatus)
+func (c *synchronizerClient) AddToQueue(ctx context.Context, in *NodeInfo, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, Synchronizer_AddToQueue_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -49,8 +49,8 @@ func (c *synchronizerClient) AddToQueue(ctx context.Context, in *NodeInfo, opts 
 	return out, nil
 }
 
-func (c *synchronizerClient) RemoveFromQueue(ctx context.Context, in *NodeInfo, opts ...grpc.CallOption) (*QueueStatus, error) {
-	out := new(QueueStatus)
+func (c *synchronizerClient) RemoveFromQueue(ctx context.Context, in *NodeInfo, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, Synchronizer_RemoveFromQueue_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -62,8 +62,8 @@ func (c *synchronizerClient) RemoveFromQueue(ctx context.Context, in *NodeInfo, 
 // All implementations must embed UnimplementedSynchronizerServer
 // for forward compatibility
 type SynchronizerServer interface {
-	AddToQueue(context.Context, *NodeInfo) (*QueueStatus, error)
-	RemoveFromQueue(context.Context, *NodeInfo) (*QueueStatus, error)
+	AddToQueue(context.Context, *NodeInfo) (*emptypb.Empty, error)
+	RemoveFromQueue(context.Context, *NodeInfo) (*emptypb.Empty, error)
 	mustEmbedUnimplementedSynchronizerServer()
 }
 
@@ -71,10 +71,10 @@ type SynchronizerServer interface {
 type UnimplementedSynchronizerServer struct {
 }
 
-func (UnimplementedSynchronizerServer) AddToQueue(context.Context, *NodeInfo) (*QueueStatus, error) {
+func (UnimplementedSynchronizerServer) AddToQueue(context.Context, *NodeInfo) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AddToQueue not implemented")
 }
-func (UnimplementedSynchronizerServer) RemoveFromQueue(context.Context, *NodeInfo) (*QueueStatus, error) {
+func (UnimplementedSynchronizerServer) RemoveFromQueue(context.Context, *NodeInfo) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RemoveFromQueue not implemented")
 }
 func (UnimplementedSynchronizerServer) mustEmbedUnimplementedSynchronizerServer() {}
@@ -156,7 +156,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type QueueListenerClient interface {
 	QueueUpdate(ctx context.Context, in *QueueStatus, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	Ping(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	Ping(ctx context.Context, in *QueueStatus, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type queueListenerClient struct {
@@ -176,7 +176,7 @@ func (c *queueListenerClient) QueueUpdate(ctx context.Context, in *QueueStatus, 
 	return out, nil
 }
 
-func (c *queueListenerClient) Ping(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (c *queueListenerClient) Ping(ctx context.Context, in *QueueStatus, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, QueueListener_Ping_FullMethodName, in, out, opts...)
 	if err != nil {
@@ -190,7 +190,7 @@ func (c *queueListenerClient) Ping(ctx context.Context, in *emptypb.Empty, opts 
 // for forward compatibility
 type QueueListenerServer interface {
 	QueueUpdate(context.Context, *QueueStatus) (*emptypb.Empty, error)
-	Ping(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
+	Ping(context.Context, *QueueStatus) (*emptypb.Empty, error)
 	mustEmbedUnimplementedQueueListenerServer()
 }
 
@@ -201,7 +201,7 @@ type UnimplementedQueueListenerServer struct {
 func (UnimplementedQueueListenerServer) QueueUpdate(context.Context, *QueueStatus) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method QueueUpdate not implemented")
 }
-func (UnimplementedQueueListenerServer) Ping(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
+func (UnimplementedQueueListenerServer) Ping(context.Context, *QueueStatus) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Ping not implemented")
 }
 func (UnimplementedQueueListenerServer) mustEmbedUnimplementedQueueListenerServer() {}
@@ -236,7 +236,7 @@ func _QueueListener_QueueUpdate_Handler(srv interface{}, ctx context.Context, de
 }
 
 func _QueueListener_Ping_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(emptypb.Empty)
+	in := new(QueueStatus)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -248,7 +248,7 @@ func _QueueListener_Ping_Handler(srv interface{}, ctx context.Context, dec func(
 		FullMethod: QueueListener_Ping_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueueListenerServer).Ping(ctx, req.(*emptypb.Empty))
+		return srv.(QueueListenerServer).Ping(ctx, req.(*QueueStatus))
 	}
 	return interceptor(ctx, in, info, handler)
 }
