@@ -154,17 +154,11 @@ func runGoshipPrototypeTest(print bool) {
 		}
 	}
 
-	if print {
-		fmt.Println("")
-		fmt.Println("Gossiping process in done")
-
-	}
-
 	cancel()
 
 	for _, nc := range nodesCases {
 		if print {
-			fmt.Printf("\nValidating node [ %p ], required to have [ %v ] accumulated messages.\n", nc.n, upperValuesRange+1)
+			fmt.Printf("Validating node [ %p ], required to have [ %v ] accumulated messages.\n", nc.n, upperValuesRange+1)
 		}
 		var accumulate int
 		for i := 0; i < upperValuesRange+1; i++ {

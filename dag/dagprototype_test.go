@@ -21,7 +21,7 @@ func TestPrototype(t *testing.T) {
 		screen.Clear()
 		screen.MoveTopLeft()
 		runGoshipPrototypeTest(true)
-		fmt.Printf("\n\nProbe [ %v ] done.\n\n", i+1)
+		fmt.Printf("\nProbe [ %v ] done.\n", i+1)
 		time.Sleep(sleep)
 	}
 	time.Sleep(time.Second)
