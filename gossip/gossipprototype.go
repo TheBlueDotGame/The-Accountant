@@ -1,4 +1,4 @@
-package dag
+package gossip
 
 import (
 	"context"

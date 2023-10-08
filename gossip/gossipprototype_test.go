@@ -1,6 +1,6 @@
 //go:build prototype
 
-package dag
+package gossip
 
 import (
 	"fmt"
