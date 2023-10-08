@@ -128,20 +128,20 @@ func runGoshipPrototypeTest(print bool) {
 			nd.n.receive(message{v: v, knowledgeable: make(map[*node]struct{})})
 		}
 		if print {
-			fmt.Printf("gossip of node [ %v ] done \n", nd)
+			fmt.Printf("gossiping by node [ %v ] done \n", nd)
 		}
-	}
-
-	if print {
-		fmt.Println("")
-		fmt.Println("gossip in done")
-		fmt.Println("")
 	}
 
 	// waits until all semaphores have closed channels.
 	for _, s := range semaphores {
 		for range s {
 		}
+	}
+
+	if print {
+		fmt.Println("")
+		fmt.Println("gossiping process in done")
+		fmt.Println("")
 	}
 
 	cancel()
