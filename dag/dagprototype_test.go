@@ -27,7 +27,7 @@ func TestPrototype(t *testing.T) {
 	time.Sleep(time.Second)
 	screen.Clear()
 	screen.MoveTopLeft()
-	fmt.Printf("All of [ %v ] probes done./n", probes+1)
+	fmt.Printf("All of [ %v ] probes done./n", probes)
 }
 
 func BenchmarkPrototype(b *testing.B) {
