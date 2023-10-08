@@ -45,15 +45,15 @@ type Verifier interface {
 // It is only important that the data are signed by the issuer and the receiver and
 // both parties agreed on them.
 type Transaction struct {
-	ID                any       `json:"-"                  bson:"_id"                db:"id"`
-	CreatedAt         time.Time `json:"created_at"         bson:"created_at"         db:"created_at"`
-	IssuerAddress     string    `json:"issuer_address"     bson:"issuer_address"     db:"issuer_address"`
-	ReceiverAddress   string    `json:"receiver_address"   bson:"receiver_address"   db:"receiver_address"`
-	Subject           string    `json:"subject"            bson:"subject"            db:"subject"`
-	Data              []byte    `json:"data"               bson:"data"               db:"data"`
-	IssuerSignature   []byte    `json:"issuer_signature"   bson:"issuer_signature"   db:"issuer_signature"`
-	ReceiverSignature []byte    `json:"receiver_signature" bson:"receiver_signature" db:"receiver_signature"`
-	Hash              [32]byte  `json:"hash"               bson:"hash"               db:"hash"`
+	ID                any       `json:"-"                  bson:"_id"                db:"id"                    msgpack:"-"`
+	CreatedAt         time.Time `json:"created_at"         bson:"created_at"         db:"created_at"            msgpack:"created_at"`
+	IssuerAddress     string    `json:"issuer_address"     bson:"issuer_address"     db:"issuer_address"        msgpack:"issuer_address"`
+	ReceiverAddress   string    `json:"receiver_address"   bson:"receiver_address"   db:"receiver_address"      msgpack:"receiver_address"`
+	Subject           string    `json:"subject"            bson:"subject"            db:"subject"               msgpack:"subject"`
+	Data              []byte    `json:"data"               bson:"data"               db:"data"                  msgpack:"data"`
+	IssuerSignature   []byte    `json:"issuer_signature"   bson:"issuer_signature"   db:"issuer_signature"      msgpack:"issuer_signature"`
+	ReceiverSignature []byte    `json:"receiver_signature" bson:"receiver_signature" db:"receiver_signature"    msgpack:"receiver_signature"`
+	Hash              [32]byte  `json:"hash"               bson:"hash"               db:"hash"                  msgpack:"hash"`
 }
 
 // New creates new transaction signed by the issuer.
