@@ -1,4 +1,4 @@
-// //go:build prototype
+//go:build prototype
 
 package dag
 
