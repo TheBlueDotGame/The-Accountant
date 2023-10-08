@@ -128,7 +128,7 @@ func runGoshipPrototypeTest(print bool) {
 			nd.n.receive(message{v: v, knowledgeable: make(map[*node]struct{})})
 		}
 		if print {
-			fmt.Printf("gossiping by node [ %v ] done \n", nd)
+			fmt.Printf("Gossiping by node [ %v ] done \n", nd)
 		}
 	}
 
@@ -140,15 +140,15 @@ func runGoshipPrototypeTest(print bool) {
 
 	if print {
 		fmt.Println("")
-		fmt.Println("gossiping process in done")
-		fmt.Println("")
+		fmt.Println("Gossiping process in done")
+
 	}
 
 	cancel()
 
 	for _, nc := range nodesCases {
 		if print {
-			fmt.Printf("\nValidating node [ %p ]\n", nc.n)
+			fmt.Printf("\nValidating node [ %p ], required to have [ %v ] accumulated messages.\n", nc.n, upperValuesRange+1)
 		}
 		accumulate := make([]int, 0, upperValuesRange)
 		for i := 0; i < upperValuesRange+1; i++ {
