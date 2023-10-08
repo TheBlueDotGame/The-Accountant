@@ -150,7 +150,7 @@ func runGoshipPrototypeTest(print bool) {
 		if print {
 			fmt.Printf("\nValidating node [ %p ], required to have [ %v ] accumulated messages.\n", nc.n, upperValuesRange+1)
 		}
-		accumulate := make([]int, 0, upperValuesRange)
+		var accumulate int
 		for i := 0; i < upperValuesRange+1; i++ {
 			if _, ok := nc.n.messages[i]; !ok {
 				if print {
@@ -158,10 +158,10 @@ func runGoshipPrototypeTest(print bool) {
 				}
 				continue
 			}
-			accumulate = append(accumulate, i)
+			accumulate++
 		}
 		if print {
-			fmt.Printf("Node [ %p ] accumulated [ %v ] messages.\n", nc.n, len(accumulate))
+			fmt.Printf("Node [ %p ] accumulated [ %v ] messages.\n", nc.n, accumulate)
 		}
 	}
 }
