@@ -128,6 +128,11 @@ func (t *Transaction) Sign(receiver Signer, v Verifier) ([32]byte, error) {
 	return hash, nil
 }
 
+// Verify verifies transaction.
+func (t *Transaction) Verify(v Verifier) error {
+	return v.Verify(t.GetMessage(), t.ReceiverSignature, t.Hash, t.ReceiverAddress)
+}
+
 // GeMessage returns message used for signature validation.
 func (t *Transaction) GetMessage() []byte {
 	msgLen := len(t.Subject) + len(t.Data) + len(t.IssuerAddress) + len(t.ReceiverAddress) + 8

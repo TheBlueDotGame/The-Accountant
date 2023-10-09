@@ -1,34 +1,56 @@
 package dag
 
 import (
+	"bytes"
+	"context"
+	"errors"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/bartossh/Computantis/logger"
-	"github.com/bartossh/Computantis/transaction"
 	badger "github.com/dgraph-io/badger/v4"
 )
 
-type Vertex struct {
-	Transaction     transaction.Transaction `msgpack:"transaction"`
-	Hash            [32]byte                `msgpack:"hash"`
-	LeftParentHash  [32]byte                `msgpack:"left_parent_hash"`
-	RightParentHash [32]byte                `msgpack:"right_parent_hash"`
+const (
+	gcRuntimeTick = time.Minute * 5
+)
+
+const (
+	keyTip                  = "tip"
+	keyVerex                = "vertex"
+	keyAddressLastTrxVertex = "last_addr_vrx"
+)
+
+func createKey(prefix string, key []byte) []byte {
+	var buf bytes.Buffer
+	buf.WriteString(prefix)
+	buf.Write(key)
+	return buf.Bytes()
 }
 
-// Config contains configuration for the AccountingBook.
-type Config struct {
-	DBPath string `yaml:"db_path"`
+var ErrVertexRejected = errors.New("vertex rejected")
+
+type signatureVerifier interface {
+	Verify(message, signature []byte, hash [32]byte, address string) error
+}
+
+type signer interface {
+	Sign(message []byte) (digest [32]byte, signature []byte)
+	Address() string
 }
 
 // AccountingBook is an entity that represents the accounting process of all received transactions.
 type AccountingBook struct {
-	db  *badger.DB
-	log logger.Logger
+	verifier  signatureVerifier
+	signer    signer
+	log       logger.Logger
+	db        *badger.DB
+	separator []byte
 }
 
 // New creates new AccountingBook.
-func New(cfg Config, l logger.Logger) (*AccountingBook, error) {
+func NewAccountingBook(ctx context.Context, cfg Config, verifier signatureVerifier, signer signer, l logger.Logger) (*AccountingBook, error) {
 	var opt badger.Options
 	switch cfg.DBPath {
 	case "":
@@ -46,9 +68,44 @@ func New(cfg Config, l logger.Logger) (*AccountingBook, error) {
 	if err != nil {
 		return nil, err
 	}
+	ab := &AccountingBook{
+		verifier:  verifier,
+		signer:    signer,
+		log:       l,
+		db:        db,
+		separator: []byte(cfg.Separator),
+	}
+	go ab.runHelper(ctx)
 
-	return &AccountingBook{
-		db:  db,
-		log: l,
-	}, nil
+	return ab, nil
+}
+
+// NewVertex gets a new candidate vertex and validates it before adding to the graph.
+func (ab *AccountingBook) NewVertex(vrx *Vertex) error {
+	if err := vrx.verify(ab.separator, ab.verifier); err != nil {
+		ab.log.Error(fmt.Sprintf("accountant [ %s ], rejected vertex [ %v ], %s", ab.signer.Address(), vrx.Hash, err))
+		return errors.Join(ErrVertexRejected, err)
+	}
+
+	// TODO: check transaction transfers tokens if not, if  yes validate for double spending
+
+	return nil
+}
+
+func (ab *AccountingBook) runHelper(ctx context.Context) {
+	ticker := time.NewTicker(gcRuntimeTick)
+	defer ab.db.Close()
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+		again:
+			err := ab.db.RunValueLogGC(0.5)
+			if err == nil {
+				goto again
+			}
+		case <-ctx.Done():
+			return
+		}
+	}
 }
