@@ -18,6 +18,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/bartossh/Computantis/fileoperations"
+	"github.com/bartossh/Computantis/spice"
 	"github.com/bartossh/Computantis/wallet"
 	"github.com/bartossh/Computantis/walletmiddleware"
 )
@@ -112,10 +113,11 @@ func TestFullClientApiCycle(t *testing.T) {
 			for i := 0; i < transactionsCount; i++ {
 				receiverAddr, err := receiver.Address()
 				assert.Nil(t, err)
-				err = issuer.ProposeTransaction(receiverAddr, "text", []byte(fmt.Sprintf("test_transaction_data:%v:%s", i, receiverAddr)))
+				spc := spice.New(0, 0)
+				err = issuer.ProposeTransaction(receiverAddr, "text", spc, []byte(fmt.Sprintf("test_transaction_data:%v:%s", i, receiverAddr)))
 				assert.Nil(t, err)
 
-				awaitedTrx, err := receiver.ReadWaitingTransactions()
+				awaitedTrx, err := receiver.ReadWaitingTransactions("")
 				assert.Nil(t, err)
 				assert.Equal(t, 1, len(awaitedTrx))
 

@@ -39,14 +39,18 @@ func New(currency, supplementaryCurrency uint64) Melange {
 	}
 }
 
-// Supply supplies spice of the given amount from the source.
+// Supply supplies spice of the given amount from the source to the entity.
 func (m *Melange) Supply(amount Melange, source *Melange) error {
 	return Transfer(amount, source, m)
 }
 
-// Drain drains spice of the given amount in to the given sink.
+// Drain drains spice of the given amount from the entity in to the given sink.
 func (m *Melange) Drain(amount Melange, sink *Melange) error {
 	return Transfer(amount, m, sink)
+}
+
+func (m *Melange) Empty() bool {
+	return m.Currency == 0 && m.SupplementaryCurrency == 0
 }
 
 // Transfer transfers given amount from one Melange asset to the other if possible or returns error otherwise.
