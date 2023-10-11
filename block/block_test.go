@@ -3,10 +3,12 @@ package block
 import (
 	"bytes"
 	"fmt"
+	"math"
 	"testing"
 
 	"gotest.tools/v3/assert"
 
+	"github.com/bartossh/Computantis/spice"
 	"github.com/bartossh/Computantis/transaction"
 	"github.com/bartossh/Computantis/wallet"
 )
@@ -24,7 +26,7 @@ func TestBlockCreate(t *testing.T) {
 	verifier := wallet.Helper{}
 
 	message := []byte("genesis transaction")
-	trx, err := transaction.New("genesis", message, receiver.Address(), &issuer)
+	trx, err := transaction.New("genesis", spice.New(math.MaxInt64, 0), message, receiver.Address(), &issuer)
 	assert.NilError(t, err)
 
 	trxHash, err := trx.Sign(&receiver, verifier)
@@ -42,7 +44,7 @@ func TestBlockCreate(t *testing.T) {
 	for i := 1; i <= blocksNum; i++ {
 		nextMsg := []byte(fmt.Sprintf("next message: %v", i))
 
-		ntrx, err := transaction.New("text", nextMsg, receiver.Address(), &issuer)
+		ntrx, err := transaction.New("text", spice.New(math.MaxInt64, 0), nextMsg, receiver.Address(), &issuer)
 		assert.NilError(t, err)
 
 		ntrxHash, err := ntrx.Sign(&receiver, verifier)
@@ -70,7 +72,7 @@ func TestBlockValidateSuccess(t *testing.T) {
 	verifier := wallet.Helper{}
 
 	message := []byte("genesis transaction")
-	trx, err := transaction.New("genesis", message, receiver.Address(), &issuer)
+	trx, err := transaction.New("genesis", spice.New(math.MaxInt64, 0), message, receiver.Address(), &issuer)
 	assert.NilError(t, err)
 
 	trxHash, err := trx.Sign(&receiver, verifier)
@@ -90,7 +92,7 @@ func TestBlockValidateSuccess(t *testing.T) {
 		for j := 0; j < 1000; j++ {
 			nextMsg := []byte(fmt.Sprintf("next message: %v%v", i, j))
 
-			ntrx, err := transaction.New("text", nextMsg, receiver.Address(), &issuer)
+			ntrx, err := transaction.New("text", spice.New(math.MaxInt64, 0), nextMsg, receiver.Address(), &issuer)
 			assert.NilError(t, err)
 
 			ntrxHash, err := ntrx.Sign(&receiver, verifier)
@@ -124,7 +126,7 @@ func TestBlockValidateFailure(t *testing.T) {
 	verifier := wallet.Helper{}
 
 	message := []byte("genesis transaction")
-	trx, err := transaction.New("genesis", message, receiver.Address(), &issuer)
+	trx, err := transaction.New("genesis", spice.New(math.MaxInt64, 0), message, receiver.Address(), &issuer)
 	assert.NilError(t, err)
 
 	trxHash, err := trx.Sign(&receiver, verifier)
@@ -144,7 +146,7 @@ func TestBlockValidateFailure(t *testing.T) {
 		for j := 0; j < 1000; j++ {
 			nextMsg := []byte(fmt.Sprintf("next message: %v%v", i, j))
 
-			ntrx, err := transaction.New("text", nextMsg, receiver.Address(), &issuer)
+			ntrx, err := transaction.New("text", spice.New(math.MaxInt64, 0), nextMsg, receiver.Address(), &issuer)
 			assert.NilError(t, err)
 
 			ntrxHash, err := ntrx.Sign(&receiver, verifier)
@@ -180,7 +182,7 @@ func Benchmark1000Blocks(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		message := []byte("genesis transaction")
-		trx, err := transaction.New("genesis", message, receiver.Address(), &issuer)
+		trx, err := transaction.New("genesis", spice.New(math.MaxInt64, 0), message, receiver.Address(), &issuer)
 		assert.NilError(b, err)
 
 		trxHash, err := trx.Sign(&receiver, verifier)
@@ -198,7 +200,7 @@ func Benchmark1000Blocks(b *testing.B) {
 		for i := 1; i <= blocksNum; i++ {
 			nextMsg := []byte(fmt.Sprintf("next message: %v", i))
 
-			ntrx, err := transaction.New("text", nextMsg, receiver.Address(), &issuer)
+			ntrx, err := transaction.New("text", spice.New(math.MaxInt64, 0), nextMsg, receiver.Address(), &issuer)
 			assert.NilError(b, err)
 
 			ntrxHash, err := ntrx.Sign(&receiver, verifier)
@@ -221,7 +223,7 @@ func Benchmark1_Block(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		message := []byte("genesis transaction")
-		trx, err := transaction.New("genesis", message, receiver.Address(), &issuer)
+		trx, err := transaction.New("genesis", spice.New(math.MaxInt64, 0), message, receiver.Address(), &issuer)
 		assert.NilError(b, err)
 
 		trxHash, err := trx.Sign(&receiver, verifier)
@@ -246,7 +248,7 @@ func BenchmarkDifficulty(b *testing.B) {
 		b.Run(fmt.Sprintf("difficulty: %v", difficulty), func(b *testing.B) {
 			for n := 0; n < b.N; n++ {
 				message := []byte("genesis transaction")
-				trx, err := transaction.New("genesis", message, receiver.Address(), &issuer)
+				trx, err := transaction.New("genesis", spice.New(math.MaxInt64, 0), message, receiver.Address(), &issuer)
 				assert.NilError(b, err)
 
 				trxHash, err := trx.Sign(&receiver, verifier)

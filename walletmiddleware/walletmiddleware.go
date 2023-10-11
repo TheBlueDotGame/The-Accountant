@@ -10,6 +10,7 @@ import (
 	"github.com/bartossh/Computantis/helperserver"
 	"github.com/bartossh/Computantis/httpclient"
 	"github.com/bartossh/Computantis/notaryserver"
+	"github.com/bartossh/Computantis/spice"
 	"github.com/bartossh/Computantis/token"
 	"github.com/bartossh/Computantis/transaction"
 	"github.com/bartossh/Computantis/wallet"
@@ -142,12 +143,12 @@ func (c *Client) Address() (string, error) {
 // then the data can by decoded to map[sting]any, when subject "pdf" than it should be decoded by proper pdf decoder,
 // when "csv" then it should be decoded by proper csv decoder.
 // Client is not responsible for decoding the data, it is only responsible for sending the data to the API server.
-func (c *Client) ProposeTransaction(receiverAddr string, subject string, data []byte) error {
+func (c *Client) ProposeTransaction(receiverAddr string, subject string, spc spice.Melange, data []byte) error {
 	if !c.ready {
 		return httpclient.ErrWalletNotReady
 	}
 
-	trx, err := transaction.New(subject, data, receiverAddr, &c.w)
+	trx, err := transaction.New(subject, spc, data, receiverAddr, &c.w)
 	if err != nil {
 		return errors.Join(httpclient.ErrSigningFailed, err)
 	}

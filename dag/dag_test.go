@@ -6,11 +6,13 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"fmt"
+	"math"
 	"math/rand"
 	"testing"
 	"time"
 
 	"github.com/bartossh/Computantis/logging"
+	"github.com/bartossh/Computantis/spice"
 	"github.com/bartossh/Computantis/stdoutwriter"
 	"github.com/bartossh/Computantis/transaction"
 	"github.com/bartossh/Computantis/wallet"
@@ -39,10 +41,12 @@ func BenchmarkSerializartion(b *testing.B) {
 			ReceiverAddress:   string(generateData(64)),
 			IssuerSignature:   generateData(32),
 			ReceiverSignature: generateData(32),
+			Spice:             spice.New(math.MaxUint64, 100),
 		},
 		Hash:            [32]byte(generateData(32)),
 		LeftParentHash:  [32]byte(generateData(32)),
 		RightParentHash: [32]byte(generateData(32)),
+		Weight:          100,
 	}
 
 	b.Run("json marshal", func(b *testing.B) {
@@ -128,10 +132,12 @@ func TestCorrectness(t *testing.T) {
 			ReceiverAddress:   string(generateData(64)),
 			IssuerSignature:   generateData(32),
 			ReceiverSignature: generateData(32),
+			Spice:             spice.New(math.MaxUint64, 100),
 		},
 		Hash:            [32]byte(generateData(32)),
 		LeftParentHash:  [32]byte(generateData(32)),
 		RightParentHash: [32]byte(generateData(32)),
+		Weight:          100,
 	}
 
 	t.Run("msgpack", func(t *testing.T) {

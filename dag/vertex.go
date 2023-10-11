@@ -18,60 +18,67 @@ type Vertex struct {
 	Signature               []byte                  `msgpack:"signature"`
 	Transaction             transaction.Transaction `msgpack:"transaction"`
 	Hash                    [32]byte                `msgpack:"hash"`
-	PrevVertexHash          [32]byte                `msgpack:"prev_vertex_hash"`
+	PrevTrxVertexHash       [32]byte                `msgpack:"prev_vertex_hash"`
 	LeftParentHash          [32]byte                `msgpack:"left_parent_hash"`
 	RightParentHash         [32]byte                `msgpack:"right_parent_hash"`
+	Weight                  uint64                  `msgpack:"weight"`
 }
 
 // NewVertex creates new Vertex but first validates transaction legitimacy.
+// It is assumed that the transaction is verified.
 func NewVertex(
 	trx transaction.Transaction,
 	accountantPubAddress string,
-	prevTrxHash, leftParentHash, rightParentHash [32]byte,
-	separator []byte,
-	verifier signatureVerifier,
+	prevTrxVertexHash, leftParentHash, rightParentHash [32]byte,
+	weight uint64,
 	signer signer,
 ) (Vertex, error) {
-	if err := trx.Verify(verifier); err != nil {
-		return Vertex{}, err
-	}
-
 	candidate := Vertex{
 		AccountantPublicAddress: accountantPubAddress,
 		CreatedAt:               time.Now(),
 		Signature:               nil,
 		Transaction:             trx,
 		Hash:                    [32]byte{},
-		PrevVertexHash:          prevTrxHash,
+		PrevTrxVertexHash:       prevTrxVertexHash,
 		LeftParentHash:          leftParentHash,
 		RightParentHash:         rightParentHash,
+		Weight:                  weight,
 	}
 
-	candidate.sign(separator, signer)
+	candidate.sign(signer)
 
 	return candidate, nil
 }
 
-func (v *Vertex) initData(separator []byte) []byte {
-	blockData := make([]byte, 0, 8)
+func (v *Vertex) initData() []byte {
+	blockData := make([]byte, 0, 16)
 	blockData = binary.LittleEndian.AppendUint64(blockData, uint64(v.CreatedAt.UnixNano()))
+	blockData = binary.LittleEndian.AppendUint64(blockData, v.Weight)
 	return bytes.Join([][]byte{
-		v.Transaction.Hash[:], v.PrevVertexHash[:], v.LeftParentHash[:], v.RightParentHash[:], blockData,
+		v.Transaction.Hash[:], v.PrevTrxVertexHash[:], v.LeftParentHash[:], v.RightParentHash[:], blockData,
 	},
-		separator,
+		[]byte{},
 	)
 }
 
-func (v *Vertex) sign(separator []byte, signer signer) {
-	data := v.initData(separator)
+func (v *Vertex) sign(signer signer) {
+	data := v.initData()
 	v.Hash, v.Signature = signer.Sign(data)
 }
 
-func (v *Vertex) verify(separator []byte, verifier signatureVerifier) error {
-	if err := v.Transaction.Verify(verifier); err != nil {
-		return err
+func (v *Vertex) verify(verifier signatureVerifier) error {
+	switch v.Transaction.IsContract() {
+	case true:
+		if err := v.Transaction.VerifyIssuerReceiver(verifier); err != nil {
+			return err
+		}
+	default:
+		if err := v.Transaction.VerifyIssuer(verifier); err != nil {
+			return err
+		}
 	}
-	data := v.initData(separator)
+
+	data := v.initData()
 	return verifier.Verify(data, v.Signature[:], v.Hash, v.AccountantPublicAddress)
 }
 
@@ -83,7 +90,7 @@ func (v *Vertex) encode() ([]byte, []byte, error) {
 	return v.Hash[:], buf, nil
 }
 
-func decode(buf []byte) (Vertex, error) {
+func decodeVertex(buf []byte) (Vertex, error) {
 	var v Vertex
 	err := msgpackv2.Unmarshal(buf, &v)
 	return v, err
