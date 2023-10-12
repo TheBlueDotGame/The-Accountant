@@ -1,4 +1,4 @@
-package dag
+package accountant
 
 // Config contains configuration for the AccountingBook.
 type Config struct {

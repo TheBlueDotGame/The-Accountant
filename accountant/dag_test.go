@@ -1,8 +1,7 @@
-package dag
+package accountant
 
 import (
 	"bytes"
-	"context"
 	"encoding/gob"
 	"encoding/json"
 	"fmt"
@@ -46,7 +45,6 @@ func BenchmarkSerializartion(b *testing.B) {
 		Hash:            [32]byte(generateData(32)),
 		LeftParentHash:  [32]byte(generateData(32)),
 		RightParentHash: [32]byte(generateData(32)),
-		Weight:          100,
 	}
 
 	b.Run("json marshal", func(b *testing.B) {
@@ -137,7 +135,6 @@ func TestCorrectness(t *testing.T) {
 		Hash:            [32]byte(generateData(32)),
 		LeftParentHash:  [32]byte(generateData(32)),
 		RightParentHash: [32]byte(generateData(32)),
-		Weight:          100,
 	}
 
 	t.Run("msgpack", func(t *testing.T) {
@@ -174,12 +171,10 @@ func TestDagStart(t *testing.T) {
 	}
 
 	l := logging.New(callOnLogErr, callOnFail, &stdoutwriter.Logger{})
-	ctx, cancel := context.WithCancel(context.Background())
 	verifier := wallet.NewVerifier()
 	signer, err := wallet.New()
 	assert.NilError(t, err)
-	_, err = NewAccountingBook(ctx, Config{}, verifier, &signer, l)
+	_, err = NewAccountingBook(Config{}, verifier, &signer, l)
 	assert.NilError(t, err)
-	cancel()
 	time.Sleep(time.Millisecond * 200)
 }
