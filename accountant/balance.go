@@ -1,4 +1,4 @@
-package dag
+package accountant
 
 import (
 	"github.com/bartossh/Computantis/spice"
