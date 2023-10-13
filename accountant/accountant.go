@@ -219,6 +219,7 @@ Outer:
 			return err
 		}
 	}
+	ab.mem.set(tip.Hash)
 
 	return nil
 }
