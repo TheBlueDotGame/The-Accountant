@@ -60,6 +60,7 @@ type AccountingBook struct {
 	signer        signer
 	log           logger.Logger
 	dag           *dag.DAG
+	mem           hyppocampus
 	gennessisHash [32]byte
 }
 
@@ -70,6 +71,7 @@ func NewAccountingBook(cfg Config, verifier signatureVerifier, signer signer, l 
 		verifier: verifier,
 		signer:   signer,
 		dag:      dag.NewDAG(),
+		mem:      hyppocampus{},
 		log:      l,
 	}
 
@@ -161,7 +163,45 @@ Outer:
 	if errM != nil {
 		return errM
 	}
-	if len(validatedLeafs) != 2 {
+
+	switch len(validatedLeafs) {
+	case 2:
+	case 1:
+		rightHash := ab.mem.getLast()
+		right, err := ab.dag.GetVertex(string(rightHash[:]))
+		if err != nil {
+			return ErrUnexpected
+		}
+		leafRight, ok := right.(Vertex)
+		if !ok {
+			return ErrUnexpected
+		}
+		validatedLeafs = append(validatedLeafs, leafRight)
+
+	case 0:
+		rightHash := ab.mem.getLast()
+		right, err := ab.dag.GetVertex(string(rightHash[:]))
+		if err != nil {
+			return ErrUnexpected
+		}
+		leafRight, ok := right.(Vertex)
+		if !ok {
+			return ErrUnexpected
+		}
+		validatedLeafs = append(validatedLeafs, leafRight)
+
+		leftHash := ab.mem.getOneBeforeLast()
+		left, err := ab.dag.GetVertex(string(leftHash[:]))
+		if err != nil {
+			return ErrUnexpected
+		}
+		leafLeft, ok := left.(Vertex)
+		if !ok {
+			return ErrUnexpected
+		}
+		validatedLeafs = append(validatedLeafs, leafLeft)
+
+	default:
 		return ErrUnexpected
 	}
 
