@@ -5,8 +5,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
+	"github.com/dgraph-io/badger/v4"
 	"github.com/heimdalr/dag"
 
 	"github.com/bartossh/Computantis/logger"
@@ -21,10 +23,8 @@ const (
 const prefetchSize = 1000
 
 const (
-	keyTip                = "tip"
-	keyVertex             = "vertex"
-	keyAddressBalance     = "address_balance"
-	keyNodeFailureCounter = "node_failure_counter"
+	keyTokens                = "key_tokens"
+	keyNotaryNodesPubAddress = "key_notary_node_pub_address"
 )
 
 var (
@@ -61,17 +61,33 @@ type AccountingBook struct {
 	signer        signer
 	log           logger.Logger
 	dag           *dag.DAG
+	db            *badger.DB
 	mem           hyppocampus
 	gennessisHash [32]byte
 }
 
 // New creates new AccountingBook.
 func NewAccountingBook(cfg Config, verifier signatureVerifier, signer signer, l logger.Logger) (*AccountingBook, error) {
-	_ = cfg // TODO: use Config when adding db
+	var opt badger.Options
+	switch cfg.DBPath {
+	case "":
+		opt = badger.DefaultOptions("").WithInMemory(true)
+	default:
+		if _, err := os.Stat(cfg.DBPath); err != nil {
+			return nil, err
+		}
+		opt = badger.DefaultOptions(cfg.DBPath)
+	}
+
+	db, err := badger.Open(opt)
+	if err != nil {
+		return nil, err
+	}
 	ab := &AccountingBook{
 		verifier: verifier,
 		signer:   signer,
 		dag:      dag.NewDAG(),
+		db:       db,
 		mem:      hyppocampus{},
 		log:      l,
 	}
@@ -86,7 +102,11 @@ func (ab *AccountingBook) validateLeaf(ctx context.Context, leaf *Vertex) error 
 	if err := leaf.verify(ab.verifier); err != nil {
 		return errors.Join(ErrLeafRejected, err)
 	}
-	if !leaf.Transaction.IsSpiceTransfer() {
+	trusted, err := ab.checkIsTrustedNode(leaf.SignerPublicAddress)
+	if err != nil {
+		return errors.Join(ErrUnexpected, err)
+	}
+	if !leaf.Transaction.IsSpiceTransfer() || trusted {
 		_, err := ab.dag.GetVertex(string(leaf.RightParentHash[:]))
 		if err != nil {
 			return errors.Join(ErrLeafRejected, err)
@@ -155,6 +175,36 @@ func (ab *AccountingBook) validateLeaf(ctx context.Context, leaf *Vertex) error 
 	}
 
 	return checkHasSufficientFounds(&spiceIn, &spiceOut)
+}
+
+func (ab *AccountingBook) checkIsTrustedNode(trustedNodePublicAddress string) (bool, error) {
+	var ok bool
+	err := ab.db.View(func(txn *badger.Txn) error {
+		_, err := txn.Get(createKey(keyNotaryNodesPubAddress, []byte(trustedNodePublicAddress)))
+		if err != nil {
+			if errors.Is(err, badger.ErrKeyNotFound) {
+				return nil
+			}
+			return err
+		}
+		ok = true
+		return nil
+	})
+	return ok, err
+}
+
+// AddTrustedNode adds trusted node public address to the trusted nodes public address repository.
+func (ab *AccountingBook) AddTrustedNode(trustedNodePublicAddress string) error {
+	return ab.db.Update(func(txn *badger.Txn) error {
+		return txn.Set(createKey(keyNotaryNodesPubAddress, []byte(trustedNodePublicAddress)), []byte{})
+	})
+}
+
+// RemoveTrustedNode removes trusted node public address from trusted nodes public address repository.
+func (ab *AccountingBook) RemoveTrustedNode(trustedNodePublicAddress string) error {
+	return ab.db.Update(func(txn *badger.Txn) error {
+		return txn.Delete(createKey(keyNotaryNodesPubAddress, []byte(trustedNodePublicAddress)))
+	})
 }
 
 // CreateLeaf creates leaf vertex also known as a tip.
@@ -271,42 +321,6 @@ func (ab *AccountingBook) CreateLeaf(ctx context.Context, trx *transaction.Trans
 	return nil
 }
 
-func pourFounds(leaf, vrx *Vertex, spiceIn, spiceOut *spice.Melange) error {
-	if leaf == nil || vrx == nil {
-		return ErrUnexpected
-	}
-	if spiceIn == nil || spiceOut == nil {
-		return ErrUnexpected
-	}
-	if !vrx.Transaction.IsSpiceTransfer() {
-		return nil
-	}
-	var sink *spice.Melange
-	if vrx.Transaction.IssuerAddress == leaf.Transaction.IssuerAddress {
-		sink = spiceOut
-	}
-	if vrx.Transaction.ReceiverAddress == leaf.Transaction.IssuerAddress {
-		sink = spiceIn
-	}
-	if sink != nil {
-		if err := vrx.Transaction.Spice.Drain(leaf.Transaction.Spice, sink); err != nil {
-			return errors.Join(ErrUnexpected, err)
-		}
-	}
-	return nil
-}
-
-func checkHasSufficientFounds(in, out *spice.Melange) error {
-	if in == nil || out == nil {
-		return ErrUnexpected
-	}
-	sink := spice.New(0, 0)
-	if err := in.Drain(*out, &sink); err != nil {
-		return errors.Join(ErrLeafRejected, err)
-	}
-	return nil
-}
-
 // AddLeaf adds leaf known also as tip to the graph for future validation.
 // Leaf will be a subject of validation by another tip.
 func (ab *AccountingBook) AddLeaf(ctx context.Context, leaf *Vertex) error {
@@ -367,5 +381,41 @@ func (ab *AccountingBook) AddLeaf(ctx context.Context, leaf *Vertex) error {
 		ab.mem.set(validVrx.Hash)
 	}
 
+	return nil
+}
+
+func pourFounds(leaf, vrx *Vertex, spiceIn, spiceOut *spice.Melange) error {
+	if leaf == nil || vrx == nil {
+		return ErrUnexpected
+	}
+	if spiceIn == nil || spiceOut == nil {
+		return ErrUnexpected
+	}
+	if !vrx.Transaction.IsSpiceTransfer() {
+		return nil
+	}
+	var sink *spice.Melange
+	if vrx.Transaction.IssuerAddress == leaf.Transaction.IssuerAddress {
+		sink = spiceOut
+	}
+	if vrx.Transaction.ReceiverAddress == leaf.Transaction.IssuerAddress {
+		sink = spiceIn
+	}
+	if sink != nil {
+		if err := vrx.Transaction.Spice.Drain(leaf.Transaction.Spice, sink); err != nil {
+			return errors.Join(ErrUnexpected, err)
+		}
+	}
+	return nil
+}
+
+func checkHasSufficientFounds(in, out *spice.Melange) error {
+	if in == nil || out == nil {
+		return ErrUnexpected
+	}
+	sink := spice.New(0, 0)
+	if err := in.Drain(*out, &sink); err != nil {
+		return errors.Join(ErrLeafRejected, err)
+	}
 	return nil
 }
