@@ -79,37 +79,36 @@ func NewAccountingBook(cfg Config, verifier signatureVerifier, signer signer, l 
 	return ab, nil
 }
 
-func (ab *AccountingBook) validateLeaf(ctx context.Context, leaf *Vertex) (bool, bool, error) {
+func (ab *AccountingBook) validateLeaf(ctx context.Context, leaf *Vertex) error {
 	if leaf == nil {
-		return false, false, ErrUnexpected
+		return ErrUnexpected
 	}
 	if err := leaf.verify(ab.verifier); err != nil {
-		return false, false, errors.Join(ErrLeafRejected, err)
+		return errors.Join(ErrLeafRejected, err)
 	}
 	if !leaf.Transaction.IsSpiceTransfer() {
 		_, err := ab.dag.GetVertex(string(leaf.RightParentHash[:]))
 		if err != nil {
-			return false, false, errors.Join(ErrLeafRejected, err)
+			return errors.Join(ErrLeafRejected, err)
 		}
 
 		_, err = ab.dag.GetVertex(string(leaf.LeftParentHash[:]))
 		if err != nil {
-			return false, false, errors.Join(ErrLeafRejected, err)
+			return errors.Join(ErrLeafRejected, err)
 		}
-		return true, true, nil
+		return nil
 	}
 
 	visited := make(map[string]struct{})
 	spiceOut := spice.New(0, 0)
 	spiceIn := spice.New(0, 0)
-	var leftValid, rightValid bool
 	vertices, signal, _ := ab.dag.AncestorsWalker(string(leaf.Hash[:]))
 
 	for ancestorID := range vertices {
 		select {
 		case <-ctx.Done():
 			signal <- true
-			return false, false, ErrLeafValidationProcessStopped
+			return ErrLeafValidationProcessStopped
 		default:
 		}
 		if _, ok := visited[ancestorID]; ok {
@@ -120,52 +119,42 @@ func (ab *AccountingBook) validateLeaf(ctx context.Context, leaf *Vertex) (bool,
 		isRoot, err := ab.dag.IsRoot(ancestorID)
 		if err != nil {
 			signal <- true
-			return false, false, ErrUnexpected
+			return ErrUnexpected
 		}
 		item, err := ab.dag.GetVertex(ancestorID)
 		if err != nil {
 			signal <- true
-			return false, false, errors.Join(ErrUnexpected, err)
+			return errors.Join(ErrUnexpected, err)
 		}
 		switch vrx := item.(type) {
 		case Vertex:
 			if vrx.Hash == leaf.LeftParentHash {
 				if err := vrx.verify(ab.verifier); err != nil {
 					signal <- true
-					return false, false, errors.Join(ErrLeafRejected, err)
+					return errors.Join(ErrLeafRejected, err)
 				}
-				leftValid = true
 			}
 			if vrx.Hash == leaf.RightParentHash {
 				if err := vrx.verify(ab.verifier); err != nil {
 					signal <- true
-					return false, false, errors.Join(ErrLeafRejected, err)
+					return errors.Join(ErrLeafRejected, err)
 				}
-				rightValid = true
 			}
 			if err := pourFounds(leaf, &vrx, &spiceIn, &spiceOut); err != nil {
-				return false, false, err
+				return err
 			}
 			if isRoot {
 				signal <- true
-				return false, false, nil
+				return nil
 			}
 
 		default:
 			signal <- true
-			return false, false, ErrUnexpected
+			return ErrUnexpected
 		}
 	}
 
-	if err := checkHasSufficientFounds(&spiceIn, &spiceOut); err != nil {
-		return false, false, err
-	}
-
-	if !leftValid || !rightValid {
-		return leftValid, rightValid, errors.Join(ErrLeafRejected, errors.New("couldn't validate left or/and right vertex"))
-	}
-
-	return leftValid, rightValid, nil
+	return checkHasSufficientFounds(&spiceIn, &spiceOut)
 }
 
 // CreateLeaf creates leaf vertex also known as a tip.
@@ -189,7 +178,7 @@ func (ab *AccountingBook) CreateLeaf(ctx context.Context, trx *transaction.Trans
 		switch vrx := item.(type) {
 		case Vertex:
 			leaf = vrx
-			_, _, err = ab.validateLeaf(ctx, &leaf)
+			err = ab.validateLeaf(ctx, &leaf)
 			if err != nil {
 				ab.dag.DeleteVertex(string(leaf.Hash[:]))
 				ab.log.Error(
@@ -275,8 +264,9 @@ func (ab *AccountingBook) CreateLeaf(ctx context.Context, trx *transaction.Trans
 			return ErrLeafRejected
 		}
 	}
-	ab.mem.set(validatedLeafs[0].Hash)
-	ab.mem.set(validatedLeafs[1].Hash)
+	for _, validVrx := range validatedLeafs {
+		ab.mem.set(validVrx.Hash)
+	}
 
 	return nil
 }
@@ -319,38 +309,63 @@ func checkHasSufficientFounds(in, out *spice.Melange) error {
 
 // AddLeaf adds leaf known also as tip to the graph for future validation.
 // Leaf will be a subject of validation by another tip.
-//func (ab *AccountingBook) AddLeaf(leaf Vertex) error {
-//	if err := leaf.verify(ab.verifier); err != nil {
-//		ab.log.Error(
-//			fmt.Sprintf("Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ], %s.",
-//				leaf.Hash, leaf.SignerPublicAddress, leaf.LeftParentHash, leaf.RightParentHash, err),
-//		)
-//		return ErrLeafRejected
-//	}
-//
-//	_, err = ab.dag.GetVertex(string(leaf.LeftParentHash[:]))
-//}
-//	if _, err := ab.dag.GetVertex(string(leaf.RightParentHash[:])); err != nil {
-//		ab.log.Error(
-//			fmt.Sprintf("Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ], %s.",
-//				leaf.Hash, leaf.SignerPublicAddress, leaf.LeftParentHash, leaf.RightParentHash, err),
-//		)
-//		return ErrLeafRejected
-//	}
-//	id, err := ab.dag.AddVertex(leaf)
-//	if err != nil {
-//		return ErrLeafRejected
-//	}
-//	for _, h := range [][32]byte{leaf.LeftParentHash, leaf.RightParentHash} {
-//		if err := ab.dag.AddEdge(string(h[:]), id); err != nil {
-//			ab.dag.DeleteVertex(string(leaf.Hash[:]))
-//			ab.log.Error(
-//				fmt.Sprintf("Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ], %s,",
-//					leaf.Hash, leaf.SignerPublicAddress, leaf.LeftParentHash, leaf.RightParentHash, err),
-//			)
-//			return ErrLeafRejected
-//		}
-//	}
-//
-//	return nil
-//}
+func (ab *AccountingBook) AddLeaf(ctx context.Context, leaf *Vertex) error {
+	if leaf == nil {
+		return ErrUnexpected
+	}
+
+	validatedLeafs := make([]Vertex, 0, 2)
+
+	if err := leaf.verify(ab.verifier); err != nil {
+		ab.log.Error(
+			fmt.Sprintf("Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ], %s.",
+				leaf.Hash, leaf.SignerPublicAddress, leaf.LeftParentHash, leaf.RightParentHash, err),
+		)
+		return ErrLeafRejected
+	}
+
+	for _, hash := range [][32]byte{leaf.LeftParentHash, leaf.RightParentHash} {
+		item, err := ab.dag.GetVertex(string(hash[:]))
+		if err != nil {
+			ab.log.Error(
+				fmt.Sprintf("Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ], %s.",
+					leaf.Hash, leaf.SignerPublicAddress, leaf.LeftParentHash, leaf.RightParentHash, err),
+			)
+			return ErrLeafRejected
+		}
+		existringLeaf, ok := item.(Vertex)
+		if !ok {
+			return ErrUnexpected
+		}
+		isLeaf, err := ab.dag.IsLeaf(string(hash[:]))
+		if err != nil {
+			ab.log.Error(
+				fmt.Sprintf("Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ], %s.",
+					leaf.Hash, leaf.SignerPublicAddress, leaf.LeftParentHash, leaf.RightParentHash, err),
+			)
+			return ErrLeafRejected
+		}
+		if isLeaf {
+			if err := ab.validateLeaf(ctx, &existringLeaf); err != nil {
+				return errors.Join(ErrLeafRejected, err)
+			}
+		}
+		validatedLeafs = append(validatedLeafs, existringLeaf)
+	}
+
+	for _, validVrx := range validatedLeafs {
+		if err := ab.dag.AddEdge(string(validVrx.Hash[:]), string(leaf.Hash[:])); err != nil {
+			ab.dag.DeleteVertex(string(leaf.Hash[:]))
+			ab.log.Error(
+				fmt.Sprintf("Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ], %s,",
+					leaf.Hash, leaf.SignerPublicAddress, leaf.LeftParentHash, leaf.RightParentHash, err),
+			)
+			return ErrLeafRejected
+		}
+	}
+	for _, validVrx := range validatedLeafs {
+		ab.mem.set(validVrx.Hash)
+	}
+
+	return nil
+}
