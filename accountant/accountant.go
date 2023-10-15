@@ -29,6 +29,7 @@ const (
 )
 
 var (
+	ErrGenesisRejected                       = errors.New("genesis vertex has been rejected")
 	ErrBalanceCaclulationUnexpectedFailure   = errors.New("balance calculation unexpected failure")
 	ErrBalanceUnavailable                    = errors.New("balance unavailable")
 	ErrLeafBallanceCalculationProcessStopped = errors.New("wallet balance calculation process stopped")
@@ -104,6 +105,7 @@ func NewAccountingBook(ctx context.Context, cfg Config, verifier signatureVerifi
 			select {
 			case <-ctx.Done():
 				return
+			default:
 			}
 		again:
 			err := db.RunValueLogGC(0.5)
@@ -207,6 +209,25 @@ func (ab *AccountingBook) checkIsTrustedNode(trustedNodePublicAddress string) (b
 	return ok, err
 }
 
+// CreateGenesis creates genesis vertex that will transfer spice to current node as a receiver.
+func (ab *AccountingBook) CreateGenesis(subject string, spc spice.Melange, data []byte, issuer signer) (Vertex, error) {
+	trx, err := transaction.New(subject, spc, data, ab.signer.Address(), issuer)
+	if err != nil {
+		return Vertex{}, errors.Join(ErrGenesisRejected, err)
+	}
+
+	vrx, err := NewVertex(trx, [32]byte{}, [32]byte{}, issuer)
+	if err != nil {
+		return Vertex{}, errors.Join(ErrGenesisRejected, err)
+	}
+	if err := ab.dag.AddVertexByID(string(vrx.Hash[:]), vrx); err != nil {
+		return Vertex{}, err
+	}
+	ab.mem.set(vrx.Hash)
+
+	return vrx, nil
+}
+
 // AddTrustedNode adds trusted node public address to the trusted nodes public address repository.
 func (ab *AccountingBook) AddTrustedNode(trustedNodePublicAddress string) error {
 	return ab.db.Update(func(txn *badger.Txn) error {
@@ -228,7 +249,7 @@ func (ab *AccountingBook) RemoveTrustedNode(trustedNodePublicAddress string) err
 // - checking if leaf transferring spice issuer has enough founds.
 // If leaf has valid signature and is referring to parent that is part of a graph then the leaf is valid.
 // If leaf transfers spice then calculate issuer total founds and drain for given amount to calculate sufficient founds.
-func (ab *AccountingBook) CreateLeaf(ctx context.Context, trx *transaction.Transaction) error {
+func (ab *AccountingBook) CreateLeaf(ctx context.Context, trx *transaction.Transaction) (Vertex, error) {
 	leavesToExamine := 2
 	var err error
 	validatedLeafs := make([]Vertex, 2)
@@ -252,7 +273,7 @@ func (ab *AccountingBook) CreateLeaf(ctx context.Context, trx *transaction.Trans
 				continue
 			}
 		default:
-			return ErrUnexpected
+			return Vertex{}, ErrUnexpected
 		}
 
 		leavesToExamine--
@@ -267,12 +288,12 @@ func (ab *AccountingBook) CreateLeaf(ctx context.Context, trx *transaction.Trans
 		right, err := ab.dag.GetVertex(string(rightHash[:]))
 		if err != nil {
 			ab.log.Error(fmt.Sprintf("Accounting book create tip %s, %s", ErrUnexpected, err))
-			return ErrUnexpected
+			return Vertex{}, ErrUnexpected
 		}
 		leafRight, ok := right.(Vertex)
 		if !ok {
 			ab.log.Error(fmt.Sprintf("Accounting book create tip %s.", ErrUnexpected))
-			return ErrUnexpected
+			return Vertex{}, ErrUnexpected
 		}
 		validatedLeafs = append(validatedLeafs, leafRight)
 
@@ -281,12 +302,12 @@ func (ab *AccountingBook) CreateLeaf(ctx context.Context, trx *transaction.Trans
 		right, err := ab.dag.GetVertex(string(rightHash[:]))
 		if err != nil {
 			ab.log.Error(fmt.Sprintf("Accounting book create tip %s, %s", ErrUnexpected, err))
-			return ErrUnexpected
+			return Vertex{}, ErrUnexpected
 		}
 		leafRight, ok := right.(Vertex)
 		if !ok {
 			ab.log.Error(fmt.Sprintf("Accounting book create tip %s.", ErrUnexpected))
-			return ErrUnexpected
+			return Vertex{}, ErrUnexpected
 		}
 		validatedLeafs = append(validatedLeafs, leafRight)
 
@@ -294,28 +315,28 @@ func (ab *AccountingBook) CreateLeaf(ctx context.Context, trx *transaction.Trans
 		left, err := ab.dag.GetVertex(string(leftHash[:]))
 		if err != nil {
 			ab.log.Error(fmt.Sprintf("Accounting book create tip %s, %s", ErrUnexpected, err))
-			return ErrUnexpected
+			return Vertex{}, ErrUnexpected
 		}
 		leafLeft, ok := left.(Vertex)
 		if !ok {
 			ab.log.Error(fmt.Sprintf("Accounting book create tip %s.", ErrUnexpected))
-			return ErrUnexpected
+			return Vertex{}, ErrUnexpected
 		}
 		validatedLeafs = append(validatedLeafs, leafLeft)
 
 	default:
 		ab.log.Error(fmt.Sprintf("Accounting book create tip %s.", ErrUnexpected))
-		return ErrUnexpected
+		return Vertex{}, ErrUnexpected
 	}
 
 	tip, err := NewVertex(*trx, validatedLeafs[0].Hash, validatedLeafs[1].Hash, ab.signer)
 	if err != nil {
 		ab.log.Error(fmt.Sprintf("Accounting book rejected new leaf [ %v ], %s.", tip.Hash, err))
-		return errors.Join(ErrNewLeafRejected, err)
+		return Vertex{}, errors.Join(ErrNewLeafRejected, err)
 	}
 	if err := ab.dag.AddVertexByID(string(tip.Hash[:]), tip); err != nil {
 		ab.log.Error(fmt.Sprintf("Accounting book rejected new leaf [ %v ], %s.", tip.Hash, err))
-		return ErrNewLeafRejected
+		return Vertex{}, ErrNewLeafRejected
 	}
 
 	for _, vrx := range validatedLeafs {
@@ -325,14 +346,14 @@ func (ab *AccountingBook) CreateLeaf(ctx context.Context, trx *transaction.Trans
 				fmt.Sprintf("Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ], %s,",
 					vrx.Hash, vrx.SignerPublicAddress, vrx.LeftParentHash, vrx.RightParentHash, err),
 			)
-			return ErrNewLeafRejected
+			return Vertex{}, ErrNewLeafRejected
 		}
 	}
 	for _, validVrx := range validatedLeafs {
 		ab.mem.set(validVrx.Hash)
 	}
 
-	return nil
+	return tip, nil
 }
 
 // AddLeaf adds leaf known also as tip to the graph for future validation.
