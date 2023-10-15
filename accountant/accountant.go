@@ -23,8 +23,9 @@ const (
 const prefetchSize = 1000
 
 const (
-	keyTokens                = "key_tokens"
-	keyNotaryNodesPubAddress = "key_notary_node_pub_address"
+	keyAllowdWalletsPubAddress = "key_allowed_wallets_pub_address"
+	keyTokens                  = "key_tokens"
+	keyNotaryNodesPubAddress   = "key_notary_node_pub_address"
 )
 
 var (
@@ -70,7 +71,8 @@ type AccountingBook struct {
 }
 
 // New creates new AccountingBook.
-func NewAccountingBook(cfg Config, verifier signatureVerifier, signer signer, l logger.Logger) (*AccountingBook, error) {
+// New AccountingBook will start internally the garbage collection loop, to stop it from running cancel the context.
+func NewAccountingBook(ctx context.Context, cfg Config, verifier signatureVerifier, signer signer, l logger.Logger) (*AccountingBook, error) {
 	var opt badger.Options
 	switch cfg.DBPath {
 	case "":
@@ -94,6 +96,22 @@ func NewAccountingBook(cfg Config, verifier signatureVerifier, signer signer, l 
 		mem:      hyppocampus{},
 		log:      l,
 	}
+
+	go func(ctx context.Context) {
+		ticker := time.NewTicker(gcRuntimeTick)
+		defer ticker.Stop()
+		for range ticker.C {
+			select {
+			case <-ctx.Done():
+				return
+			}
+		again:
+			err := db.RunValueLogGC(0.5)
+			if err == nil {
+				goto again
+			}
+		}
+	}(ctx)
 
 	return ab, nil
 }

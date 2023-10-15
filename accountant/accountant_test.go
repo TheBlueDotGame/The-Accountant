@@ -2,6 +2,7 @@ package accountant
 
 import (
 	"bytes"
+	"context"
 	"encoding/gob"
 	"encoding/json"
 	"fmt"
@@ -169,12 +170,15 @@ func TestDagStart(t *testing.T) {
 	callOnFail := func(err error) {
 		fmt.Printf("Faield with error: %s\n", err)
 	}
+	ctx, cancel := context.WithCancel(context.Background())
 
 	l := logging.New(callOnLogErr, callOnFail, &stdoutwriter.Logger{})
 	verifier := wallet.NewVerifier()
 	signer, err := wallet.New()
 	assert.NilError(t, err)
-	_, err = NewAccountingBook(Config{}, verifier, &signer, l)
+	_, err = NewAccountingBook(ctx, Config{}, verifier, &signer, l)
 	assert.NilError(t, err)
+	time.Sleep(time.Millisecond * 200)
+	cancel()
 	time.Sleep(time.Millisecond * 200)
 }
