@@ -1,23 +1,25 @@
 package accountant
 
 import (
+	"time"
+
 	"github.com/bartossh/Computantis/spice"
 
 	msgpackv2 "github.com/shamaton/msgpack/v2"
 	"github.com/vmihailenco/msgpack"
 )
 
-// Balance holds the wallet address balance for convenience of fast lookup but it is redundant informations.
-// This entity lives alongside graph as a simple directed acyclic graph itself with only one parent.
-// It is not sealed by hashing or cryptographic signature, it only allows for faster accounting.
+// Balance holds the  wallet balance.
 type Balance struct {
-	LastTrxVectorHash [32]byte      `msgpack:"last_trx_vector_hash"`
-	Spice             spice.Melange `msgpack:"spice"`
+	AccountedAt         time.Time     `msgpack:"accounted_at"`
+	WalletPublicAddress string        `msgpack:"wallet_public_address"`
+	Spice               spice.Melange `msgpack:"spice"`
 }
 
 // NewBalance creates a new balance entity.
-func NewBalance(h [32]byte, s spice.Melange) Balance {
-	return Balance{LastTrxVectorHash: h, Spice: s}
+func NewBalance(walletPubAddr string, s spice.Melange) Balance {
+	now := time.Now()
+	return Balance{AccountedAt: now, WalletPublicAddress: walletPubAddr, Spice: s}
 }
 
 func (b *Balance) encode() ([]byte, error) {

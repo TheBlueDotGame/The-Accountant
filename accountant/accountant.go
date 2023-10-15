@@ -28,14 +28,17 @@ const (
 )
 
 var (
-	ErrLeafValidationProcessStopped       = errors.New("leaf validation process stopped")
-	ErrNewLeafRejected                    = errors.New("new leaf rejected")
-	ErrLeafRejected                       = errors.New("leaf rejected")
-	ErrIssuerAddressBalanceNotFound       = errors.New("issuer address balance not found")
-	ErrReceiverAddressBalanceNotFound     = errors.New("receiver address balance not found")
-	ErrDoubleSpendingOrInsufficinetFounds = errors.New("double spending or insufficient founds")
-	ErrVertexHashNotFound                 = errors.New("vertex hash not found")
-	ErrUnexpected                         = errors.New("unexpected")
+	ErrBalanceCaclulationUnexpectedFailure   = errors.New("balance calculation unexpected failure")
+	ErrBalanceUnavailable                    = errors.New("balance unavailable")
+	ErrLeafBallanceCalculationProcessStopped = errors.New("wallet balance calculation process stopped")
+	ErrLeafValidationProcessStopped          = errors.New("leaf validation process stopped")
+	ErrNewLeafRejected                       = errors.New("new leaf rejected")
+	ErrLeafRejected                          = errors.New("leaf rejected")
+	ErrIssuerAddressBalanceNotFound          = errors.New("issuer address balance not found")
+	ErrReceiverAddressBalanceNotFound        = errors.New("receiver address balance not found")
+	ErrDoubleSpendingOrInsufficinetFounds    = errors.New("double spending or insufficient founds")
+	ErrVertexHashNotFound                    = errors.New("vertex hash not found")
+	ErrUnexpected                            = errors.New("unexpected")
 )
 
 func createKey(prefix string, key []byte) []byte {
@@ -122,8 +125,10 @@ func (ab *AccountingBook) validateLeaf(ctx context.Context, leaf *Vertex) error 
 	visited := make(map[string]struct{})
 	spiceOut := spice.New(0, 0)
 	spiceIn := spice.New(0, 0)
+	if err := pourFounds(leaf.Transaction.IssuerAddress, *leaf, &spiceIn, &spiceOut); err != nil {
+		return err
+	}
 	vertices, signal, _ := ab.dag.AncestorsWalker(string(leaf.Hash[:]))
-
 	for ancestorID := range vertices {
 		select {
 		case <-ctx.Done():
@@ -136,11 +141,6 @@ func (ab *AccountingBook) validateLeaf(ctx context.Context, leaf *Vertex) error 
 		}
 		visited[ancestorID] = struct{}{}
 
-		isRoot, err := ab.dag.IsRoot(ancestorID)
-		if err != nil {
-			signal <- true
-			return ErrUnexpected
-		}
 		item, err := ab.dag.GetVertex(ancestorID)
 		if err != nil {
 			signal <- true
@@ -160,12 +160,8 @@ func (ab *AccountingBook) validateLeaf(ctx context.Context, leaf *Vertex) error 
 					return errors.Join(ErrLeafRejected, err)
 				}
 			}
-			if err := pourFounds(leaf, &vrx, &spiceIn, &spiceOut); err != nil {
+			if err := pourFounds(leaf.Transaction.IssuerAddress, vrx, &spiceIn, &spiceOut); err != nil {
 				return err
-			}
-			if isRoot {
-				signal <- true
-				return nil
 			}
 
 		default:
@@ -297,7 +293,7 @@ func (ab *AccountingBook) CreateLeaf(ctx context.Context, trx *transaction.Trans
 	tip, err := NewVertex(*trx, validatedLeafs[0].Hash, validatedLeafs[1].Hash, ab.signer)
 	if err != nil {
 		ab.log.Error(fmt.Sprintf("Accounting book rejected new leaf [ %v ], %s.", tip.Hash, err))
-		return err
+		return errors.Join(ErrNewLeafRejected, err)
 	}
 	if err := ab.dag.AddVertexByID(string(tip.Hash[:]), tip); err != nil {
 		ab.log.Error(fmt.Sprintf("Accounting book rejected new leaf [ %v ], %s.", tip.Hash, err))
@@ -311,7 +307,7 @@ func (ab *AccountingBook) CreateLeaf(ctx context.Context, trx *transaction.Trans
 				fmt.Sprintf("Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ], %s,",
 					vrx.Hash, vrx.SignerPublicAddress, vrx.LeftParentHash, vrx.RightParentHash, err),
 			)
-			return ErrLeafRejected
+			return ErrNewLeafRejected
 		}
 	}
 	for _, validVrx := range validatedLeafs {
@@ -384,38 +380,65 @@ func (ab *AccountingBook) AddLeaf(ctx context.Context, leaf *Vertex) error {
 	return nil
 }
 
-func pourFounds(leaf, vrx *Vertex, spiceIn, spiceOut *spice.Melange) error {
-	if leaf == nil || vrx == nil {
-		return ErrUnexpected
+// CalculateBalance traverses the graph starting from the recent accepted Vertex,
+// and calculates the balance for the given address.
+func (ab *AccountingBook) CalculateBalance(ctx context.Context, walletPubAddr string) (Balance, error) {
+	lastVertexHash := ab.mem.getLast()
+	item, err := ab.dag.GetVertex(string(lastVertexHash[:]))
+	if err != nil {
+		return Balance{}, errors.Join(ErrUnexpected, err)
 	}
-	if spiceIn == nil || spiceOut == nil {
-		return ErrUnexpected
+
+	spiceOut := spice.New(0, 0)
+	spiceIn := spice.New(0, 0)
+	switch vrx := item.(type) {
+	case Vertex:
+		if err := pourFounds(walletPubAddr, vrx, &spiceIn, &spiceOut); err != nil {
+			return Balance{}, err
+		}
+	default:
+		return Balance{}, ErrUnexpected
+
 	}
-	if !vrx.Transaction.IsSpiceTransfer() {
-		return nil
-	}
-	var sink *spice.Melange
-	if vrx.Transaction.IssuerAddress == leaf.Transaction.IssuerAddress {
-		sink = spiceOut
-	}
-	if vrx.Transaction.ReceiverAddress == leaf.Transaction.IssuerAddress {
-		sink = spiceIn
-	}
-	if sink != nil {
-		if err := vrx.Transaction.Spice.Drain(leaf.Transaction.Spice, sink); err != nil {
-			return errors.Join(ErrUnexpected, err)
+	visited := make(map[string]struct{})
+	vertices, signal, _ := ab.dag.AncestorsWalker(string(lastVertexHash[:]))
+	for ancestorID := range vertices {
+		select {
+		case <-ctx.Done():
+			signal <- true
+			return Balance{}, ErrLeafBallanceCalculationProcessStopped
+		default:
+		}
+		if _, ok := visited[ancestorID]; ok {
+			continue
+		}
+		visited[ancestorID] = struct{}{}
+
+		item, err := ab.dag.GetVertex(ancestorID)
+		if err != nil {
+			signal <- true
+			return Balance{}, errors.Join(ErrUnexpected, err)
+		}
+		switch vrx := item.(type) {
+		case Vertex:
+			if err := pourFounds(walletPubAddr, vrx, &spiceIn, &spiceOut); err != nil {
+				return Balance{}, err
+			}
+
+		default:
+			signal <- true
+			return Balance{}, ErrUnexpected
 		}
 	}
-	return nil
-}
 
-func checkHasSufficientFounds(in, out *spice.Melange) error {
-	if in == nil || out == nil {
-		return ErrUnexpected
+	s := spice.New(0, 0)
+	if err := s.Supply(spiceIn, &spiceIn); err != nil {
+		return Balance{}, errors.Join(ErrBalanceCaclulationUnexpectedFailure, err)
 	}
-	sink := spice.New(0, 0)
-	if err := in.Drain(*out, &sink); err != nil {
-		return errors.Join(ErrLeafRejected, err)
+
+	if err := s.Drain(spiceOut, &spice.Melange{}); err != nil {
+		return Balance{}, errors.Join(ErrBalanceCaclulationUnexpectedFailure, err)
 	}
-	return nil
+
+	return NewBalance(walletPubAddr, s), nil
 }
