@@ -182,3 +182,38 @@ func TestDagStart(t *testing.T) {
 	cancel()
 	time.Sleep(time.Millisecond * 200)
 }
+
+func TestNewVertex(t *testing.T) {
+	signer, err := wallet.New()
+	assert.NilError(t, err)
+	trx, err := transaction.New("Vertex Test", spice.New(10, 10), []byte{}, signer.Address(), &signer)
+	assert.NilError(t, err)
+	_, err = NewVertex(trx, [32]byte{}, [32]byte{}, &signer)
+	assert.NilError(t, err)
+}
+
+func TestCreateGensis(t *testing.T) {
+	callOnLogErr := func(err error) {
+		fmt.Printf("logger failed with error: %s\n", err)
+	}
+	callOnFail := func(err error) {
+		fmt.Printf("Faield with error: %s\n", err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	l := logging.New(callOnLogErr, callOnFail, &stdoutwriter.Logger{})
+	verifier := wallet.NewVerifier()
+	signer, err := wallet.New()
+	assert.NilError(t, err)
+	ab, err := NewAccountingBook(ctx, Config{}, verifier, &signer, l)
+	assert.NilError(t, err)
+
+	genesisSigner, err := wallet.New()
+	assert.NilError(t, err)
+	vrx, err := ab.CreateGenesis("GENESIS", spice.New(math.MaxUint64, 1000000000000000000), []byte{}, &genesisSigner)
+	assert.NilError(t, err)
+	ok := vrx.Transaction.IsSpiceTransfer()
+	assert.Equal(t, ok, true)
+	assert.DeepEqual(t, spice.New(math.MaxUint64, 1000000000000000000), vrx.Transaction.Spice)
+}

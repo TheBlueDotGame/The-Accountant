@@ -167,7 +167,10 @@ func (ab *AccountingBook) validateLeaf(ctx context.Context, leaf *Vertex) error 
 			return errors.Join(ErrUnexpected, err)
 		}
 		switch vrx := item.(type) {
-		case Vertex:
+		case *Vertex:
+			if vrx == nil {
+				return ErrUnexpected
+			}
 			if vrx.Hash == leaf.LeftParentHash {
 				if err := vrx.verify(ab.verifier); err != nil {
 					signal <- true
@@ -180,7 +183,7 @@ func (ab *AccountingBook) validateLeaf(ctx context.Context, leaf *Vertex) error 
 					return errors.Join(ErrLeafRejected, err)
 				}
 			}
-			if err := pourFounds(leaf.Transaction.IssuerAddress, vrx, &spiceIn, &spiceOut); err != nil {
+			if err := pourFounds(leaf.Transaction.IssuerAddress, *vrx, &spiceIn, &spiceOut); err != nil {
 				return err
 			}
 
@@ -220,7 +223,8 @@ func (ab *AccountingBook) CreateGenesis(subject string, spc spice.Melange, data 
 	if err != nil {
 		return Vertex{}, errors.Join(ErrGenesisRejected, err)
 	}
-	if err := ab.dag.AddVertexByID(string(vrx.Hash[:]), vrx); err != nil {
+
+	if err := ab.dag.AddVertexByID(string(vrx.Hash[:]), &vrx); err != nil {
 		return Vertex{}, err
 	}
 	ab.mem.set(vrx.Hash)
@@ -261,8 +265,11 @@ func (ab *AccountingBook) CreateLeaf(ctx context.Context, trx *transaction.Trans
 
 		var leaf Vertex
 		switch vrx := item.(type) {
-		case Vertex:
-			leaf = vrx
+		case *Vertex:
+			if vrx == nil {
+				return Vertex{}, ErrUnexpected
+			}
+			leaf = *vrx
 			err = ab.validateLeaf(ctx, &leaf)
 			if err != nil {
 				ab.dag.DeleteVertex(string(leaf.Hash[:]))
@@ -334,7 +341,7 @@ func (ab *AccountingBook) CreateLeaf(ctx context.Context, trx *transaction.Trans
 		ab.log.Error(fmt.Sprintf("Accounting book rejected new leaf [ %v ], %s.", tip.Hash, err))
 		return Vertex{}, errors.Join(ErrNewLeafRejected, err)
 	}
-	if err := ab.dag.AddVertexByID(string(tip.Hash[:]), tip); err != nil {
+	if err := ab.dag.AddVertexByID(string(tip.Hash[:]), &tip); err != nil {
 		ab.log.Error(fmt.Sprintf("Accounting book rejected new leaf [ %v ], %s.", tip.Hash, err))
 		return Vertex{}, ErrNewLeafRejected
 	}
@@ -401,6 +408,10 @@ func (ab *AccountingBook) AddLeaf(ctx context.Context, leaf *Vertex) error {
 		}
 		validatedLeafs = append(validatedLeafs, existringLeaf)
 	}
+	if err := ab.dag.AddVertexByID(string(leaf.Hash[:]), &leaf); err != nil {
+		ab.log.Error(fmt.Sprintf("Accounting book rejected new leaf [ %v ], %s.", leaf.Hash, err))
+		return ErrLeafRejected
+	}
 
 	for _, validVrx := range validatedLeafs {
 		if err := ab.dag.AddEdge(string(validVrx.Hash[:]), string(leaf.Hash[:])); err != nil {
@@ -431,8 +442,11 @@ func (ab *AccountingBook) CalculateBalance(ctx context.Context, walletPubAddr st
 	spiceOut := spice.New(0, 0)
 	spiceIn := spice.New(0, 0)
 	switch vrx := item.(type) {
-	case Vertex:
-		if err := pourFounds(walletPubAddr, vrx, &spiceIn, &spiceOut); err != nil {
+	case *Vertex:
+		if vrx == nil {
+			return Balance{}, ErrUnexpected
+		}
+		if err := pourFounds(walletPubAddr, *vrx, &spiceIn, &spiceOut); err != nil {
 			return Balance{}, err
 		}
 	default:
@@ -459,8 +473,11 @@ func (ab *AccountingBook) CalculateBalance(ctx context.Context, walletPubAddr st
 			return Balance{}, errors.Join(ErrUnexpected, err)
 		}
 		switch vrx := item.(type) {
-		case Vertex:
-			if err := pourFounds(walletPubAddr, vrx, &spiceIn, &spiceOut); err != nil {
+		case *Vertex:
+			if vrx == nil {
+				return Balance{}, ErrUnexpected
+			}
+			if err := pourFounds(walletPubAddr, *vrx, &spiceIn, &spiceOut); err != nil {
 				return Balance{}, err
 			}
 

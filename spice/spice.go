@@ -49,6 +49,7 @@ func (m *Melange) Drain(amount Melange, sink *Melange) error {
 	return Transfer(amount, m, sink)
 }
 
+// Empty verifies if is spice empty.
 func (m *Melange) Empty() bool {
 	return m.Currency == 0 && m.SupplementaryCurrency == 0
 }

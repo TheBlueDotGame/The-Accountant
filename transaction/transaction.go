@@ -93,6 +93,7 @@ func New(subject string, spice spice.Melange, data []byte, receiverAddress strin
 		Data:              data,
 		IssuerSignature:   signature,
 		ReceiverSignature: []byte{},
+		Spice:             spice,
 	}, nil
 }
 
