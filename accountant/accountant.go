@@ -480,7 +480,6 @@ func (ab *AccountingBook) CalculateBalance(ctx context.Context, walletPubAddr st
 			if err := pourFounds(walletPubAddr, *vrx, &spiceIn, &spiceOut); err != nil {
 				return Balance{}, err
 			}
-
 		default:
 			signal <- true
 			return Balance{}, ErrUnexpected
