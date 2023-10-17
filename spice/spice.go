@@ -29,7 +29,7 @@ type Melange struct {
 
 // New creates new spice Melange from given currency and supplementary currency values.
 func New(currency, supplementaryCurrency uint64) Melange {
-	if supplementaryCurrency > maxAmoutnPerSupplementaryCurrency {
+	if supplementaryCurrency >= maxAmoutnPerSupplementaryCurrency {
 		currency += 1
 		supplementaryCurrency -= maxAmoutnPerSupplementaryCurrency
 	}
@@ -40,11 +40,34 @@ func New(currency, supplementaryCurrency uint64) Melange {
 }
 
 // Supply supplies spice of the given amount from the source to the entity.
-func (m *Melange) Supply(amount Melange, source *Melange) error {
-	return Transfer(amount, source, m)
+func (m *Melange) Supply(amount Melange) error {
+	mCp := m.clone()
+	for _, unit := range []byte{Currency, SuplementaryCurrency} {
+		switch unit {
+		case Currency:
+			if math.MaxUint64-amount.Currency < m.Currency {
+				return ErrValueOverflow
+			}
+			m.Currency += amount.Currency
+		case SuplementaryCurrency:
+			if maxAmoutnPerSupplementaryCurrency-amount.SupplementaryCurrency < m.SupplementaryCurrency {
+				if m.Currency == math.MaxUint64 {
+					m.copyFrom(mCp)
+					return ErrValueOverflow
+				}
+			}
+			m.SupplementaryCurrency += amount.SupplementaryCurrency
+
+			if m.SupplementaryCurrency >= maxAmoutnPerSupplementaryCurrency {
+				m.Currency += 1
+				m.SupplementaryCurrency -= maxAmoutnPerSupplementaryCurrency
+			}
+		}
+	}
+	return nil
 }
 
-// Drain drains spice of the given amount from the entity in to the given sink.
+// Drain drains amount from the function pointer receiver to the sink.
 func (m *Melange) Drain(amount Melange, sink *Melange) error {
 	return Transfer(amount, m, sink)
 }
@@ -118,8 +141,13 @@ func (m Melange) String() string {
 		buf.WriteString("0")
 	}
 	buf.WriteString(suplementary)
-	s := fmt.Sprintf("%v.%s", m.Currency, buf.String())
-	return strings.Trim(s, "0")
+	curr := fmt.Sprintf("%v", m.Currency)
+	supp := buf.String()
+	supp = strings.Trim(supp, "0")
+	if len(supp) == 0 {
+		supp = "0"
+	}
+	return fmt.Sprintf("%s.%s", curr, supp)
 }
 
 func (m Melange) clone() Melange {

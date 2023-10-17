@@ -13,15 +13,13 @@ func pourFounds(issuerAddress string, vrx Vertex, spiceIn, spiceOut *spice.Melan
 	if !vrx.Transaction.IsSpiceTransfer() {
 		return nil
 	}
-	var sink *spice.Melange
 	if vrx.Transaction.IssuerAddress == issuerAddress {
-		sink = spiceOut
+		if err := spiceOut.Supply(vrx.Transaction.Spice); err != nil {
+			return errors.Join(ErrUnexpected, err)
+		}
 	}
 	if vrx.Transaction.ReceiverAddress == issuerAddress {
-		sink = spiceIn
-	}
-	if sink != nil {
-		if err := vrx.Transaction.Spice.Drain(vrx.Transaction.Spice, sink); err != nil {
+		if err := spiceIn.Supply(vrx.Transaction.Spice); err != nil {
 			return errors.Join(ErrUnexpected, err)
 		}
 	}
