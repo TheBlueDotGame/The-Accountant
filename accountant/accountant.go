@@ -69,6 +69,7 @@ type AccountingBook struct {
 	dag            *dag.DAG
 	db             *badger.DB
 	lastVertexHash chan [32]byte
+	registry       chan struct{}
 	gennessisHash  [32]byte
 }
 
@@ -96,6 +97,7 @@ func NewAccountingBook(ctx context.Context, cfg Config, verifier signatureVerifi
 		dag:            dag.NewDAG(),
 		db:             db,
 		lastVertexHash: make(chan [32]byte, 100),
+		registry:       make(chan struct{}, 1),
 		log:            l,
 	}
 
@@ -115,6 +117,8 @@ func NewAccountingBook(ctx context.Context, cfg Config, verifier signatureVerifi
 			}
 		}
 	}(ctx)
+
+	ab.unregister()
 
 	return ab, nil
 }
@@ -224,8 +228,18 @@ func (ab *AccountingBook) checkIsTrustedNode(trustedNodePublicAddress string) (b
 	return ok, err
 }
 
+func (ab *AccountingBook) register() {
+	<-ab.registry
+}
+
+func (ab *AccountingBook) unregister() {
+	ab.registry <- struct{}{}
+}
+
 // CreateGenesis creates genesis vertex that will transfer spice to current node as a receiver.
 func (ab *AccountingBook) CreateGenesis(subject string, spc spice.Melange, data []byte, receiver signer) (Vertex, error) {
+	ab.register()
+	defer ab.unregister()
 	trx, err := transaction.New(subject, spc, data, receiver.Address(), ab.signer)
 	if err != nil {
 		return Vertex{}, errors.Join(ErrGenesisRejected, err)
@@ -267,6 +281,9 @@ func (ab *AccountingBook) RemoveTrustedNode(trustedNodePublicAddress string) err
 // If leaf has valid signature and is referring to parent that is part of a graph then the leaf is valid.
 // If leaf transfers spice then calculate issuer total founds and drain for given amount to calculate sufficient founds.
 func (ab *AccountingBook) CreateLeaf(ctx context.Context, trx *transaction.Transaction) (Vertex, error) {
+	ab.register()
+	defer ab.unregister()
+
 	leavesToExamine := 2
 	var err error
 	validatedLeafs := make([]Vertex, 0, 2)
@@ -415,6 +432,8 @@ func (ab *AccountingBook) AddLeaf(ctx context.Context, leaf *Vertex) error {
 		)
 		return ErrLeafRejected
 	}
+	ab.register()
+	defer ab.unregister()
 
 	for _, hash := range [][32]byte{leaf.LeftParentHash, leaf.RightParentHash} {
 		item, err := ab.dag.GetVertex(string(hash[:]))

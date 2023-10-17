@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -220,7 +222,7 @@ func TestCreateGensis(t *testing.T) {
 	assert.DeepEqual(t, genesisSpice, vrx.Transaction.Spice)
 }
 
-func TestSingleIssuerSingleReceiverSpiceTransfer(t *testing.T) {
+func TestSingleIssuerSingleReceiverSpiceTransferConsecutive(t *testing.T) {
 	callOnLogErr := func(err error) {
 		fmt.Printf("logger failed with error: %s\n", err)
 	}
@@ -267,12 +269,66 @@ func TestSingleIssuerSingleReceiverSpiceTransfer(t *testing.T) {
 	time.Sleep(time.Millisecond * 200)
 }
 
-func BenchmarkSingleIssuerSingleReceiverSpiceTransfer(b *testing.B) {
+func TestSingleIssuerSingleReceiverSpiceTransferConcurent(t *testing.T) {
 	callOnLogErr := func(err error) {
 		fmt.Printf("logger failed with error: %s\n", err)
 	}
 	callOnFail := func(err error) {
-		fmt.Printf("Faield with error: %s\n", err)
+		fmt.Printf("Failed with error: %s\n", err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	l := logging.New(callOnLogErr, callOnFail, &stdoutwriter.Logger{})
+	verifier := wallet.NewVerifier()
+	signer, err := wallet.New()
+	assert.NilError(t, err)
+	ab, err := NewAccountingBook(ctx, Config{}, verifier, &signer, l)
+	assert.NilError(t, err)
+
+	genesisSpice := spice.New(math.MaxUint64-1, 0)
+
+	genesisReceiver, err := wallet.New()
+	assert.NilError(t, err)
+	vrx, err := ab.CreateGenesis("GENESIS", genesisSpice, []byte{}, &genesisReceiver)
+	assert.NilError(t, err)
+	ok := vrx.Transaction.IsSpiceTransfer()
+	assert.Equal(t, ok, true)
+	assert.DeepEqual(t, genesisSpice, vrx.Transaction.Spice)
+
+	receiver, err := wallet.New()
+	assert.NilError(t, err)
+	spiceMainTransfer := 10
+	var mainSpiceReduction atomic.Int64
+	var wg sync.WaitGroup
+	for i := 0; i < 100; i++ {
+		wg.Add(1)
+		go func(next int, wg *sync.WaitGroup) {
+			spc := spice.New(uint64(spiceMainTransfer), 0)
+			trx, err := transaction.New(fmt.Sprintf("Spice supply %v", next), spc, []byte{}, receiver.Address(), &genesisReceiver)
+			assert.NilError(t, err)
+			_, err = ab.CreateLeaf(ctx, &trx)
+			assert.NilError(t, err)
+			mainSpiceReduction.Add(int64(spiceMainTransfer))
+			wg.Done()
+		}(i, &wg)
+	}
+
+	wg.Wait()
+
+	balance, err := ab.CalculateBalance(ctx, receiver.Address())
+	assert.NilError(t, err)
+	assert.Equal(t, int64(balance.Spice.Currency), mainSpiceReduction.Add(int64(-spiceMainTransfer)))
+
+	time.Sleep(time.Millisecond * 200)
+}
+
+func BenchmarkSingleIssuerSingleReceiverSpiceTransferConsecutive(b *testing.B) {
+	callOnLogErr := func(err error) {
+		fmt.Printf("logger failed with error: %s\n", err)
+	}
+	callOnFail := func(err error) {
+		fmt.Printf("Failed with error: %s\n", err)
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -297,6 +353,14 @@ func BenchmarkSingleIssuerSingleReceiverSpiceTransfer(b *testing.B) {
 	receiver, err := wallet.New()
 	assert.NilError(b, err)
 	spiceMainTransfer := 10
+	// Pre-populate
+	for i := 0; i < 1000; i++ {
+		spc := spice.New(uint64(spiceMainTransfer), 0)
+		trx, err := transaction.New(fmt.Sprintf("Spice supply %v", i), spc, []byte{}, receiver.Address(), &genesisReceiver)
+		assert.NilError(b, err)
+		_, err = ab.CreateLeaf(ctx, &trx)
+		assert.NilError(b, err)
+	}
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
 		spc := spice.New(uint64(spiceMainTransfer), 0)
@@ -305,4 +369,58 @@ func BenchmarkSingleIssuerSingleReceiverSpiceTransfer(b *testing.B) {
 		_, err = ab.CreateLeaf(ctx, &trx)
 		assert.NilError(b, err)
 	}
+}
+
+func BenchmarkSingleIssuerSingleReceiverSpiceTransferConcurrent(b *testing.B) {
+	callOnLogErr := func(err error) {
+		fmt.Printf("logger failed with error: %s\n", err)
+	}
+	callOnFail := func(err error) {
+		fmt.Printf("Failed with error: %s\n", err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	l := logging.New(callOnLogErr, callOnFail, &stdoutwriter.Logger{})
+	verifier := wallet.NewVerifier()
+	signer, err := wallet.New()
+	assert.NilError(b, err)
+	ab, err := NewAccountingBook(ctx, Config{}, verifier, &signer, l)
+	assert.NilError(b, err)
+
+	genesisSpice := spice.New(math.MaxUint64-1, 0)
+
+	genesisReceiver, err := wallet.New()
+	assert.NilError(b, err)
+	vrx, err := ab.CreateGenesis("GENESIS", genesisSpice, []byte{}, &genesisReceiver)
+	assert.NilError(b, err)
+	ok := vrx.Transaction.IsSpiceTransfer()
+	assert.Equal(b, ok, true)
+	assert.DeepEqual(b, genesisSpice, vrx.Transaction.Spice)
+
+	receiver, err := wallet.New()
+	assert.NilError(b, err)
+	spiceMainTransfer := 10
+	// Pre-populate
+	for i := 0; i < 1000; i++ {
+		spc := spice.New(uint64(spiceMainTransfer), 0)
+		trx, err := transaction.New(fmt.Sprintf("Spice supply %v", i), spc, []byte{}, receiver.Address(), &genesisReceiver)
+		assert.NilError(b, err)
+		_, err = ab.CreateLeaf(ctx, &trx)
+		assert.NilError(b, err)
+	}
+	b.ResetTimer()
+	var wg sync.WaitGroup
+	for n := 0; n < b.N; n++ {
+		wg.Add(1)
+		go func(next int, wg *sync.WaitGroup) {
+			spc := spice.New(uint64(spiceMainTransfer), 0)
+			trx, err := transaction.New(fmt.Sprintf("Spice supply %v", next), spc, []byte{}, receiver.Address(), &genesisReceiver)
+			assert.NilError(b, err)
+			_, err = ab.CreateLeaf(ctx, &trx)
+			assert.NilError(b, err)
+			wg.Done()
+		}(n, &wg)
+	}
+	wg.Wait()
 }
