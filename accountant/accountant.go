@@ -494,6 +494,14 @@ func (ab *AccountingBook) CalculateBalance(ctx context.Context, walletPubAddr st
 	ab.register()
 	defer ab.unregister()
 	lastVertexHash := <-ab.lastVertexHash
+	switch len(ab.lastVertexHash) {
+	case 1:
+		ab.lastVertexHash <- lastVertexHash
+	case 0:
+		ab.lastVertexHash <- lastVertexHash
+		ab.lastVertexHash <- lastVertexHash
+	default:
+	}
 	item, err := ab.dag.GetVertex(string(lastVertexHash[:]))
 	if err != nil {
 		return Balance{}, errors.Join(ErrUnexpected, err)
