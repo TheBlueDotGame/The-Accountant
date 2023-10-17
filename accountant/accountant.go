@@ -491,6 +491,8 @@ func (ab *AccountingBook) AddLeaf(ctx context.Context, leaf *Vertex) error {
 // CalculateBalance traverses the graph starting from the recent accepted Vertex,
 // and calculates the balance for the given address.
 func (ab *AccountingBook) CalculateBalance(ctx context.Context, walletPubAddr string) (Balance, error) {
+	ab.register()
+	defer ab.unregister()
 	lastVertexHash := <-ab.lastVertexHash
 	item, err := ab.dag.GetVertex(string(lastVertexHash[:]))
 	if err != nil {
