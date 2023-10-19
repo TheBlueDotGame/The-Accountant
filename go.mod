@@ -3,7 +3,7 @@ module github.com/bartossh/Computantis
 go 1.20
 
 require (
-	github.com/gofiber/fiber/v2 v2.49.2
+	github.com/gofiber/fiber/v2 v2.50.0
 	github.com/lib/pq v1.10.9
 	github.com/mr-tron/base58 v1.2.0
 	github.com/nats-io/nats.go v1.28.0
@@ -11,7 +11,7 @@ require (
 	github.com/pterm/pterm v0.12.62
 	github.com/stretchr/testify v1.8.4
 	github.com/urfave/cli/v2 v2.25.4
-	github.com/valyala/fasthttp v1.49.0
+	github.com/valyala/fasthttp v1.50.0
 	go.mongodb.org/mongo-driver v1.11.4
 	golang.org/x/crypto v0.12.0
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9
@@ -57,7 +57,7 @@ require (
 	github.com/valyala/tcplisten v1.0.0 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
-	golang.org/x/sys v0.12.0 // indirect
+	golang.org/x/sys v0.13.0 // indirect
 	golang.org/x/term v0.11.0 // indirect
 	golang.org/x/text v0.12.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
