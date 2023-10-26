@@ -2,7 +2,7 @@
 
 [![CodeQL](https://github.com/bartossh/Computantis/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/bartossh/Computantis/actions/workflows/github-code-scanning/codeql)
 [![pages-build-deployment](https://github.com/bartossh/Computantis/actions/workflows/pages/pages-build-deployment/badge.svg)](https://github.com/bartossh/Computantis/actions/workflows/pages/pages-build-deployment)
-## Computantis protocol.
+## Computantis protocol, DAG and gossiping.
 
 ### High level description and purpose.
 
@@ -32,17 +32,17 @@ It offers these key features:
 - The central node acts as a middleware service and ensures transaction legitimacy.
 - The transaction receiver and the transaction issuer are known as the client.
 - The clients are not aware of each other network URLs, they participate in the transaction transmission using the central node (network of central nodes).
-- The client URL is known only for the network of central nodes and the validators.
+- The client URL is known only for the computantis nodes in the network.
 - The URL of the client may change while data are transmitted and it is not affecting the transmission consistency.
-- The client is recognized in the network by the public address of cryptographic key pairs.
-- The client's responsibility is to inform the validator of the URL change. The validators are public nodes that are validating the central node's network legitimacy and inform the client nodes about the awaiting transactions.
+- The client is recognized in the network by the public address of cryptographic key pairs
+- The client may listen on a webhook for approved transactions.
 - The client node is working on the client machine or as an edge device proxying traffic to the device or a client application.
-- The traffic cannot omit the central node when transmitted from client to client.
+- The traffic cannot omit the computantis network when transaction is transmitted from client to client.
 - The client is additionally validating the message's legitimacy, decrypting and decoding the message.
-- The central nodes stores all the transactions in the immutable repository in the form of a blockchain.
-- The central nodes are not competing over the forging of the block but cooperate to do so.
-- There is no token transfer happening and there is no prize given for forging the block. The whole network of nodes is a privately owned entity without the possibility of branching or corrupting the blockchain. Any attempt to corrupt the system by any node will be recognized as a violation of procedure and such central node will be removed from the network and blacklisted, even thou this is a privately owned central node. Any misbehaving node will be treated as broken or compromised by a third party or a hacker.
-- The validators and the central nodes are voting using a weighted system over violation of procedure. There is a minimum of 51% of votes to disconnect the central node and blacklist the node, the same applies to the validators.
+- The central nodes stores all the transactions in the immutable repository in the form of a DAG with Hashed edges and signed vertices.
+- The central nodes are concurrently cooperating in creating and validating the DAG.
+- The value transfer in form of a token may occur and is a subject of validation by the node taking the vertex as the ancestor. The double spending and sufficient amount of tokens is calculated and validated. The name of the token in computantis network is: 'spice'.
+- DAG is truncated every some vertexes to allow for fast graph traversal for 'spice' accounting.
 
 2. The transaction.
 
@@ -57,6 +57,7 @@ It offers these key features:
     - IssuerSignature: The cryptographic signature of the issuer.
     - ReceiverSignature: The cryptographic signature of the receiver.
     - Hash: Message hash acting as the control sum of the transaction.
+    - Spice: The amount of tokens in the transactions. Spice is transferred always from the Issuer to the Receiver.
 
 - The transaction footprint on the transmitted data size depends on the relation between the size of the ‘Data’ field in the transaction. That is highly recommended to transmit as much data in a single request as possible. 
 - The transaction has an upper limit on the size of transmitted data, that is set according to the requirements.
@@ -70,52 +71,32 @@ It offers these key features:
     - The issuer signature and hash are validated.
     - The message is encoded using a private key if necessary.
 
+- Transfer of the spice occurs only when both issuer and receiver signed the transaction.
 
-3. The blockchain.
+3. The DAG.
 
-- The block consists of:
-    - ID: Unique repository key / or hash, it is not transmitted over the network.
-    - TrxHashes: The merkle tree of transaction hashes.
-    - Hash: All the other fields hash.
-    - PrevHash: Previous block hash.
-    - Index: Consecutive number of the block. A unique number describing the block position in the blockchain.
-    - Timestamp: Time when the block was forged.
-    - Nonce: 64-bit unsigned integer value that was calculated to create a hash to reach a given difficulty.
-    - Difficulty: The difficulty of the forging process for looking for the nonce value to calculate block hash. Higher difficulty ensures the immutability of past blocks, there will be harder to rewrite blocks when new ones are created and catch up with the existing chain.
-
-- The blockchain cannot be mutated, which is ensured by the:
-    - Hashed merkle three of all the transactions are part of the current block.
-    - The block is hashed.
-    - The previous block hash is part of the current block and is taken as a part of the data to hash the current block.
-    - No branching of the blockchain is possible, nonce and difficulty prevent rewriting history by creating a requirement for high computational power to overcome the challenge of outperforming the network of nodes that forges the blocks.
+- DAG stands for Directed Acyclic Graph.
+- DAG contains leafs, vertices and edges.
+- Leafs are like vertices but are not confirmed yet so they have no children connected by the edges.
+- Vertices are connected by the edges and have children which proofs them being valid.
+- Edges are connecting vertices and leafs. Edges are single direction connection, from the parent vertex to the child vertex or a leaf.
+- Vertex contains the transaction and seals it by the signature of the node that validated the transaction. If two edges are connecting two leafs with two parent vertices, those parent vertices are assumed to be valid and to contain valid transaction. Valid transaction is checked for sufficient spice and is not having a double spending transaction.  
+- DAG seals the transactions immutability and allows for the accounting of the spice transfer.
+- DAG is truncated and all the edges and vertices are stored in permanent storage. 
+- When truncated all the transactions are accounted and the next vertex is created and signed by the node with all the leafs being referred in the edge between new leaf vertex and leafs from the truncated DAG.
+- The leaf validation may happen in any node, not only the one that created the leaf.
+- Creating a leaf means to create a new leaf with the transaction embedded in to the leaf and then the leaf is gossiped to other nodes in the node network.
+- Adding a leaf means it was created by other node and shared with the nodes network in gossip protocol.
+- Adding and creating a leaf in to the DAG per node is done in a consecutive way to allow for transaction validation consistency.
+- Adding and creating a leaf in to the DAG in the network of nodes is done in the concurrent way. This allows for application scaling, more nodes may compute more transactions.
 
 4. The networking
 
-- The network consists of three main participants:
-- The central node - validates transactions and forges blocks.
-- The validator - validates blocks and informs the client over webhook about awaiting transactions.
-- The client - proxy between the application or server and the system. Signs the transactions and takes care of transmitting transactions.
-- The central node network:
-    - The central node network communicates over the inner pub- sub-system.
-    - The transactions and blockchain repository are shared between all the nodes.
-    - The repository is sharded and distributed.
-    - The central node allows for HTTP and Web Socket connection. HTTP is used for interaction with clients where a Web Socket connection is used to communicate with Validators.
-    - Central nodes are offering nodes discovery protocol over the Web Socket.
+- The network of nodes communicate via gossip about gossip protocol.
+- Gossip about gossip protocol is used in many crypto DAG protocols but each of them may use slightly different form.
+- Some gossip about gossip protocols are patented.
+- Computantis uses its own implementation of the gossip about gossip protocol that is not based on the gossip about gossip patents.
 
-- The validators nodes network:
-    - Validators are connected to each central node in the computantis network.
-    - Validators are able to discover all the central nodes by using the central node discovery protocol over Web Socket.
-    - Validators validate the block.
-    - Validators consist of a webhook endpoint to which a client node can assign its URL and wait for the information about the awaiting transactions.
-    - Validators will reconnect if the connection is lost.
-    - Validators will automatically connect to a new central node created in the computantis network if such is started.
-
-- The client node network:
-    - The client sends its location to the validator node.
-    - The validator responds with the list of available central nodes to communicate with.
-    - The client activates the webhook in the validator node each time the URL is changed. This allows the client node to receive information about transactions waiting, being altered or rejected.
-    - The client node pulls transactions from the known central node.
-    - The client node sends signed or rejected transactions to the central node.
 
 5. Wallet 
 
