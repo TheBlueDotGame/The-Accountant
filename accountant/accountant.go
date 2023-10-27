@@ -31,6 +31,8 @@ var (
 	ErrReceiverAddressBalanceNotFound        = errors.New("receiver address balance not found")
 	ErrDoubleSpendingOrInsufficinetFounds    = errors.New("double spending or insufficient founds")
 	ErrVertexHashNotFound                    = errors.New("vertex hash not found")
+	ErrVertexAlreadyExists                   = errors.New("vertex already exists")
+	ErrTrxInVertexAlreadyExists              = errors.New("transaction in vertex already exists")
 	ErrTrxToVertexNotFound                   = errors.New("trx mapping to vertex do not found, transaction doesn't exist")
 	ErrUnexpected                            = errors.New("unexpected failure")
 	ErrTransferringFoundsFailure             = errors.New("transferring founds failure")
@@ -210,7 +212,36 @@ func (ab *AccountingBook) unregister() {
 	ab.registry <- struct{}{}
 }
 
-func (ab *AccountingBook) getTrxVertex(trxHash []byte) (Vertex, error) {
+func (ab *AccountingBook) checkTrxInVertexExists(trxHash []byte) (bool, error) {
+	err := ab.trxsToVertxDB.View(func(txn *badger.Txn) error {
+		_, err := txn.Get(trxHash)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err == nil {
+		return true, nil
+	}
+	switch err {
+	case badger.ErrKeyNotFound:
+		return false, nil
+	default:
+		ab.log.Error(fmt.Sprintf("transaction to vertex mapping for existing trx lookup failed, %s", err))
+		return false, ErrUnexpected
+	}
+}
+
+func (ab *AccountingBook) saveTrxInVertex(trxHash, vrxHash []byte) error {
+	return ab.trxsToVertxDB.Update(func(txn *badger.Txn) error {
+		if _, err := txn.Get(trxHash); err == nil {
+			return ErrTrxInVertexAlreadyExists
+		}
+		return txn.SetEntry(badger.NewEntry(trxHash, vrxHash))
+	})
+}
+
+func (ab *AccountingBook) readTrxVertex(trxHash []byte) (Vertex, error) {
 	var vrxHash []byte
 	err := ab.trxsToVertxDB.View(func(txn *badger.Txn) error {
 		item, err := txn.Get(trxHash)
@@ -244,6 +275,27 @@ func (ab *AccountingBook) readVertex(vrxHash []byte) (Vertex, error) {
 		return Vertex{}, err
 	}
 	return ab.readVertexFromStorage(vrxHash)
+}
+
+func (ab *AccountingBook) checkVertexExists(vrxHash []byte) (bool, error) {
+	_, err := ab.dag.GetVertex(string(vrxHash))
+	if err == nil {
+		return true, nil
+	}
+	err = ab.verticesDB.View(func(txn *badger.Txn) error {
+		_, err := txn.Get(vrxHash)
+		return err
+	})
+	if err != nil {
+		switch err {
+		case badger.ErrKeyNotFound:
+			return false, nil
+		default:
+			ab.log.Error(fmt.Sprintf("transaction to vertex mapping failed when looking for transaction hash, %s", err))
+			return false, ErrUnexpected
+		}
+	}
+	return true, nil
 }
 
 func (ab *AccountingBook) readVertexFromDAG(vrxHash []byte) (Vertex, error) {
@@ -285,34 +337,17 @@ func (ab *AccountingBook) readVertexFromStorage(vrxHash []byte) (Vertex, error) 
 	return vrx, nil
 }
 
-func (ab *AccountingBook) addVertexToStorage(vrx *Vertex) error {
+func (ab *AccountingBook) saveVertexToStorage(vrx *Vertex) error {
 	buf, err := vrx.encode()
 	if err != nil {
 		return err
 	}
 	return ab.verticesDB.Update(func(txn *badger.Txn) error {
+		if _, err := txn.Get(vrx.Hash[:]); err == nil {
+			return ErrVertexAlreadyExists
+		}
 		return txn.SetEntry(badger.NewEntry(vrx.Hash[:], buf))
 	})
-}
-
-func (ab *AccountingBook) checkTrxInVertexExists(trxHash []byte) (bool, error) {
-	err := ab.trxsToVertxDB.View(func(txn *badger.Txn) error {
-		_, err := txn.Get(trxHash)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-	if err != nil {
-		return true, nil
-	}
-	switch err {
-	case badger.ErrKeyNotFound:
-		return false, nil
-	default:
-		ab.log.Error(fmt.Sprintf("transaction to vertex mapping for existing trx lookup failed with %s", err))
-		return false, ErrUnexpected
-	}
 }
 
 // CreateGenesis creates genesis vertex that will transfer spice to current node as a receiver.
@@ -497,13 +532,27 @@ func (ab *AccountingBook) CreateLeaf(ctx context.Context, trx *transaction.Trans
 
 // AddLeaf adds leaf known also as tip to the graph for future validation.
 // Leaf will be a subject of validation by another tip.
+// TODO: add Trx to vertex map after success, remove trx to vertex map if vertex rejected - do the same for creating a trx
 func (ab *AccountingBook) AddLeaf(ctx context.Context, leaf *Vertex) error {
 	if leaf == nil {
 		return ErrUnexpected
 	}
 
-	if l, err := ab.dag.GetVertex(string(leaf.Hash[:])); err == nil && l != nil {
+	ok, err := ab.checkVertexExists(leaf.Hash[:])
+	if err != nil {
+		ab.log.Error(fmt.Sprintf("Accounting book adding leaf failed, %s", err))
+		return ErrUnexpected
+	}
+	if ok {
 		return ErrLeafAlreadyExists
+	}
+	ok, err = ab.checkTrxInVertexExists(leaf.Transaction.Hash[:])
+	if err != nil {
+		ab.log.Error(fmt.Sprintf("Accounting book adding leaf failed, %s", err))
+		return ErrUnexpected
+	}
+	if ok {
+		return ErrTrxInVertexAlreadyExists
 	}
 
 	validatedLeafs := make([]Vertex, 0, 2)

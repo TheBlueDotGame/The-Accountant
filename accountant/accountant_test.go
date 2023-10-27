@@ -425,5 +425,316 @@ func BenchmarkSingleIssuerSingleReceiverSpiceTransferConcurrent(b *testing.B) {
 	wg.Wait()
 }
 
-func TestTransactionDuplication(t *testing.T) {
+func TestVertexStorageAdd(t *testing.T) {
+	v := Vertex{
+		CreatedAt: time.Now(),
+		Transaction: transaction.Transaction{
+			Hash:              [32]byte(generateData(32)),
+			CreatedAt:         time.Now(),
+			Subject:           "Test packing to binary",
+			Data:              generateData(2048),
+			IssuerAddress:     string(generateData(64)),
+			ReceiverAddress:   string(generateData(64)),
+			IssuerSignature:   generateData(32),
+			ReceiverSignature: generateData(32),
+			Spice:             spice.New(math.MaxUint64, 100),
+		},
+		Hash:            [32]byte(generateData(32)),
+		LeftParentHash:  [32]byte(generateData(32)),
+		RightParentHash: [32]byte(generateData(32)),
+	}
+
+	callOnLogErr := func(err error) {
+		fmt.Printf("logger failed with error: %s\n", err)
+	}
+	callOnFail := func(err error) {
+		fmt.Printf("Failed with error: %s\n", err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	l := logging.New(callOnLogErr, callOnFail, &stdoutwriter.Logger{})
+	verifier := wallet.NewVerifier()
+	signer, err := wallet.New()
+	assert.NilError(t, err)
+	ab, err := NewAccountingBook(ctx, Config{}, verifier, &signer, l)
+	assert.NilError(t, err)
+
+	err = ab.saveVertexToStorage(&v)
+	assert.NilError(t, err)
+}
+
+func TestVertexStorageAddRepret(t *testing.T) {
+	v := Vertex{
+		CreatedAt: time.Now(),
+		Transaction: transaction.Transaction{
+			Hash:              [32]byte(generateData(32)),
+			CreatedAt:         time.Now(),
+			Subject:           "Test packing to binary",
+			Data:              generateData(2048),
+			IssuerAddress:     string(generateData(64)),
+			ReceiverAddress:   string(generateData(64)),
+			IssuerSignature:   generateData(32),
+			ReceiverSignature: generateData(32),
+			Spice:             spice.New(math.MaxUint64, 100),
+		},
+		Hash:            [32]byte(generateData(32)),
+		LeftParentHash:  [32]byte(generateData(32)),
+		RightParentHash: [32]byte(generateData(32)),
+	}
+
+	callOnLogErr := func(err error) {
+		fmt.Printf("logger failed with error: %s\n", err)
+	}
+	callOnFail := func(err error) {
+		fmt.Printf("Failed with error: %s\n", err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	l := logging.New(callOnLogErr, callOnFail, &stdoutwriter.Logger{})
+	verifier := wallet.NewVerifier()
+	signer, err := wallet.New()
+	assert.NilError(t, err)
+	ab, err := NewAccountingBook(ctx, Config{}, verifier, &signer, l)
+	assert.NilError(t, err)
+
+	err = ab.saveVertexToStorage(&v)
+	assert.NilError(t, err)
+	err = ab.saveVertexToStorage(&v)
+	assert.ErrorIs(t, err, ErrVertexAlreadyExists)
+}
+
+func TestVertexStorageAddRead(t *testing.T) {
+	v := Vertex{
+		CreatedAt: time.Now(),
+		Transaction: transaction.Transaction{
+			Hash:              [32]byte(generateData(32)),
+			CreatedAt:         time.Now(),
+			Subject:           "Test packing to binary",
+			Data:              generateData(2048),
+			IssuerAddress:     string(generateData(64)),
+			ReceiverAddress:   string(generateData(64)),
+			IssuerSignature:   generateData(32),
+			ReceiverSignature: generateData(32),
+			Spice:             spice.New(math.MaxUint64, 100),
+		},
+		Hash:            [32]byte(generateData(32)),
+		LeftParentHash:  [32]byte(generateData(32)),
+		RightParentHash: [32]byte(generateData(32)),
+	}
+
+	callOnLogErr := func(err error) {
+		fmt.Printf("logger failed with error: %s\n", err)
+	}
+	callOnFail := func(err error) {
+		fmt.Printf("Failed with error: %s\n", err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	l := logging.New(callOnLogErr, callOnFail, &stdoutwriter.Logger{})
+	verifier := wallet.NewVerifier()
+	signer, err := wallet.New()
+	assert.NilError(t, err)
+	ab, err := NewAccountingBook(ctx, Config{}, verifier, &signer, l)
+	assert.NilError(t, err)
+
+	err = ab.saveVertexToStorage(&v)
+	assert.NilError(t, err)
+
+	newV, err := ab.readVertexFromStorage(v.Hash[:])
+	assert.NilError(t, err)
+	assert.DeepEqual(t, newV, v)
+}
+
+func BenchmarkVertexStorageAdd(b *testing.B) {
+	callOnLogErr := func(err error) {
+		fmt.Printf("logger failed with error: %s\n", err)
+	}
+	callOnFail := func(err error) {
+		fmt.Printf("Failed with error: %s\n", err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	l := logging.New(callOnLogErr, callOnFail, &stdoutwriter.Logger{})
+	verifier := wallet.NewVerifier()
+	signer, err := wallet.New()
+	assert.NilError(b, err)
+	ab, err := NewAccountingBook(ctx, Config{}, verifier, &signer, l)
+	assert.NilError(b, err)
+
+	for n := 0; n < b.N; n++ {
+		b.StopTimer()
+		v := Vertex{
+			CreatedAt: time.Now(),
+			Transaction: transaction.Transaction{
+				Hash:              [32]byte(generateData(32)),
+				CreatedAt:         time.Now(),
+				Subject:           "Test packing to binary",
+				Data:              generateData(2048),
+				IssuerAddress:     string(generateData(64)),
+				ReceiverAddress:   string(generateData(64)),
+				IssuerSignature:   generateData(32),
+				ReceiverSignature: generateData(32),
+				Spice:             spice.New(math.MaxUint64, 100),
+			},
+			Hash:            [32]byte(generateData(32)),
+			LeftParentHash:  [32]byte(generateData(32)),
+			RightParentHash: [32]byte(generateData(32)),
+		}
+		b.StartTimer()
+		ab.saveVertexToStorage(&v)
+	}
+}
+
+func BenchmarkVertexStorageSaveRead(b *testing.B) {
+	callOnLogErr := func(err error) {
+		fmt.Printf("logger failed with error: %s\n", err)
+	}
+	callOnFail := func(err error) {
+		fmt.Printf("Failed with error: %s\n", err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	l := logging.New(callOnLogErr, callOnFail, &stdoutwriter.Logger{})
+	verifier := wallet.NewVerifier()
+	signer, err := wallet.New()
+	assert.NilError(b, err)
+	ab, err := NewAccountingBook(ctx, Config{}, verifier, &signer, l)
+	assert.NilError(b, err)
+
+	for n := 0; n < b.N; n++ {
+		b.StopTimer()
+		v := Vertex{
+			CreatedAt: time.Now(),
+			Transaction: transaction.Transaction{
+				Hash:              [32]byte(generateData(32)),
+				CreatedAt:         time.Now(),
+				Subject:           "Test packing to binary",
+				Data:              generateData(2048),
+				IssuerAddress:     string(generateData(64)),
+				ReceiverAddress:   string(generateData(64)),
+				IssuerSignature:   generateData(32),
+				ReceiverSignature: generateData(32),
+				Spice:             spice.New(math.MaxUint64, 100),
+			},
+			Hash:            [32]byte(generateData(32)),
+			LeftParentHash:  [32]byte(generateData(32)),
+			RightParentHash: [32]byte(generateData(32)),
+		}
+		b.StartTimer()
+		ab.saveVertexToStorage(&v)
+		ab.readVertexFromStorage(v.Hash[:])
+	}
+}
+
+func TestTrxToVrxStorageSaveRead(t *testing.T) {
+	trxHash := generateData(32)
+	vrxHash := generateData(32)
+
+	callOnLogErr := func(err error) {
+		fmt.Printf("logger failed with error: %s\n", err)
+	}
+	callOnFail := func(err error) {
+		fmt.Printf("Failed with error: %s\n", err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	l := logging.New(callOnLogErr, callOnFail, &stdoutwriter.Logger{})
+	verifier := wallet.NewVerifier()
+	signer, err := wallet.New()
+	assert.NilError(t, err)
+	ab, err := NewAccountingBook(ctx, Config{}, verifier, &signer, l)
+	assert.NilError(t, err)
+
+	err = ab.saveTrxInVertex(trxHash, vrxHash)
+	assert.NilError(t, err)
+
+	ok, err := ab.checkTrxInVertexExists(trxHash)
+	assert.NilError(t, err)
+	assert.Equal(t, ok, true)
+}
+
+func TestTrxToVrxStorageSaveExisting(t *testing.T) {
+	trxHash := generateData(32)
+	vrxHash := generateData(32)
+
+	callOnLogErr := func(err error) {
+		fmt.Printf("logger failed with error: %s\n", err)
+	}
+	callOnFail := func(err error) {
+		fmt.Printf("Failed with error: %s\n", err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	l := logging.New(callOnLogErr, callOnFail, &stdoutwriter.Logger{})
+	verifier := wallet.NewVerifier()
+	signer, err := wallet.New()
+	assert.NilError(t, err)
+	ab, err := NewAccountingBook(ctx, Config{}, verifier, &signer, l)
+	assert.NilError(t, err)
+
+	err = ab.saveTrxInVertex(trxHash, vrxHash)
+	assert.NilError(t, err)
+
+	err = ab.saveTrxInVertex(trxHash, vrxHash)
+	assert.ErrorIs(t, err, ErrTrxInVertexAlreadyExists)
+}
+
+func BenchmarkTrxToVertexStorageSave(b *testing.B) {
+	callOnLogErr := func(err error) {
+		fmt.Printf("logger failed with error: %s\n", err)
+	}
+	callOnFail := func(err error) {
+		fmt.Printf("Failed with error: %s\n", err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	l := logging.New(callOnLogErr, callOnFail, &stdoutwriter.Logger{})
+	verifier := wallet.NewVerifier()
+	signer, err := wallet.New()
+	assert.NilError(b, err)
+	ab, err := NewAccountingBook(ctx, Config{}, verifier, &signer, l)
+	assert.NilError(b, err)
+
+	for n := 0; n < b.N; n++ {
+		b.StopTimer()
+		trxHash := generateData(32)
+		vrxHash := generateData(32)
+		b.StartTimer()
+		ab.saveTrxInVertex(trxHash, vrxHash)
+	}
+}
+
+func BenchmarkTrxToVertexStorageSaveRead(b *testing.B) {
+	callOnLogErr := func(err error) {
+		fmt.Printf("logger failed with error: %s\n", err)
+	}
+	callOnFail := func(err error) {
+		fmt.Printf("Failed with error: %s\n", err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	l := logging.New(callOnLogErr, callOnFail, &stdoutwriter.Logger{})
+	verifier := wallet.NewVerifier()
+	signer, err := wallet.New()
+	assert.NilError(b, err)
+	ab, err := NewAccountingBook(ctx, Config{}, verifier, &signer, l)
+	assert.NilError(b, err)
+
+	for n := 0; n < b.N; n++ {
+		b.StopTimer()
+		trxHash := generateData(32)
+		vrxHash := generateData(32)
+		b.StartTimer()
+		ab.saveTrxInVertex(trxHash, vrxHash)
+		ab.checkTrxInVertexExists(trxHash)
+	}
 }
