@@ -1,11 +1,9 @@
 package accountant
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/dgraph-io/badger/v4"
@@ -20,14 +18,6 @@ const (
 	gcRuntimeTick = time.Minute * 5
 )
 
-const prefetchSize = 1000
-
-const (
-	keyAllowdWalletsPubAddress = "key_allowed_wallets_pub_address"
-	keyTokens                  = "key_tokens"
-	keyNotaryNodesPubAddress   = "key_notary_node_pub_address"
-)
-
 var (
 	ErrGenesisRejected                       = errors.New("genesis vertex has been rejected")
 	ErrBalanceCaclulationUnexpectedFailure   = errors.New("balance calculation unexpected failure")
@@ -36,21 +26,15 @@ var (
 	ErrLeafValidationProcessStopped          = errors.New("leaf validation process stopped")
 	ErrNewLeafRejected                       = errors.New("new leaf rejected")
 	ErrLeafRejected                          = errors.New("leaf rejected")
+	ErrLeafAlreadyExists                     = errors.New("leaf already exists")
 	ErrIssuerAddressBalanceNotFound          = errors.New("issuer address balance not found")
 	ErrReceiverAddressBalanceNotFound        = errors.New("receiver address balance not found")
 	ErrDoubleSpendingOrInsufficinetFounds    = errors.New("double spending or insufficient founds")
 	ErrVertexHashNotFound                    = errors.New("vertex hash not found")
+	ErrTrxToVertexNotFound                   = errors.New("trx mapping to vertex do not found, transaction doesn't exist")
 	ErrUnexpected                            = errors.New("unexpected failure")
 	ErrTransferringFoundsFailure             = errors.New("transferring founds failure")
 )
-
-func createKey(prefix string, key []byte) []byte {
-	var buf bytes.Buffer
-	buf.WriteString(prefix)
-	buf.WriteString("-")
-	buf.Write(key)
-	return buf.Bytes()
-}
 
 type signatureVerifier interface {
 	Verify(message, signature []byte, hash [32]byte, address string) error
@@ -67,7 +51,10 @@ type AccountingBook struct {
 	signer         signer
 	log            logger.Logger
 	dag            *dag.DAG
-	db             *badger.DB
+	trustedNodesDB *badger.DB
+	tokensDB       *badger.DB
+	trxsToVertxDB  *badger.DB
+	verticesDB     *badger.DB
 	lastVertexHash chan [32]byte
 	registry       chan struct{}
 	gennessisHash  [32]byte
@@ -76,18 +63,19 @@ type AccountingBook struct {
 // New creates new AccountingBook.
 // New AccountingBook will start internally the garbage collection loop, to stop it from running cancel the context.
 func NewAccountingBook(ctx context.Context, cfg Config, verifier signatureVerifier, signer signer, l logger.Logger) (*AccountingBook, error) {
-	var opt badger.Options
-	switch cfg.DBPath {
-	case "":
-		opt = badger.DefaultOptions("").WithInMemory(true)
-	default:
-		if _, err := os.Stat(cfg.DBPath); err != nil {
-			return nil, err
-		}
-		opt = badger.DefaultOptions(cfg.DBPath)
+	trustedNodesDB, err := createBadgerDB(ctx, cfg.TrustedNodesDBPath, l)
+	if err != nil {
+		return nil, err
 	}
-
-	db, err := badger.Open(opt)
+	tokensDB, err := createBadgerDB(ctx, cfg.TokensDBPath, l)
+	if err != nil {
+		return nil, err
+	}
+	trxsToVertxDB, err := createBadgerDB(ctx, cfg.TraxsToVerticesMapDBPath, l)
+	if err != nil {
+		return nil, err
+	}
+	verticesDB, err := createBadgerDB(ctx, cfg.VerticesDBPath, l)
 	if err != nil {
 		return nil, err
 	}
@@ -95,30 +83,16 @@ func NewAccountingBook(ctx context.Context, cfg Config, verifier signatureVerifi
 		verifier:       verifier,
 		signer:         signer,
 		dag:            dag.NewDAG(),
-		db:             db,
+		trustedNodesDB: trustedNodesDB,
+		tokensDB:       tokensDB,
+		trxsToVertxDB:  trxsToVertxDB,
+		verticesDB:     verticesDB,
 		lastVertexHash: make(chan [32]byte, 100),
 		registry:       make(chan struct{}, 1),
 		log:            l,
 	}
 
-	go func(ctx context.Context) {
-		ticker := time.NewTicker(gcRuntimeTick)
-		defer ticker.Stop()
-		for range ticker.C {
-			select {
-			case <-ctx.Done():
-				return
-			default:
-			}
-		again:
-			err := db.RunValueLogGC(0.5)
-			if err == nil {
-				goto again
-			}
-		}
-	}(ctx)
-
-	ab.unregister()
+	ab.unregister() // on new AccountingBook creation send to the register channel to unblock the register queue.
 
 	return ab, nil
 }
@@ -214,8 +188,8 @@ func (ab *AccountingBook) validateLeaf(ctx context.Context, leaf *Vertex) error 
 
 func (ab *AccountingBook) checkIsTrustedNode(trustedNodePublicAddress string) (bool, error) {
 	var ok bool
-	err := ab.db.View(func(txn *badger.Txn) error {
-		_, err := txn.Get(createKey(keyNotaryNodesPubAddress, []byte(trustedNodePublicAddress)))
+	err := ab.trustedNodesDB.View(func(txn *badger.Txn) error {
+		_, err := txn.Get([]byte(trustedNodePublicAddress))
 		if err != nil {
 			if errors.Is(err, badger.ErrKeyNotFound) {
 				return nil
@@ -234,6 +208,111 @@ func (ab *AccountingBook) register() {
 
 func (ab *AccountingBook) unregister() {
 	ab.registry <- struct{}{}
+}
+
+func (ab *AccountingBook) getTrxVertex(trxHash []byte) (Vertex, error) {
+	var vrxHash []byte
+	err := ab.trxsToVertxDB.View(func(txn *badger.Txn) error {
+		item, err := txn.Get(trxHash)
+		if err != nil {
+			return err
+		}
+		item.Value(func(v []byte) error {
+			vrxHash = v
+			return nil
+		})
+		return nil
+	})
+	if err != nil {
+		switch err {
+		case badger.ErrKeyNotFound:
+			return Vertex{}, ErrTrxToVertexNotFound
+		default:
+			ab.log.Error(fmt.Sprintf("transaction to vertex mapping failed when looking for transaction hash, %s", err))
+			return Vertex{}, ErrUnexpected
+		}
+	}
+	return ab.readVertex(vrxHash)
+}
+
+func (ab *AccountingBook) readVertex(vrxHash []byte) (Vertex, error) {
+	vrx, err := ab.readVertexFromDAG(vrxHash)
+	if err == nil {
+		return vrx, nil
+	}
+	if !errors.Is(err, ErrVertexHashNotFound) {
+		return Vertex{}, err
+	}
+	return ab.readVertexFromStorage(vrxHash)
+}
+
+func (ab *AccountingBook) readVertexFromDAG(vrxHash []byte) (Vertex, error) {
+	item, err := ab.dag.GetVertex(string(vrxHash))
+	if err == nil {
+		switch v := item.(type) {
+		case *Vertex:
+			return *v, nil
+		default:
+			return Vertex{}, ErrUnexpected
+		}
+	}
+	return Vertex{}, ErrVertexHashNotFound
+}
+
+func (ab *AccountingBook) readVertexFromStorage(vrxHash []byte) (Vertex, error) {
+	var vrx Vertex
+	err := ab.verticesDB.View(func(txn *badger.Txn) error {
+		item, err := txn.Get(vrxHash)
+		if err != nil {
+			return err
+		}
+		item.Value(func(v []byte) error {
+			vrx, err = decodeVertex(v)
+			return err
+		})
+		return nil
+	})
+	if err != nil {
+		switch err {
+		case badger.ErrKeyNotFound:
+			return vrx, ErrVertexHashNotFound
+		default:
+			ab.log.Error(fmt.Sprintf("transaction to vertex mapping failed when looking for vertex hash, %s", err))
+			return vrx, ErrUnexpected
+		}
+	}
+
+	return vrx, nil
+}
+
+func (ab *AccountingBook) addVertexToStorage(vrx *Vertex) error {
+	buf, err := vrx.encode()
+	if err != nil {
+		return err
+	}
+	return ab.verticesDB.Update(func(txn *badger.Txn) error {
+		return txn.SetEntry(badger.NewEntry(vrx.Hash[:], buf))
+	})
+}
+
+func (ab *AccountingBook) checkTrxInVertexExists(trxHash []byte) (bool, error) {
+	err := ab.trxsToVertxDB.View(func(txn *badger.Txn) error {
+		_, err := txn.Get(trxHash)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return true, nil
+	}
+	switch err {
+	case badger.ErrKeyNotFound:
+		return false, nil
+	default:
+		ab.log.Error(fmt.Sprintf("transaction to vertex mapping for existing trx lookup failed with %s", err))
+		return false, ErrUnexpected
+	}
 }
 
 // CreateGenesis creates genesis vertex that will transfer spice to current node as a receiver.
@@ -261,15 +340,15 @@ func (ab *AccountingBook) CreateGenesis(subject string, spc spice.Melange, data 
 
 // AddTrustedNode adds trusted node public address to the trusted nodes public address repository.
 func (ab *AccountingBook) AddTrustedNode(trustedNodePublicAddress string) error {
-	return ab.db.Update(func(txn *badger.Txn) error {
-		return txn.Set(createKey(keyNotaryNodesPubAddress, []byte(trustedNodePublicAddress)), []byte{})
+	return ab.trustedNodesDB.Update(func(txn *badger.Txn) error {
+		return txn.Set([]byte(trustedNodePublicAddress), []byte{})
 	})
 }
 
 // RemoveTrustedNode removes trusted node public address from trusted nodes public address repository.
 func (ab *AccountingBook) RemoveTrustedNode(trustedNodePublicAddress string) error {
-	return ab.db.Update(func(txn *badger.Txn) error {
-		return txn.Delete(createKey(keyNotaryNodesPubAddress, []byte(trustedNodePublicAddress)))
+	return ab.trustedNodesDB.Update(func(txn *badger.Txn) error {
+		return txn.Delete([]byte(trustedNodePublicAddress))
 	})
 }
 
@@ -423,6 +502,10 @@ func (ab *AccountingBook) AddLeaf(ctx context.Context, leaf *Vertex) error {
 		return ErrUnexpected
 	}
 
+	if l, err := ab.dag.GetVertex(string(leaf.Hash[:])); err == nil && l != nil {
+		return ErrLeafAlreadyExists
+	}
+
 	validatedLeafs := make([]Vertex, 0, 2)
 
 	if err := leaf.verify(ab.verifier); err != nil {
@@ -463,7 +546,7 @@ func (ab *AccountingBook) AddLeaf(ctx context.Context, leaf *Vertex) error {
 		}
 		validatedLeafs = append(validatedLeafs, existringLeaf)
 	}
-	if err := ab.dag.AddVertexByID(string(leaf.Hash[:]), &leaf); err != nil {
+	if err := ab.dag.AddVertexByID(string(leaf.Hash[:]), leaf); err != nil {
 		ab.log.Error(fmt.Sprintf("Accounting book rejected new leaf [ %v ], %s.", leaf.Hash, err))
 		return ErrLeafRejected
 	}

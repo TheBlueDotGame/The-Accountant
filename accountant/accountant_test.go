@@ -424,3 +424,6 @@ func BenchmarkSingleIssuerSingleReceiverSpiceTransferConcurrent(b *testing.B) {
 	}
 	wg.Wait()
 }
+
+func TestTransactionDuplication(t *testing.T) {
+}

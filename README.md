@@ -92,11 +92,14 @@ It offers these key features:
 
 4. The networking
 
-- The network of nodes communicate via gossip about gossip protocol.
+- The network of nodes communicate via knowledgable gossip about gossip protocol.
 - Gossip about gossip protocol is used in many crypto DAG protocols but each of them may use slightly different form.
 - Some gossip about gossip protocols are patented.
 - Computantis uses its own implementation of the gossip about gossip protocol that is not based on the gossip about gossip patents.
-
+- Computantis knowledgable gossip about gossip protocol is build on top of GRPC protocol.
+- Computantis node informs all the connected nodes about the new leaf, but omits those that already knows about the message. Each node signs the message by adding node wallet public address and signature.
+- This creates a little of redundancy, but ensures that all the nodes will receive the message even if there is a bad actor in the middle that is not forwarding messages.
+- Knowledgable gossip about gossip provides the message to all the nodes even if some nodes are not interconnected, packets are lost or internet roots are very slower then the others.
 
 5. Wallet 
 
