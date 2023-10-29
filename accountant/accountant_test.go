@@ -48,6 +48,7 @@ func BenchmarkSerializartion(b *testing.B) {
 		Hash:            [32]byte(generateData(32)),
 		LeftParentHash:  [32]byte(generateData(32)),
 		RightParentHash: [32]byte(generateData(32)),
+		Weight:          1,
 	}
 
 	b.Run("json marshal", func(b *testing.B) {
@@ -138,6 +139,7 @@ func TestCorrectness(t *testing.T) {
 		Hash:            [32]byte(generateData(32)),
 		LeftParentHash:  [32]byte(generateData(32)),
 		RightParentHash: [32]byte(generateData(32)),
+		Weight:          1,
 	}
 
 	t.Run("msgpack", func(t *testing.T) {
@@ -190,7 +192,7 @@ func TestNewVertex(t *testing.T) {
 	assert.NilError(t, err)
 	trx, err := transaction.New("Vertex Test", spice.New(10, 10), []byte{}, signer.Address(), &signer)
 	assert.NilError(t, err)
-	_, err = NewVertex(trx, [32]byte{}, [32]byte{}, &signer)
+	_, err = NewVertex(trx, [32]byte{}, [32]byte{}, 0, &signer)
 	assert.NilError(t, err)
 }
 

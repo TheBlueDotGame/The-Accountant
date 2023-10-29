@@ -11,6 +11,10 @@ import (
 	"github.com/vmihailenco/msgpack"
 )
 
+func calcNewWeight(leftWeight, rightWeight uint64) uint64 {
+	return leftWeight + rightWeight/2 + 1
+}
+
 // Vertex is a Direct Acyclic Graph vertex that creates a AccountingBook inner graph.
 type Vertex struct {
 	SignerPublicAddress string                  `msgpack:"signer_public_address"`
@@ -20,6 +24,7 @@ type Vertex struct {
 	Hash                [32]byte                `msgpack:"hash"`
 	LeftParentHash      [32]byte                `msgpack:"left_parent_hash"`
 	RightParentHash     [32]byte                `msgpack:"right_parent_hash"`
+	Weight              uint64                  `msgpack:"weight"`
 }
 
 // NewVertex creates new Vertex but first validates transaction legitimacy.
@@ -27,7 +32,7 @@ type Vertex struct {
 func NewVertex(
 	trx transaction.Transaction,
 	leftParentHash, rightParentHash [32]byte,
-	signer signer,
+	weight uint64, signer signer,
 ) (Vertex, error) {
 	candidate := Vertex{
 		SignerPublicAddress: signer.Address(),
@@ -37,6 +42,7 @@ func NewVertex(
 		Hash:                [32]byte{},
 		LeftParentHash:      leftParentHash,
 		RightParentHash:     rightParentHash,
+		Weight:              weight,
 	}
 
 	candidate.sign(signer)

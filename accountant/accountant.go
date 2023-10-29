@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	"github.com/dgraph-io/badger/v4"
@@ -16,6 +17,11 @@ import (
 
 const (
 	gcRuntimeTick = time.Minute * 5
+)
+
+const (
+	initialThroughput     = 10
+	throughputMultiplayer = 2
 )
 
 var (
@@ -60,6 +66,8 @@ type AccountingBook struct {
 	lastVertexHash chan [32]byte
 	registry       chan struct{}
 	gennessisHash  [32]byte
+	weight         atomic.Uint64
+	troughput      atomic.Uint64
 }
 
 // New creates new AccountingBook.
@@ -92,6 +100,8 @@ func NewAccountingBook(ctx context.Context, cfg Config, verifier signatureVerifi
 		lastVertexHash: make(chan [32]byte, 100),
 		registry:       make(chan struct{}, 1),
 		log:            l,
+		weight:         atomic.Uint64{},
+		troughput:      atomic.Uint64{},
 	}
 
 	ab.unregister() // on new AccountingBook creation send to the register channel to unblock the register queue.
@@ -103,6 +113,10 @@ func (ab *AccountingBook) validateLeaf(ctx context.Context, leaf *Vertex) error 
 	if leaf == nil {
 		return errors.Join(ErrUnexpected, errors.New("leaf to validate is nil"))
 	}
+	if !ab.isValidWeight(leaf.Weight) {
+		return errors.Join(ErrLeafRejected, errors.New("leaf doesn't meet condition of minimal weight"))
+	}
+
 	if err := leaf.verify(ab.verifier); err != nil {
 		return errors.Join(ErrLeafRejected, err)
 	}
@@ -356,6 +370,17 @@ func (ab *AccountingBook) saveVertexToStorage(vrx *Vertex) error {
 	})
 }
 
+func (ab *AccountingBook) updateWaightAndThroughput(weight uint64) {
+	if ab.weight.Load() < weight {
+		ab.weight.Store(weight)
+	}
+	ab.troughput.Store((ab.troughput.Load() + uint64(len(ab.dag.GetLeaves()))/2*throughputMultiplayer))
+}
+
+func (ab *AccountingBook) isValidWeight(weight uint64) bool {
+	return weight >= ab.weight.Load()-ab.troughput.Load()
+}
+
 // CreateGenesis creates genesis vertex that will transfer spice to current node as a receiver.
 func (ab *AccountingBook) CreateGenesis(subject string, spc spice.Melange, data []byte, receiver signer) (Vertex, error) {
 	ab.register()
@@ -365,7 +390,7 @@ func (ab *AccountingBook) CreateGenesis(subject string, spc spice.Melange, data 
 		return Vertex{}, errors.Join(ErrGenesisRejected, err)
 	}
 
-	vrx, err := NewVertex(trx, [32]byte{}, [32]byte{}, ab.signer)
+	vrx, err := NewVertex(trx, [32]byte{}, [32]byte{}, 0, ab.signer)
 	if err != nil {
 		return Vertex{}, errors.Join(ErrGenesisRejected, err)
 	}
@@ -373,6 +398,9 @@ func (ab *AccountingBook) CreateGenesis(subject string, spc spice.Melange, data 
 	if err := ab.dag.AddVertexByID(string(vrx.Hash[:]), &vrx); err != nil {
 		return Vertex{}, err
 	}
+	ab.troughput.Store(initialThroughput)
+	ab.updateWaightAndThroughput(initialThroughput)
+
 	ab.lastVertexHash <- vrx.Hash
 	ab.lastVertexHash <- vrx.Hash
 
@@ -427,10 +455,12 @@ func (ab *AccountingBook) CreateLeaf(ctx context.Context, trx *transaction.Trans
 			err = ab.validateLeaf(ctx, &leaf)
 			if err != nil {
 				ab.dag.DeleteVertex(string(leaf.Hash[:]))
+				ab.removeTrxInVertex(leaf.Transaction.Hash[:])
 				ab.log.Error(
 					fmt.Sprintf("Accounting book rejected leaf hash [ %v ], from [ %v ], %s",
 						leaf.Hash, leaf.SignerPublicAddress, err),
 				)
+				ab.updateWaightAndThroughput(leaf.Weight)
 				continue
 			}
 		default:
@@ -494,7 +524,9 @@ func (ab *AccountingBook) CreateLeaf(ctx context.Context, trx *transaction.Trans
 		return Vertex{}, msgErr
 	}
 
-	tip, err := NewVertex(*trx, validatedLeafs[0].Hash, validatedLeafs[1].Hash, ab.signer)
+	tip, err := NewVertex(
+		*trx, validatedLeafs[0].Hash, validatedLeafs[1].Hash, calcNewWeight(validatedLeafs[0].Weight, validatedLeafs[1].Weight), ab.signer,
+	)
 	if err != nil {
 		ab.log.Error(fmt.Sprintf("Accounting book rejected new leaf [ %v ], %s.", tip.Hash, err))
 		return Vertex{}, errors.Join(ErrNewLeafRejected, err)
@@ -549,8 +581,6 @@ func (ab *AccountingBook) CreateLeaf(ctx context.Context, trx *transaction.Trans
 
 // AddLeaf adds leaf known also as tip to the graph for future validation.
 // Added leaf will be a subject of validation by another tip.
-//
-// TODO: Validate that leaf is added in front of the graph and not at the back, probably weight is required (check for possible implementations)
 func (ab *AccountingBook) AddLeaf(ctx context.Context, leaf *Vertex) error {
 	if leaf == nil {
 		return ErrUnexpected
@@ -608,8 +638,11 @@ func (ab *AccountingBook) AddLeaf(ctx context.Context, leaf *Vertex) error {
 		}
 		if isLeaf {
 			if err := ab.validateLeaf(ctx, &existringLeaf); err != nil {
+				ab.dag.DeleteVertex(string(existringLeaf.Hash[:]))
+				ab.removeTrxInVertex(existringLeaf.Transaction.Hash[:])
 				return errors.Join(ErrLeafRejected, err)
 			}
+			ab.updateWaightAndThroughput(leaf.Weight)
 		}
 		validatedLeafs = append(validatedLeafs, existringLeaf)
 	}
