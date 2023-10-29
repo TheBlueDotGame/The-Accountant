@@ -241,6 +241,12 @@ func (ab *AccountingBook) saveTrxInVertex(trxHash, vrxHash []byte) error {
 	})
 }
 
+func (ab *AccountingBook) removeTrxInVertex(trxHash []byte) error {
+	return ab.trxsToVertxDB.Update(func(txn *badger.Txn) error {
+		return txn.Delete(trxHash)
+	})
+}
+
 func (ab *AccountingBook) readTrxVertex(trxHash []byte) (Vertex, error) {
 	var vrxHash []byte
 	err := ab.trxsToVertxDB.View(func(txn *badger.Txn) error {
@@ -388,18 +394,22 @@ func (ab *AccountingBook) RemoveTrustedNode(trustedNodePublicAddress string) err
 }
 
 // CreateLeaf creates leaf vertex also known as a tip.
-// Leaf validates previous leaf by:
-// - checking leaf signature
-// - checking leaf ancestors signatures to the depth of one parent
-// - checking if leaf transferring spice issuer has enough founds.
-// If leaf has valid signature and is referring to parent that is part of a graph then the leaf is valid.
-// If leaf transfers spice then calculate issuer total founds and drain for given amount to calculate sufficient founds.
+// All the graph validations before adding the leaf happens in that function,
+// Created leaf will be a subject of validation by another tip.
 func (ab *AccountingBook) CreateLeaf(ctx context.Context, trx *transaction.Transaction) (Vertex, error) {
+	ok, err := ab.checkTrxInVertexExists(trx.Hash[:])
+	if err != nil {
+		ab.log.Error(fmt.Sprintf("Accounting book creating transaction failed when checking trx to vertex mapping, %s", err))
+		return Vertex{}, ErrUnexpected
+	}
+	if ok {
+		return Vertex{}, ErrTrxInVertexAlreadyExists
+	}
+
 	ab.register()
 	defer ab.unregister()
 
 	leavesToExamine := 2
-	var err error
 	validatedLeafs := make([]Vertex, 0, 2)
 
 	for _, item := range ab.dag.GetLeaves() {
@@ -489,7 +499,12 @@ func (ab *AccountingBook) CreateLeaf(ctx context.Context, trx *transaction.Trans
 		ab.log.Error(fmt.Sprintf("Accounting book rejected new leaf [ %v ], %s.", tip.Hash, err))
 		return Vertex{}, errors.Join(ErrNewLeafRejected, err)
 	}
+	if err := ab.saveTrxInVertex(trx.Hash[:], tip.Hash[:]); err != nil {
+		ab.log.Error(fmt.Sprintf("Accounting book vertex create failed saving transaction [ %v ] in tip [ %v ], %s.", trx.Hash[:], tip.Hash, err))
+		return Vertex{}, ErrUnexpected
+	}
 	if err := ab.dag.AddVertexByID(string(tip.Hash[:]), &tip); err != nil {
+		ab.removeTrxInVertex(trx.Hash[:])
 		ab.log.Error(fmt.Sprintf("Accounting book rejected new leaf [ %v ], %s.", tip.Hash, err))
 		return Vertex{}, ErrNewLeafRejected
 	}
@@ -499,6 +514,7 @@ func (ab *AccountingBook) CreateLeaf(ctx context.Context, trx *transaction.Trans
 		ok, err := ab.dag.IsRoot(string(validatedLeafs[0].Hash[:]))
 		if err != nil {
 			ab.dag.DeleteVertex(string(tip.Hash[:]))
+			ab.removeTrxInVertex(trx.Hash[:])
 			ab.log.Error(
 				fmt.Sprintf("Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ], %s,",
 					vrx.Hash, vrx.SignerPublicAddress, vrx.LeftParentHash, vrx.RightParentHash, err),
@@ -513,6 +529,7 @@ func (ab *AccountingBook) CreateLeaf(ctx context.Context, trx *transaction.Trans
 		}
 		if err := ab.dag.AddEdge(string(vrx.Hash[:]), string(tip.Hash[:])); err != nil {
 			ab.dag.DeleteVertex(string(tip.Hash[:]))
+			ab.removeTrxInVertex(trx.Hash[:])
 			ab.log.Error(
 				fmt.Sprintf("Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ], %s,",
 					vrx.Hash, vrx.SignerPublicAddress, vrx.LeftParentHash, vrx.RightParentHash, err),
@@ -531,8 +548,9 @@ func (ab *AccountingBook) CreateLeaf(ctx context.Context, trx *transaction.Trans
 }
 
 // AddLeaf adds leaf known also as tip to the graph for future validation.
-// Leaf will be a subject of validation by another tip.
-// TODO: add Trx to vertex map after success, remove trx to vertex map if vertex rejected - do the same for creating a trx
+// Added leaf will be a subject of validation by another tip.
+//
+// TODO: Validate that leaf is added in front of the graph and not at the back, probably weight is required (check for possible implementations)
 func (ab *AccountingBook) AddLeaf(ctx context.Context, leaf *Vertex) error {
 	if leaf == nil {
 		return ErrUnexpected
@@ -540,7 +558,7 @@ func (ab *AccountingBook) AddLeaf(ctx context.Context, leaf *Vertex) error {
 
 	ok, err := ab.checkVertexExists(leaf.Hash[:])
 	if err != nil {
-		ab.log.Error(fmt.Sprintf("Accounting book adding leaf failed, %s", err))
+		ab.log.Error(fmt.Sprintf("Accounting book adding leaf failed when checking vertex exists, %s", err))
 		return ErrUnexpected
 	}
 	if ok {
@@ -548,14 +566,12 @@ func (ab *AccountingBook) AddLeaf(ctx context.Context, leaf *Vertex) error {
 	}
 	ok, err = ab.checkTrxInVertexExists(leaf.Transaction.Hash[:])
 	if err != nil {
-		ab.log.Error(fmt.Sprintf("Accounting book adding leaf failed, %s", err))
+		ab.log.Error(fmt.Sprintf("Accounting book adding leaf failed when checking if trx to vertex mapping exists, %s", err))
 		return ErrUnexpected
 	}
 	if ok {
 		return ErrTrxInVertexAlreadyExists
 	}
-
-	validatedLeafs := make([]Vertex, 0, 2)
 
 	if err := leaf.verify(ab.verifier); err != nil {
 		ab.log.Error(
@@ -566,6 +582,8 @@ func (ab *AccountingBook) AddLeaf(ctx context.Context, leaf *Vertex) error {
 	}
 	ab.register()
 	defer ab.unregister()
+
+	validatedLeafs := make([]Vertex, 0, 2)
 
 	for _, hash := range [][32]byte{leaf.LeftParentHash, leaf.RightParentHash} {
 		item, err := ab.dag.GetVertex(string(hash[:]))
@@ -595,14 +613,24 @@ func (ab *AccountingBook) AddLeaf(ctx context.Context, leaf *Vertex) error {
 		}
 		validatedLeafs = append(validatedLeafs, existringLeaf)
 	}
+
+	if err := ab.saveTrxInVertex(leaf.Transaction.Hash[:], leaf.Hash[:]); err != nil {
+		ab.log.Error(
+			fmt.Sprintf("Accounting book leaf add failed saving transaction [ %v ] in leaf [ %v ], %s.", leaf.Transaction.Hash[:], leaf.Hash, err),
+		)
+		return ErrUnexpected
+	}
+
 	if err := ab.dag.AddVertexByID(string(leaf.Hash[:]), leaf); err != nil {
 		ab.log.Error(fmt.Sprintf("Accounting book rejected new leaf [ %v ], %s.", leaf.Hash, err))
+		ab.removeTrxInVertex(leaf.Transaction.Hash[:])
 		return ErrLeafRejected
 	}
 
 	for _, validVrx := range validatedLeafs {
 		if err := ab.dag.AddEdge(string(validVrx.Hash[:]), string(leaf.Hash[:])); err != nil {
 			ab.dag.DeleteVertex(string(leaf.Hash[:]))
+			ab.removeTrxInVertex(leaf.Transaction.Hash[:])
 			ab.log.Error(
 				fmt.Sprintf("Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ], %s,",
 					leaf.Hash, leaf.SignerPublicAddress, leaf.LeftParentHash, leaf.RightParentHash, err),

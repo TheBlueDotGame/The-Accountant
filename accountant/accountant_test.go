@@ -356,7 +356,7 @@ func BenchmarkSingleIssuerSingleReceiverSpiceTransferConsecutive(b *testing.B) {
 	// Pre-populate
 	for i := 0; i < 1000; i++ {
 		spc := spice.New(uint64(spiceMainTransfer), 0)
-		trx, err := transaction.New(fmt.Sprintf("Spice supply %v", i), spc, []byte{}, receiver.Address(), &genesisReceiver)
+		trx, err := transaction.New(fmt.Sprintf("First spice supply %v", i), spc, []byte{}, receiver.Address(), &genesisReceiver)
 		assert.NilError(b, err)
 		_, err = ab.CreateLeaf(ctx, &trx)
 		assert.NilError(b, err)
@@ -364,7 +364,7 @@ func BenchmarkSingleIssuerSingleReceiverSpiceTransferConsecutive(b *testing.B) {
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
 		spc := spice.New(uint64(spiceMainTransfer), 0)
-		trx, err := transaction.New(fmt.Sprintf("Spice supply %v", n), spc, []byte{}, receiver.Address(), &genesisReceiver)
+		trx, err := transaction.New(fmt.Sprintf("Second spice supply %v", n), spc, []byte{}, receiver.Address(), &genesisReceiver)
 		assert.NilError(b, err)
 		_, err = ab.CreateLeaf(ctx, &trx)
 		assert.NilError(b, err)
@@ -404,7 +404,7 @@ func BenchmarkSingleIssuerSingleReceiverSpiceTransferConcurrent(b *testing.B) {
 	// Pre-populate
 	for i := 0; i < 1000; i++ {
 		spc := spice.New(uint64(spiceMainTransfer), 0)
-		trx, err := transaction.New(fmt.Sprintf("Spice supply %v", i), spc, []byte{}, receiver.Address(), &genesisReceiver)
+		trx, err := transaction.New(fmt.Sprintf("First spice supply %v", i), spc, []byte{}, receiver.Address(), &genesisReceiver)
 		assert.NilError(b, err)
 		_, err = ab.CreateLeaf(ctx, &trx)
 		assert.NilError(b, err)
@@ -415,7 +415,7 @@ func BenchmarkSingleIssuerSingleReceiverSpiceTransferConcurrent(b *testing.B) {
 		wg.Add(1)
 		go func(next int, wg *sync.WaitGroup) {
 			spc := spice.New(uint64(spiceMainTransfer), 0)
-			trx, err := transaction.New(fmt.Sprintf("Spice supply %v", next), spc, []byte{}, receiver.Address(), &genesisReceiver)
+			trx, err := transaction.New(fmt.Sprintf("Second spice supply %v", next), spc, []byte{}, receiver.Address(), &genesisReceiver)
 			assert.NilError(b, err)
 			_, err = ab.CreateLeaf(ctx, &trx)
 			assert.NilError(b, err)
@@ -657,6 +657,41 @@ func TestTrxToVrxStorageSaveRead(t *testing.T) {
 	ok, err := ab.checkTrxInVertexExists(trxHash)
 	assert.NilError(t, err)
 	assert.Equal(t, ok, true)
+}
+
+func TestTrxToVrxStorageSaveReadRemove(t *testing.T) {
+	trxHash := generateData(32)
+	vrxHash := generateData(32)
+
+	callOnLogErr := func(err error) {
+		fmt.Printf("logger failed with error: %s\n", err)
+	}
+	callOnFail := func(err error) {
+		fmt.Printf("Failed with error: %s\n", err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	l := logging.New(callOnLogErr, callOnFail, &stdoutwriter.Logger{})
+	verifier := wallet.NewVerifier()
+	signer, err := wallet.New()
+	assert.NilError(t, err)
+	ab, err := NewAccountingBook(ctx, Config{}, verifier, &signer, l)
+	assert.NilError(t, err)
+
+	err = ab.saveTrxInVertex(trxHash, vrxHash)
+	assert.NilError(t, err)
+
+	ok, err := ab.checkTrxInVertexExists(trxHash)
+	assert.NilError(t, err)
+	assert.Equal(t, ok, true)
+
+	err = ab.removeTrxInVertex(trxHash)
+	assert.NilError(t, err)
+
+	ok, err = ab.checkTrxInVertexExists(trxHash)
+	assert.NilError(t, err)
+	assert.Equal(t, ok, false)
 }
 
 func TestTrxToVrxStorageSaveExisting(t *testing.T) {
