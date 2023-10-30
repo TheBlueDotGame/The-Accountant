@@ -70,7 +70,7 @@ func New(subject string, spice spice.Melange, data []byte, receiverAddress strin
 
 	createdAt := time.Now()
 
-	msgLen := len(subject) + len(data) + len(issuer.Address()) + len(receiverAddress) + 8
+	msgLen := len(subject) + len(data) + len(issuer.Address()) + len(receiverAddress) + 24
 	message := make([]byte, 0, msgLen)
 	message = append(message, []byte(subject)...)
 	message = append(message, data...)

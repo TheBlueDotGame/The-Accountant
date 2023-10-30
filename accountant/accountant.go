@@ -382,7 +382,12 @@ func (ab *AccountingBook) updateWaightAndThroughput(weight uint64) {
 }
 
 func (ab *AccountingBook) isValidWeight(weight uint64) bool {
-	return weight >= ab.weight.Load()-ab.throughput.Load()
+	current := ab.weight.Load()
+	throughput := ab.throughput.Load()
+	if throughput > current {
+		return true
+	}
+	return weight >= current-throughput
 }
 
 // CreateGenesis creates genesis vertex that will transfer spice to current node as a receiver.
