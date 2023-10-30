@@ -135,18 +135,20 @@ func (m Melange) String() string {
 	if zeros < 0 {
 		suplementary = "0"
 	}
+	suplementary = strings.Trim(suplementary, "0")
 
 	var buf strings.Builder
-	for i := 0; i < zeros; i++ {
-		buf.WriteString("0")
+	if len(suplementary) != 0 {
+		for i := 0; i < zeros; i++ {
+			buf.WriteString("0")
+		}
 	}
 	buf.WriteString(suplementary)
-	curr := fmt.Sprintf("%v", m.Currency)
 	supp := buf.String()
-	supp = strings.Trim(supp, "0")
 	if len(supp) == 0 {
 		supp = "0"
 	}
+	curr := fmt.Sprintf("%v", m.Currency)
 	return fmt.Sprintf("%s.%s", curr, supp)
 }
 

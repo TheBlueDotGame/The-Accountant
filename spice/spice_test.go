@@ -25,18 +25,18 @@ func TestStringifyMelange(t *testing.T) {
 	}
 
 	results := []string{
-		"10.",
+		"10.0",
 		"100.999999999999999999",
 		"1000.99999999999999999",
 		"10000.9999999999999999",
 		"100000.999999999999999",
 		"1000000.99999999999999",
 		"1.9999999999999",
-		".",
-		".1",
-		".01",
-		".001",
-		".0001",
+		"0.0",
+		"0.1",
+		"0.01",
+		"0.001",
+		"0.0001",
 	}
 
 	for i, c := range testcases {
@@ -130,7 +130,7 @@ func TestMelangeTransferAccounting(t *testing.T) {
 	testcase := struct {
 		from, to, ammount Melange
 	}{
-		from: New(math.MaxUint64, maxAmoutnPerSupplementaryCurrency), to: New(0, 0), ammount: New(1, 1),
+		from: New(math.MaxUint64, maxAmoutnPerSupplementaryCurrency-1), to: New(0, 0), ammount: New(1, 1),
 	}
 	transfersNum := 1000000
 
