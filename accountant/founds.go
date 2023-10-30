@@ -32,7 +32,7 @@ func checkHasSufficientFounds(in, out *spice.Melange) error {
 	}
 	sink := spice.New(0, 0)
 	if err := in.Drain(*out, &sink); err != nil {
-		return errors.Join(ErrLeafRejected, err)
+		return errors.Join(ErrDoubleSpendingOrInsufficinetFounds, err)
 	}
 	return nil
 }

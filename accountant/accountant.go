@@ -20,7 +20,7 @@ const (
 )
 
 const (
-	initialThroughput     = 10
+	initialThroughput     = 50
 	throughputMultiplayer = 2
 )
 
@@ -67,7 +67,7 @@ type AccountingBook struct {
 	registry       chan struct{}
 	gennessisHash  [32]byte
 	weight         atomic.Uint64
-	troughput      atomic.Uint64
+	throughput     atomic.Uint64
 }
 
 // New creates new AccountingBook.
@@ -101,7 +101,7 @@ func NewAccountingBook(ctx context.Context, cfg Config, verifier signatureVerifi
 		registry:       make(chan struct{}, 1),
 		log:            l,
 		weight:         atomic.Uint64{},
-		troughput:      atomic.Uint64{},
+		throughput:     atomic.Uint64{},
 	}
 
 	ab.unregister() // on new AccountingBook creation send to the register channel to unblock the register queue.
@@ -114,7 +114,10 @@ func (ab *AccountingBook) validateLeaf(ctx context.Context, leaf *Vertex) error 
 		return errors.Join(ErrUnexpected, errors.New("leaf to validate is nil"))
 	}
 	if !ab.isValidWeight(leaf.Weight) {
-		return errors.Join(ErrLeafRejected, errors.New("leaf doesn't meet condition of minimal weight"))
+		return errors.Join(
+			ErrLeafRejected,
+			fmt.Errorf("leaf doesn't meet condition of minimal weight, throughput: %v current: %v, received: %v", ab.throughput.Load(), ab.weight.Load(), leaf.Weight),
+		)
 	}
 
 	if err := leaf.verify(ab.verifier); err != nil {
@@ -374,11 +377,12 @@ func (ab *AccountingBook) updateWaightAndThroughput(weight uint64) {
 	if ab.weight.Load() < weight {
 		ab.weight.Store(weight)
 	}
-	ab.troughput.Store((ab.troughput.Load() + uint64(len(ab.dag.GetLeaves()))/2*throughputMultiplayer))
+	leafsCount := uint64(len(ab.dag.GetLeaves()))
+	ab.throughput.Store(((ab.throughput.Load() + leafsCount) / 2 * throughputMultiplayer))
 }
 
 func (ab *AccountingBook) isValidWeight(weight uint64) bool {
-	return weight >= ab.weight.Load()-ab.troughput.Load()
+	return weight >= ab.weight.Load()-ab.throughput.Load()
 }
 
 // CreateGenesis creates genesis vertex that will transfer spice to current node as a receiver.
@@ -395,16 +399,46 @@ func (ab *AccountingBook) CreateGenesis(subject string, spc spice.Melange, data 
 		return Vertex{}, errors.Join(ErrGenesisRejected, err)
 	}
 
+	if err := ab.saveTrxInVertex(trx.Hash[:], vrx.Hash[:]); err != nil {
+		return Vertex{}, errors.Join(ErrGenesisRejected, err)
+	}
+
 	if err := ab.dag.AddVertexByID(string(vrx.Hash[:]), &vrx); err != nil {
 		return Vertex{}, err
 	}
-	ab.troughput.Store(initialThroughput)
+
+	ab.throughput.Store(initialThroughput)
 	ab.updateWaightAndThroughput(initialThroughput)
 
 	ab.lastVertexHash <- vrx.Hash
 	ab.lastVertexHash <- vrx.Hash
 
 	return vrx, nil
+}
+
+// AcceptGenesis accepts genesis vertex from the genesis node.
+func (ab *AccountingBook) AcceptGenesis(vrx *Vertex) error {
+	ab.register()
+	defer ab.unregister()
+	if len(ab.dag.GetVertices()) > 0 {
+		return ErrLeafRejected
+	}
+
+	if err := ab.saveTrxInVertex(vrx.Transaction.Hash[:], vrx.Hash[:]); err != nil {
+		return errors.Join(ErrGenesisRejected, err)
+	}
+
+	if err := ab.dag.AddVertexByID(string(vrx.Hash[:]), vrx); err != nil {
+		return err
+	}
+
+	ab.throughput.Store(initialThroughput)
+	ab.updateWaightAndThroughput(initialThroughput)
+
+	ab.lastVertexHash <- vrx.Hash
+	ab.lastVertexHash <- vrx.Hash
+
+	return nil
 }
 
 // AddTrustedNode adds trusted node public address to the trusted nodes public address repository.
@@ -548,7 +582,7 @@ func (ab *AccountingBook) CreateLeaf(ctx context.Context, trx *transaction.Trans
 			ab.dag.DeleteVertex(string(tip.Hash[:]))
 			ab.removeTrxInVertex(trx.Hash[:])
 			ab.log.Error(
-				fmt.Sprintf("Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ], %s,",
+				fmt.Sprintf("Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ] when checking is root, %s,",
 					vrx.Hash, vrx.SignerPublicAddress, vrx.LeftParentHash, vrx.RightParentHash, err),
 			)
 			return Vertex{}, ErrNewLeafRejected
@@ -563,7 +597,7 @@ func (ab *AccountingBook) CreateLeaf(ctx context.Context, trx *transaction.Trans
 			ab.dag.DeleteVertex(string(tip.Hash[:]))
 			ab.removeTrxInVertex(trx.Hash[:])
 			ab.log.Error(
-				fmt.Sprintf("Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ], %s,",
+				fmt.Sprintf("Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ] when adding an edge, %s,",
 					vrx.Hash, vrx.SignerPublicAddress, vrx.LeftParentHash, vrx.RightParentHash, err),
 			)
 			return Vertex{}, ErrNewLeafRejected
@@ -583,13 +617,13 @@ func (ab *AccountingBook) CreateLeaf(ctx context.Context, trx *transaction.Trans
 // Added leaf will be a subject of validation by another tip.
 func (ab *AccountingBook) AddLeaf(ctx context.Context, leaf *Vertex) error {
 	if leaf == nil {
-		return ErrUnexpected
+		return errors.Join(ErrUnexpected, errors.New("leaf is nil"))
 	}
 
 	ok, err := ab.checkVertexExists(leaf.Hash[:])
 	if err != nil {
 		ab.log.Error(fmt.Sprintf("Accounting book adding leaf failed when checking vertex exists, %s", err))
-		return ErrUnexpected
+		return errors.Join(ErrUnexpected, err)
 	}
 	if ok {
 		return ErrLeafAlreadyExists
@@ -597,7 +631,7 @@ func (ab *AccountingBook) AddLeaf(ctx context.Context, leaf *Vertex) error {
 	ok, err = ab.checkTrxInVertexExists(leaf.Transaction.Hash[:])
 	if err != nil {
 		ab.log.Error(fmt.Sprintf("Accounting book adding leaf failed when checking if trx to vertex mapping exists, %s", err))
-		return ErrUnexpected
+		return errors.Join(ErrUnexpected, err)
 	}
 	if ok {
 		return ErrTrxInVertexAlreadyExists
@@ -605,7 +639,7 @@ func (ab *AccountingBook) AddLeaf(ctx context.Context, leaf *Vertex) error {
 
 	if err := leaf.verify(ab.verifier); err != nil {
 		ab.log.Error(
-			fmt.Sprintf("Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ], %s.",
+			fmt.Sprintf("Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ] when verifying, %s.",
 				leaf.Hash, leaf.SignerPublicAddress, leaf.LeftParentHash, leaf.RightParentHash, err),
 		)
 		return ErrLeafRejected
@@ -619,39 +653,39 @@ func (ab *AccountingBook) AddLeaf(ctx context.Context, leaf *Vertex) error {
 		item, err := ab.dag.GetVertex(string(hash[:]))
 		if err != nil {
 			ab.log.Error(
-				fmt.Sprintf("Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ], %s.",
+				fmt.Sprintf("Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ] when reading vertex, %s.",
 					leaf.Hash, leaf.SignerPublicAddress, leaf.LeftParentHash, leaf.RightParentHash, err),
 			)
 			return ErrLeafRejected
 		}
-		existringLeaf, ok := item.(Vertex)
+		existringLeaf, ok := item.(*Vertex)
 		if !ok {
-			return ErrUnexpected
+			return errors.Join(ErrUnexpected, errors.New("wrong leaf type"))
 		}
 		isLeaf, err := ab.dag.IsLeaf(string(hash[:]))
 		if err != nil {
 			ab.log.Error(
-				fmt.Sprintf("Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ], %s.",
+				fmt.Sprintf("Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ] when validate is leaf, %s.",
 					leaf.Hash, leaf.SignerPublicAddress, leaf.LeftParentHash, leaf.RightParentHash, err),
 			)
 			return ErrLeafRejected
 		}
 		if isLeaf {
-			if err := ab.validateLeaf(ctx, &existringLeaf); err != nil {
+			if err := ab.validateLeaf(ctx, existringLeaf); err != nil {
 				ab.dag.DeleteVertex(string(existringLeaf.Hash[:]))
 				ab.removeTrxInVertex(existringLeaf.Transaction.Hash[:])
 				return errors.Join(ErrLeafRejected, err)
 			}
-			ab.updateWaightAndThroughput(leaf.Weight)
+			ab.updateWaightAndThroughput(existringLeaf.Weight)
 		}
-		validatedLeafs = append(validatedLeafs, existringLeaf)
+		validatedLeafs = append(validatedLeafs, *existringLeaf)
 	}
 
 	if err := ab.saveTrxInVertex(leaf.Transaction.Hash[:], leaf.Hash[:]); err != nil {
 		ab.log.Error(
 			fmt.Sprintf("Accounting book leaf add failed saving transaction [ %v ] in leaf [ %v ], %s.", leaf.Transaction.Hash[:], leaf.Hash, err),
 		)
-		return ErrUnexpected
+		return errors.Join(ErrUnexpected, err)
 	}
 
 	if err := ab.dag.AddVertexByID(string(leaf.Hash[:]), leaf); err != nil {
@@ -660,12 +694,29 @@ func (ab *AccountingBook) AddLeaf(ctx context.Context, leaf *Vertex) error {
 		return ErrLeafRejected
 	}
 
+	var isRoot bool
 	for _, validVrx := range validatedLeafs {
+		ok, err := ab.dag.IsRoot(string(validatedLeafs[0].Hash[:]))
+		if err != nil {
+			ab.dag.DeleteVertex(string(leaf.Hash[:]))
+			ab.removeTrxInVertex(leaf.Transaction.Hash[:])
+			ab.log.Error(
+				fmt.Sprintf("Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ] when checking is root, %s,",
+					leaf.Hash, leaf.SignerPublicAddress, leaf.LeftParentHash, leaf.RightParentHash, err),
+			)
+			return ErrNewLeafRejected
+		}
+		if ok {
+			if isRoot {
+				continue
+			}
+			isRoot = true
+		}
 		if err := ab.dag.AddEdge(string(validVrx.Hash[:]), string(leaf.Hash[:])); err != nil {
 			ab.dag.DeleteVertex(string(leaf.Hash[:]))
 			ab.removeTrxInVertex(leaf.Transaction.Hash[:])
 			ab.log.Error(
-				fmt.Sprintf("Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ], %s,",
+				fmt.Sprintf("Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ] when adding edge, %s.",
 					leaf.Hash, leaf.SignerPublicAddress, leaf.LeftParentHash, leaf.RightParentHash, err),
 			)
 			return ErrLeafRejected
