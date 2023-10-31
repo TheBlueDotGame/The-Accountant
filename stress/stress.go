@@ -221,7 +221,7 @@ func main() {
 					}
 
 					for i := range awaitedTrx {
-						receiver.ConfirmTransaction(&awaitedTrx[i])
+						receiver.ConfirmTransaction(fmt.Sprintf("http://%s:%v", cfg.CentralNodeIP, cfg.CentralNodePort), &awaitedTrx[i])
 						if err != nil {
 							fmt.Println(err)
 							cancel()

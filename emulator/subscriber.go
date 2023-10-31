@@ -13,6 +13,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/pterm/pterm"
 
+	"github.com/bartossh/Computantis/helperserver"
 	"github.com/bartossh/Computantis/httpclient"
 	"github.com/bartossh/Computantis/transaction"
 	"github.com/bartossh/Computantis/walletapi"
@@ -118,7 +119,7 @@ func RunSubscriber(ctx context.Context, cancel context.CancelFunc, config Config
 		return err
 	}
 
-	var resT walletapi.CreateWebhookResponse
+	var resT helperserver.CreateRemoveUpdateHookResponse
 	reqT := walletapi.CreateWebHookRequest{
 		URL: fmt.Sprintf("%s%s", config.PublicURL, WebHookEndpointTransaction),
 	}
@@ -220,7 +221,8 @@ func (sub *subscriber) actOnTransactions(notaryNodeURL string) {
 			pterm.Warning.Printf("Trx [ %x ] data [ %s ] rejected, %s.\n", trx.Hash[:], trx.Data, err)
 
 			rejectReq := walletapi.RejectTransactionsRequest{
-				Transactions: []transaction.Transaction{trx},
+				NotaryNodeURL: notaryNodeURL,
+				Transactions:  []transaction.Transaction{trx},
 			}
 			var rejectRes walletapi.RejectedTransactionResponse
 			url := fmt.Sprintf("%s%s", sub.pub.clientURL, walletapi.RejectTransactions)
@@ -235,7 +237,8 @@ func (sub *subscriber) actOnTransactions(notaryNodeURL string) {
 		pterm.Info.Printf("Trx [ %x ] data [ %s ] accepted.\n", trx.Hash[:], string(trx.Data))
 
 		confirmReq := walletapi.ConfirmTransactionRequest{
-			Transaction: trx,
+			NotaryNodeURL: notaryNodeURL,
+			Transaction:   trx,
 		}
 
 		url := fmt.Sprintf("%s%s", sub.pub.clientURL, walletapi.ConfirmTransaction)

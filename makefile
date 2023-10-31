@@ -46,7 +46,7 @@ generate-secret:
 	./secret.sh
 
 generate-protobuf:
-	protoc --proto_path=protobuf --go_out=protobufcompiled --go-grpc_out=protobufcompiled --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative block.proto addresses.proto synchronizer.proto 
+	protoc --proto_path=protobuf --go-grpc_out=protobufcompiled --go_out=protobufcompiled --go-grpc_opt=paths=source_relative --go_opt=paths=source_relative block.proto addresses.proto transaction.proto wallet_client_api.proto
 
 run-notary:
 	./bin/dedicated/notary -c setup_example.yaml &
