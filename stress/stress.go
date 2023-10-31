@@ -13,6 +13,7 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/bartossh/Computantis/fileoperations"
+	"github.com/bartossh/Computantis/spice"
 	"github.com/bartossh/Computantis/wallet"
 	"github.com/bartossh/Computantis/walletmiddleware"
 )
@@ -206,7 +207,8 @@ func main() {
 						fmt.Println(err)
 						cancel()
 					}
-					err = issuer.ProposeTransaction(receiverAddr, "text", []byte(fmt.Sprintf("test_transaction_data:%v:%s", now.UnixMicro(), receiverAddr)))
+					spc := spice.New(0, 0)
+					err = issuer.ProposeTransaction(receiverAddr, "text", spc, []byte(fmt.Sprintf("test_transaction_data:%v:%s", now.UnixMicro(), receiverAddr)))
 					if err != nil {
 						fmt.Println(err)
 						cancel()

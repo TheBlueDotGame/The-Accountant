@@ -1,9 +1,11 @@
 package transaction
 
 import (
+	"math"
 	"testing"
 	"time"
 
+	"github.com/bartossh/Computantis/spice"
 	"github.com/bartossh/Computantis/wallet"
 	"github.com/stretchr/testify/assert"
 )
@@ -11,7 +13,7 @@ import (
 func TestTransaction(t *testing.T) {
 	signer, err := wallet.New()
 	assert.Nil(t, err)
-	trx, err := New("subject", []byte("message"), signer.Address(), &signer)
+	trx, err := New("subject", spice.New(math.MaxInt64, 0), []byte("message"), signer.Address(), &signer)
 	assert.Nil(t, err)
 	h, err := trx.Sign(&signer, wallet.Helper{})
 	assert.Nil(t, err)
@@ -21,7 +23,7 @@ func TestTransaction(t *testing.T) {
 func TestTransactionCreatedAndSignedSuccess(t *testing.T) {
 	signer, err := wallet.New()
 	assert.Nil(t, err)
-	trx, err := New("subject", []byte("message"), signer.Address(), &signer)
+	trx, err := New("subject", spice.New(math.MaxInt64, 0), []byte("message"), signer.Address(), &signer)
 	assert.Nil(t, err)
 	h, err := trx.Sign(&signer, wallet.Helper{})
 	assert.Nil(t, err)
@@ -31,7 +33,7 @@ func TestTransactionCreatedAndSignedSuccess(t *testing.T) {
 func TestTransactionCreatedAndSignedFutureFail(t *testing.T) {
 	signer, err := wallet.New()
 	assert.Nil(t, err)
-	trx, err := New("subject", []byte("message"), signer.Address(), &signer)
+	trx, err := New("subject", spice.New(math.MaxInt64, 0), []byte("message"), signer.Address(), &signer)
 	assert.Nil(t, err)
 
 	trx.CreatedAt = time.Now().Add(4 * time.Minute)
@@ -45,7 +47,7 @@ func TestTransactionCreatedAndSignedFutureFailWrongSignature(t *testing.T) {
 	assert.Nil(t, err)
 	signer1, err := wallet.New()
 	assert.Nil(t, err)
-	trx, err := New("subject", []byte("message"), signer0.Address(), &signer1)
+	trx, err := New("subject", spice.New(math.MaxInt64, 0), []byte("message"), signer0.Address(), &signer1)
 	assert.Nil(t, err)
 
 	h, err := trx.Sign(&signer1, wallet.Helper{})
@@ -58,7 +60,20 @@ func TestTransactionCreatedAndSignedFutureSuccessIssuerReceiver(t *testing.T) {
 	assert.Nil(t, err)
 	receiver, err := wallet.New()
 	assert.Nil(t, err)
-	trx, err := New("subject", []byte("message"), receiver.Address(), &issuer)
+	trx, err := New("subject", spice.New(math.MaxInt64, 0), []byte("message"), receiver.Address(), &issuer)
+	assert.Nil(t, err)
+
+	h, err := trx.Sign(&receiver, wallet.Helper{})
+	assert.Nil(t, err)
+	assert.NotEmpty(t, h)
+}
+
+func TestTransactionCreatedAndSignedFutureSuccessIssuerReceiverVerify(t *testing.T) {
+	issuer, err := wallet.New()
+	assert.Nil(t, err)
+	receiver, err := wallet.New()
+	assert.Nil(t, err)
+	trx, err := New("subject", spice.New(math.MaxInt64, 0), []byte("message"), receiver.Address(), &issuer)
 	assert.Nil(t, err)
 
 	h, err := trx.Sign(&receiver, wallet.Helper{})

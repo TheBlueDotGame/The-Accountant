@@ -16,6 +16,7 @@ import (
 	"github.com/bartossh/Computantis/logger"
 	"github.com/bartossh/Computantis/notaryserver"
 	"github.com/bartossh/Computantis/protobufcompiled"
+	"github.com/bartossh/Computantis/spice"
 	"github.com/bartossh/Computantis/transaction"
 	"github.com/bartossh/Computantis/walletmiddleware"
 )
@@ -164,9 +165,11 @@ func (a *app) address(c *fiber.Ctx) error {
 
 // IssueTransactionRequest is a request message that contains data and subject of the transaction to be issued.
 type IssueTransactionRequest struct {
-	ReceiverAddress string `json:"receiver_address"`
-	Subject         string `json:"subject"`
-	Data            []byte `json:"data"`
+	ReceiverAddress       string `json:"receiver_address"`
+	Subject               string `json:"subject"`
+	Data                  []byte `json:"data"`
+	Curency               uint64 `json:"currency"`
+	SupplementaryCurrency uint64 `json:"supplementary_currency"`
 }
 
 // IssueTransactionResponse is response to issued transaction.
@@ -188,7 +191,9 @@ func (a *app) issueTransaction(c *fiber.Ctx) error {
 		return fiber.ErrBadRequest
 	}
 
-	if err := a.centralNodeClient.ProposeTransaction(req.ReceiverAddress, req.Subject, req.Data); err != nil {
+	spc := spice.New(req.Curency, req.SupplementaryCurrency)
+
+	if err := a.centralNodeClient.ProposeTransaction(req.ReceiverAddress, req.Subject, spc, req.Data); err != nil {
 		err := fmt.Errorf("error proposing transaction: %v", err)
 		a.log.Error(err.Error())
 		return c.JSON(IssueTransactionResponse{Ok: false, Err: err.Error()})

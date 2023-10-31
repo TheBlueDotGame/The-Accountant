@@ -6,6 +6,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/bartossh/Computantis/spice"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -45,19 +46,20 @@ type Verifier interface {
 // It is only important that the data are signed by the issuer and the receiver and
 // both parties agreed on them.
 type Transaction struct {
-	ID                any       `json:"-"                  bson:"_id"                db:"id"`
-	CreatedAt         time.Time `json:"created_at"         bson:"created_at"         db:"created_at"`
-	IssuerAddress     string    `json:"issuer_address"     bson:"issuer_address"     db:"issuer_address"`
-	ReceiverAddress   string    `json:"receiver_address"   bson:"receiver_address"   db:"receiver_address"`
-	Subject           string    `json:"subject"            bson:"subject"            db:"subject"`
-	Data              []byte    `json:"data"               bson:"data"               db:"data"`
-	IssuerSignature   []byte    `json:"issuer_signature"   bson:"issuer_signature"   db:"issuer_signature"`
-	ReceiverSignature []byte    `json:"receiver_signature" bson:"receiver_signature" db:"receiver_signature"`
-	Hash              [32]byte  `json:"hash"               bson:"hash"               db:"hash"`
+	ID                any           `json:"-"                  bson:"_id"                db:"id"                    msgpack:"-"`
+	CreatedAt         time.Time     `json:"created_at"         bson:"created_at"         db:"created_at"            msgpack:"created_at"`
+	IssuerAddress     string        `json:"issuer_address"     bson:"issuer_address"     db:"issuer_address"        msgpack:"issuer_address"`
+	ReceiverAddress   string        `json:"receiver_address"   bson:"receiver_address"   db:"receiver_address"      msgpack:"receiver_address"`
+	Subject           string        `json:"subject"            bson:"subject"            db:"subject"               msgpack:"subject"`
+	Data              []byte        `json:"data"               bson:"data"               db:"data"                  msgpack:"data"`
+	IssuerSignature   []byte        `json:"issuer_signature"   bson:"issuer_signature"   db:"issuer_signature"      msgpack:"issuer_signature"`
+	ReceiverSignature []byte        `json:"receiver_signature" bson:"receiver_signature" db:"receiver_signature"    msgpack:"receiver_signature"`
+	Hash              [32]byte      `json:"hash"               bson:"hash"               db:"hash"                  msgpack:"hash"`
+	Spice             spice.Melange `json:"spice"              bson:"spice"              db:"spice"                 msgpack:"spice"`
 }
 
 // New creates new transaction signed by the issuer.
-func New(subject string, data []byte, receiverAddress string, issuer Signer) (Transaction, error) {
+func New(subject string, spice spice.Melange, data []byte, receiverAddress string, issuer Signer) (Transaction, error) {
 	if len(subject) == 0 {
 		return Transaction{}, ErrSubjectIsEmpty
 	}
@@ -68,14 +70,16 @@ func New(subject string, data []byte, receiverAddress string, issuer Signer) (Tr
 
 	createdAt := time.Now()
 
-	msgLen := len(subject) + len(data) + len(issuer.Address()) + len(receiverAddress) + 8
+	msgLen := len(subject) + len(data) + len(issuer.Address()) + len(receiverAddress) + 24
 	message := make([]byte, 0, msgLen)
 	message = append(message, []byte(subject)...)
 	message = append(message, data...)
 	message = append(message, []byte(issuer.Address())...)
 	message = append(message, []byte(receiverAddress)...)
-	b := make([]byte, 8)
+	b := make([]byte, 24)
 	binary.LittleEndian.PutUint64(b, uint64(createdAt.UnixMicro()))
+	binary.LittleEndian.PutUint64(b, spice.Currency)
+	binary.LittleEndian.PutUint64(b, spice.SupplementaryCurrency)
 	message = append(message, b...)
 	hash, signature := issuer.Sign(message)
 
@@ -89,6 +93,7 @@ func New(subject string, data []byte, receiverAddress string, issuer Signer) (Tr
 		Data:              data,
 		IssuerSignature:   signature,
 		ReceiverSignature: []byte{},
+		Spice:             spice,
 	}, nil
 }
 
@@ -110,8 +115,10 @@ func (t *Transaction) Sign(receiver Signer, v Verifier) ([32]byte, error) {
 	message = append(message, t.Data...)
 	message = append(message, []byte(t.IssuerAddress)...)
 	message = append(message, []byte(receiver.Address())...)
-	b := make([]byte, 8)
+	b := make([]byte, 24)
 	binary.LittleEndian.PutUint64(b, uint64(t.CreatedAt.UnixMicro()))
+	binary.LittleEndian.PutUint64(b, t.Spice.Currency)
+	binary.LittleEndian.PutUint64(b, t.Spice.SupplementaryCurrency)
 	message = append(message, b...)
 
 	if err := v.Verify(message, t.IssuerSignature, [32]byte(t.Hash), t.IssuerAddress); err != nil {
@@ -128,6 +135,30 @@ func (t *Transaction) Sign(receiver Signer, v Verifier) ([32]byte, error) {
 	return hash, nil
 }
 
+// IsContract returns true if the transaction contains data buffer that is recognised as transaction with contract.
+func (t *Transaction) IsContract() bool {
+	return len(t.Data) != 0
+}
+
+// IsSpiceTransfer returns true if the transaction transfers spice.
+func (t *Transaction) IsSpiceTransfer() bool {
+	return !t.Spice.Empty()
+}
+
+func (t *Transaction) VerifyIssuer(v Verifier) error {
+	message := t.GetMessage()
+	return v.Verify(message, t.IssuerSignature, t.Hash, t.IssuerAddress)
+}
+
+// Verify verifies transaction signatures.
+func (t *Transaction) VerifyIssuerReceiver(v Verifier) error {
+	message := t.GetMessage()
+	if err := v.Verify(message, t.IssuerSignature, t.Hash, t.IssuerAddress); err != nil {
+		return err
+	}
+	return v.Verify(message, t.ReceiverSignature, t.Hash, t.ReceiverAddress)
+}
+
 // GeMessage returns message used for signature validation.
 func (t *Transaction) GetMessage() []byte {
 	msgLen := len(t.Subject) + len(t.Data) + len(t.IssuerAddress) + len(t.ReceiverAddress) + 8
@@ -136,8 +167,10 @@ func (t *Transaction) GetMessage() []byte {
 	message = append(message, t.Data...)
 	message = append(message, []byte(t.IssuerAddress)...)
 	message = append(message, []byte(t.ReceiverAddress)...)
-	b := make([]byte, 8)
+	b := make([]byte, 24)
 	binary.LittleEndian.PutUint64(b, uint64(t.CreatedAt.UnixMicro()))
+	binary.LittleEndian.PutUint64(b, t.Spice.Currency)
+	binary.LittleEndian.PutUint64(b, t.Spice.SupplementaryCurrency)
 	return append(message, b...)
 }
 
