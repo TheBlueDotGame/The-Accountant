@@ -51,8 +51,9 @@ func NewVertex(
 }
 
 func (v *Vertex) initData() []byte {
-	blockData := make([]byte, 0, 8)
+	blockData := make([]byte, 0, 16)
 	blockData = binary.LittleEndian.AppendUint64(blockData, uint64(v.CreatedAt.UnixNano()))
+	blockData = binary.LittleEndian.AppendUint64(blockData, uint64(v.Weight))
 	return bytes.Join([][]byte{
 		v.Transaction.Hash[:], v.LeftParentHash[:], v.RightParentHash[:], blockData,
 	},
