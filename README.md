@@ -2,47 +2,32 @@
 
 [![CodeQL](https://github.com/bartossh/Computantis/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/bartossh/Computantis/actions/workflows/github-code-scanning/codeql)
 [![pages-build-deployment](https://github.com/bartossh/Computantis/actions/workflows/pages/pages-build-deployment/badge.svg)](https://github.com/bartossh/Computantis/actions/workflows/pages/pages-build-deployment)
-## Computantis protocol, DAG and gossiping.
+## Computantis DAG cryptographic protocol.
 
-### High level description and purpose.
-
-Secure and performant transaction broker hosting data in the private, redundant and immutable repository. The system is guarded with observatory helpers nodes, that are independently controlling all the notary nodes.
-It offers these key features:
- - Transaction immutability and uniqueness (no replay attack possible).
- - Transaction privacy outside the system.
- - Transaction correctness. Cryptographic anti-corruption security of the transaction.
- - Privacy. Data are owned by the private system.
- - Speed - fast and reliable transaction throughput.
- - Integrity - Only allowed wallets are able to participate in the transactions. Transaction anti-forgery is secured with the highest cryptographic standards.
- - Redundancy - Helper nodes are able to independently store data.
- - Lightness - The client node can be deployed on a Raspberry Pi Zero type of device with minimal RAM and CPU footprint (20MB RAM, low CPU usage)
-- Scalability - service scales horizontally and vertically. 
-- Immutability - Transactions are preserved in the blockchain repository that secures immutability. 
-- Maintainability - System shutdown or node failure has no effect over transaction integrity or transaction loss.
-
-### Overview
-
-1. Protocol overview.
+1. The network.
 
 - The protocol works within the application layer in the OSI network model.
 - The protocol wraps data within the transaction.
 - The transaction seals the data cryptographically.
 - The transaction data are irrelevant to the protocol, and so is its encoding. Encoding is the responsibility of the final application.
-- The central node participates in the transmission process of the transaction.
-- The central node acts as a middleware service and ensures transaction legitimacy.
+- The node participates in the transmission process of the transaction.
+- The node acts as a middleware service and ensures transaction legitimacy.
 - The transaction receiver and the transaction issuer are known as the client.
 - The clients are not aware of each other network URLs, they participate in the transaction transmission using the central node (network of central nodes).
 - The client URL is known only for the computantis nodes in the network.
 - The URL of the client may change while data are transmitted and it is not affecting the transmission consistency.
 - The client is recognized in the network by the public address of cryptographic key pairs
-- The client may listen on a webhook for approved transactions.
+- The client may listen on a webhook for approved transactions on dedicated node that has supporting functionalities.
 - The client node is working on the client machine or as an edge device proxying traffic to the device or a client application.
 - The traffic cannot omit the computantis network when transaction is transmitted from client to client.
 - The client is additionally validating the message's legitimacy, decrypting and decoding the message.
 - The central nodes stores all the transactions in the immutable repository in the form of a DAG with Hashed edges and signed vertices.
-- The central nodes are concurrently cooperating in creating and validating the DAG.
-- The value transfer in form of a token may occur and is a subject of validation by the node taking the vertex as the ancestor. The double spending and sufficient amount of tokens is calculated and validated. The name of the token in computantis network is: 'spice'.
-- DAG is truncated every some vertexes to allow for fast graph traversal for 'spice' accounting.
+- The central nodes are concurrently cooperating in creating and validating the DAG vertices and edges.
+- The value transfer in form of the 'spice' token may occur and is a subject of validation. The double spending and sufficient amount of tokens is calculated and validated. This process is described in the DAG protocol section.
+- When a vertex is created on the node, it is shared with other nodes participating in the network by using gossip about gossip protocol.
+- Nodes sends the message containing vertex and list of nodes that knows about the vertex to all nodes that are known to the node, adding itself to the list of nodes.
+- Each node receiving the message continues to share the message with all the nodes that are known for the receiving node that are not on the list, but first node adds itself to the list. Process continues until message list contains all the nodes in the network.
+- This form of sharing the information creates a redundancy in the traffic, but prevents the bad actors from rejecting legitimate vertices by stopping the message to spread. This as well allows the message to reach nodes that are not connected to the message source node.
 
 2. The transaction.
 
@@ -58,31 +43,32 @@ It offers these key features:
     - ReceiverSignature: The cryptographic signature of the receiver.
     - Hash: Message hash acting as the control sum of the transaction.
     - Spice: The amount of tokens in the transactions. Spice is transferred always from the Issuer to the Receiver.
-
 - The transaction footprint on the transmitted data size depends on the relation between the size of the ‘Data’ field in the transaction. That is highly recommended to transmit as much data in a single request as possible. 
 - The transaction has an upper limit on the size of transmitted data, that is set according to the requirements.
-
 - The transaction is validated on any mutation by the central node:
     - If it is a new transaction, the issuer's signature and hash are checked.
     - If it is signed by the receiver, the issuer signature, receiver signature and hash are checked.
-
 - The client node validates the transaction before it transmits to the application:
     - The issuer address is checked to ensure messages from the given address can be used.
     - The issuer signature and hash are validated.
     - The message is encoded using a private key if necessary.
-
-- Transfer of the spice occurs only when both issuer and receiver signed the transaction.
+- Transaction have three possible types.
+    - Only the 'spice' transfer, when no 'Data' field is populated and 'spice' has a value. This requires to be only signed by the issuer to be validated and added to DAG.
+    - Only contract agreement, when no 'spice' is transferred but 'Data' field is populated. This requires to be signed by the issuer and receiver in order to be added to DAG.
+    - Both, the 'spice' transfer and the contract agreement, when the 'spice' has a value and the 'Data' field is populated, This requires to be signed by the issuer and receiver in order to be added to DAG.
 
 3. The DAG.
 
 - DAG stands for Directed Acyclic Graph.
 - DAG contains leafs, vertices and edges.
-- Leafs are like vertices but are not confirmed yet so they have no children connected by the edges.
+- Leafs are like vertices but are not confirmed yet, so they have no children connected by the edges.
 - Vertices are connected by the edges and have children which proofs them being valid.
 - Edges are connecting vertices and leafs. Edges are single direction connection, from the parent vertex to the child vertex or a leaf.
-- Vertex contains the transaction and seals it by the signature of the node that validated the transaction. If two edges are connecting two leafs with two parent vertices, those parent vertices are assumed to be valid and to contain valid transaction. Valid transaction is checked for sufficient spice and is not having a double spending transaction.  
+- Vertex contains the transaction and seals it by the signature of the node that validated the transaction and digest of all the data vertex contains, Vertex is identified in the graph by its digest.
+- Connection between vertices in the graph is achieved by the reference to the vertex digest - hash. 
+- If two edges are connecting two leafs with two parent vertices, those parent vertices are assumed to be valid and to contain valid transaction. Valid transaction is checked for sufficient spice and is not having a double spending transaction.  
 - DAG seals the transactions immutability and allows for the accounting of the spice transfer.
-- DAG is truncated and all the edges and vertices are stored in permanent storage. 
+- DAG is truncated and all the edges and vertices are stored in permanent storage.
 - When truncated all the transactions are accounted and the next vertex is created and signed by the node with all the leafs being referred in the edge between new leaf vertex and leafs from the truncated DAG.
 - The leaf validation may happen in any node, not only the one that created the leaf.
 - Creating a leaf means to create a new leaf with the transaction embedded in to the leaf and then the leaf is gossiped to other nodes in the node network.
@@ -90,18 +76,7 @@ It offers these key features:
 - Adding and creating a leaf in to the DAG per node is done in a consecutive way to allow for transaction validation consistency.
 - Adding and creating a leaf in to the DAG in the network of nodes is done in the concurrent way. This allows for application scaling, more nodes may compute more transactions.
 
-4. The networking
-
-- The network of nodes communicate via knowledgable gossip about gossip protocol.
-- Gossip about gossip protocol is used in many crypto DAG protocols but each of them may use slightly different form.
-- Some gossip about gossip protocols are patented.
-- Computantis uses its own implementation of the gossip about gossip protocol that is not based on the gossip about gossip patents.
-- Computantis knowledgable gossip about gossip protocol is build on top of GRPC protocol.
-- Computantis node informs all the connected nodes about the new leaf, but omits those that already knows about the message. Each node signs the message by adding node wallet public address and signature.
-- This creates a little of redundancy, but ensures that all the nodes will receive the message even if there is a bad actor in the middle that is not forwarding messages.
-- Knowledgable gossip about gossip provides the message to all the nodes even if some nodes are not interconnected, packets are lost or internet roots are very slower then the others.
-
-5. Wallet 
+4. Wallet 
 
 - Wallet is the central entity allowing for sealing data with signatures.
 - Wallet holds a pair of asymmetric cryptographic keys. In this case we are implementing asymmetric cryptography based on 256 bits ed25519 elliptic curve algorithm. 
@@ -430,10 +405,10 @@ copy `wasm/bin/wallet.wasm` and `wasm/js/wasm_exec.js` to you fronted project an
 - Performance counts.
 - Performance applies equally to computational performance and development performance.
 - Write code that performs well and benchmark it.
-- Don't microbenchmark, do the benchmarking in the context.
+- Do the benchmarking in the proper context, avoid microbenchmarking. 
 - Unit test your code, especially critical parts.
 - Write integration tests for the API calls or use integration testing tools such as Postman.
-- Programming Language counts. Pick the effective, performant, safe and simple one.
+- Programming Language and other tools counts. Pick the effective, performant, safe and simple one.
 - Be open-minded, do not fall into the pitfalls of one ideology, non solve all the problems.
 - Less is almost always more.
 - Abstraction is your superpower. Unnecessary abstraction and complicated abstraction are your kryptonite.
