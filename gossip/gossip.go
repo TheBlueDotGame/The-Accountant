@@ -17,6 +17,7 @@ import (
 	"github.com/bartossh/Computantis/versioning"
 	"github.com/dgraph-io/badger/v4"
 	"golang.org/x/exp/maps"
+	"golang.org/x/exp/slices"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -27,6 +28,8 @@ var (
 	ErrUnexpectedGossipFailure                        = errors.New("unexpected gossip failure")
 	ErrVertexInCache                                  = errors.New("vertex in cache")
 	ErrFailedToProcessGossip                          = errors.New("failed to process gossip")
+	ErrNilVertex                                      = errors.New("vertex is nil")
+	ErrNilVertexGossip                                = errors.New("vertex gossip is nil")
 )
 
 const (
@@ -74,15 +77,16 @@ type signer interface {
 
 type gossiper struct {
 	protobufcompiled.UnimplementedGossipAPIServer
-	verifier       signatureVerifier
-	signer         signer
-	log            logger.Logger
-	vertexCache    *badger.DB
-	vertexGossipCh chan *protobufcompiled.VertexGossip
-	nodes          map[string]nodeData
-	url            string
-	mux            sync.RWMutex
-	timeout        time.Duration
+	verifier                 signatureVerifier
+	signer                   signer
+	log                      logger.Logger
+	vertexCache              *badger.DB
+	vertexGossipCh           chan *protobufcompiled.VertexGossip
+	vertexGossipTimeSortedCh chan *protobufcompiled.VertexGossip
+	nodes                    map[string]nodeData
+	url                      string
+	mux                      sync.RWMutex
+	timeout                  time.Duration
 }
 
 // RunGRPC runs the service application that exposes the GRPC API for gossip protocol.
@@ -101,16 +105,19 @@ func RunGRPC(ctx context.Context, cfg Config, l logger.Logger, t time.Duration, 
 	}
 
 	g := gossiper{
-		verifier:       v,
-		signer:         s,
-		log:            l,
-		vertexCache:    db,
-		vertexGossipCh: make(chan *protobufcompiled.VertexGossip, vertexGossipChCapacity),
-		nodes:          make(map[string]nodeData),
-		url:            cfg.URL,
-		mux:            sync.RWMutex{},
-		timeout:        t,
+		verifier:                 v,
+		signer:                   s,
+		log:                      l,
+		vertexCache:              db,
+		vertexGossipCh:           make(chan *protobufcompiled.VertexGossip, vertexGossipChCapacity),
+		vertexGossipTimeSortedCh: make(chan *protobufcompiled.VertexGossip, 1),
+		nodes:                    make(map[string]nodeData),
+		url:                      cfg.URL,
+		mux:                      sync.RWMutex{},
+		timeout:                  t,
 	}
+
+	defer g.closeAllNodesConnections()
 	defer close(g.vertexGossipCh)
 
 	lis, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%v", cfg.Port))
@@ -122,10 +129,13 @@ func RunGRPC(ctx context.Context, cfg Config, l logger.Logger, t time.Duration, 
 	grpcServer := grpc.NewServer()
 	protobufcompiled.RegisterGossipAPIServer(grpcServer, &g)
 
-	done := make(chan struct{}, 1)
+	go g.runProcessVertexGossip(ctx)
+	go g.runTimeSortVertexGossip(ctx, cancel)
 
+	done := make(chan struct{}, 1)
 	go func() {
-		if err = grpcServer.Serve(lis); err != nil {
+		err = grpcServer.Serve(lis)
+		if err != nil {
 			cancel()
 		}
 		close(done)
@@ -134,10 +144,12 @@ func RunGRPC(ctx context.Context, cfg Config, l logger.Logger, t time.Duration, 
 	<-done
 	defer grpcServer.GracefulStop()
 
-	if err := g.updateNodesConnectionsFromGensisNode(ctx, cfg.GenesisURL); err != nil {
-		cancel()
+	if err == nil {
+		if err := g.updateNodesConnectionsFromGensisNode(ctx, cfg.GenesisURL); err != nil {
+			g.log.Fatal(err.Error())
+			cancel()
+		}
 	}
-
 	<-ctxx.Done()
 
 	return nil
@@ -201,10 +213,43 @@ func (g *gossiper) Discover(_ context.Context, cd *protobufcompiled.ConnectionDa
 }
 
 func (g *gossiper) Gossip(ctx context.Context, vg *protobufcompiled.VertexGossip) (*emptypb.Empty, error) {
-	return nil, nil
+	if vg == nil {
+		return nil, ErrNilVertexGossip
+	}
+	if vg.Vertex == nil {
+		return nil, ErrNilVertex
+	}
+	err := g.vertexCache.Update(func(txn *badger.Txn) error {
+		_, err := txn.Get(vg.Vertex.Hash)
+		switch err {
+		case nil:
+			return ErrVertexInCache
+		default:
+			switch errors.Is(err, badger.ErrKeyNotFound) {
+			case true:
+			default:
+				return err
+			}
+		}
+		return txn.SetEntry(badger.NewEntry(vg.Vertex.Hash, []byte{}).WithTTL(vertexCacheLongevity))
+	})
+	if err != nil {
+		if errors.Is(err, ErrVertexInCache) {
+			return &emptypb.Empty{}, nil
+		}
+		return nil, ErrUnexpectedGossipFailure
+	}
+
+	g.vertexGossipCh <- vg
+
+	return &emptypb.Empty{}, nil
 }
 
-func (g *gossiper) runProcessVertexGossip(ctx context.Context, cancel context.CancelFunc) {
+func (g *gossiper) runTimeSortVertexGossip(ctx context.Context, cancel context.CancelFunc) {
+	close(g.vertexGossipTimeSortedCh)
+	t := time.NewTicker(time.Millisecond)
+	defer t.Stop()
+	vertexes := make([]*protobufcompiled.VertexGossip, 0, vertexGossipChCapacity)
 	for {
 		select {
 		case <-ctx.Done():
@@ -215,6 +260,44 @@ func (g *gossiper) runProcessVertexGossip(ctx context.Context, cancel context.Ca
 				cancel()
 				return
 			}
+			vertexes = append(vertexes, vg)
+			slices.SortFunc(vertexes, func(a, b *protobufcompiled.VertexGossip) int {
+				if a == nil || b == nil {
+					return 0
+				}
+				if a.Vertex.CreaterdAt == b.Vertex.CreaterdAt {
+					return 0
+				}
+				if a.Vertex.CreaterdAt > b.Vertex.CreaterdAt {
+					return 1
+				}
+				return -1
+			})
+			select {
+			case g.vertexGossipTimeSortedCh <- vertexes[0]:
+				vertexes = vertexes[1:]
+			default:
+			}
+		case <-t.C:
+			if len(vertexes) == 0 {
+				continue
+			}
+			select {
+			case g.vertexGossipTimeSortedCh <- vertexes[0]:
+				vertexes = vertexes[1:]
+			default:
+			}
+		}
+	}
+}
+
+func (g *gossiper) runProcessVertexGossip(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case vg := <-g.vertexGossipTimeSortedCh:
+			go g.sendToAccountant(ctx, vg.Vertex)
 			vg.Gossipers = append(vg.Gossipers, g.signer.Address())
 			set := toSet(vg.Gossipers)
 			vg.Gossipers = toSlice(set)
@@ -299,6 +382,11 @@ func (g *gossiper) updateNodesConnectionsFromGensisNode(ctx context.Context, gen
 	}
 
 	return nil
+}
+
+func (g *gossiper) sendToAccountant(ctx context.Context, vg *protobufcompiled.Vertex) {
+	// TODO: send to accountant DAG when implementd
+	fmt.Printf("unimplementd for vg created at: [ %v ] \n", vg.CreaterdAt)
 }
 
 func (g *gossiper) valiudateSignature(sigAddr, pubAddr, url string, createdAt time.Time, signature []byte, hash [32]byte) error {
