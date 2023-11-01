@@ -297,7 +297,7 @@ func (g *gossiper) runProcessVertexGossip(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case vg := <-g.vertexGossipTimeSortedCh:
-			go g.sendToAccountant(ctx, vg.Vertex)
+			g.sendToAccountant(ctx, vg.Vertex)
 			vg.Gossipers = append(vg.Gossipers, g.signer.Address())
 			set := toSet(vg.Gossipers)
 			vg.Gossipers = toSlice(set)
@@ -387,6 +387,8 @@ func (g *gossiper) updateNodesConnectionsFromGensisNode(ctx context.Context, gen
 func (g *gossiper) sendToAccountant(ctx context.Context, vg *protobufcompiled.Vertex) {
 	// TODO: send to accountant DAG when implementd
 	fmt.Printf("unimplementd for vg created at: [ %v ] \n", vg.CreaterdAt)
+
+	// NOTE: after transformation from protobufcompiled.Vertex to accountant.Vertex, accountant can process leaf concurently
 }
 
 func (g *gossiper) valiudateSignature(sigAddr, pubAddr, url string, createdAt time.Time, signature []byte, hash [32]byte) error {
