@@ -15,6 +15,7 @@ import (
 	"github.com/bartossh/Computantis/logger"
 	"github.com/bartossh/Computantis/notaryserver"
 	"github.com/bartossh/Computantis/transaction"
+	"github.com/bartossh/Computantis/versioning"
 	"github.com/bartossh/Computantis/webhooks"
 )
 
@@ -128,8 +129,8 @@ func (a *app) runServer(ctx context.Context, cancel context.CancelFunc, port int
 		StrictRouting: true,
 		ReadTimeout:   time.Second * 5,
 		WriteTimeout:  time.Second * 5,
-		ServerHeader:  notaryserver.Header,
-		AppName:       notaryserver.ApiVersion,
+		ServerHeader:  versioning.Header,
+		AppName:       versioning.ApiVersion,
 		Concurrency:   4096,
 	})
 	router.Use(recover.New())
@@ -175,8 +176,8 @@ func (s *app) alive(c *fiber.Ctx) error {
 	return c.JSON(
 		notaryserver.AliveResponse{
 			Alive:      true,
-			APIVersion: notaryserver.ApiVersion,
-			APIHeader:  notaryserver.Header,
+			APIVersion: versioning.ApiVersion,
+			APIHeader:  versioning.Header,
 		})
 }
 

@@ -10,7 +10,7 @@ import "google/protobuf/empty.proto";
 message AliveData {
   string api_version = 1;
   string api_header = 2;
-  string address = 3;
+  string public_address = 3;
 }
 
 message Vertex {
@@ -30,7 +30,7 @@ message VertexGossip {
 }
 
 message ConnectionData {
-    string address = 1;
+    string public_address = 1;
     string url = 2;
     uint64 created_at = 3;
     bytes digest = 4;
@@ -38,11 +38,12 @@ message ConnectionData {
 }
 
 message ConnectedNodes {
-    repeated ConnectionData connections = 1;
+    string signer_public_address = 1;
+    repeated ConnectionData connections = 2;
 }
 
 service GossipAPI {
     rpc Alive(google.protobuf.Empty) returns (AliveData) {}
-    rpc Connect(ConnectionData) returns (ConnectedNodes) {}
+    rpc Discover(ConnectionData) returns (ConnectedNodes) {}
     rpc Gossip(VertexGossip) returns (google.protobuf.Empty) {}
 }

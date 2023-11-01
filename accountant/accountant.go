@@ -5,18 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"sync/atomic"
-	"time"
 
 	"github.com/dgraph-io/badger/v4"
 	"github.com/heimdalr/dag"
 
 	"github.com/bartossh/Computantis/logger"
 	"github.com/bartossh/Computantis/spice"
+	"github.com/bartossh/Computantis/storage"
 	"github.com/bartossh/Computantis/transaction"
-)
-
-const (
-	gcRuntimeTick = time.Minute * 5
 )
 
 const (
@@ -73,19 +69,19 @@ type AccountingBook struct {
 // New creates new AccountingBook.
 // New AccountingBook will start internally the garbage collection loop, to stop it from running cancel the context.
 func NewAccountingBook(ctx context.Context, cfg Config, verifier signatureVerifier, signer signer, l logger.Logger) (*AccountingBook, error) {
-	trustedNodesDB, err := createBadgerDB(ctx, cfg.TrustedNodesDBPath, l)
+	trustedNodesDB, err := storage.CreateBadgerDB(ctx, cfg.TrustedNodesDBPath, l)
 	if err != nil {
 		return nil, err
 	}
-	tokensDB, err := createBadgerDB(ctx, cfg.TokensDBPath, l)
+	tokensDB, err := storage.CreateBadgerDB(ctx, cfg.TokensDBPath, l)
 	if err != nil {
 		return nil, err
 	}
-	trxsToVertxDB, err := createBadgerDB(ctx, cfg.TraxsToVerticesMapDBPath, l)
+	trxsToVertxDB, err := storage.CreateBadgerDB(ctx, cfg.TraxsToVerticesMapDBPath, l)
 	if err != nil {
 		return nil, err
 	}
-	verticesDB, err := createBadgerDB(ctx, cfg.VerticesDBPath, l)
+	verticesDB, err := storage.CreateBadgerDB(ctx, cfg.VerticesDBPath, l)
 	if err != nil {
 		return nil, err
 	}

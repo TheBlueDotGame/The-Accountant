@@ -8,6 +8,7 @@ import (
 
 	"github.com/bartossh/Computantis/token"
 	"github.com/bartossh/Computantis/transaction"
+	"github.com/bartossh/Computantis/versioning"
 )
 
 // AliveResponse is a response for alive and version check.
@@ -21,8 +22,8 @@ func (s *server) alive(c *fiber.Ctx) error {
 	return c.JSON(
 		AliveResponse{
 			Alive:      true,
-			APIVersion: ApiVersion,
-			APIHeader:  Header,
+			APIVersion: versioning.ApiVersion,
+			APIHeader:  versioning.Header,
 		})
 }
 

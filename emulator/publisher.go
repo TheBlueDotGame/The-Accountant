@@ -11,7 +11,7 @@ import (
 	"github.com/pterm/pterm"
 
 	"github.com/bartossh/Computantis/httpclient"
-	"github.com/bartossh/Computantis/notaryserver"
+	"github.com/bartossh/Computantis/versioning"
 	"github.com/bartossh/Computantis/walletapi"
 )
 
@@ -51,10 +51,10 @@ func RunPublisher(ctx context.Context, cancel context.CancelFunc, config Config,
 	if err := httpclient.MakeGet(p.timeout, url, &alive); err != nil {
 		return err
 	}
-	if alive.APIVersion != notaryserver.ApiVersion || alive.APIHeader != notaryserver.Header {
+	if alive.APIVersion != versioning.ApiVersion || alive.APIHeader != versioning.Header {
 		return fmt.Errorf(
 			"emulation not possible due to wrong headers and/or version, expected header %s, version %s, received header %s, version %s",
-			notaryserver.Header, notaryserver.ApiVersion, alive.APIHeader, alive.APIVersion)
+			versioning.Header, versioning.ApiVersion, alive.APIHeader, alive.APIVersion)
 	}
 
 	var addr walletapi.AddressResponse

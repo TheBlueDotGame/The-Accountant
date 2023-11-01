@@ -16,16 +16,12 @@ import (
 	"github.com/bartossh/Computantis/logger"
 	"github.com/bartossh/Computantis/providers"
 	"github.com/bartossh/Computantis/transaction"
+	"github.com/bartossh/Computantis/versioning"
 )
 
 const (
 	checkForRegisteredNodesInterval = 5 * time.Second
 	transactionsUpdateTick          = time.Millisecond * 100
-)
-
-const (
-	ApiVersion = "1.0.0"
-	Header     = "Computantis-Notary"
 )
 
 const (
@@ -221,8 +217,8 @@ func Run(
 		StrictRouting: true,
 		ReadTimeout:   time.Second * 5,
 		WriteTimeout:  time.Second * 5,
-		ServerHeader:  Header,
-		AppName:       ApiVersion,
+		ServerHeader:  versioning.Header,
+		AppName:       versioning.ApiVersion,
 		Concurrency:   4096,
 	})
 	router.Use(recover.New())

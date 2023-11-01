@@ -1,4 +1,4 @@
-package accountant
+package storage
 
 import (
 	"context"
@@ -10,7 +10,13 @@ import (
 	"github.com/dgraph-io/badger/v4"
 )
 
-func createBadgerDB(ctx context.Context, path string, l logger.Logger) (*badger.DB, error) {
+const (
+	gcRuntimeTick = time.Minute * 5
+)
+
+// Create storage returns a BadgerDB storage and runs the Garbage Collection concurrently.
+// To stop the storage and disconnect from database cancel the context.
+func CreateBadgerDB(ctx context.Context, path string, l logger.Logger) (*badger.DB, error) {
 	var opt badger.Options
 	switch path {
 	case "":
@@ -33,6 +39,7 @@ func createBadgerDB(ctx context.Context, path string, l logger.Logger) (*badger.
 		for range ticker.C {
 			select {
 			case <-ctx.Done():
+				db.Close()
 				return
 			default:
 			}

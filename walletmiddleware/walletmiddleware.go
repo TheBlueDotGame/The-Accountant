@@ -13,6 +13,7 @@ import (
 	"github.com/bartossh/Computantis/spice"
 	"github.com/bartossh/Computantis/token"
 	"github.com/bartossh/Computantis/transaction"
+	"github.com/bartossh/Computantis/versioning"
 	"github.com/bartossh/Computantis/wallet"
 )
 
@@ -62,12 +63,12 @@ func (c *Client) ValidateApiVersion() error {
 		return fmt.Errorf("check notary node alive on url: [ %s ], %w", url, err)
 	}
 
-	if alive.APIVersion != notaryserver.ApiVersion {
-		return errors.Join(httpclient.ErrApiVersionMismatch, fmt.Errorf("expected %s but got %s", notaryserver.ApiVersion, alive.APIVersion))
+	if alive.APIVersion != versioning.ApiVersion {
+		return errors.Join(httpclient.ErrApiVersionMismatch, fmt.Errorf("expected %s but got %s", versioning.ApiVersion, alive.APIVersion))
 	}
 
-	if alive.APIHeader != notaryserver.Header {
-		return errors.Join(httpclient.ErrApiHeaderMismatch, fmt.Errorf("expected %s but got %s", notaryserver.Header, alive.APIHeader))
+	if alive.APIHeader != versioning.Header {
+		return errors.Join(httpclient.ErrApiHeaderMismatch, fmt.Errorf("expected %s but got %s", versioning.Header, alive.APIHeader))
 	}
 
 	return nil

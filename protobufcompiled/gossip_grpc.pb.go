@@ -20,9 +20,9 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	GossipAPI_Alive_FullMethodName   = "/computantis.GossipAPI/Alive"
-	GossipAPI_Connect_FullMethodName = "/computantis.GossipAPI/Connect"
-	GossipAPI_Gossip_FullMethodName  = "/computantis.GossipAPI/Gossip"
+	GossipAPI_Alive_FullMethodName    = "/computantis.GossipAPI/Alive"
+	GossipAPI_Discover_FullMethodName = "/computantis.GossipAPI/Discover"
+	GossipAPI_Gossip_FullMethodName   = "/computantis.GossipAPI/Gossip"
 )
 
 // GossipAPIClient is the client API for GossipAPI service.
@@ -30,7 +30,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type GossipAPIClient interface {
 	Alive(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*AliveData, error)
-	Connect(ctx context.Context, in *ConnectionData, opts ...grpc.CallOption) (*ConnectedNodes, error)
+	Discover(ctx context.Context, in *ConnectionData, opts ...grpc.CallOption) (*ConnectedNodes, error)
 	Gossip(ctx context.Context, in *VertexGossip, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
@@ -51,9 +51,9 @@ func (c *gossipAPIClient) Alive(ctx context.Context, in *emptypb.Empty, opts ...
 	return out, nil
 }
 
-func (c *gossipAPIClient) Connect(ctx context.Context, in *ConnectionData, opts ...grpc.CallOption) (*ConnectedNodes, error) {
+func (c *gossipAPIClient) Discover(ctx context.Context, in *ConnectionData, opts ...grpc.CallOption) (*ConnectedNodes, error) {
 	out := new(ConnectedNodes)
-	err := c.cc.Invoke(ctx, GossipAPI_Connect_FullMethodName, in, out, opts...)
+	err := c.cc.Invoke(ctx, GossipAPI_Discover_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +74,7 @@ func (c *gossipAPIClient) Gossip(ctx context.Context, in *VertexGossip, opts ...
 // for forward compatibility
 type GossipAPIServer interface {
 	Alive(context.Context, *emptypb.Empty) (*AliveData, error)
-	Connect(context.Context, *ConnectionData) (*ConnectedNodes, error)
+	Discover(context.Context, *ConnectionData) (*ConnectedNodes, error)
 	Gossip(context.Context, *VertexGossip) (*emptypb.Empty, error)
 	mustEmbedUnimplementedGossipAPIServer()
 }
@@ -86,8 +86,8 @@ type UnimplementedGossipAPIServer struct {
 func (UnimplementedGossipAPIServer) Alive(context.Context, *emptypb.Empty) (*AliveData, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Alive not implemented")
 }
-func (UnimplementedGossipAPIServer) Connect(context.Context, *ConnectionData) (*ConnectedNodes, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Connect not implemented")
+func (UnimplementedGossipAPIServer) Discover(context.Context, *ConnectionData) (*ConnectedNodes, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Discover not implemented")
 }
 func (UnimplementedGossipAPIServer) Gossip(context.Context, *VertexGossip) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Gossip not implemented")
@@ -123,20 +123,20 @@ func _GossipAPI_Alive_Handler(srv interface{}, ctx context.Context, dec func(int
 	return interceptor(ctx, in, info, handler)
 }
 
-func _GossipAPI_Connect_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _GossipAPI_Discover_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ConnectionData)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(GossipAPIServer).Connect(ctx, in)
+		return srv.(GossipAPIServer).Discover(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: GossipAPI_Connect_FullMethodName,
+		FullMethod: GossipAPI_Discover_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(GossipAPIServer).Connect(ctx, req.(*ConnectionData))
+		return srv.(GossipAPIServer).Discover(ctx, req.(*ConnectionData))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -171,8 +171,8 @@ var GossipAPI_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _GossipAPI_Alive_Handler,
 		},
 		{
-			MethodName: "Connect",
-			Handler:    _GossipAPI_Connect_Handler,
+			MethodName: "Discover",
+			Handler:    _GossipAPI_Discover_Handler,
 		},
 		{
 			MethodName: "Gossip",
