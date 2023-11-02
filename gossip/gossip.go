@@ -141,7 +141,7 @@ func RunGRPC(ctx context.Context, cfg Config, l logger.Logger, t time.Duration, 
 		}
 	}()
 
-	time.Sleep(time.Millisecond * 50) // jsut wait so the server can start
+	time.Sleep(time.Millisecond * 50) // just wait so the server can start
 
 	defer grpcServer.GracefulStop()
 
@@ -172,9 +172,7 @@ func (g *gossiper) Alive(_ context.Context, _ *emptypb.Empty) (*protobufcompiled
 }
 
 func (g *gossiper) Discover(_ context.Context, cd *protobufcompiled.ConnectionData) (*protobufcompiled.ConnectedNodes, error) {
-	fmt.Println(" -- connection -- ")
-	createdAt := time.Unix(0, int64(cd.CreatedAt))
-	err := g.valiudateSignature(cd.PublicAddress, cd.PublicAddress, cd.Url, createdAt, cd.Signature, [32]byte(cd.Digest))
+	err := g.valiudateSignature(cd.PublicAddress, cd.PublicAddress, cd.Url, cd.CreatedAt, cd.Signature, [32]byte(cd.Digest))
 	if err != nil {
 		g.log.Info(fmt.Sprintf("Discovery attempt failed, public address [ %s ] with URL [ %s ], %s", cd.PublicAddress, cd.Url, err))
 		return nil, ErrDiscoveryAttmeptSignatureFailed
@@ -195,25 +193,24 @@ func (g *gossiper) Discover(_ context.Context, cd *protobufcompiled.ConnectionDa
 		SignerPublicAddress: g.signer.Address(),
 		Connections:         make([]*protobufcompiled.ConnectionData, 0, len(g.nodes)+1),
 	}
-	now := time.Now()
+	now := uint64(time.Now().UnixNano())
 	data := initConnectionData(g.signer.Address(), g.url, now)
 	digest, signature := g.signer.Sign(data)
-
 	connected.Connections = append(connected.Connections, &protobufcompiled.ConnectionData{
 		PublicAddress: g.signer.Address(),
 		Url:           g.url,
-		CreatedAt:     uint64(now.Unix()),
+		CreatedAt:     now,
 		Digest:        digest[:],
 		Signature:     signature,
 	})
 
 	for address, nd := range g.nodes {
-		data = initConnectionData(address, nd.url, now)
-		digest, signature = g.signer.Sign(data)
+		data := initConnectionData(address, nd.url, now)
+		digest, signature := g.signer.Sign(data)
 		connected.Connections = append(connected.Connections, &protobufcompiled.ConnectionData{
 			PublicAddress: address,
 			Url:           nd.url,
-			CreatedAt:     uint64(now.Unix()),
+			CreatedAt:     now,
 			Digest:        digest[:],
 			Signature:     signature,
 		})
@@ -358,14 +355,14 @@ func (g *gossiper) updateNodesConnectionsFromGensisNode(ctx context.Context, gen
 	}()
 
 	client := protobufcompiled.NewGossipAPIClient(conn)
-	now := time.Now()
+	now := uint64(time.Now().UnixNano())
 	data := initConnectionData(g.signer.Address(), g.url, now)
 	digest, signature := g.signer.Sign(data)
 
 	cd := &protobufcompiled.ConnectionData{
 		PublicAddress: g.signer.Address(),
 		Url:           g.url,
-		CreatedAt:     uint64(now.UnixNano()),
+		CreatedAt:     now,
 		Digest:        digest[:],
 		Signature:     signature,
 	}
@@ -382,12 +379,11 @@ func (g *gossiper) updateNodesConnectionsFromGensisNode(ctx context.Context, gen
 		if n.PublicAddress == g.signer.Address() || n.Url == g.url {
 			continue
 		}
-		createdAt := time.Unix(0, int64(n.CreatedAt))
-		err := g.valiudateSignature(result.SignerPublicAddress, n.PublicAddress, n.Url, createdAt, n.Signature, [32]byte(n.Digest))
+		err := g.valiudateSignature(result.SignerPublicAddress, n.PublicAddress, n.Url, n.CreatedAt, n.Signature, [32]byte(n.Digest))
 		if err != nil {
 			g.log.Warn(
-				fmt.Sprintf("Received connection [ %s ] for URL [ %s ] has corrupted signature. Signer [ %s ]",
-					n.PublicAddress, n.Url, result.SignerPublicAddress),
+				fmt.Sprintf("Received connection [ %s ] for URL [ %s ] has corrupted signature. Signer [ %s ], %s.",
+					n.PublicAddress, n.Url, result.SignerPublicAddress, err),
 			)
 			continue
 		}
@@ -410,7 +406,7 @@ func (g *gossiper) sendToAccountant(ctx context.Context, vg *protobufcompiled.Ve
 	// NOTE: after transformation from protobufcompiled.Vertex to accountant.Vertex, accountant can process leaf concurently
 }
 
-func (g *gossiper) valiudateSignature(sigAddr, pubAddr, url string, createdAt time.Time, signature []byte, hash [32]byte) error {
+func (g *gossiper) valiudateSignature(sigAddr, pubAddr, url string, createdAt uint64, signature []byte, hash [32]byte) error {
 	data := initConnectionData(pubAddr, url, createdAt)
 	return g.verifier.Verify(data, signature, hash, sigAddr)
 }
@@ -430,9 +426,9 @@ func connectToNode(url string) (nodeData, error) {
 	}, nil
 }
 
-func initConnectionData(publicAddress, url string, createdAt time.Time) []byte {
+func initConnectionData(publicAddress, url string, createdAt uint64) []byte {
 	blockData := make([]byte, 0, 8)
-	blockData = binary.LittleEndian.AppendUint64(blockData, uint64(createdAt.UnixNano()))
+	blockData = binary.LittleEndian.AppendUint64(blockData, createdAt)
 	return bytes.Join([][]byte{
 		[]byte(publicAddress), []byte(url), blockData,
 	},

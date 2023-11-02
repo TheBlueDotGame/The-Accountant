@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/bartossh/Computantis/logging"
-	"github.com/bartossh/Computantis/stdoutwriter"
 	"github.com/bartossh/Computantis/wallet"
 	"gotest.tools/v3/assert"
 )
@@ -28,7 +27,7 @@ func (d *discoveryConnetionLogger) Write(p []byte) (n int, err error) {
 	fmt.Printf("%s\n", string(p))
 	for _, port := range d.ports {
 		substring := strconv.Itoa(port)
-		if strings.Contains(string(p), substring) {
+		if strings.Contains(string(p), substring) && strings.Contains(string(p), "connected to") {
 			d.counter.Add(1)
 		}
 	}
@@ -70,7 +69,6 @@ func TestDiscoverProtocol(t *testing.T) {
 		assert.NilError(t, err)
 	}()
 
-	nl := logging.New(callOnFail, callOnLogErr, &stdoutwriter.Logger{})
 	for _, port := range nodePorts[1:] {
 		cfg := Config{
 			URL:        fmt.Sprintf("localhost:%v", port),
@@ -81,12 +79,12 @@ func TestDiscoverProtocol(t *testing.T) {
 			w, err := wallet.New()
 			assert.NilError(t, err)
 			v := wallet.NewVerifier()
-			err = RunGRPC(ctx, cfg, nl, time.Second*1, &w, v)
+			err = RunGRPC(ctx, cfg, l, time.Second*1, &w, v)
 			assert.NilError(t, err)
 		}(cfg)
 	}
 
-	time.Sleep(time.Second * 5)
+	time.Sleep(time.Second * 2)
 	cancel()
 
 	cnt := counter.readCounter()
