@@ -3,7 +3,6 @@ package gossip
 import (
 	"bytes"
 	"context"
-	"crypto/x509"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -20,7 +19,6 @@ import (
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -129,7 +127,7 @@ func RunGRPC(ctx context.Context, cfg Config, l logger.Logger, t time.Duration, 
 		return err
 	}
 
-	grpcServer := grpc.NewServer(grpc.Creds(credentials.NewClientTLSFromCert(x509.NewCertPool(), "")))
+	grpcServer := grpc.NewServer()
 	protobufcompiled.RegisterGossipAPIServer(grpcServer, &g)
 
 	go g.runProcessVertexGossip(ctx)
@@ -174,6 +172,7 @@ func (g *gossiper) Alive(_ context.Context, _ *emptypb.Empty) (*protobufcompiled
 }
 
 func (g *gossiper) Discover(_ context.Context, cd *protobufcompiled.ConnectionData) (*protobufcompiled.ConnectedNodes, error) {
+	fmt.Println(" -- connection -- ")
 	createdAt := time.Unix(0, int64(cd.CreatedAt))
 	err := g.valiudateSignature(cd.PublicAddress, cd.PublicAddress, cd.Url, createdAt, cd.Signature, [32]byte(cd.Digest))
 	if err != nil {
@@ -352,6 +351,11 @@ func (g *gossiper) updateNodesConnectionsFromGensisNode(ctx context.Context, gen
 	if err != nil {
 		return fmt.Errorf("connection refused: %s", err)
 	}
+	defer func() {
+		if err := conn.Close(); err != nil {
+			g.log.Error(fmt.Sprintf("connection close error: %s", err))
+		}
+	}()
 
 	client := protobufcompiled.NewGossipAPIClient(conn)
 	now := time.Now()
@@ -369,9 +373,6 @@ func (g *gossiper) updateNodesConnectionsFromGensisNode(ctx context.Context, gen
 	result, err := client.Discover(ctx, cd)
 	if err != nil {
 		return fmt.Errorf("result error: %s", err)
-	}
-	if err := conn.Close(); err != nil {
-		return fmt.Errorf("connection close error: %s", err)
 	}
 
 	g.mux.Lock()
@@ -418,7 +419,7 @@ func connectToNode(url string) (nodeData, error) {
 	opts := grpc.WithTransportCredentials(insecure.NewCredentials()) // TODO: remove when credentials are set
 	conn, err := grpc.Dial(url, opts)
 	if err != nil {
-		return nodeData{}, err
+		return nodeData{}, fmt.Errorf("dial failed, %s", err)
 	}
 
 	client := protobufcompiled.NewGossipAPIClient(conn)

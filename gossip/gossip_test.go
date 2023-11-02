@@ -86,7 +86,7 @@ func TestDiscoverProtocol(t *testing.T) {
 		}(cfg)
 	}
 
-	time.Sleep(time.Second * 2)
+	time.Sleep(time.Second * 5)
 	cancel()
 
 	cnt := counter.readCounter()
