@@ -18,6 +18,7 @@ import (
 	"github.com/bartossh/Computantis/protobufcompiled"
 	"github.com/bartossh/Computantis/spice"
 	"github.com/bartossh/Computantis/transaction"
+	"github.com/bartossh/Computantis/versioning"
 	"github.com/bartossh/Computantis/walletmiddleware"
 )
 
@@ -88,8 +89,8 @@ func Run(ctx context.Context, cfg Config, log logger.Logger, timeout time.Durati
 		StrictRouting: true,
 		ReadTimeout:   time.Second * 5,
 		WriteTimeout:  time.Second * 5,
-		ServerHeader:  notaryserver.Header,
-		AppName:       notaryserver.ApiVersion,
+		ServerHeader:  versioning.Header,
+		AppName:       versioning.ApiVersion,
 		Concurrency:   1024,
 	})
 	router.Use(recover.New())
@@ -138,8 +139,8 @@ func (a *app) alive(c *fiber.Ctx) error {
 	return c.JSON(
 		AliveResponse{
 			Alive:      true,
-			APIVersion: notaryserver.ApiVersion,
-			APIHeader:  notaryserver.Header,
+			APIVersion: versioning.ApiVersion,
+			APIHeader:  versioning.Header,
 		})
 }
 

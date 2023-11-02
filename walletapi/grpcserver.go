@@ -12,9 +12,9 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/bartossh/Computantis/logger"
-	"github.com/bartossh/Computantis/notaryserver"
 	"github.com/bartossh/Computantis/protobufcompiled"
 	"github.com/bartossh/Computantis/transaction"
+	"github.com/bartossh/Computantis/versioning"
 	"github.com/bartossh/Computantis/walletmiddleware"
 )
 
@@ -78,8 +78,8 @@ func (a *app) Alive(context.Context, *emptypb.Empty) (*protobufcompiled.AliveInf
 		return &aliveResp, err
 	}
 	aliveResp.Alive = true
-	aliveResp.ApiVersion = notaryserver.ApiVersion
-	aliveResp.ApiHeader = notaryserver.Header
+	aliveResp.ApiVersion = versioning.ApiVersion
+	aliveResp.ApiHeader = versioning.Header
 	return &aliveResp, nil
 }
 

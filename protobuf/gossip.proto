@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package computantis;
+
+option go_package = "github.com/bartossh/Computantis/protobufcompiled";
+
+import "transaction.proto";
+import "google/protobuf/empty.proto";
+
+message AliveData {
+  string api_version = 1;
+  string api_header = 2;
+  string public_address = 3;
+}
+
+message Vertex {
+    string signer_public_address = 1;
+    uint64 createrd_at = 2;
+    bytes signature = 3;
+    Transaction transaction = 4;
+    bytes hash = 5;
+    bytes left_parent_hash = 6;
+    bytes right_parent_hash = 7;
+    uint64 weight = 8;
+}
+
+message VertexGossip {
+    Vertex vertex = 1;
+    repeated string gossipers = 2;
+}
+
+message ConnectionData {
+    string public_address = 1;
+    string url = 2;
+    uint64 created_at = 3;
+    bytes digest = 4;
+    bytes signature = 5;
+}
+
+message ConnectedNodes {
+    string signer_public_address = 1;
+    repeated ConnectionData connections = 2;
+}
+
+service GossipAPI {
+    rpc Alive(google.protobuf.Empty) returns (AliveData) {}
+    rpc Discover(ConnectionData) returns (ConnectedNodes) {}
+    rpc Gossip(VertexGossip) returns (google.protobuf.Empty) {}
+}
