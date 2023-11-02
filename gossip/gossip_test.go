@@ -43,7 +43,7 @@ func TestDiscoverProtocol(t *testing.T) {
 		connections int
 	}{
 		{connections: 2, nodes: []int{8080, 8081}},
-		{connections: 4, nodes: []int{8080, 8081, 8082}},
+		{connections: 6, nodes: []int{8080, 8081, 8082}},
 		{connections: 12, nodes: []int{8080, 8081, 8082, 8083}},
 		{connections: 20, nodes: []int{8080, 8081, 8082, 8083, 8084}},
 		{connections: 30, nodes: []int{8080, 8081, 8082, 8083, 8084, 8085}},
