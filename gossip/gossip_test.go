@@ -24,7 +24,6 @@ func newDiscoveryConnetionLogger(ports []int) *discoveryConnetionLogger {
 }
 
 func (d *discoveryConnetionLogger) Write(p []byte) (n int, err error) {
-	fmt.Printf("%s\n", string(p))
 	for _, port := range d.ports {
 		substring := strconv.Itoa(port)
 		if strings.Contains(string(p), substring) && strings.Contains(string(p), "connected to") {
