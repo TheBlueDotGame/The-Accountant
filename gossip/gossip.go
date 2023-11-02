@@ -3,6 +3,7 @@ package gossip
 import (
 	"bytes"
 	"context"
+	"crypto/x509"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -19,6 +20,8 @@ import (
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -126,30 +129,37 @@ func RunGRPC(ctx context.Context, cfg Config, l logger.Logger, t time.Duration, 
 		return err
 	}
 
-	grpcServer := grpc.NewServer()
+	grpcServer := grpc.NewServer(grpc.Creds(credentials.NewClientTLSFromCert(x509.NewCertPool(), "")))
 	protobufcompiled.RegisterGossipAPIServer(grpcServer, &g)
 
 	go g.runProcessVertexGossip(ctx)
 	go g.runTimeSortVertexGossip(ctx, cancel)
 
-	done := make(chan struct{}, 1)
 	go func() {
 		err = grpcServer.Serve(lis)
 		if err != nil {
+			g.log.Fatal(fmt.Sprintf("Node [ %s ] cannot start server on port [ %v ], %s", s.Address(), cfg.Port, err))
 			cancel()
 		}
-		close(done)
 	}()
 
-	<-done
+	time.Sleep(time.Millisecond * 50) // jsut wait so the server can start
+
 	defer grpcServer.GracefulStop()
 
 	if err == nil {
 		if err := g.updateNodesConnectionsFromGensisNode(ctx, cfg.GenesisURL); err != nil {
-			g.log.Fatal(err.Error())
+			g.log.Fatal(
+				fmt.Sprintf("Updating nodes on genesis URL [ %s ] for node [ %s ] failed, %s",
+					cfg.GenesisURL, g.signer.Address(), err.Error(),
+				),
+			)
 			cancel()
 		}
 	}
+
+	g.log.Info(fmt.Sprintf("Server started on port [ %v ] for node [ %s ].", cfg.Port, s.Address()))
+
 	<-ctxx.Done()
 
 	return nil
@@ -180,6 +190,7 @@ func (g *gossiper) Discover(_ context.Context, cd *protobufcompiled.ConnectionDa
 	defer g.mux.Unlock()
 
 	g.nodes[cd.PublicAddress] = nd
+	g.log.Info(fmt.Sprintf("Node [ %s ] accepted connection from [ %s ] with URL [ %s ]", g.signer.Address(), cd.PublicAddress, nd.url))
 
 	connected := &protobufcompiled.ConnectedNodes{
 		SignerPublicAddress: g.signer.Address(),
@@ -246,7 +257,7 @@ func (g *gossiper) Gossip(ctx context.Context, vg *protobufcompiled.VertexGossip
 }
 
 func (g *gossiper) runTimeSortVertexGossip(ctx context.Context, cancel context.CancelFunc) {
-	close(g.vertexGossipTimeSortedCh)
+	defer close(g.vertexGossipTimeSortedCh)
 	t := time.NewTicker(time.Millisecond)
 	defer t.Stop()
 	vertexes := make([]*protobufcompiled.VertexGossip, 0, vertexGossipChCapacity)
@@ -256,9 +267,7 @@ func (g *gossiper) runTimeSortVertexGossip(ctx context.Context, cancel context.C
 			return
 		case vg := <-g.vertexGossipCh:
 			if vg == nil {
-				g.log.Fatal("Gossip process received nil Vertex Gossip")
-				cancel()
-				return
+				continue
 			}
 			vertexes = append(vertexes, vg)
 			slices.SortFunc(vertexes, func(a, b *protobufcompiled.VertexGossip) int {
@@ -297,6 +306,9 @@ func (g *gossiper) runProcessVertexGossip(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case vg := <-g.vertexGossipTimeSortedCh:
+			if vg == nil {
+				continue
+			}
 			g.sendToAccountant(ctx, vg.Vertex)
 			vg.Gossipers = append(vg.Gossipers, g.signer.Address())
 			set := toSet(vg.Gossipers)
@@ -331,9 +343,14 @@ func (g *gossiper) closeAllNodesConnections() {
 }
 
 func (g *gossiper) updateNodesConnectionsFromGensisNode(ctx context.Context, genesisURL string) error {
-	conn, err := grpc.Dial(genesisURL)
+	if genesisURL == "" {
+		g.log.Info(fmt.Sprintf("Genesis Node URL is not specified. Node [ %s ] runs as Genesis Node.", g.signer.Address()))
+		return nil
+	}
+	opts := grpc.WithTransportCredentials(insecure.NewCredentials()) // TODO: remove when credentials are set
+	conn, err := grpc.Dial(genesisURL, opts)
 	if err != nil {
-		return err
+		return fmt.Errorf("connection refused: %s", err)
 	}
 
 	client := protobufcompiled.NewGossipAPIClient(conn)
@@ -351,10 +368,10 @@ func (g *gossiper) updateNodesConnectionsFromGensisNode(ctx context.Context, gen
 
 	result, err := client.Discover(ctx, cd)
 	if err != nil {
-		return err
+		return fmt.Errorf("result error: %s", err)
 	}
 	if err := conn.Close(); err != nil {
-		return err
+		return fmt.Errorf("connection close error: %s", err)
 	}
 
 	g.mux.Lock()
@@ -379,6 +396,7 @@ func (g *gossiper) updateNodesConnectionsFromGensisNode(ctx context.Context, gen
 			continue
 		}
 		g.nodes[n.PublicAddress] = nd
+		g.log.Info(fmt.Sprintf("Node [ %s ] connected to [ %s ] with URL [ %s ].", g.signer.Address(), n.PublicAddress, nd.url))
 	}
 
 	return nil
@@ -397,7 +415,8 @@ func (g *gossiper) valiudateSignature(sigAddr, pubAddr, url string, createdAt ti
 }
 
 func connectToNode(url string) (nodeData, error) {
-	conn, err := grpc.Dial(url)
+	opts := grpc.WithTransportCredentials(insecure.NewCredentials()) // TODO: remove when credentials are set
+	conn, err := grpc.Dial(url, opts)
 	if err != nil {
 		return nodeData{}, err
 	}
