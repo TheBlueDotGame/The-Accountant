@@ -34,7 +34,7 @@ func (db DataBase) WriteIssuerSignedTransactionForReceiver(
 	ctx context.Context,
 	trx *transaction.Transaction,
 ) error {
-	timestamp := trx.CreatedAt.UnixMicro()
+	timestamp := trx.CreatedAt.UnixNano()
 	if _, err := db.inner.ExecContext(
 		ctx,
 		`INSERT INTO 
@@ -111,7 +111,7 @@ func (db DataBase) ReadTemporaryTransactions(ctx context.Context, offset, limit 
 			return nil, errors.Join(ErrSelectFailed, err)
 		}
 		copy(trx.Hash[:], hash[:])
-		trx.CreatedAt = time.UnixMicro(timestamp)
+		trx.CreatedAt = time.Unix(0, timestamp)
 		trxsAwaiting = append(trxsAwaiting, trx)
 	}
 	return trxsAwaiting, nil
@@ -230,7 +230,7 @@ func (db DataBase) readTransactionsByStatusPagginate(
 			return nil, errors.Join(ErrSelectFailed, err)
 		}
 		copy(trx.Hash[:], hash[:])
-		trx.CreatedAt = time.UnixMicro(timestamp)
+		trx.CreatedAt = time.Unix(0, timestamp)
 		trxs = append(trxs, trx)
 	}
 	return trxs, nil

@@ -11,9 +11,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bartossh/Computantis/accountant"
 	"github.com/bartossh/Computantis/logger"
 	"github.com/bartossh/Computantis/protobufcompiled"
+	"github.com/bartossh/Computantis/spice"
 	"github.com/bartossh/Computantis/storage"
+	"github.com/bartossh/Computantis/transaction"
 	"github.com/bartossh/Computantis/versioning"
 	"github.com/dgraph-io/badger/v4"
 	"golang.org/x/exp/maps"
@@ -76,8 +79,13 @@ type signer interface {
 	Address() string
 }
 
+type accounter interface {
+	AddLeaf(ctx context.Context, leaf *accountant.Vertex) error
+}
+
 type gossiper struct {
 	protobufcompiled.UnimplementedGossipAPIServer
+	accounter                accounter
 	verifier                 signatureVerifier
 	signer                   signer
 	log                      logger.Logger
@@ -92,7 +100,7 @@ type gossiper struct {
 
 // RunGRPC runs the service application that exposes the GRPC API for gossip protocol.
 // To stop server cancel the context.
-func RunGRPC(ctx context.Context, cfg Config, l logger.Logger, t time.Duration, s signer, v signatureVerifier) error {
+func RunGRPC(ctx context.Context, cfg Config, l logger.Logger, t time.Duration, s signer, v signatureVerifier, a accounter) error {
 	if err := cfg.verify(); err != nil {
 		return err
 	}
@@ -106,6 +114,7 @@ func RunGRPC(ctx context.Context, cfg Config, l logger.Logger, t time.Duration, 
 	}
 
 	g := gossiper{
+		accounter:                a,
 		verifier:                 v,
 		signer:                   s,
 		log:                      l,
@@ -268,7 +277,7 @@ func (g *gossiper) Gossip(ctx context.Context, vg *protobufcompiled.VertexGossip
 		return txn.SetEntry(badger.NewEntry(vg.Vertex.Hash, []byte{}).WithTTL(vertexCacheLongevity))
 	})
 	if err != nil {
-		if errors.Is(err, ErrVertexInCache) {
+		if errors.Is(err, ErrVertexInCache) || errors.Is(err, badger.ErrConflict) {
 			return &emptypb.Empty{}, nil
 		}
 		return nil, ErrUnexpectedGossipFailure
@@ -332,7 +341,7 @@ func (g *gossiper) runProcessVertexGossip(ctx context.Context) {
 			if vg == nil {
 				continue
 			}
-			g.sendToAccountant(ctx, vg.Vertex)
+			go g.sendToAccountant(ctx, vg.Vertex)
 			vg.Gossipers = append(vg.Gossipers, g.signer.Address())
 			set := toSet(vg.Gossipers)
 			vg.Gossipers = toSlice(set)
@@ -434,10 +443,32 @@ func (g *gossiper) updateNodesConnectionsFromGensisNode(ctx context.Context, gen
 }
 
 func (g *gossiper) sendToAccountant(ctx context.Context, vg *protobufcompiled.Vertex) {
-	// TODO: send to accountant DAG when implementd
-	fmt.Printf("unimplementd for vg created at: [ %v ] \n", vg.CreaterdAt)
-
-	// NOTE: after transformation from protobufcompiled.Vertex to accountant.Vertex, accountant can process leaf concurently
+	if vg.Transaction == nil {
+		return
+	}
+	v := accountant.Vertex{
+		SignerPublicAddress: vg.SignerPublicAddress,
+		CreatedAt:           time.Unix(0, int64(vg.CreaterdAt)),
+		Signature:           vg.Signature,
+		Transaction: transaction.Transaction{
+			CreatedAt:         time.Unix(0, int64(vg.CreaterdAt)),
+			IssuerAddress:     vg.Transaction.IssuerAddress,
+			ReceiverAddress:   vg.Transaction.ReceiverAddress,
+			Subject:           vg.Transaction.Subject,
+			Data:              vg.Transaction.Data,
+			IssuerSignature:   vg.Transaction.IssuerSignature,
+			ReceiverSignature: vg.Transaction.ReceiverSignature,
+			Hash:              [32]byte(vg.Transaction.Hash),
+			Spice:             spice.Melange{}, // TODO: implement spice in the GRPC
+		},
+		Hash:            [32]byte(vg.Hash),
+		LeftParentHash:  [32]byte(vg.LeftParentHash),
+		RightParentHash: [32]byte(vg.RightParentHash),
+		Weight:          vg.Weight,
+	}
+	if err := g.accounter.AddLeaf(ctx, &v); err != nil {
+		g.log.Info(fmt.Sprintf("Node [ %s ] adding leaf error: %s.", g.signer.Address(), err))
+	}
 }
 
 func (g *gossiper) valiudateSignature(sigAddr, pubAddr, url string, createdAt uint64, signature []byte, hash [32]byte) error {
