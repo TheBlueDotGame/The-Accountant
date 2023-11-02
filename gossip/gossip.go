@@ -171,6 +171,29 @@ func (g *gossiper) Alive(_ context.Context, _ *emptypb.Empty) (*protobufcompiled
 	}, nil
 }
 
+func (g *gossiper) Announce(_ context.Context, cd *protobufcompiled.ConnectionData) (*emptypb.Empty, error) {
+	err := g.valiudateSignature(cd.PublicAddress, cd.PublicAddress, cd.Url, cd.CreatedAt, cd.Signature, [32]byte(cd.Digest))
+	if err != nil {
+		g.log.Info(fmt.Sprintf("Discovery attempt failed, public address [ %s ] with URL [ %s ], %s", cd.PublicAddress, cd.Url, err))
+		return nil, ErrDiscoveryAttmeptSignatureFailed
+	}
+	g.mux.Lock()
+	defer g.mux.Unlock()
+	if n, ok := g.nodes[cd.PublicAddress]; ok {
+		n.conn.Close()
+		delete(g.nodes, cd.PublicAddress)
+	}
+	nd, err := connectToNode(cd.Url)
+	if err != nil {
+		return nil, err
+	}
+
+	g.nodes[cd.PublicAddress] = nd
+	g.log.Info(fmt.Sprintf("Node [ %s ] connected to [ %s ] with URL [ %s ].", g.signer.Address(), cd.PublicAddress, cd.Url))
+
+	return &emptypb.Empty{}, nil
+}
+
 func (g *gossiper) Discover(_ context.Context, cd *protobufcompiled.ConnectionData) (*protobufcompiled.ConnectedNodes, error) {
 	err := g.valiudateSignature(cd.PublicAddress, cd.PublicAddress, cd.Url, cd.CreatedAt, cd.Signature, [32]byte(cd.Digest))
 	if err != nil {
@@ -185,9 +208,13 @@ func (g *gossiper) Discover(_ context.Context, cd *protobufcompiled.ConnectionDa
 
 	g.mux.Lock()
 	defer g.mux.Unlock()
+	if n, ok := g.nodes[cd.PublicAddress]; ok {
+		n.conn.Close()
+		delete(g.nodes, cd.PublicAddress)
+	}
 
 	g.nodes[cd.PublicAddress] = nd
-	g.log.Info(fmt.Sprintf("Node [ %s ] accepted connection from [ %s ] with URL [ %s ]", g.signer.Address(), cd.PublicAddress, nd.url))
+	g.log.Info(fmt.Sprintf("Node [ %s ] connected to [ %s ] with URL [ %s ].", g.signer.Address(), cd.PublicAddress, cd.Url))
 
 	connected := &protobufcompiled.ConnectedNodes{
 		SignerPublicAddress: g.signer.Address(),
@@ -393,7 +420,14 @@ func (g *gossiper) updateNodesConnectionsFromGensisNode(ctx context.Context, gen
 			continue
 		}
 		g.nodes[n.PublicAddress] = nd
-		g.log.Info(fmt.Sprintf("Node [ %s ] connected to [ %s ] with URL [ %s ].", g.signer.Address(), n.PublicAddress, nd.url))
+		g.log.Info(fmt.Sprintf("Node [ %s ] connected to [ %s ] with URL [ %s ].", g.signer.Address(), n.PublicAddress, n.Url))
+
+		if n.Url == genesisURL {
+			continue
+		}
+		if _, err := nd.client.Announce(ctx, cd); err != nil {
+			g.log.Info(fmt.Sprintf("Node [ %s ] connection back to [ %s ] with URL [ %s ] failed.", g.signer.Address(), n.PublicAddress, n.Url))
+		}
 	}
 
 	return nil

@@ -38,56 +38,72 @@ func (d *discoveryConnetionLogger) readCounter() int64 {
 }
 
 func TestDiscoverProtocol(t *testing.T) {
-	nodePorts := []int{8080, 8081, 8082, 8083, 8084, 8085}
-
-	callOnLogErr := func(err error) {
-		fmt.Printf("logger failed with error: %s\n", err)
+	testsCases := []struct {
+		nodes       []int
+		connections int
+	}{
+		{connections: 2, nodes: []int{8080, 8081}},
+		{connections: 4, nodes: []int{8080, 8081, 8082}},
+		{connections: 12, nodes: []int{8080, 8081, 8082, 8083}},
+		{connections: 20, nodes: []int{8080, 8081, 8082, 8083, 8084}},
+		{connections: 30, nodes: []int{8080, 8081, 8082, 8083, 8084, 8085}},
+		{connections: 42, nodes: []int{8080, 8081, 8082, 8083, 8084, 8085, 8086}},
+		{connections: 56, nodes: []int{8080, 8081, 8082, 8083, 8084, 8085, 8086, 8087}},
 	}
-	callOnFail := func(err error) {
-		fmt.Printf("Faield with error: %s\n", err)
-	}
 
-	counter := newDiscoveryConnetionLogger(nodePorts)
+	for _, c := range testsCases {
+		t.Run(fmt.Sprintf("connections %v test", c.connections), func(t *testing.T) {
+			callOnLogErr := func(err error) {
+				fmt.Printf("logger failed with error: %s\n", err)
+			}
+			callOnFail := func(err error) {
+				fmt.Printf("Faield with error: %s\n", err)
+			}
 
-	l := logging.New(callOnLogErr, callOnFail, counter)
+			counter := newDiscoveryConnetionLogger(c.nodes)
 
-	w, err := wallet.New()
-	assert.NilError(t, err)
+			l := logging.New(callOnLogErr, callOnFail, counter)
 
-	v := wallet.NewVerifier()
-
-	ctx, cancel := context.WithCancel(context.Background())
-
-	genessisConfig := Config{
-		URL:        fmt.Sprintf("localhost:%v", nodePorts[0]),
-		GenesisURL: "",
-		Port:       nodePorts[0],
-	}
-	go func() {
-		err := RunGRPC(ctx, genessisConfig, l, time.Second*1, &w, v)
-		assert.NilError(t, err)
-	}()
-
-	for _, port := range nodePorts[1:] {
-		cfg := Config{
-			URL:        fmt.Sprintf("localhost:%v", port),
-			GenesisURL: fmt.Sprintf("localhost:%v", nodePorts[0]),
-			Port:       port,
-		}
-		go func(cfg Config) {
 			w, err := wallet.New()
 			assert.NilError(t, err)
+
 			v := wallet.NewVerifier()
-			err = RunGRPC(ctx, cfg, l, time.Second*1, &w, v)
-			assert.NilError(t, err)
-		}(cfg)
+
+			ctx, cancel := context.WithCancel(context.Background())
+
+			genessisConfig := Config{
+				URL:        fmt.Sprintf("localhost:%v", c.nodes[0]),
+				GenesisURL: "",
+				Port:       c.nodes[0],
+			}
+			go func() {
+				err := RunGRPC(ctx, genessisConfig, l, time.Second*1, &w, v)
+				assert.NilError(t, err)
+			}()
+
+			for _, port := range c.nodes[1:] {
+				cfg := Config{
+					URL:        fmt.Sprintf("localhost:%v", port),
+					GenesisURL: fmt.Sprintf("localhost:%v", c.nodes[0]),
+					Port:       port,
+				}
+				go func(cfg Config) {
+					w, err := wallet.New()
+					assert.NilError(t, err)
+					v := wallet.NewVerifier()
+					err = RunGRPC(ctx, cfg, l, time.Second*1, &w, v)
+					assert.NilError(t, err)
+				}(cfg)
+			}
+
+			time.Sleep(time.Second * 1)
+			cancel()
+
+			cnt := counter.readCounter()
+			fmt.Printf("counter: %v\n", cnt)
+			assert.Equal(t, int(cnt), c.connections)
+
+			time.Sleep(time.Millisecond * 200)
+		})
 	}
-
-	time.Sleep(time.Second * 2)
-	cancel()
-
-	cnt := counter.readCounter()
-	fmt.Printf("counter: %v\n", cnt)
-
-	time.Sleep(time.Second * 1)
 }

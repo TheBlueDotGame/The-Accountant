@@ -21,6 +21,7 @@ const _ = grpc.SupportPackageIsVersion7
 
 const (
 	GossipAPI_Alive_FullMethodName    = "/computantis.GossipAPI/Alive"
+	GossipAPI_Announce_FullMethodName = "/computantis.GossipAPI/Announce"
 	GossipAPI_Discover_FullMethodName = "/computantis.GossipAPI/Discover"
 	GossipAPI_Gossip_FullMethodName   = "/computantis.GossipAPI/Gossip"
 )
@@ -30,6 +31,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type GossipAPIClient interface {
 	Alive(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*AliveData, error)
+	Announce(ctx context.Context, in *ConnectionData, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	Discover(ctx context.Context, in *ConnectionData, opts ...grpc.CallOption) (*ConnectedNodes, error)
 	Gossip(ctx context.Context, in *VertexGossip, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
@@ -45,6 +47,15 @@ func NewGossipAPIClient(cc grpc.ClientConnInterface) GossipAPIClient {
 func (c *gossipAPIClient) Alive(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*AliveData, error) {
 	out := new(AliveData)
 	err := c.cc.Invoke(ctx, GossipAPI_Alive_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *gossipAPIClient) Announce(ctx context.Context, in *ConnectionData, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, GossipAPI_Announce_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -74,6 +85,7 @@ func (c *gossipAPIClient) Gossip(ctx context.Context, in *VertexGossip, opts ...
 // for forward compatibility
 type GossipAPIServer interface {
 	Alive(context.Context, *emptypb.Empty) (*AliveData, error)
+	Announce(context.Context, *ConnectionData) (*emptypb.Empty, error)
 	Discover(context.Context, *ConnectionData) (*ConnectedNodes, error)
 	Gossip(context.Context, *VertexGossip) (*emptypb.Empty, error)
 	mustEmbedUnimplementedGossipAPIServer()
@@ -85,6 +97,9 @@ type UnimplementedGossipAPIServer struct {
 
 func (UnimplementedGossipAPIServer) Alive(context.Context, *emptypb.Empty) (*AliveData, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Alive not implemented")
+}
+func (UnimplementedGossipAPIServer) Announce(context.Context, *ConnectionData) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Announce not implemented")
 }
 func (UnimplementedGossipAPIServer) Discover(context.Context, *ConnectionData) (*ConnectedNodes, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Discover not implemented")
@@ -119,6 +134,24 @@ func _GossipAPI_Alive_Handler(srv interface{}, ctx context.Context, dec func(int
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(GossipAPIServer).Alive(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GossipAPI_Announce_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ConnectionData)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GossipAPIServer).Announce(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: GossipAPI_Announce_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GossipAPIServer).Announce(ctx, req.(*ConnectionData))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -169,6 +202,10 @@ var GossipAPI_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Alive",
 			Handler:    _GossipAPI_Alive_Handler,
+		},
+		{
+			MethodName: "Announce",
+			Handler:    _GossipAPI_Announce_Handler,
 		},
 		{
 			MethodName: "Discover",
