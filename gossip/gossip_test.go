@@ -39,20 +39,20 @@ func (d *discoveryConnetionLogger) readCounter() int64 {
 
 func TestDiscoverProtocol(t *testing.T) {
 	testsCases := []struct {
-		nodes       []int
-		connections int
+		nodes      []int
+		handshakes int
 	}{
-		{connections: 2, nodes: []int{8080, 8081}},
-		{connections: 6, nodes: []int{8080, 8081, 8082}},
-		{connections: 12, nodes: []int{8080, 8081, 8082, 8083}},
-		{connections: 20, nodes: []int{8080, 8081, 8082, 8083, 8084}},
-		{connections: 30, nodes: []int{8080, 8081, 8082, 8083, 8084, 8085}},
-		{connections: 42, nodes: []int{8080, 8081, 8082, 8083, 8084, 8085, 8086}},
-		{connections: 56, nodes: []int{8080, 8081, 8082, 8083, 8084, 8085, 8086, 8087}},
+		{handshakes: 2, nodes: []int{8080, 8081}},
+		{handshakes: 6, nodes: []int{8080, 8081, 8082}},
+		{handshakes: 12, nodes: []int{8080, 8081, 8082, 8083}},
+		{handshakes: 20, nodes: []int{8080, 8081, 8082, 8083, 8084}},
+		{handshakes: 30, nodes: []int{8080, 8081, 8082, 8083, 8084, 8085}},
+		{handshakes: 42, nodes: []int{8080, 8081, 8082, 8083, 8084, 8085, 8086}},
+		{handshakes: 56, nodes: []int{8080, 8081, 8082, 8083, 8084, 8085, 8086, 8087}},
 	}
 
 	for _, c := range testsCases {
-		t.Run(fmt.Sprintf("connections %v test", c.connections), func(t *testing.T) {
+		t.Run(fmt.Sprintf("handshakes %v test", c.handshakes), func(t *testing.T) {
 			callOnLogErr := func(err error) {
 				fmt.Printf("logger failed with error: %s\n", err)
 			}
@@ -101,7 +101,7 @@ func TestDiscoverProtocol(t *testing.T) {
 
 			cnt := counter.readCounter()
 			fmt.Printf("counter: %v\n", cnt)
-			assert.Equal(t, int(cnt), c.connections)
+			assert.Equal(t, int(cnt), c.handshakes)
 
 			time.Sleep(time.Millisecond * 200)
 		})
