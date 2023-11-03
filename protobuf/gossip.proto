@@ -44,6 +44,7 @@ message ConnectedNodes {
 
 service GossipAPI {
     rpc Alive(google.protobuf.Empty) returns (AliveData) {}
+    rpc Announce(ConnectionData) returns (google.protobuf.Empty) {}
     rpc Discover(ConnectionData) returns (ConnectedNodes) {}
     rpc Gossip(VertexGossip) returns (google.protobuf.Empty) {}
 }

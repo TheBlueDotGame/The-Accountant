@@ -11,14 +11,18 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bartossh/Computantis/accountant"
 	"github.com/bartossh/Computantis/logger"
 	"github.com/bartossh/Computantis/protobufcompiled"
+	"github.com/bartossh/Computantis/spice"
 	"github.com/bartossh/Computantis/storage"
+	"github.com/bartossh/Computantis/transaction"
 	"github.com/bartossh/Computantis/versioning"
 	"github.com/dgraph-io/badger/v4"
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -75,8 +79,13 @@ type signer interface {
 	Address() string
 }
 
+type accounter interface {
+	AddLeaf(ctx context.Context, leaf *accountant.Vertex) error
+}
+
 type gossiper struct {
 	protobufcompiled.UnimplementedGossipAPIServer
+	accounter                accounter
 	verifier                 signatureVerifier
 	signer                   signer
 	log                      logger.Logger
@@ -91,7 +100,7 @@ type gossiper struct {
 
 // RunGRPC runs the service application that exposes the GRPC API for gossip protocol.
 // To stop server cancel the context.
-func RunGRPC(ctx context.Context, cfg Config, l logger.Logger, t time.Duration, s signer, v signatureVerifier) error {
+func RunGRPC(ctx context.Context, cfg Config, l logger.Logger, t time.Duration, s signer, v signatureVerifier, a accounter) error {
 	if err := cfg.verify(); err != nil {
 		return err
 	}
@@ -105,6 +114,7 @@ func RunGRPC(ctx context.Context, cfg Config, l logger.Logger, t time.Duration, 
 	}
 
 	g := gossiper{
+		accounter:                a,
 		verifier:                 v,
 		signer:                   s,
 		log:                      l,
@@ -132,24 +142,31 @@ func RunGRPC(ctx context.Context, cfg Config, l logger.Logger, t time.Duration, 
 	go g.runProcessVertexGossip(ctx)
 	go g.runTimeSortVertexGossip(ctx, cancel)
 
-	done := make(chan struct{}, 1)
 	go func() {
 		err = grpcServer.Serve(lis)
 		if err != nil {
+			g.log.Fatal(fmt.Sprintf("Node [ %s ] cannot start server on port [ %v ], %s", s.Address(), cfg.Port, err))
 			cancel()
 		}
-		close(done)
 	}()
 
-	<-done
+	time.Sleep(time.Millisecond * 50) // just wait so the server can start
+
 	defer grpcServer.GracefulStop()
 
 	if err == nil {
 		if err := g.updateNodesConnectionsFromGensisNode(ctx, cfg.GenesisURL); err != nil {
-			g.log.Fatal(err.Error())
+			g.log.Fatal(
+				fmt.Sprintf("Updating nodes on genesis URL [ %s ] for node [ %s ] failed, %s",
+					cfg.GenesisURL, g.signer.Address(), err.Error(),
+				),
+			)
 			cancel()
 		}
 	}
+
+	g.log.Info(fmt.Sprintf("Server started on port [ %v ] for node [ %s ].", cfg.Port, s.Address()))
+
 	<-ctxx.Done()
 
 	return nil
@@ -163,9 +180,31 @@ func (g *gossiper) Alive(_ context.Context, _ *emptypb.Empty) (*protobufcompiled
 	}, nil
 }
 
+func (g *gossiper) Announce(_ context.Context, cd *protobufcompiled.ConnectionData) (*emptypb.Empty, error) {
+	err := g.valiudateSignature(cd.PublicAddress, cd.PublicAddress, cd.Url, cd.CreatedAt, cd.Signature, [32]byte(cd.Digest))
+	if err != nil {
+		g.log.Info(fmt.Sprintf("Discovery attempt failed, public address [ %s ] with URL [ %s ], %s", cd.PublicAddress, cd.Url, err))
+		return nil, ErrDiscoveryAttmeptSignatureFailed
+	}
+	g.mux.Lock()
+	defer g.mux.Unlock()
+	if n, ok := g.nodes[cd.PublicAddress]; ok {
+		n.conn.Close()
+		delete(g.nodes, cd.PublicAddress)
+	}
+	nd, err := connectToNode(cd.Url)
+	if err != nil {
+		return nil, err
+	}
+
+	g.nodes[cd.PublicAddress] = nd
+	g.log.Info(fmt.Sprintf("Node [ %s ] connected to [ %s ] with URL [ %s ].", g.signer.Address(), cd.PublicAddress, cd.Url))
+
+	return &emptypb.Empty{}, nil
+}
+
 func (g *gossiper) Discover(_ context.Context, cd *protobufcompiled.ConnectionData) (*protobufcompiled.ConnectedNodes, error) {
-	createdAt := time.Unix(0, int64(cd.CreatedAt))
-	err := g.valiudateSignature(cd.PublicAddress, cd.PublicAddress, cd.Url, createdAt, cd.Signature, [32]byte(cd.Digest))
+	err := g.valiudateSignature(cd.PublicAddress, cd.PublicAddress, cd.Url, cd.CreatedAt, cd.Signature, [32]byte(cd.Digest))
 	if err != nil {
 		g.log.Info(fmt.Sprintf("Discovery attempt failed, public address [ %s ] with URL [ %s ], %s", cd.PublicAddress, cd.Url, err))
 		return nil, ErrDiscoveryAttmeptSignatureFailed
@@ -178,32 +217,36 @@ func (g *gossiper) Discover(_ context.Context, cd *protobufcompiled.ConnectionDa
 
 	g.mux.Lock()
 	defer g.mux.Unlock()
+	if n, ok := g.nodes[cd.PublicAddress]; ok {
+		n.conn.Close()
+		delete(g.nodes, cd.PublicAddress)
+	}
 
 	g.nodes[cd.PublicAddress] = nd
+	g.log.Info(fmt.Sprintf("Node [ %s ] connected to [ %s ] with URL [ %s ].", g.signer.Address(), cd.PublicAddress, cd.Url))
 
 	connected := &protobufcompiled.ConnectedNodes{
 		SignerPublicAddress: g.signer.Address(),
 		Connections:         make([]*protobufcompiled.ConnectionData, 0, len(g.nodes)+1),
 	}
-	now := time.Now()
+	now := uint64(time.Now().UnixNano())
 	data := initConnectionData(g.signer.Address(), g.url, now)
 	digest, signature := g.signer.Sign(data)
-
 	connected.Connections = append(connected.Connections, &protobufcompiled.ConnectionData{
 		PublicAddress: g.signer.Address(),
 		Url:           g.url,
-		CreatedAt:     uint64(now.Unix()),
+		CreatedAt:     now,
 		Digest:        digest[:],
 		Signature:     signature,
 	})
 
 	for address, nd := range g.nodes {
-		data = initConnectionData(address, nd.url, now)
-		digest, signature = g.signer.Sign(data)
+		data := initConnectionData(address, nd.url, now)
+		digest, signature := g.signer.Sign(data)
 		connected.Connections = append(connected.Connections, &protobufcompiled.ConnectionData{
 			PublicAddress: address,
 			Url:           nd.url,
-			CreatedAt:     uint64(now.Unix()),
+			CreatedAt:     now,
 			Digest:        digest[:],
 			Signature:     signature,
 		})
@@ -234,7 +277,7 @@ func (g *gossiper) Gossip(ctx context.Context, vg *protobufcompiled.VertexGossip
 		return txn.SetEntry(badger.NewEntry(vg.Vertex.Hash, []byte{}).WithTTL(vertexCacheLongevity))
 	})
 	if err != nil {
-		if errors.Is(err, ErrVertexInCache) {
+		if errors.Is(err, ErrVertexInCache) || errors.Is(err, badger.ErrConflict) {
 			return &emptypb.Empty{}, nil
 		}
 		return nil, ErrUnexpectedGossipFailure
@@ -246,7 +289,7 @@ func (g *gossiper) Gossip(ctx context.Context, vg *protobufcompiled.VertexGossip
 }
 
 func (g *gossiper) runTimeSortVertexGossip(ctx context.Context, cancel context.CancelFunc) {
-	close(g.vertexGossipTimeSortedCh)
+	defer close(g.vertexGossipTimeSortedCh)
 	t := time.NewTicker(time.Millisecond)
 	defer t.Stop()
 	vertexes := make([]*protobufcompiled.VertexGossip, 0, vertexGossipChCapacity)
@@ -256,9 +299,7 @@ func (g *gossiper) runTimeSortVertexGossip(ctx context.Context, cancel context.C
 			return
 		case vg := <-g.vertexGossipCh:
 			if vg == nil {
-				g.log.Fatal("Gossip process received nil Vertex Gossip")
-				cancel()
-				return
+				continue
 			}
 			vertexes = append(vertexes, vg)
 			slices.SortFunc(vertexes, func(a, b *protobufcompiled.VertexGossip) int {
@@ -297,7 +338,10 @@ func (g *gossiper) runProcessVertexGossip(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case vg := <-g.vertexGossipTimeSortedCh:
-			g.sendToAccountant(ctx, vg.Vertex)
+			if vg == nil {
+				continue
+			}
+			go g.sendToAccountant(ctx, vg.Vertex)
 			vg.Gossipers = append(vg.Gossipers, g.signer.Address())
 			set := toSet(vg.Gossipers)
 			vg.Gossipers = toSlice(set)
@@ -331,30 +375,37 @@ func (g *gossiper) closeAllNodesConnections() {
 }
 
 func (g *gossiper) updateNodesConnectionsFromGensisNode(ctx context.Context, genesisURL string) error {
-	conn, err := grpc.Dial(genesisURL)
-	if err != nil {
-		return err
+	if genesisURL == "" {
+		g.log.Info(fmt.Sprintf("Genesis Node URL is not specified. Node [ %s ] runs as Genesis Node.", g.signer.Address()))
+		return nil
 	}
+	opts := grpc.WithTransportCredentials(insecure.NewCredentials()) // TODO: remove when credentials are set
+	conn, err := grpc.Dial(genesisURL, opts)
+	if err != nil {
+		return fmt.Errorf("connection refused: %s", err)
+	}
+	defer func() {
+		if err := conn.Close(); err != nil {
+			g.log.Error(fmt.Sprintf("connection close error: %s", err))
+		}
+	}()
 
 	client := protobufcompiled.NewGossipAPIClient(conn)
-	now := time.Now()
+	now := uint64(time.Now().UnixNano())
 	data := initConnectionData(g.signer.Address(), g.url, now)
 	digest, signature := g.signer.Sign(data)
 
 	cd := &protobufcompiled.ConnectionData{
 		PublicAddress: g.signer.Address(),
 		Url:           g.url,
-		CreatedAt:     uint64(now.UnixNano()),
+		CreatedAt:     now,
 		Digest:        digest[:],
 		Signature:     signature,
 	}
 
 	result, err := client.Discover(ctx, cd)
 	if err != nil {
-		return err
-	}
-	if err := conn.Close(); err != nil {
-		return err
+		return fmt.Errorf("result error: %s", err)
 	}
 
 	g.mux.Lock()
@@ -364,12 +415,11 @@ func (g *gossiper) updateNodesConnectionsFromGensisNode(ctx context.Context, gen
 		if n.PublicAddress == g.signer.Address() || n.Url == g.url {
 			continue
 		}
-		createdAt := time.Unix(0, int64(n.CreatedAt))
-		err := g.valiudateSignature(result.SignerPublicAddress, n.PublicAddress, n.Url, createdAt, n.Signature, [32]byte(n.Digest))
+		err := g.valiudateSignature(result.SignerPublicAddress, n.PublicAddress, n.Url, n.CreatedAt, n.Signature, [32]byte(n.Digest))
 		if err != nil {
 			g.log.Warn(
-				fmt.Sprintf("Received connection [ %s ] for URL [ %s ] has corrupted signature. Signer [ %s ]",
-					n.PublicAddress, n.Url, result.SignerPublicAddress),
+				fmt.Sprintf("Received connection [ %s ] for URL [ %s ] has corrupted signature. Signer [ %s ], %s.",
+					n.PublicAddress, n.Url, result.SignerPublicAddress, err),
 			)
 			continue
 		}
@@ -379,27 +429,58 @@ func (g *gossiper) updateNodesConnectionsFromGensisNode(ctx context.Context, gen
 			continue
 		}
 		g.nodes[n.PublicAddress] = nd
+		g.log.Info(fmt.Sprintf("Node [ %s ] connected to [ %s ] with URL [ %s ].", g.signer.Address(), n.PublicAddress, n.Url))
+
+		if n.Url == genesisURL {
+			continue
+		}
+		if _, err := nd.client.Announce(ctx, cd); err != nil {
+			g.log.Info(fmt.Sprintf("Node [ %s ] connection back to [ %s ] with URL [ %s ] failed.", g.signer.Address(), n.PublicAddress, n.Url))
+		}
 	}
 
 	return nil
 }
 
 func (g *gossiper) sendToAccountant(ctx context.Context, vg *protobufcompiled.Vertex) {
-	// TODO: send to accountant DAG when implementd
-	fmt.Printf("unimplementd for vg created at: [ %v ] \n", vg.CreaterdAt)
-
-	// NOTE: after transformation from protobufcompiled.Vertex to accountant.Vertex, accountant can process leaf concurently
+	if vg.Transaction == nil {
+		return
+	}
+	v := accountant.Vertex{
+		SignerPublicAddress: vg.SignerPublicAddress,
+		CreatedAt:           time.Unix(0, int64(vg.CreaterdAt)),
+		Signature:           vg.Signature,
+		Transaction: transaction.Transaction{
+			CreatedAt:         time.Unix(0, int64(vg.CreaterdAt)),
+			IssuerAddress:     vg.Transaction.IssuerAddress,
+			ReceiverAddress:   vg.Transaction.ReceiverAddress,
+			Subject:           vg.Transaction.Subject,
+			Data:              vg.Transaction.Data,
+			IssuerSignature:   vg.Transaction.IssuerSignature,
+			ReceiverSignature: vg.Transaction.ReceiverSignature,
+			Hash:              [32]byte(vg.Transaction.Hash),
+			Spice:             spice.Melange{}, // TODO: implement spice in the GRPC
+		},
+		Hash:            [32]byte(vg.Hash),
+		LeftParentHash:  [32]byte(vg.LeftParentHash),
+		RightParentHash: [32]byte(vg.RightParentHash),
+		Weight:          vg.Weight,
+	}
+	if err := g.accounter.AddLeaf(ctx, &v); err != nil {
+		g.log.Info(fmt.Sprintf("Node [ %s ] adding leaf error: %s.", g.signer.Address(), err))
+	}
 }
 
-func (g *gossiper) valiudateSignature(sigAddr, pubAddr, url string, createdAt time.Time, signature []byte, hash [32]byte) error {
+func (g *gossiper) valiudateSignature(sigAddr, pubAddr, url string, createdAt uint64, signature []byte, hash [32]byte) error {
 	data := initConnectionData(pubAddr, url, createdAt)
 	return g.verifier.Verify(data, signature, hash, sigAddr)
 }
 
 func connectToNode(url string) (nodeData, error) {
-	conn, err := grpc.Dial(url)
+	opts := grpc.WithTransportCredentials(insecure.NewCredentials()) // TODO: remove when credentials are set
+	conn, err := grpc.Dial(url, opts)
 	if err != nil {
-		return nodeData{}, err
+		return nodeData{}, fmt.Errorf("dial failed, %s", err)
 	}
 
 	client := protobufcompiled.NewGossipAPIClient(conn)
@@ -410,9 +491,9 @@ func connectToNode(url string) (nodeData, error) {
 	}, nil
 }
 
-func initConnectionData(publicAddress, url string, createdAt time.Time) []byte {
+func initConnectionData(publicAddress, url string, createdAt uint64) []byte {
 	blockData := make([]byte, 0, 8)
-	blockData = binary.LittleEndian.AppendUint64(blockData, uint64(createdAt.UnixNano()))
+	blockData = binary.LittleEndian.AppendUint64(blockData, createdAt)
 	return bytes.Join([][]byte{
 		[]byte(publicAddress), []byte(url), blockData,
 	},
