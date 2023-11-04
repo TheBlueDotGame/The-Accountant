@@ -29,6 +29,7 @@ var (
 	ErrNewLeafRejected                       = errors.New("new leaf rejected")
 	ErrLeafRejected                          = errors.New("leaf rejected")
 	ErrDagIsLoaded                           = errors.New("dag is already loaded")
+	ErrDagIsNotLoaded                        = errors.New("dag is not loaded")
 	ErrLeafAlreadyExists                     = errors.New("leaf already exists")
 	ErrIssuerAddressBalanceNotFound          = errors.New("issuer address balance not found")
 	ErrReceiverAddressBalanceNotFound        = errors.New("receiver address balance not found")
@@ -462,6 +463,7 @@ VertxLoop:
 	if counter == 1 {
 		ab.lastVertexHash <- lastLeafHash
 		ab.lastVertexHash <- lastLeafHash
+		ab.dagLoaded = true
 		return
 	}
 
@@ -550,6 +552,9 @@ func (ab *AccountingBook) RemoveTrustedNode(trustedNodePublicAddress string) err
 // All the graph validations before adding the leaf happens in that function,
 // Created leaf will be a subject of validation by another tip.
 func (ab *AccountingBook) CreateLeaf(ctx context.Context, trx *transaction.Transaction) (Vertex, error) {
+	if !ab.DagLoaded() {
+		return Vertex{}, ErrDagIsNotLoaded
+	}
 	ok, err := ab.checkTrxInVertexExists(trx.Hash[:])
 	if err != nil {
 		ab.log.Error(fmt.Sprintf("Accounting book creating transaction failed when checking trx to vertex mapping, %s", err))
@@ -707,6 +712,9 @@ func (ab *AccountingBook) CreateLeaf(ctx context.Context, trx *transaction.Trans
 // AddLeaf adds leaf known also as tip to the graph for future validation.
 // Added leaf will be a subject of validation by another tip.
 func (ab *AccountingBook) AddLeaf(ctx context.Context, leaf *Vertex) error {
+	if !ab.DagLoaded() {
+		return ErrDagIsNotLoaded
+	}
 	if leaf == nil {
 		return errors.Join(ErrUnexpected, errors.New("leaf is nil"))
 	}

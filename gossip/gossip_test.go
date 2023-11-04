@@ -237,7 +237,8 @@ func TestGossipProtocol(t *testing.T) {
 								Hash:       generateData(32), // TODO: generate real hash and Trx data when accountant is implemented
 								CreaterdAt: uint64(time.Now().UnixNano()),
 								Transaction: &protobufcompiled.Transaction{
-									Hash: generateData(32),
+									Hash:  generateData(32),
+									Spice: &protobufcompiled.Spice{},
 								},
 								LeftParentHash:  generateData(32),
 								RightParentHash: generateData(32),
