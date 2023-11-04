@@ -502,7 +502,8 @@ func TestMultipleIssuerMultipleReceiversMultipleAccountantSpiceTransferLegitimat
 		verifier := wallet.NewVerifier()
 		signer, err := wallet.New()
 		assert.NilError(t, err)
-		ab, err := NewAccountingBook(ctx, Config{}, verifier, &signer, l)
+		loadDag := i > 0 // NOTE: crucial for tests, on all node genesis nodes dag shall be loaded from genessis
+		ab, err := NewAccountingBook(ctx, Config{LoadDAG: loadDag}, verifier, &signer, l)
 		assert.NilError(t, err)
 
 		switch i {
@@ -517,8 +518,12 @@ func TestMultipleIssuerMultipleReceiversMultipleAccountantSpiceTransferLegitimat
 			assert.DeepEqual(t, genesisSpice, vrx.Transaction.Spice)
 			issuer = genesisReceiver
 		default:
-			err := ab.AcceptGenesis(&vrx)
-			assert.NilError(t, err)
+			ctxx, cancelF := context.WithCancelCause(ctx)
+			cVrx := make(chan *Vertex, 2)
+			go ab.LoadDag(ctxx, cancelF, cVrx) // NOTE: crucial for tests, on all node genesis nodes dag shall be loaded from genessis
+			cVrx <- &vrx
+			time.Sleep(time.Millisecond * 100)
+			cancelF(nil)
 		}
 
 		nodes = append(nodes, ab)

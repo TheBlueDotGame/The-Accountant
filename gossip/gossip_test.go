@@ -51,12 +51,31 @@ func (d *discoveryConnetionLogger) readCounter() int64 {
 }
 
 type testAccountant struct {
-	counter atomic.Uint64
+	counter    atomic.Uint64
+	hasGenesis atomic.Bool
 }
 
 func (t *testAccountant) AddLeaf(ctx context.Context, leaf *accountant.Vertex) error {
 	t.counter.Add(1)
 	return nil
+}
+
+func (t *testAccountant) AcceptGenesis(vrx *accountant.Vertex) error {
+	t.counter.Add(1)
+	t.hasGenesis.Store(true)
+	return nil
+}
+
+func (t *testAccountant) StreamDAG(ctx context.Context) (<-chan *accountant.Vertex, <-chan error) {
+	return nil, nil
+}
+
+func (t *testAccountant) LoadDag(ctx context.Context, cancelF context.CancelCauseFunc, cVrx <-chan *accountant.Vertex) {
+	return
+}
+
+func (t *testAccountant) DagLoaded() bool {
+	return true
 }
 
 func (t *testAccountant) readCounter() uint64 {
@@ -240,3 +259,108 @@ func TestGossipProtocol(t *testing.T) {
 		})
 	}
 }
+
+//func TestDAGWithGossip(t *testing.T) {
+//	testsCases := []struct {
+//		nodes []int
+//	}{
+//		{nodes: []int{8080, 8081}},
+//		{nodes: []int{8080, 8081, 8082}},
+//		{nodes: []int{8080, 8081, 8082, 8083}},
+//		{nodes: []int{8080, 8081, 8082, 8083, 8084}},
+//		{nodes: []int{8080, 8081, 8082, 8083, 8084, 8085}},
+//		{nodes: []int{8080, 8081, 8082, 8083, 8084, 8085, 8086}},
+//		{nodes: []int{8080, 8081, 8082, 8083, 8084, 8085, 8086, 8087}},
+//	}
+//
+//	vertexRoundsPerNode := 10
+//
+//	for _, c := range testsCases {
+//		t.Run(fmt.Sprintf("gossip %v nodes", len(c.nodes)), func(t *testing.T) {
+//			callOnLogErr := func(err error) {
+//				fmt.Printf("logger failed with error: %s\n", err)
+//			}
+//			callOnFail := func(err error) {
+//				fmt.Printf("Faield with error: %s\n", err)
+//			}
+//
+//			l := logging.New(callOnLogErr, callOnFail, &stdoutwriter.Logger{})
+//
+//			w, err := wallet.New()
+//			assert.NilError(t, err)
+//
+//			v := wallet.NewVerifier()
+//
+//			ctx, cancel := context.WithCancel(context.Background())
+//
+//			genessisConfigNode := Config{
+//				URL:        fmt.Sprintf("localhost:%v", c.nodes[0]),
+//				GenesisURL: "",
+//				Port:       c.nodes[0],
+//			}
+//			genessisConfigAccountant := accountant.Config{}
+//
+//			nodesReadyCh := make(chan struct{})
+//
+//			genessisReceiver, err := wallet.New()
+//			assert.NilError(t, err)
+//
+//			go func() {
+//				acc, err := accountant.NewAccountingBook(ctx, genessisConfigAccountant, v, &w, l)
+//				assert.NilError(t, err)
+//				go func(nodesReadyCh <-chan struct{}) {
+//					<-nodesReadyCh
+//					acc.CreateGenesis("Genesis Test Transaction", spice.New(1000000000000000, 0), []byte{}, &genessisReceiver)
+//				}(nodesReadyCh)
+//				err = RunGRPC(ctx, genessisConfigNode, l, time.Second*1, &w, v, acc)
+//				assert.NilError(t, err)
+//			}()
+//
+//			var wg sync.WaitGroup
+//			for _, port := range c.nodes[1:] {
+//				wg.Add(1)
+//				cfg := Config{
+//					URL:        fmt.Sprintf("localhost:%v", port),
+//					GenesisURL: fmt.Sprintf("localhost:%v", c.nodes[0]),
+//					Port:       port,
+//				}
+//				w, err := wallet.New()
+//				assert.NilError(t, err)
+//				acc, err := accountant.NewAccountingBook(ctx, genessisConfigAccountant, v, &w, l)
+//				assert.NilError(t, err)
+//				go func(cfg Config) {
+//					v := wallet.NewVerifier()
+//					go func() {
+//						time.Sleep(time.Second)
+//						wg.Done()
+//					}()
+//					err = RunGRPC(ctx, cfg, l, time.Second*1, &w, v, acc)
+//					assert.NilError(t, err)
+//				}(cfg)
+//			}
+//			wg.Wait()
+//			close(nodesReadyCh)
+//
+//			for _, port := range c.nodes {
+//				wg.Add(1)
+//				go func(port int) {
+//					nd, err := connectToNode(fmt.Sprintf("localhost:%v", port))
+//					assert.NilError(t, err)
+//					for i := 0; i < vertexRoundsPerNode; i++ {
+//						time.Sleep(time.Millisecond)
+//						_, err := nd.client.Gossip(ctx, &vd)
+//						assert.NilError(t, err)
+//
+//					}
+//					nd.conn.Close()
+//					wg.Done()
+//				}(port)
+//			}
+//
+//			wg.Wait()
+//			time.Sleep(time.Second * 2) // Allow all the nodes inner process to finish.
+//			cancel()
+//			time.Sleep(time.Second)
+//		})
+//	}
+//}

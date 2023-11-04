@@ -28,6 +28,7 @@ var (
 	ErrLeafValidationProcessStopped          = errors.New("leaf validation process stopped")
 	ErrNewLeafRejected                       = errors.New("new leaf rejected")
 	ErrLeafRejected                          = errors.New("leaf rejected")
+	ErrDagIsLoaded                           = errors.New("dag is already loaded")
 	ErrLeafAlreadyExists                     = errors.New("leaf already exists")
 	ErrIssuerAddressBalanceNotFound          = errors.New("issuer address balance not found")
 	ErrReceiverAddressBalanceNotFound        = errors.New("receiver address balance not found")
@@ -64,6 +65,7 @@ type AccountingBook struct {
 	gennessisHash  [32]byte
 	weight         atomic.Uint64
 	throughput     atomic.Uint64
+	dagLoaded      bool
 }
 
 // New creates new AccountingBook.
@@ -98,6 +100,7 @@ func NewAccountingBook(ctx context.Context, cfg Config, verifier signatureVerifi
 		log:            l,
 		weight:         atomic.Uint64{},
 		throughput:     atomic.Uint64{},
+		dagLoaded:      !cfg.LoadDAG,
 	}
 
 	ab.unregister() // on new AccountingBook creation send to the register channel to unblock the register queue.
@@ -417,29 +420,116 @@ func (ab *AccountingBook) CreateGenesis(subject string, spc spice.Melange, data 
 	return vrx, nil
 }
 
-// AcceptGenesis accepts genesis vertex from the genesis node.
-func (ab *AccountingBook) AcceptGenesis(vrx *Vertex) error {
+// LoadDag loads stream of Vertices in to the DAG.
+func (ab *AccountingBook) LoadDag(ctx context.Context, cancelF context.CancelCauseFunc, cVrx <-chan *Vertex) {
+	if ab.DagLoaded() {
+		cancelF(ErrDagIsLoaded)
+		return
+	}
 	ab.register()
 	defer ab.unregister()
-	if len(ab.dag.GetVertices()) > 0 {
-		return ErrLeafRejected
+	defer ab.throughput.Store(initialThroughput)
+	defer ab.updateWaightAndThroughput(initialThroughput)
+
+	var counter int
+	var lastLeafHash [32]byte
+
+VertxLoop:
+	for {
+		select {
+		case <-ctx.Done():
+			break VertxLoop
+		case vrx := <-cVrx:
+			if err := ab.saveTrxInVertex(vrx.Transaction.Hash[:], vrx.Hash[:]); err != nil {
+				cancelF(ErrLeafRejected)
+				return
+			}
+
+			if err := ab.dag.AddVertexByID(string(vrx.Hash[:]), vrx); err != nil {
+				cancelF(err)
+				return
+			}
+			lastLeafHash = vrx.Hash
+			counter++
+		}
 	}
 
-	if err := ab.saveTrxInVertex(vrx.Transaction.Hash[:], vrx.Hash[:]); err != nil {
-		return errors.Join(ErrGenesisRejected, err)
+	if counter == 0 {
+		cancelF(ErrUnexpected)
+		return
 	}
 
-	if err := ab.dag.AddVertexByID(string(vrx.Hash[:]), vrx); err != nil {
-		return err
+	if counter == 1 {
+		ab.lastVertexHash <- lastLeafHash
+		ab.lastVertexHash <- lastLeafHash
+		return
 	}
 
-	ab.throughput.Store(initialThroughput)
-	ab.updateWaightAndThroughput(initialThroughput)
+	for _, item := range ab.dag.GetVertices() {
+		switch vrx := item.(type) {
+		case *Vertex:
+			for _, conn := range [][32]byte{vrx.LeftParentHash, vrx.RightParentHash} {
+				if err := ab.dag.AddEdge(string(conn[:]), string(vrx.Hash[:])); err != nil {
+					cancelF(err)
+					return
+				}
+			}
+		default:
+			cancelF(ErrUnexpected)
+			return
+		}
+	}
 
-	ab.lastVertexHash <- vrx.Hash
-	ab.lastVertexHash <- vrx.Hash
+	for _, item := range ab.dag.GetLeaves() {
+		switch vrx := item.(type) {
+		case *Vertex:
+			ab.lastVertexHash <- vrx.Hash
+			lastLeafHash = vrx.Hash
+		default:
+			cancelF(ErrUnexpected)
+			return
+		}
+	}
 
-	return nil
+	if len(ab.lastVertexHash) == 0 {
+		cancelF(ErrUnexpected)
+		return
+	}
+
+	if len(ab.lastVertexHash) == 1 {
+		ab.lastVertexHash <- lastLeafHash
+	}
+	ab.dagLoaded = true
+}
+
+func (ab *AccountingBook) DagLoaded() bool {
+	return ab.dagLoaded
+}
+
+func (ab *AccountingBook) StreamDAG(ctx context.Context) (<-chan *Vertex, <-chan error) {
+	cVrx := make(chan *Vertex, 100)
+	cDone := make(chan error, 1)
+	go func(cVrx chan<- *Vertex, cDone chan<- error) {
+	VerticesLoop:
+		for _, item := range ab.dag.GetVertices() {
+			select {
+			case <-ctx.Done():
+				break VerticesLoop
+			default:
+			}
+			switch vrx := item.(type) {
+			case *Vertex:
+				cVrx <- vrx
+			default:
+				cDone <- ErrUnexpected
+				break VerticesLoop
+			}
+		}
+		close(cDone)
+		close(cVrx)
+	}(cVrx, cDone)
+
+	return cVrx, cDone
 }
 
 // AddTrustedNode adds trusted node public address to the trusted nodes public address repository.

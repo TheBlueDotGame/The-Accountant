@@ -81,6 +81,9 @@ type signer interface {
 
 type accounter interface {
 	AddLeaf(ctx context.Context, leaf *accountant.Vertex) error
+	StreamDAG(ctx context.Context) (<-chan *accountant.Vertex, <-chan error)
+	LoadDag(ctx context.Context, cancelF context.CancelCauseFunc, cVrx <-chan *accountant.Vertex)
+	DagLoaded() bool
 }
 
 type gossiper struct {
@@ -253,6 +256,10 @@ func (g *gossiper) Discover(_ context.Context, cd *protobufcompiled.ConnectionDa
 	}
 
 	return connected, nil
+}
+
+func (g *gossiper) LoadDag(*emptypb.Empty, protobufcompiled.GossipAPI_LoadDagServer) error {
+	return nil
 }
 
 func (g *gossiper) Gossip(ctx context.Context, vg *protobufcompiled.VertexGossip) (*emptypb.Empty, error) {
@@ -466,6 +473,7 @@ func (g *gossiper) sendToAccountant(ctx context.Context, vg *protobufcompiled.Ve
 		RightParentHash: [32]byte(vg.RightParentHash),
 		Weight:          vg.Weight,
 	}
+
 	if err := g.accounter.AddLeaf(ctx, &v); err != nil {
 		g.log.Info(fmt.Sprintf("Node [ %s ] adding leaf error: %s.", g.signer.Address(), err))
 	}
