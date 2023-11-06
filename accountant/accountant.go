@@ -441,6 +441,9 @@ VertxLoop:
 		case <-ctx.Done():
 			break VertxLoop
 		case vrx := <-cVrx:
+			if vrx == nil {
+				break VertxLoop
+			}
 			if err := ab.saveTrxInVertex(vrx.Transaction.Hash[:], vrx.Hash[:]); err != nil {
 				cancelF(ErrLeafRejected)
 				return
