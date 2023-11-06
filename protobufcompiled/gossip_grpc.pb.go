@@ -21,6 +21,7 @@ const _ = grpc.SupportPackageIsVersion7
 
 const (
 	GossipAPI_Alive_FullMethodName    = "/computantis.GossipAPI/Alive"
+	GossipAPI_LoadDag_FullMethodName  = "/computantis.GossipAPI/LoadDag"
 	GossipAPI_Announce_FullMethodName = "/computantis.GossipAPI/Announce"
 	GossipAPI_Discover_FullMethodName = "/computantis.GossipAPI/Discover"
 	GossipAPI_Gossip_FullMethodName   = "/computantis.GossipAPI/Gossip"
@@ -31,6 +32,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type GossipAPIClient interface {
 	Alive(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*AliveData, error)
+	LoadDag(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (GossipAPI_LoadDagClient, error)
 	Announce(ctx context.Context, in *ConnectionData, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	Discover(ctx context.Context, in *ConnectionData, opts ...grpc.CallOption) (*ConnectedNodes, error)
 	Gossip(ctx context.Context, in *VertexGossip, opts ...grpc.CallOption) (*emptypb.Empty, error)
@@ -51,6 +53,38 @@ func (c *gossipAPIClient) Alive(ctx context.Context, in *emptypb.Empty, opts ...
 		return nil, err
 	}
 	return out, nil
+}
+
+func (c *gossipAPIClient) LoadDag(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (GossipAPI_LoadDagClient, error) {
+	stream, err := c.cc.NewStream(ctx, &GossipAPI_ServiceDesc.Streams[0], GossipAPI_LoadDag_FullMethodName, opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &gossipAPILoadDagClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type GossipAPI_LoadDagClient interface {
+	Recv() (*Vertex, error)
+	grpc.ClientStream
+}
+
+type gossipAPILoadDagClient struct {
+	grpc.ClientStream
+}
+
+func (x *gossipAPILoadDagClient) Recv() (*Vertex, error) {
+	m := new(Vertex)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 func (c *gossipAPIClient) Announce(ctx context.Context, in *ConnectionData, opts ...grpc.CallOption) (*emptypb.Empty, error) {
@@ -85,6 +119,7 @@ func (c *gossipAPIClient) Gossip(ctx context.Context, in *VertexGossip, opts ...
 // for forward compatibility
 type GossipAPIServer interface {
 	Alive(context.Context, *emptypb.Empty) (*AliveData, error)
+	LoadDag(*emptypb.Empty, GossipAPI_LoadDagServer) error
 	Announce(context.Context, *ConnectionData) (*emptypb.Empty, error)
 	Discover(context.Context, *ConnectionData) (*ConnectedNodes, error)
 	Gossip(context.Context, *VertexGossip) (*emptypb.Empty, error)
@@ -97,6 +132,9 @@ type UnimplementedGossipAPIServer struct {
 
 func (UnimplementedGossipAPIServer) Alive(context.Context, *emptypb.Empty) (*AliveData, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Alive not implemented")
+}
+func (UnimplementedGossipAPIServer) LoadDag(*emptypb.Empty, GossipAPI_LoadDagServer) error {
+	return status.Errorf(codes.Unimplemented, "method LoadDag not implemented")
 }
 func (UnimplementedGossipAPIServer) Announce(context.Context, *ConnectionData) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Announce not implemented")
@@ -136,6 +174,27 @@ func _GossipAPI_Alive_Handler(srv interface{}, ctx context.Context, dec func(int
 		return srv.(GossipAPIServer).Alive(ctx, req.(*emptypb.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
+}
+
+func _GossipAPI_LoadDag_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(emptypb.Empty)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(GossipAPIServer).LoadDag(m, &gossipAPILoadDagServer{stream})
+}
+
+type GossipAPI_LoadDagServer interface {
+	Send(*Vertex) error
+	grpc.ServerStream
+}
+
+type gossipAPILoadDagServer struct {
+	grpc.ServerStream
+}
+
+func (x *gossipAPILoadDagServer) Send(m *Vertex) error {
+	return x.ServerStream.SendMsg(m)
 }
 
 func _GossipAPI_Announce_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -216,6 +275,12 @@ var GossipAPI_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _GossipAPI_Gossip_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "LoadDag",
+			Handler:       _GossipAPI_LoadDag_Handler,
+			ServerStreams: true,
+		},
+	},
 	Metadata: "gossip.proto",
 }

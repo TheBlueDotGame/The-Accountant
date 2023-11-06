@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/url"
 	"sync"
@@ -53,6 +54,7 @@ type nodeData struct {
 type Config struct {
 	URL            string `yaml:"url"`
 	GenesisURL     string `yaml:"genesis_url"`
+	LoadDagURL     string `yaml:"load_dag_url"`
 	VerticesDBPath string `yaml:"vertices_db_path"`
 	Port           int    `yaml:"port"`
 }
@@ -65,6 +67,9 @@ func (c Config) verify() error {
 		return fmt.Errorf("cannot parse given genesis URL: [ %s ], %w", c.GenesisURL, err)
 	}
 	if _, err := url.Parse(c.URL); err != nil {
+		return fmt.Errorf("cannot parse given node URL: [ %s ], %w", c.URL, err)
+	}
+	if _, err := url.Parse(c.LoadDagURL); err != nil {
 		return fmt.Errorf("cannot parse given node URL: [ %s ], %w", c.URL, err)
 	}
 	return nil
@@ -81,6 +86,9 @@ type signer interface {
 
 type accounter interface {
 	AddLeaf(ctx context.Context, leaf *accountant.Vertex) error
+	StreamDAG(ctx context.Context) (<-chan *accountant.Vertex, <-chan error)
+	LoadDag(ctx context.Context, cancelF context.CancelCauseFunc, cVrx <-chan *accountant.Vertex)
+	DagLoaded() bool
 }
 
 type gossiper struct {
@@ -125,6 +133,15 @@ func RunGRPC(ctx context.Context, cfg Config, l logger.Logger, t time.Duration, 
 		url:                      cfg.URL,
 		mux:                      sync.RWMutex{},
 		timeout:                  t,
+	}
+
+	if cfg.LoadDagURL != "" {
+		if err := g.updateDag(ctx, cfg.LoadDagURL); err != nil {
+			cancel()
+			g.log.Error(fmt.Sprintf("Failed loading DAG: %s", err))
+			return err
+		}
+		g.log.Info(fmt.Sprintf("Node %s loaded DAG from URL: %s.", g.signer.Address(), cfg.URL))
 	}
 
 	defer g.closeAllNodesConnections()
@@ -255,6 +272,33 @@ func (g *gossiper) Discover(_ context.Context, cd *protobufcompiled.ConnectionDa
 	return connected, nil
 }
 
+func (g *gossiper) LoadDag(_ *emptypb.Empty, stream protobufcompiled.GossipAPI_LoadDagServer) error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	chVrx, chErr := g.accounter.StreamDAG(ctx)
+	var err error
+StreamLoop:
+	for {
+		select {
+		case vrx := <-chVrx:
+			if vrx == nil {
+				break StreamLoop
+			}
+			vr := mapAccountantVertexToProtoVertex(vrx)
+			err = stream.Send(vr)
+			if err != nil {
+				break StreamLoop
+			}
+		case err = <-chErr:
+			break StreamLoop
+		}
+	}
+	if err != nil {
+		g.log.Error(fmt.Sprintf("GRPC streaming DAG failed: %v", err))
+	}
+	return err
+}
+
 func (g *gossiper) Gossip(ctx context.Context, vg *protobufcompiled.VertexGossip) (*emptypb.Empty, error) {
 	if vg == nil {
 		return nil, ErrNilVertexGossip
@@ -286,6 +330,48 @@ func (g *gossiper) Gossip(ctx context.Context, vg *protobufcompiled.VertexGossip
 	g.vertexGossipCh <- vg
 
 	return &emptypb.Empty{}, nil
+}
+
+func (g *gossiper) updateDag(ctx context.Context, url string) error {
+	nd, err := connectToNode(url)
+	if err != nil {
+		return err
+	}
+	defer nd.conn.Close()
+
+	stream, err := nd.client.LoadDag(ctx, &emptypb.Empty{})
+	if err != nil {
+		return err
+	}
+
+	chVrx := make(chan *accountant.Vertex, 1000)
+	ctxx, cancel := context.WithCancelCause(ctx)
+	go g.accounter.LoadDag(ctxx, cancel, chVrx)
+
+	var errx error
+StreamRcvLoop:
+	for {
+		select {
+		case <-ctxx.Done():
+			if err := ctxx.Err(); err != nil && err != context.Canceled {
+				errx = err
+			}
+			break StreamRcvLoop
+		default:
+			vg, err := stream.Recv()
+			if err != nil || vg == nil {
+				errx = err
+				break StreamRcvLoop
+			}
+			vrx := mapProtoVertexToAccountantVertex(vg)
+			chVrx <- &vrx
+		}
+	}
+	if errx == nil || errx == io.EOF {
+		return nil
+	}
+	cancel(errx)
+	return errx
 }
 
 func (g *gossiper) runTimeSortVertexGossip(ctx context.Context, cancel context.CancelFunc) {
@@ -446,26 +532,7 @@ func (g *gossiper) sendToAccountant(ctx context.Context, vg *protobufcompiled.Ve
 	if vg.Transaction == nil {
 		return
 	}
-	v := accountant.Vertex{
-		SignerPublicAddress: vg.SignerPublicAddress,
-		CreatedAt:           time.Unix(0, int64(vg.CreaterdAt)),
-		Signature:           vg.Signature,
-		Transaction: transaction.Transaction{
-			CreatedAt:         time.Unix(0, int64(vg.CreaterdAt)),
-			IssuerAddress:     vg.Transaction.IssuerAddress,
-			ReceiverAddress:   vg.Transaction.ReceiverAddress,
-			Subject:           vg.Transaction.Subject,
-			Data:              vg.Transaction.Data,
-			IssuerSignature:   vg.Transaction.IssuerSignature,
-			ReceiverSignature: vg.Transaction.ReceiverSignature,
-			Hash:              [32]byte(vg.Transaction.Hash),
-			Spice:             spice.Melange{}, // TODO: implement spice in the GRPC
-		},
-		Hash:            [32]byte(vg.Hash),
-		LeftParentHash:  [32]byte(vg.LeftParentHash),
-		RightParentHash: [32]byte(vg.RightParentHash),
-		Weight:          vg.Weight,
-	}
+	v := mapProtoVertexToAccountantVertex(vg)
 	if err := g.accounter.AddLeaf(ctx, &v); err != nil {
 		g.log.Info(fmt.Sprintf("Node [ %s ] adding leaf error: %s.", g.signer.Address(), err))
 	}
@@ -515,4 +582,56 @@ func toSlice(m map[string]struct{}) []string {
 		s = append(s, k)
 	}
 	return s
+}
+
+func mapProtoVertexToAccountantVertex(vg *protobufcompiled.Vertex) accountant.Vertex {
+	return accountant.Vertex{
+		SignerPublicAddress: vg.SignerPublicAddress,
+		CreatedAt:           time.Unix(0, int64(vg.CreaterdAt)),
+		Signature:           vg.Signature,
+		Transaction: transaction.Transaction{
+			CreatedAt:         time.Unix(0, int64(vg.CreaterdAt)),
+			IssuerAddress:     vg.Transaction.IssuerAddress,
+			ReceiverAddress:   vg.Transaction.ReceiverAddress,
+			Subject:           vg.Transaction.Subject,
+			Data:              vg.Transaction.Data,
+			IssuerSignature:   vg.Transaction.IssuerSignature,
+			ReceiverSignature: vg.Transaction.ReceiverSignature,
+			Hash:              [32]byte(vg.Transaction.Hash),
+			Spice: spice.Melange{
+				Currency:              vg.Transaction.Spice.Currency,
+				SupplementaryCurrency: vg.Transaction.Spice.SuplementaryCurrency,
+			},
+		},
+		Hash:            [32]byte(vg.Hash),
+		LeftParentHash:  [32]byte(vg.LeftParentHash),
+		RightParentHash: [32]byte(vg.RightParentHash),
+		Weight:          vg.Weight,
+	}
+}
+
+func mapAccountantVertexToProtoVertex(vrx *accountant.Vertex) *protobufcompiled.Vertex {
+	return &protobufcompiled.Vertex{
+		SignerPublicAddress: vrx.SignerPublicAddress,
+		CreaterdAt:          uint64(vrx.CreatedAt.UnixNano()),
+		Signature:           vrx.Signature,
+		Transaction: &protobufcompiled.Transaction{
+			Subject:           vrx.Transaction.Subject,
+			Data:              vrx.Transaction.Data,
+			Hash:              vrx.Transaction.Hash[:],
+			CreaterdAt:        uint64(vrx.Transaction.CreatedAt.UnixNano()),
+			ReceiverAddress:   vrx.Transaction.ReceiverAddress,
+			IssuerAddress:     vrx.Transaction.IssuerAddress,
+			ReceiverSignature: vrx.Transaction.ReceiverSignature,
+			IssuerSignature:   vrx.Transaction.IssuerSignature,
+			Spice: &protobufcompiled.Spice{
+				Currency:             vrx.Transaction.Spice.Currency,
+				SuplementaryCurrency: vrx.Transaction.Spice.SupplementaryCurrency,
+			},
+		},
+		Hash:            vrx.Hash[:],
+		LeftParentHash:  vrx.LeftParentHash[:],
+		RightParentHash: vrx.RightParentHash[:],
+		Weight:          vrx.Weight,
+	}
 }

@@ -502,7 +502,8 @@ func TestMultipleIssuerMultipleReceiversMultipleAccountantSpiceTransferLegitimat
 		verifier := wallet.NewVerifier()
 		signer, err := wallet.New()
 		assert.NilError(t, err)
-		ab, err := NewAccountingBook(ctx, Config{}, verifier, &signer, l)
+		loadDag := i > 0 // NOTE: crucial for tests, on all node genesis nodes dag shall be loaded from genessis
+		ab, err := NewAccountingBook(ctx, Config{LoadDAG: loadDag}, verifier, &signer, l)
 		assert.NilError(t, err)
 
 		switch i {
@@ -517,8 +518,12 @@ func TestMultipleIssuerMultipleReceiversMultipleAccountantSpiceTransferLegitimat
 			assert.DeepEqual(t, genesisSpice, vrx.Transaction.Spice)
 			issuer = genesisReceiver
 		default:
-			err := ab.AcceptGenesis(&vrx)
-			assert.NilError(t, err)
+			ctxx, cancelF := context.WithCancelCause(ctx)
+			cVrx := make(chan *Vertex, 2)
+			go ab.LoadDag(ctxx, cancelF, cVrx) // NOTE: crucial for tests, on all node genesis nodes dag shall be loaded from genessis
+			cVrx <- &vrx
+			time.Sleep(time.Millisecond * 100)
+			cancelF(nil)
 		}
 
 		nodes = append(nodes, ab)
@@ -563,6 +568,78 @@ func TestMultipleIssuerMultipleReceiversMultipleAccountantSpiceTransferLegitimat
 	}
 
 	time.Sleep(time.Millisecond * 200)
+}
+
+func TestMultipleIssuerMultipleReceiversMultipleAccountantSpiceLoadDAG(t *testing.T) {
+	callOnLogErr := func(err error) {
+		fmt.Printf("logger failed with error: %s\n", err)
+	}
+	callOnFail := func(err error) {
+		fmt.Printf("Failed with error: %s\n", err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	l := logging.New(callOnLogErr, callOnFail, &stdoutwriter.Logger{})
+
+	var vrx Vertex
+	var issuer wallet.Wallet
+	verifier := wallet.NewVerifier()
+	signer, err := wallet.New()
+	assert.NilError(t, err)
+	ab, err := NewAccountingBook(ctx, Config{LoadDAG: false}, verifier, &signer, l)
+	assert.NilError(t, err)
+
+	genesisSpice := spice.New(math.MaxUint64-1, 0)
+	genesisReceiver, err := wallet.New()
+	assert.NilError(t, err)
+	vrx, err = ab.CreateGenesis("GENESIS", genesisSpice, []byte{}, &genesisReceiver)
+	assert.NilError(t, err)
+	ok := vrx.Transaction.IsSpiceTransfer()
+	assert.Equal(t, ok, true)
+	assert.DeepEqual(t, genesisSpice, vrx.Transaction.Spice)
+	issuer = genesisReceiver
+
+	numberOfParticipants := 20
+	numberOfRounds := 10
+
+	var receiver wallet.Wallet
+
+	for rec := 0; rec < numberOfParticipants; rec++ {
+		receiver, err := wallet.New()
+		assert.NilError(t, err)
+		spiceMainTransfer := 10
+		var mainSpiceReduction atomic.Int64
+		for i := 0; i < numberOfRounds; i++ {
+			spc := spice.New(uint64(spiceMainTransfer), 0)
+			trx, err := transaction.New(fmt.Sprintf("Spice supply from: %v to %v, trx number: %v", issuer.Address(), receiver.Address(), i), spc, []byte{}, receiver.Address(), &issuer)
+			assert.NilError(t, err)
+			_, err = ab.CreateLeaf(ctx, &trx)
+			assert.NilError(t, err)
+			mainSpiceReduction.Add(int64(spiceMainTransfer))
+		}
+		issuer = receiver
+	}
+
+	balanceGenessis, err := ab.CalculateBalance(ctx, receiver.Address())
+	assert.NilError(t, err)
+	// Load Dag test.
+	abLoad, err := NewAccountingBook(ctx, Config{LoadDAG: true}, verifier, &signer, l)
+	assert.NilError(t, err)
+
+	ctxx, cancelF := context.WithCancelCause(ctx)
+	cVrx, cErr := ab.StreamDAG(ctxx)
+	go abLoad.LoadDag(ctxx, cancelF, cVrx)
+
+	err = <-cErr
+	assert.NilError(t, err)
+	cancelF(nil)
+
+	balanceLoadedDag, err := ab.CalculateBalance(ctx, receiver.Address())
+	assert.NilError(t, err)
+
+	time.Sleep(time.Millisecond * 200)
+	assert.Equal(t, int64(balanceGenessis.Spice.Currency), int64(balanceLoadedDag.Spice.Currency))
 }
 
 func BenchmarkSingleIssuerSingleReceiverSpiceTransferConsecutive(b *testing.B) {

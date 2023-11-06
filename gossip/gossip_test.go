@@ -14,6 +14,7 @@ import (
 	"github.com/bartossh/Computantis/accountant"
 	"github.com/bartossh/Computantis/logging"
 	"github.com/bartossh/Computantis/protobufcompiled"
+	"github.com/bartossh/Computantis/spice"
 	"github.com/bartossh/Computantis/stdoutwriter"
 	"github.com/bartossh/Computantis/wallet"
 	"gotest.tools/v3/assert"
@@ -28,20 +29,25 @@ func generateData(l int) []byte {
 }
 
 type discoveryConnetionLogger struct {
-	ports   []int
-	counter atomic.Int64
+	contains string
+	ports    []int
+	counter  atomic.Int64
 }
 
-func newDiscoveryConnetionLogger(ports []int) *discoveryConnetionLogger {
-	return &discoveryConnetionLogger{ports: ports, counter: atomic.Int64{}}
+func newDiscoveryConnetionLogger(ports []int, contains string) *discoveryConnetionLogger {
+	return &discoveryConnetionLogger{contains: contains, ports: ports, counter: atomic.Int64{}}
 }
 
 func (d *discoveryConnetionLogger) Write(p []byte) (n int, err error) {
-	for _, port := range d.ports {
-		substring := strconv.Itoa(port)
-		if strings.Contains(string(p), substring) && strings.Contains(string(p), "connected to") {
-			d.counter.Add(1)
+	if len(d.ports) > 0 {
+		for _, port := range d.ports {
+			substring := strconv.Itoa(port)
+			if strings.Contains(string(p), substring) && strings.Contains(string(p), d.contains) {
+				d.counter.Add(1)
+			}
 		}
+	} else if strings.Contains(string(p), d.contains) {
+		d.counter.Add(1)
 	}
 	return len(p), nil
 }
@@ -51,12 +57,31 @@ func (d *discoveryConnetionLogger) readCounter() int64 {
 }
 
 type testAccountant struct {
-	counter atomic.Uint64
+	counter    atomic.Uint64
+	hasGenesis atomic.Bool
 }
 
 func (t *testAccountant) AddLeaf(ctx context.Context, leaf *accountant.Vertex) error {
 	t.counter.Add(1)
 	return nil
+}
+
+func (t *testAccountant) AcceptGenesis(vrx *accountant.Vertex) error {
+	t.counter.Add(1)
+	t.hasGenesis.Store(true)
+	return nil
+}
+
+func (t *testAccountant) StreamDAG(ctx context.Context) (<-chan *accountant.Vertex, <-chan error) {
+	return nil, nil
+}
+
+func (t *testAccountant) LoadDag(ctx context.Context, cancelF context.CancelCauseFunc, cVrx <-chan *accountant.Vertex) {
+	return
+}
+
+func (t *testAccountant) DagLoaded() bool {
+	return true
 }
 
 func (t *testAccountant) readCounter() uint64 {
@@ -86,7 +111,7 @@ func TestDiscoverProtocol(t *testing.T) {
 				fmt.Printf("Faield with error: %s\n", err)
 			}
 
-			counter := newDiscoveryConnetionLogger(c.nodes)
+			counter := newDiscoveryConnetionLogger(c.nodes, "connected to")
 
 			l := logging.New(callOnLogErr, callOnFail, counter)
 
@@ -218,7 +243,8 @@ func TestGossipProtocol(t *testing.T) {
 								Hash:       generateData(32), // TODO: generate real hash and Trx data when accountant is implemented
 								CreaterdAt: uint64(time.Now().UnixNano()),
 								Transaction: &protobufcompiled.Transaction{
-									Hash: generateData(32),
+									Hash:  generateData(32),
+									Spice: &protobufcompiled.Spice{},
 								},
 								LeftParentHash:  generateData(32),
 								RightParentHash: generateData(32),
@@ -237,6 +263,101 @@ func TestGossipProtocol(t *testing.T) {
 			time.Sleep(time.Second * 2) // Allow all the nodes inner process to finish.
 			cancel()
 			time.Sleep(time.Second)
+		})
+	}
+}
+
+func TestDAGWithGossip(t *testing.T) {
+	testsCases := []struct {
+		nodes []int
+	}{
+		{nodes: []int{8080, 8081}},
+		{nodes: []int{8080, 8081, 8082}},
+		{nodes: []int{8080, 8081, 8082, 8083}},
+		{nodes: []int{8080, 8081, 8082, 8083, 8084}},
+		{nodes: []int{8080, 8081, 8082, 8083, 8084, 8085}},
+		{nodes: []int{8080, 8081, 8082, 8083, 8084, 8085, 8086}},
+		{nodes: []int{8080, 8081, 8082, 8083, 8084, 8085, 8086, 8087}},
+	}
+
+	for _, c := range testsCases {
+		t.Run(fmt.Sprintf("gossip %v nodes", len(c.nodes)), func(t *testing.T) {
+			callOnLogErr := func(err error) {
+				fmt.Printf("logger failed with error: %s\n", err)
+			}
+			callOnFail := func(err error) {
+				fmt.Printf("failed with error: %s\n", err)
+			}
+
+			l := logging.New(callOnLogErr, callOnFail, &stdoutwriter.Logger{})
+
+			w, err := wallet.New()
+			assert.NilError(t, err)
+
+			v := wallet.NewVerifier()
+
+			ctx, cancel := context.WithCancel(context.Background())
+
+			genessisConfigNode := Config{
+				URL:        fmt.Sprintf("localhost:%v", c.nodes[0]),
+				GenesisURL: "",
+				Port:       c.nodes[0],
+			}
+			genessisConfigAccountant := accountant.Config{}
+
+			genessisReceiver, err := wallet.New()
+			assert.NilError(t, err)
+
+			var accGenesis *accountant.AccountingBook
+			doneGenesis := make(chan struct{})
+			go func() {
+				var err error
+				accGenesis, err = accountant.NewAccountingBook(ctx, genessisConfigAccountant, v, &w, l)
+				assert.NilError(t, err)
+				go func() {
+					accGenesis.CreateGenesis("Genesis Test Transaction", spice.New(1000000000000000, 0), []byte{}, &genessisReceiver)
+					close(doneGenesis)
+				}()
+				err = RunGRPC(ctx, genessisConfigNode, l, time.Second*1, &w, v, accGenesis)
+				assert.NilError(t, err)
+			}()
+
+			<-doneGenesis
+
+			discovery := newDiscoveryConnetionLogger([]int{}, "loaded DAG from URL")
+			counterLogger := logging.New(callOnLogErr, callOnFail, discovery)
+
+			var wg sync.WaitGroup
+			for _, port := range c.nodes[1:] {
+				wg.Add(1)
+				cfg := Config{
+					URL:        fmt.Sprintf("localhost:%v", port),
+					GenesisURL: fmt.Sprintf("localhost:%v", c.nodes[0]),
+					LoadDagURL: fmt.Sprintf("localhost:%v", c.nodes[0]),
+					Port:       port,
+				}
+				w, err := wallet.New()
+				assert.NilError(t, err)
+				acc, err := accountant.NewAccountingBook(ctx, genessisConfigAccountant, v, &w, l)
+				assert.NilError(t, err)
+				go func(cfg Config) {
+					v := wallet.NewVerifier()
+					go func() {
+						time.Sleep(time.Millisecond * 100)
+						wg.Done()
+					}()
+					err = RunGRPC(ctx, cfg, counterLogger, time.Second*1, &w, v, acc)
+					assert.NilError(t, err)
+				}(cfg)
+			}
+			wg.Wait()
+
+			time.Sleep(time.Second * 1) // Allow all the nodes inner process to finish.
+			cancel()
+
+			assert.Equal(t, int(discovery.counter.Load()), len(c.nodes[1:]))
+
+			time.Sleep(time.Millisecond * 200) // just to safely close al the gossip process and to not polute loger
 		})
 	}
 }
