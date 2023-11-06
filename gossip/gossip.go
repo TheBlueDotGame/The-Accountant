@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/url"
 	"sync"
@@ -137,8 +138,10 @@ func RunGRPC(ctx context.Context, cfg Config, l logger.Logger, t time.Duration, 
 	if cfg.LoadDagURL != "" {
 		if err := g.updateDag(ctx, cfg.LoadDagURL); err != nil {
 			cancel()
+			g.log.Error(fmt.Sprintf("Failed loading DAG: %s", err))
 			return err
 		}
+		g.log.Info(fmt.Sprintf("Node %s loaded DAG from URL: %s.", g.signer.Address(), cfg.URL))
 	}
 
 	defer g.closeAllNodesConnections()
@@ -278,6 +281,9 @@ StreamLoop:
 	for {
 		select {
 		case vrx := <-chVrx:
+			if vrx == nil {
+				break StreamLoop
+			}
 			vr := mapAccountantVertexToProtoVertex(vrx)
 			err = stream.Send(vr)
 			if err != nil {
@@ -286,6 +292,9 @@ StreamLoop:
 		case err = <-chErr:
 			break StreamLoop
 		}
+	}
+	if err != nil {
+		g.log.Error(fmt.Sprintf("GRPC streaming DAG failed: %v", err))
 	}
 	return err
 }
@@ -335,23 +344,22 @@ func (g *gossiper) updateDag(ctx context.Context, url string) error {
 		return err
 	}
 
+	chVrx := make(chan *accountant.Vertex, 1000)
 	ctxx, cancel := context.WithCancelCause(ctx)
-	chVrx := make(chan *accountant.Vertex)
 	go g.accounter.LoadDag(ctxx, cancel, chVrx)
 
 	var errx error
-	defer cancel(errx)
 StreamRcvLoop:
 	for {
 		select {
 		case <-ctxx.Done():
-			if err := ctxx.Err(); err != nil {
+			if err := ctxx.Err(); err != nil && err != context.Canceled {
 				errx = err
 			}
 			break StreamRcvLoop
 		default:
 			vg, err := stream.Recv()
-			if err != nil {
+			if err != nil || vg == nil {
 				errx = err
 				break StreamRcvLoop
 			}
@@ -359,6 +367,10 @@ StreamRcvLoop:
 			chVrx <- &vrx
 		}
 	}
+	if errx == nil || errx == io.EOF {
+		return nil
+	}
+	cancel(errx)
 	return errx
 }
 
