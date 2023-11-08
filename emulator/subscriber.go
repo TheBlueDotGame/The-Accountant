@@ -93,7 +93,6 @@ func RunSubscriber(ctx context.Context, cancel context.CancelFunc, config Config
 	router.Use(cors.New())
 	router.Use(recover.New())
 	router.Post(WebHookEndpointTransaction, s.hookTransaction)
-	router.Post(WebHookEndpointTransaction, s.hookTransaction)
 	router.Get(MessageEndpoint, s.messages)
 
 	var err error
@@ -146,25 +145,6 @@ func (sub *subscriber) messages(c *fiber.Ctx) error {
 	return c.JSON(sub.buffer)
 }
 
-func (sub *subscriber) hookBlock(ctx *fiber.Ctx) error {
-	hookRes := make(map[string]bool)
-
-	var res webhooks.WebHookNewBlockMessage
-	if err := ctx.BodyParser(&res); err != nil {
-		pterm.Error.Println(err.Error())
-		hookRes["ack"] = false
-		hookRes["ok"] = false
-		return ctx.JSON(hookRes)
-	}
-
-	sub.mux.Lock()
-	defer sub.mux.Unlock()
-
-	hookRes["ack"] = true
-	hookRes["ok"] = true
-	return ctx.JSON(hookRes)
-}
-
 func (sub *subscriber) hookTransaction(ctx *fiber.Ctx) error {
 	hookRes := make(map[string]bool)
 
@@ -199,8 +179,8 @@ func (sub *subscriber) actOnTransactions(notaryNodeURL string) {
 	sub.mux.Lock()
 	defer sub.mux.Unlock()
 
-	var resReceivedTransactions walletapi.ReceivedTransactionResponse
-	url := fmt.Sprintf("%s%s", sub.pub.clientURL, walletapi.GetReceivedTransactions)
+	var resReceivedTransactions walletapi.TransactionsResponse
+	url := fmt.Sprintf("%s%s", sub.pub.clientURL, walletapi.GetWaitingTransactions)
 	if err := httpclient.MakePost(sub.pub.timeout, url, notaryNodeURL, &resReceivedTransactions); err != nil {
 		pterm.Error.Println(err.Error())
 		return
@@ -214,17 +194,17 @@ func (sub *subscriber) actOnTransactions(notaryNodeURL string) {
 	}
 
 	var counter int
-	var confirmRes walletapi.ConfirmTransactionResponse
+	var confirmRes walletapi.TransactionResponse
 
 	for _, trx := range resReceivedTransactions.Transactions {
 		if err := sub.validateData(trx.Data); err != nil {
 			pterm.Warning.Printf("Trx [ %x ] data [ %s ] rejected, %s.\n", trx.Hash[:], trx.Data, err)
 
-			rejectReq := walletapi.RejectTransactionsRequest{
+			rejectReq := walletapi.TransactionsRequest{
 				NotaryNodeURL: notaryNodeURL,
 				Transactions:  []transaction.Transaction{trx},
 			}
-			var rejectRes walletapi.RejectedTransactionResponse
+			var rejectRes walletapi.TransactionResponse
 			url := fmt.Sprintf("%s%s", sub.pub.clientURL, walletapi.RejectTransactions)
 			if err := httpclient.MakePost(sub.pub.timeout, url, rejectReq, &rejectRes); err != nil {
 				pterm.Error.Printf("Transaction faild to be rejected due to: %s.\n", err)
@@ -236,7 +216,7 @@ func (sub *subscriber) actOnTransactions(notaryNodeURL string) {
 
 		pterm.Info.Printf("Trx [ %x ] data [ %s ] accepted.\n", trx.Hash[:], string(trx.Data))
 
-		confirmReq := walletapi.ConfirmTransactionRequest{
+		confirmReq := walletapi.TransactionRequest{
 			NotaryNodeURL: notaryNodeURL,
 			Transaction:   trx,
 		}

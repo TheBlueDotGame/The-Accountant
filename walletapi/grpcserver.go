@@ -128,69 +128,9 @@ func (a *app) IssuedTransactions(ctx context.Context, notaryNode *protobufcompil
 		}, err
 	}
 
-	transactions, err := a.centralNodeClient.ReadIssuedTransactions(notaryNode.Url)
-	if err != nil {
-		err := fmt.Errorf("error getting issued transactions: %v", err)
-		a.log.Error(err.Error())
-		return &protobufcompiled.Transactions{
-			Transactions: nil,
-			Info: &protobufcompiled.ServerInfo{
-				Ok:  false,
-				Err: err.Error(),
-			},
-		}, err
-	}
-
-	trxs := make([]*protobufcompiled.Transaction, 0, len(transactions))
-	for _, transaction := range transactions {
-		trxs = append(trxs, &protobufcompiled.Transaction{
-			Subject:           transaction.Subject,
-			Data:              transaction.Data,
-			Hash:              transaction.Hash[:],
-			CreaterdAt:        uint64(transaction.CreatedAt.UnixNano()),
-			IssuerAddress:     transaction.IssuerAddress,
-			ReceiverAddress:   transaction.ReceiverAddress,
-			IssuerSignature:   transaction.IssuerSignature,
-			ReceiverSignature: transaction.ReceiverSignature,
-		})
-	}
-
-	return &protobufcompiled.Transactions{
-		Transactions: trxs,
-		Info: &protobufcompiled.ServerInfo{
-			Ok: true,
-		},
-	}, nil
-}
-
-// ReceivedTransactions implements wallet client API GRPC read received transactions.
-// Procedure returns client awaiting transactions if exists in the system.
-func (a *app) ReceivedTransactions(ctx context.Context, notaryNode *protobufcompiled.NotaryNode) (*protobufcompiled.Transactions, error) {
-	if notaryNode.Url == "" {
-		a.log.Error("notary node URL is empty in the message")
-		err := errors.New("empty notary node URL")
-		return &protobufcompiled.Transactions{
-			Transactions: nil,
-			Info: &protobufcompiled.ServerInfo{
-				Ok:  false,
-				Err: err.Error(),
-			},
-		}, err
-	}
-	if _, err := url.Parse(notaryNode.Url); err != nil {
-		a.log.Error(fmt.Sprintf("wrong URL format, notary node URL cannot be parsed, %s", err))
-		return &protobufcompiled.Transactions{
-			Transactions: nil,
-			Info: &protobufcompiled.ServerInfo{
-				Ok:  false,
-				Err: err.Error(),
-			},
-		}, err
-	}
-
 	transactions, err := a.centralNodeClient.ReadWaitingTransactions(notaryNode.Url)
 	if err != nil {
-		err := fmt.Errorf("error getting waiting transactions: %v", err)
+		err := fmt.Errorf("error getting issued transactions: %v", err)
 		a.log.Error(err.Error())
 		return &protobufcompiled.Transactions{
 			Transactions: nil,
@@ -229,44 +169,6 @@ func (a *app) ApprovedTransactions(ctx context.Context, paggination *protobufcom
 	transactions, err := a.centralNodeClient.ReadApprovedTransactions(int(paggination.Offset), int(paggination.Limit))
 	if err != nil {
 		err := fmt.Errorf("error getting approved transactions: %v", err)
-		a.log.Error(err.Error())
-		return &protobufcompiled.Transactions{
-			Transactions: nil,
-			Info: &protobufcompiled.ServerInfo{
-				Ok:  false,
-				Err: err.Error(),
-			},
-		}, err
-	}
-
-	trxs := make([]*protobufcompiled.Transaction, 0, len(transactions))
-	for _, transaction := range transactions {
-		trxs = append(trxs, &protobufcompiled.Transaction{
-			Subject:           transaction.Subject,
-			Data:              transaction.Data,
-			Hash:              transaction.Hash[:],
-			CreaterdAt:        uint64(transaction.CreatedAt.UnixNano()),
-			IssuerAddress:     transaction.IssuerAddress,
-			ReceiverAddress:   transaction.ReceiverAddress,
-			IssuerSignature:   transaction.IssuerSignature,
-			ReceiverSignature: transaction.ReceiverSignature,
-		})
-	}
-
-	return &protobufcompiled.Transactions{
-		Transactions: trxs,
-		Info: &protobufcompiled.ServerInfo{
-			Ok: true,
-		},
-	}, nil
-}
-
-// RejectedTransactions implements wallet client API GRPC read rejected transactions.
-// Procedure returns client rejected transactions if exists in the system.
-func (a *app) RejectedTransactions(ctx context.Context, paggination *protobufcompiled.Paggination) (*protobufcompiled.Transactions, error) {
-	transactions, err := a.centralNodeClient.ReadRejectedTransactions(int(paggination.Offset), int(paggination.Limit))
-	if err != nil {
-		err := fmt.Errorf("error getting rejected transactions: %v", err)
 		a.log.Error(err.Error())
 		return &protobufcompiled.Transactions{
 			Transactions: nil,

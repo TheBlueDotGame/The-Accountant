@@ -1,27 +1,27 @@
 build-local:
-	CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/dedicated/notary -ldflags="-s -w" cmd/notary/main.go
-	CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/dedicated/helper -ldflags="-s -w" cmd/helper/main.go
+	CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/dedicated/node -ldflags="-s -w" cmd/node/main.go
+	CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/dedicated/webhooks -ldflags="-s -w" cmd/webhooks/main.go
 	CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/dedicated/client -ldflags="-s -w" cmd/client/main.go
 	CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/dedicated/emulator -ldflags="-s -w" cmd/emulator/main.go
 
 build-all: build-local
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/linux_x86/notary -ldflags="-s -w" cmd/notary/main.go
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/linux_x86/helper -ldflags="-s -w" cmd/helper/main.go
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/linux_x86/node -ldflags="-s -w" cmd/node/main.go
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/linux_x86/webhooks -ldflags="-s -w" cmd/webhooks/main.go
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/linux_x86/client -ldflags="-s -w" cmd/client/main.go
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/linux_x86/emulator -ldflags="-s -w" cmd/emulator/main.go
 
-	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/linux_arm/notary -ldflags="-s -w" cmd/notary/main.go
-	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/linux_arm/helper -ldflags="-s -w" cmd/helper/main.go
+	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/linux_arm/node -ldflags="-s -w" cmd/node/main.go
+	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/linux_arm/webhooks -ldflags="-s -w" cmd/webhooks/main.go
 	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/linux_arm/client -ldflags="-s -w" cmd/client/main.go
 	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/linux_arm/emulator -ldflags="-s -w" cmd/emulator/main.go
 
-	GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/darwin_arm/notary -ldflags="-s -w" cmd/notary/main.go
-	GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/darwin_arm/helper -ldflags="-s -w" cmd/helper/main.go
+	GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/darwin_arm/node -ldflags="-s -w" cmd/node/main.go
+	GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/darwin_arm/webhooks -ldflags="-s -w" cmd/webhooks/main.go
 	GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/darwin_arm/client -ldflags="-s -w" cmd/client/main.go
 	GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/darwin_arm/emulator -ldflags="-s -w" cmd/emulator/main.go
 
-	GOOS=linux GOARCH=arm GOARM=5 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/raspberry_pi_zero/notary -ldflags="-s -w" cmd/notary/main.go
-	GOOS=linux GOARCH=arm GOARM=5 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/raspberry_pi_zero/helper -ldflags="-s -w" cmd/helper/main.go
+	GOOS=linux GOARCH=arm GOARM=5 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/raspberry_pi_zero/node -ldflags="-s -w" cmd/node/main.go
+	GOOS=linux GOARCH=arm GOARM=5 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/raspberry_pi_zero/webhooks -ldflags="-s -w" cmd/webhooks/main.go
 
 build-tools:
 	CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/dedicated/generator -ldflags="-s -w" -gcflags -m cmd/generator/main.go
@@ -48,11 +48,11 @@ generate-secret:
 generate-protobuf:
 	protoc --proto_path=protobuf --go-grpc_out=protobufcompiled --go_out=protobufcompiled --go-grpc_opt=paths=source_relative --go_opt=paths=source_relative block.proto addresses.proto transaction.proto wallet_client_api.proto gossip.proto
 
-run-notary:
-	./bin/dedicated/notary -c setup_example.yaml &
+run-node:
+	./bin/dedicated/node -c setup_example.yaml &
 
-run-helper:
-	./bin/dedicated/helper -c setup_example.yaml &
+run-webhooks:
+	./bin/dedicated/webhooks -c setup_example.yaml &
 
 run-client:
 	./bin/dedicated/client -c setup_example.yaml &
@@ -65,7 +65,7 @@ emulate-publisher:
 
 run-emulate: emulate-subscriber emulate-subscriber
 
-run-all: run-notary run-client run-helper emulate-subscriber emulate-publisher
+run-all: run-node run-client run-webhooks emulate-subscriber emulate-publisher
 
 start: build-local run-all
 
@@ -87,19 +87,19 @@ docker-down:
 docker-logs:
 	docker compose logs -f
 
-docker-restart-notary:
-	docker-compose up -d --no-deps --build notary-node
+docker-restart-node:
+	docker-compose up -d --no-deps --build node-node
 
-docker-restart-helper:
-	docker-compose up -d --no-deps --build helper-node
+docker-restart-webhooks:
+	docker-compose up -d --no-deps --build webhooks-node
 
-docker-build-all: docker-build-notary docker-build-helper docker-build-client docker-build-subscriber docker-build-publisher
+docker-build-all: docker-build-node docker-build-webhooks docker-build-client docker-build-subscriber docker-build-publisher
 
-docker-build-notary:
-	docker compose build notary-node
+docker-build-node:
+	docker compose build node-node
 
-docker-build-helper:
-	docker compose build helper-node
+docker-build-webhooks:
+	docker compose build webhooks-node
 
 docker-build-client:
 	docker compose build client-node

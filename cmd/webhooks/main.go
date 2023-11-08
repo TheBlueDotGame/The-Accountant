@@ -18,7 +18,6 @@ import (
 	"github.com/bartossh/Computantis/logging"
 	"github.com/bartossh/Computantis/logo"
 	"github.com/bartossh/Computantis/natsclient"
-	"github.com/bartossh/Computantis/repository"
 	"github.com/bartossh/Computantis/stdoutwriter"
 	"github.com/bartossh/Computantis/telemetry"
 	"github.com/bartossh/Computantis/wallet"
@@ -26,9 +25,7 @@ import (
 	"github.com/bartossh/Computantis/zincaddapter"
 )
 
-const usage = `The Helper Computantis API server validates transactions and blocks. In additions Helper offers
-web-hook endpoint where any application with valid address can register to listen for new blocks or transactions for 
-given wallet public address.`
+const usage = `runs The Computnantis-We-Hooks node that is responsible for informing subscribed clients about awiated transactions`
 
 func main() {
 	logo.Display()
@@ -48,7 +45,7 @@ func main() {
 	}
 
 	app := &cli.App{
-		Name:  "validator",
+		Name:  "helper",
 		Usage: usage,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -84,16 +81,6 @@ func run(cfg configuration.Configuration) {
 	defer cancel()
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
-
-	statusDB, err := repository.Connect(ctx, cfg.StorageConfig.HelperStatusDatabase)
-	if err != nil {
-		fmt.Println(err)
-		c <- os.Interrupt
-		return
-	}
-	ctxx, cancelClose := context.WithTimeout(context.Background(), time.Second*1)
-	defer cancelClose()
-	defer statusDB.Disconnect(ctxx)
 
 	callbackOnErr := func(err error) {
 		fmt.Println("logger error: ", err)
@@ -142,8 +129,9 @@ func run(cfg configuration.Configuration) {
 		}
 	}()
 
-	if err := helperserver.Run(ctx, cfg.HelperServer, sub, statusDB, log, verify, wh, dataProvider); err != nil {
+	if err := helperserver.Run(ctx, cfg.HelperServer, sub, &log, &verify, wh, dataProvider); err != nil {
 		log.Error(err.Error())
 		time.Sleep(time.Second)
+		c <- os.Interrupt
 	}
 }

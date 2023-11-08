@@ -37,26 +37,15 @@ type app struct {
 }
 
 const (
-	day  = time.Hour * 24
-	week = day * 7
-)
-
-const (
 	MetricsURL              = notaryserver.MetricsURL                 // URL serves service metrics.
 	Alive                   = notaryserver.AliveURL                   // URL allows to check if server is alive and if sign service is of the same version.
-	Address                 = "/address"                              // URL allows to check wallet public address
+	Address                 = "/address"                              // URL allows to validate address and API verssion
 	IssueTransaction        = "/transactions/issue"                   // URL allows to issue transaction signed by the issuer.
 	ConfirmTransaction      = "/transaction/sign"                     // URL allows to sign transaction received by the receiver.
 	RejectTransactions      = "/transactions/reject"                  // URL allows to reject transactions received by the receiver.
-	GetIssuedTransactions   = "/transactions/issued"                  // URL allows to get issued transactions for the issuer.
-	GetReceivedTransactions = "/transactions/received"                // URL allows to get received transactions for the receiver.
-	GetRejectedTransactions = "/transactions/rejected/:offset/:limit" // URL allows to get rejected transactions with pagination.
+	GetWaitingTransactions  = "/transactions/waiting"                 // URL allows to get issued transactions for the issuer.
 	GetApprovedTransactions = "/transactions/approved/:offset/:limit" // URL allows to get approved transactions with pagination.
-	CreateWallet            = "/wallet/create"                        // URL allows to create new wallet.
 	CreateUpdateWebhook     = "/webhook/create"                       // URL allows to creatre webhook
-	ReadWalletPublicAddress = "/wallet/address"                       // URL allows to read public address of the wallet.
-	GetOneDayToken          = "token/day"                             // URL allows to get one day token.
-	GetOneWeekToken         = "token/week"                            // URL allows to get one week token.
 )
 
 // Run runs the service application that exposes the API for creating, validating and signing transactions.
@@ -99,18 +88,12 @@ func Run(ctx context.Context, cfg Config, log logger.Logger, timeout time.Durati
 	router.Get(Alive, s.alive)
 	router.Get(Address, s.address)
 
-	router.Get(GetIssuedTransactions, s.issuedTransactions)
-	router.Post(GetReceivedTransactions, s.receivedTransactions)
-	router.Get(GetRejectedTransactions, s.rejectedTransactions)
+	router.Get(GetWaitingTransactions, s.waitingTransactions)
 	router.Get(GetApprovedTransactions, s.approvedTransactions)
 	router.Post(IssueTransaction, s.issueTransaction)
 	router.Post(ConfirmTransaction, s.confirmReceivedTransaction)
 	router.Post(RejectTransactions, s.rejectTransactions)
-	router.Post(CreateWallet, s.createWallet)
 	router.Post(CreateUpdateWebhook, s.createUpdateWebHook)
-	router.Get(ReadWalletPublicAddress, s.readWalletPublicAddress)
-	router.Get(GetOneDayToken, s.getOneDayToken)
-	router.Get(GetOneWeekToken, s.getOneWeekToken)
 
 	var err error
 	go func() {
@@ -202,57 +185,21 @@ func (a *app) issueTransaction(c *fiber.Ctx) error {
 	return c.JSON(IssueTransactionResponse{Ok: true})
 }
 
-// ConfirmTransactionRequest is a request to confirm transaction.
-type ConfirmTransactionRequest struct {
-	NotaryNodeURL string                  `json:"notary_node_url"`
-	Transaction   transaction.Transaction `json:"transaction"`
-}
-
-// ConfirmTransactionResponse is response of confirming transaction.
-type ConfirmTransactionResponse struct {
-	Err string `json:"err"`
-	Ok  bool   `json:"ok"`
-}
-
-func (a *app) confirmReceivedTransaction(c *fiber.Ctx) error {
-	var req ConfirmTransactionRequest
-	if err := c.BodyParser(&req); err != nil {
-		err := fmt.Errorf("error reading data: %v", err)
-		a.log.Error(err.Error())
-		return errors.Join(fiber.ErrBadRequest, err)
-	}
-
-	if req.Transaction.ReceiverAddress == "" || req.Transaction.Subject == "" ||
-		req.Transaction.Data == nil || req.Transaction.CreatedAt.IsZero() || req.Transaction.IssuerAddress == "" ||
-		req.Transaction.IssuerSignature == nil || req.Transaction.Hash == [32]byte{} {
-		a.log.Error("wrong JSON format to confirm transaction")
-		return fiber.ErrBadRequest
-	}
-
-	if err := a.centralNodeClient.ConfirmTransaction(req.NotaryNodeURL, &req.Transaction); err != nil {
-		err := fmt.Errorf("error confirming transaction: %v", err)
-		a.log.Error(err.Error())
-		return c.JSON(ConfirmTransactionResponse{Ok: false, Err: err.Error()})
-	}
-
-	return c.JSON(ConfirmTransactionResponse{Ok: true})
-}
-
-// RejectTransactionsRequest is a request to reject transactions.
-type RejectTransactionsRequest struct {
+// TransactionsRequest is a request for group of transactions.
+type TransactionsRequest struct {
 	NotaryNodeURL string                    `json:"notary_node_url"`
 	Transactions  []transaction.Transaction `json:"transactions"`
 }
 
-// RejectTransactionsResponse is response of rejecting transactions.
-type RejectTransactionsResponse struct {
+// TransactionsHashesResponse is response of group of transactions hashes.
+type TransactionsHashesResponse struct {
 	Err        string     `json:"err"`
-	TrxsHashes [][32]byte `json:"trxs_hashes"`
+	TrxsHashes [][32]byte `json:"trxs_hashes,omitempty"`
 	Ok         bool       `json:"ok"`
 }
 
 func (a *app) rejectTransactions(c *fiber.Ctx) error {
-	var req RejectTransactionsRequest
+	var req TransactionsRequest
 	if err := c.BodyParser(&req); err != nil {
 		err := fmt.Errorf("error reading data: %v", err)
 		a.log.Error(err.Error())
@@ -272,49 +219,53 @@ func (a *app) rejectTransactions(c *fiber.Ctx) error {
 		errMsg = err.Error()
 	}
 
-	return c.JSON(RejectTransactionsResponse{Ok: ok, TrxsHashes: hashes, Err: errMsg})
+	return c.JSON(TransactionsHashesResponse{Ok: ok, TrxsHashes: hashes, Err: errMsg})
 }
 
-// IssuedTransactionResponse is a response of issued transactions.
-type IssuedTransactionResponse struct {
-	Err          string                    `json:"err"`
-	Transactions []transaction.Transaction `json:"transactions"`
-	Ok           bool                      `json:"ok"`
+// TransactionRequest is a request to confirm transaction.
+type TransactionRequest struct {
+	NotaryNodeURL string                  `json:"notary_node_url"`
+	Transaction   transaction.Transaction `json:"transaction"`
 }
 
-func (a *app) issuedTransactions(c *fiber.Ctx) error {
-	var notaryNodeURL string
-	if err := c.BodyParser(&notaryNodeURL); err != nil {
+// TransactionResponse is response of confirming transaction.
+type TransactionResponse struct {
+	Err string `json:"err"`
+	Ok  bool   `json:"ok"`
+}
+
+func (a *app) confirmReceivedTransaction(c *fiber.Ctx) error {
+	var req TransactionRequest
+	if err := c.BodyParser(&req); err != nil {
 		err := fmt.Errorf("error reading data: %v", err)
 		a.log.Error(err.Error())
 		return errors.Join(fiber.ErrBadRequest, err)
 	}
-	if notaryNodeURL == "" {
-		a.log.Error("wrong message format, notary node URL is empty in the message")
-		return fiber.ErrBadRequest
-	}
-	if _, err := url.Parse(notaryNodeURL); err != nil {
-		a.log.Error(fmt.Sprintf("wrong URL format, notary node URL cannot be parsed, %s", err))
+
+	if req.Transaction.ReceiverAddress == "" || req.Transaction.Subject == "" ||
+		req.Transaction.Data == nil || req.Transaction.CreatedAt.IsZero() || req.Transaction.IssuerAddress == "" ||
+		req.Transaction.IssuerSignature == nil || req.Transaction.Hash == [32]byte{} {
+		a.log.Error("wrong JSON format to confirm transaction")
 		return fiber.ErrBadRequest
 	}
 
-	transactions, err := a.centralNodeClient.ReadIssuedTransactions(notaryNodeURL)
-	if err != nil {
-		err := fmt.Errorf("error getting issued transactions: %v", err)
+	if err := a.centralNodeClient.ConfirmTransaction(req.NotaryNodeURL, &req.Transaction); err != nil {
+		err := fmt.Errorf("error confirming transaction: %v", err)
 		a.log.Error(err.Error())
-		return c.JSON(IssuedTransactionResponse{Ok: false, Err: err.Error()})
+		return c.JSON(TransactionResponse{Ok: false, Err: err.Error()})
 	}
-	return c.JSON(IssuedTransactionResponse{Ok: true, Transactions: transactions})
+
+	return c.JSON(TransactionResponse{Ok: true})
 }
 
-// ReceivedTransactionResponse is a response of issued transactions.
-type ReceivedTransactionResponse struct {
+// TransactionsResponse is a response containing transactions, success indicator and error.
+type TransactionsResponse struct {
 	Err          string                    `json:"err"`
 	Transactions []transaction.Transaction `json:"transactions"`
 	Ok           bool                      `json:"ok"`
 }
 
-func (a *app) receivedTransactions(c *fiber.Ctx) error {
+func (a *app) waitingTransactions(c *fiber.Ctx) error {
 	var notaryNodeURL string
 	if err := c.BodyParser(&notaryNodeURL); err != nil {
 		err := fmt.Errorf("error reading data: %v", err)
@@ -334,47 +285,9 @@ func (a *app) receivedTransactions(c *fiber.Ctx) error {
 	if err != nil {
 		err := fmt.Errorf("error getting issued transactions: %v", err)
 		a.log.Error(err.Error())
-		return c.JSON(ReceivedTransactionResponse{Ok: false, Err: err.Error()})
+		return c.JSON(TransactionResponse{Ok: false, Err: err.Error()})
 	}
-	return c.JSON(ReceivedTransactionResponse{Ok: true, Transactions: transactions})
-}
-
-// RejectedTransactionResponse is a response of rejected transactions.
-type RejectedTransactionResponse struct {
-	Err          string                    `json:"err"`
-	Transactions []transaction.Transaction `json:"transactions"`
-	Ok           bool                      `json:"ok"`
-}
-
-func (a *app) rejectedTransactions(c *fiber.Ctx) error {
-	offset := c.Params("offset")
-	limit := c.Params("limit")
-
-	offsetNum, err := strconv.Atoi(offset)
-	if err != nil {
-		a.log.Error(err.Error())
-		return c.JSON(RejectedTransactionResponse{Ok: false, Err: err.Error()})
-	}
-	limitNum, err := strconv.Atoi(limit)
-	if err != nil {
-		a.log.Error(err.Error())
-		return c.JSON(RejectedTransactionResponse{Ok: false, Err: err.Error()})
-	}
-
-	transactions, err := a.centralNodeClient.ReadRejectedTransactions(offsetNum, limitNum)
-	if err != nil {
-		err := fmt.Errorf("error getting rejected transactions: %v", err)
-		a.log.Error(err.Error())
-		return c.JSON(RejectedTransactionResponse{Ok: false, Err: err.Error()})
-	}
-	return c.JSON(RejectedTransactionResponse{Ok: true, Transactions: transactions})
-}
-
-// ApprovedTransactionResponse is a response of approved transactions.
-type ApprovedTransactionResponse struct {
-	Err          string                    `json:"err"`
-	Transactions []transaction.Transaction `json:"transactions"`
-	Ok           bool                      `json:"ok"`
+	return c.JSON(TransactionsResponse{Ok: true, Transactions: transactions})
 }
 
 func (a *app) approvedTransactions(c *fiber.Ctx) error {
@@ -384,59 +297,21 @@ func (a *app) approvedTransactions(c *fiber.Ctx) error {
 	offsetNum, err := strconv.Atoi(offset)
 	if err != nil {
 		a.log.Error(err.Error())
-		return c.JSON(ApprovedTransactionResponse{Ok: false, Err: err.Error()})
+		return c.JSON(TransactionResponse{Ok: false, Err: err.Error()})
 	}
 	limitNum, err := strconv.Atoi(limit)
 	if err != nil {
 		a.log.Error(err.Error())
-		return c.JSON(ApprovedTransactionResponse{Ok: false, Err: err.Error()})
+		return c.JSON(TransactionResponse{Ok: false, Err: err.Error()})
 	}
 
 	transactions, err := a.centralNodeClient.ReadApprovedTransactions(offsetNum, limitNum)
 	if err != nil {
 		err := fmt.Errorf("error getting rejected transactions: %v", err)
 		a.log.Error(err.Error())
-		return c.JSON(ApprovedTransactionResponse{Ok: false, Err: err.Error()})
+		return c.JSON(TransactionResponse{Ok: false, Err: err.Error()})
 	}
-	return c.JSON(ApprovedTransactionResponse{Ok: true, Transactions: transactions})
-}
-
-// CreateWalletRequest is a request to create wallet.
-type CreateWalletRequest struct {
-	Token string `json:"token"`
-}
-
-// CreateWalletResponse is response to create wallet.
-type CreateWalletResponse struct {
-	Err string `json:"err"`
-	Ok  bool   `json:"ok"`
-}
-
-func (a *app) createWallet(c *fiber.Ctx) error {
-	var req CreateWalletRequest
-	if err := c.BodyParser(&req); err != nil {
-		err := fmt.Errorf("error reading create wallet request: %v", err)
-		a.log.Error(err.Error())
-		return errors.Join(fiber.ErrBadRequest, err)
-	}
-	if req.Token == "" {
-		a.log.Error("wrong JSON format when creating a wallet")
-		return fiber.ErrBadGateway
-	}
-
-	if err := a.centralNodeClient.NewWallet(req.Token); err != nil {
-		err := fmt.Errorf("error creating wallet: %v", err)
-		a.log.Error(err.Error())
-		return c.JSON(CreateWalletResponse{Ok: false, Err: err.Error()})
-	}
-
-	if err := a.centralNodeClient.SaveWalletToFile(); err != nil {
-		err := fmt.Errorf("error saving wallet to file: %v", err)
-		a.log.Error(err.Error())
-		return c.JSON(CreateWalletResponse{Ok: false, Err: err.Error()})
-	}
-
-	return c.JSON(CreateWalletResponse{Ok: true})
+	return c.JSON(TransactionsResponse{Ok: true, Transactions: transactions})
 }
 
 // CreateWebHookRequest is a request to create a web hook
@@ -466,41 +341,4 @@ func (a *app) createUpdateWebHook(c *fiber.Ctx) error {
 
 	res.Ok = true
 	return c.JSON(res)
-}
-
-// ReadWalletPublicAddressResponse is a response to read wallet public address.
-type ReadWalletPublicAddressResponse struct {
-	Err     string `json:"err"`
-	Address string `json:"address"`
-	Ok      bool   `json:"ok"`
-}
-
-func (a *app) readWalletPublicAddress(c *fiber.Ctx) error {
-	address, err := a.centralNodeClient.Address()
-	if err != nil {
-		err := fmt.Errorf("error reading wallet address: %v", err)
-		a.log.Error(err.Error())
-		return c.JSON(ReadWalletPublicAddressResponse{Ok: false, Err: err.Error()})
-	}
-	return c.JSON(ReadWalletPublicAddressResponse{Ok: true, Address: address})
-}
-
-func (a *app) getOneDayToken(c *fiber.Ctx) error {
-	t := time.Now().Add(day)
-	token, err := a.centralNodeClient.GenerateToken(t)
-	if err != nil {
-		a.log.Error(err.Error())
-		return errors.Join(fiber.ErrBadRequest, err)
-	}
-	return c.JSON(token)
-}
-
-func (a *app) getOneWeekToken(c *fiber.Ctx) error {
-	t := time.Now().Add(week)
-	token, err := a.centralNodeClient.GenerateToken(t)
-	if err != nil {
-		a.log.Error(err.Error())
-		return errors.Join(fiber.ErrBadRequest, err)
-	}
-	return c.JSON(token)
 }

@@ -18,6 +18,7 @@ import (
 const (
 	initialThroughput     = 50
 	throughputMultiplayer = 2
+	lastVertexHashes      = 100
 )
 
 var (
@@ -96,7 +97,7 @@ func NewAccountingBook(ctx context.Context, cfg Config, verifier signatureVerifi
 		tokensDB:       tokensDB,
 		trxsToVertxDB:  trxsToVertxDB,
 		verticesDB:     verticesDB,
-		lastVertexHash: make(chan [32]byte, 100),
+		lastVertexHash: make(chan [32]byte, lastVertexHashes),
 		registry:       make(chan struct{}, 1),
 		log:            l,
 		weight:         atomic.Uint64{},
