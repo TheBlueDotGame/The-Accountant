@@ -98,6 +98,7 @@ type gossiper struct {
 	signer                   signer
 	log                      logger.Logger
 	vertexCache              *badger.DB
+	vrxCh                    <-chan *accountant.Vertex
 	vertexGossipCh           chan *protobufcompiled.VertexGossip
 	vertexGossipTimeSortedCh chan *protobufcompiled.VertexGossip
 	nodes                    map[string]nodeData
@@ -108,7 +109,9 @@ type gossiper struct {
 
 // RunGRPC runs the service application that exposes the GRPC API for gossip protocol.
 // To stop server cancel the context.
-func RunGRPC(ctx context.Context, cfg Config, l logger.Logger, t time.Duration, s signer, v signatureVerifier, a accounter) error {
+func RunGRPC(ctx context.Context, cfg Config, l logger.Logger, t time.Duration, s signer,
+	v signatureVerifier, a accounter, vrxCh <-chan *accountant.Vertex,
+) error {
 	if err := cfg.verify(); err != nil {
 		return err
 	}
@@ -127,6 +130,7 @@ func RunGRPC(ctx context.Context, cfg Config, l logger.Logger, t time.Duration, 
 		signer:                   s,
 		log:                      l,
 		vertexCache:              db,
+		vrxCh:                    vrxCh,
 		vertexGossipCh:           make(chan *protobufcompiled.VertexGossip, vertexGossipChCapacity),
 		vertexGossipTimeSortedCh: make(chan *protobufcompiled.VertexGossip, 1),
 		nodes:                    make(map[string]nodeData),
@@ -383,6 +387,16 @@ func (g *gossiper) runTimeSortVertexGossip(ctx context.Context, cancel context.C
 		select {
 		case <-ctx.Done():
 			return
+		case vrx := <-g.vrxCh:
+			if vrx == nil {
+				continue
+			}
+			go func(vrx *accountant.Vertex) {
+				vg := mapAccountantVertexToProtoVertex(vrx)
+				g.vertexGossipCh <- &protobufcompiled.VertexGossip{
+					Vertex: vg,
+				}
+			}(vrx)
 		case vg := <-g.vertexGossipCh:
 			if vg == nil {
 				continue

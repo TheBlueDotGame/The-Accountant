@@ -129,7 +129,7 @@ func TestDiscoverProtocol(t *testing.T) {
 			}
 			go func() {
 				acc := testAccountant{}
-				err := RunGRPC(ctx, genessisConfig, l, time.Second*1, &w, v, &acc)
+				err := RunGRPC(ctx, genessisConfig, l, time.Second*1, &w, v, &acc, nil)
 				assert.NilError(t, err)
 			}()
 
@@ -144,7 +144,7 @@ func TestDiscoverProtocol(t *testing.T) {
 					w, err := wallet.New()
 					assert.NilError(t, err)
 					v := wallet.NewVerifier()
-					err = RunGRPC(ctx, cfg, l, time.Second*1, &w, v, &acc)
+					err = RunGRPC(ctx, cfg, l, time.Second*1, &w, v, &acc, nil)
 					assert.NilError(t, err)
 				}(cfg)
 			}
@@ -201,7 +201,7 @@ func TestGossipProtocol(t *testing.T) {
 			}
 			go func() {
 				acc := testAccountant{}
-				err := RunGRPC(ctx, genessisConfig, l, time.Second*1, &w, v, &acc)
+				err := RunGRPC(ctx, genessisConfig, l, time.Second*1, &w, v, &acc, nil)
 				assert.NilError(t, err)
 				assert.Equal(t, acc.readCounter(), uint64(len(c.nodes)*vertexRoundsPerNode))
 			}()
@@ -223,7 +223,7 @@ func TestGossipProtocol(t *testing.T) {
 						time.Sleep(time.Second)
 						wg.Done()
 					}()
-					err = RunGRPC(ctx, cfg, l, time.Second*1, &w, v, &acc)
+					err = RunGRPC(ctx, cfg, l, time.Second*1, &w, v, &acc, nil)
 					assert.NilError(t, err)                                                      // if fails it means nodes are overloded or are not able to handle connections.
 					assert.Equal(t, acc.readCounter(), uint64(len(c.nodes)*vertexRoundsPerNode)) // NOTE: The assertion for test of gossip protoco happens here.
 					// NOTE: we want to each node to receive exactly the amount of propagated certexes per each node.
@@ -318,7 +318,7 @@ func TestDAGWithGossip(t *testing.T) {
 					accGenesis.CreateGenesis("Genesis Test Transaction", spice.New(1000000000000000, 0), []byte{}, &genessisReceiver)
 					close(doneGenesis)
 				}()
-				err = RunGRPC(ctx, genessisConfigNode, l, time.Second*1, &w, v, accGenesis)
+				err = RunGRPC(ctx, genessisConfigNode, l, time.Second*1, &w, v, accGenesis, nil)
 				assert.NilError(t, err)
 			}()
 
@@ -346,7 +346,7 @@ func TestDAGWithGossip(t *testing.T) {
 						time.Sleep(time.Millisecond * 100)
 						wg.Done()
 					}()
-					err = RunGRPC(ctx, cfg, counterLogger, time.Second*1, &w, v, acc)
+					err = RunGRPC(ctx, cfg, counterLogger, time.Second*1, &w, v, acc, nil)
 					assert.NilError(t, err)
 				}(cfg)
 			}

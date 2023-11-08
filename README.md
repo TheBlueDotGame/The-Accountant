@@ -133,7 +133,7 @@ zinc_logger:
   token: Basic YWRtaW46emluY3NlYXJjaA==
 ```
 
-- The helper node specific:
+- The Web-Hook node:
 ```yaml
 is_profiling: false
 helper_server:
@@ -142,11 +142,6 @@ nats:
   server_address: "nats://nats:4222"
   client_name: "notary-1"
   token: "D9pHfuiEQPXtqPqPdyxozi8kU2FlHqC0FlSRIzpwDI0="
-storage_config:
-  helper_status_database:
-    conn_str: "postgres://computantis:computantis@postgres:5432"
-    database_name: "computantis"
-    is_ssl: false
 zinc_logger:
   address: http://zincsearch:4080 
   index: helper-1
@@ -183,9 +178,8 @@ emulator: # emulates data
 ## Start locally all services
 
 Required services setup:
- - PostgreSQL database
- - Central node
- - Validator node
+ - Computantis node
+ - Web-Hook node
  - Client node
  - Exporter node
  - Prometheus node
@@ -222,16 +216,16 @@ make docker-dependencies
 make build-local
 ```
 
- - Central:
+ - Computnatis Node:
    
    ```sh
-    ./bin/dedicated/central -c setup_example.yaml
+    ./bin/dedicated/node -c setup_example.yaml
 
    ``` 
- - Validator:
+ - Computantis Web-Hooks:
 
    ```sh
-    ./bin/dedicated/validator -c setup_example.yaml
+    ./bin/dedicated/webhooks -c setup_example.yaml
 
    ``` 
 
@@ -274,31 +268,6 @@ This will compile all the components when docker image is run. All the processes
     - Run `go run cmd/emulator/main.go -c setup_example.yaml -d data.json p`
     - Run `go run cmd/emulator/main.go -c setup_example.yaml -d minmax.json s`
 - Enjoy.
-
-### Demo resource usage
-
-- System parameter
-```sh
-OS: Ubuntu 20.04 focal
-Kernel: x86_64 Linux 5.15.0-76-generic
-CPU: AMD Ryzen 7 PRO 4750U with Radeon Graphics @ 16x 1,7GHz
-GPU: Advanced Micro Devices, Inc. [AMD/ATI] Renoir (rev d1)
-RAM: 31451MiB
-SERVICES: Running in Docker
-```
-
-- Stats:
-```sh
-CONTAINER ID   NAME                    CPU %     MEM USAGE
-294fe037553d   client-node             0.41%     13.99MiB 
-892c7a00df55   prometheus              0.00%     42.24MiB 
-046e5abc3f90   node-exporter           0.00%     10.48MiB 
-b898d27d9ebb   validator-node          0.31%     15.73MiB 
-cf65e697b277   central-node            1.17%     12.95MiB 
-793fe32f060c   postgres                0.70%     38.15MiB 
-d075fab56e0e   computantis-grafana-1   0.06%     86.7MiB 
-b49f6921f75b   zincsearch              1.13%     50.54MiB 
-```
 
 ## Stress test
 
@@ -399,28 +368,20 @@ copy `wasm/bin/wallet.wasm` and `wasm/js/wasm_exec.js` to you fronted project an
 
 ## Coding Philosophy
 
-👀 Development guidelines:
+👀 The Zen of Computantis:
+ - Simple is better than complex.
+ - Simplicity is prerequisite for reliability.
+ - Controlling complexity is the essence of computer programming.
+ - Explicit is better than implicit.
+ - Errors should never pass silently.
+ - Flat is better than nested. Return early rather than nesting deeply.
+ - APIs should be easy to use and hard to misuse.
+ - Readability Counts.
+ - Use composition over inheritance.
+ - Avoid package level state.
+ - Moderation is a virtue. Use with moderation: go routines, channels, atomic types, generics, interfaces, any and pointers.
 
-- Correctness is the first principle.
-- Performance counts.
-- Performance applies equally to computational performance and development performance.
-- Write code that performs well and benchmark it.
-- Do the benchmarking in the proper context, avoid microbenchmarking. 
-- Unit test your code, especially critical parts.
-- Write integration tests for the API calls or use integration testing tools such as Postman.
-- Programming Language and other tools counts. Pick the effective, performant, safe and simple one.
-- Be open-minded, do not fall into the pitfalls of one ideology, non solve all the problems.
-- Less is almost always more.
-- Abstraction is your superpower. Unnecessary abstraction and complicated abstraction are your kryptonite.
-- Avoid the inheritance it is the root of all evil. But sometimes we pick the inheritance as the lesser evil.
-- Use composition. Please keep it simple.
-- Problems are complex do not make them more complicated than they are.
-- Write documentation, don't write comments (comments lie, code never lies).
-- Never panic, handle errors gracefully.
-- Focus on data first, avoid pointers if possible, and paginate structures.
-- Prealocate continuous memory if possible. Keep things on the stack if possible.
-- Have the courage to change your opinion.
-- Don't be clever be boring.
+
 
 💻 Useful resources:
 

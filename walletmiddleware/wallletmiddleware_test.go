@@ -11,6 +11,7 @@ import (
 
 	"github.com/bartossh/Computantis/aeswrapper"
 	"github.com/bartossh/Computantis/fileoperations"
+	"github.com/bartossh/Computantis/spice"
 	"github.com/bartossh/Computantis/wallet"
 )
 
@@ -78,17 +79,14 @@ func TestFullClientApiCycle(t *testing.T) {
 
 	receiverAddr, err := receiver.Address()
 	assert.Nil(t, err)
-	err = issuer.ProposeTransaction(receiverAddr, "text", []byte("test_transaction_data"))
+	err = issuer.ProposeTransaction(receiverAddr, "text", spice.New(0, 0), []byte("test_transaction_data"))
 	assert.Nil(t, err)
-	issuedTrx, err := issuer.ReadIssuedTransactions()
-	assert.Nil(t, err)
-	assert.Equal(t, 1, len(issuedTrx))
 
-	awaitedTrx, err := receiver.ReadWaitingTransactions()
+	awaitedTrx, err := receiver.ReadWaitingTransactions("http://localhost:8080")
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(awaitedTrx))
 
-	err = receiver.ConfirmTransaction(&awaitedTrx[0])
+	err = receiver.ConfirmTransaction("http://localhost:8080", &awaitedTrx[0])
 	assert.Nil(t, err)
 	if err != nil {
 		fmt.Printf("err: %v\n", err.Error())

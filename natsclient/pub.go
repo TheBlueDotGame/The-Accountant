@@ -3,7 +3,6 @@ package natsclient
 import (
 	"google.golang.org/protobuf/proto"
 
-	"github.com/bartossh/Computantis/block"
 	"github.com/bartossh/Computantis/protobufcompiled"
 )
 
@@ -20,37 +19,12 @@ func PublisherConnect(cfg Config) (*Publisher, error) {
 	return &p, err
 }
 
-// PublishNewBlock publishes new block.
-func (p *Publisher) PublishNewBlock(blk *block.Block, notaryNodeURL string) error {
-	protoBlk := protobufcompiled.Block{}
-	protoBlk.NotaryNodeUrl = notaryNodeURL
-	protoBlk.TrxHashes = make([][]byte, 0, len(blk.TrxHashes))
-	for i := range blk.TrxHashes {
-		protoBlk.TrxHashes = append(protoBlk.TrxHashes, blk.TrxHashes[i][:])
-	}
-	protoBlk.Hash = blk.Hash[:]
-	protoBlk.PrevHash = blk.PrevHash[:]
-	protoBlk.Index = blk.Index
-	protoBlk.Timestamp = blk.Timestamp
-	protoBlk.Nonce = blk.Nonce
-	protoBlk.Difficulty = blk.Difficulty
-
-	msg, err := proto.Marshal(&protoBlk)
-	if err != nil {
-		return err
-	}
-	if err := p.conn.Publish(PubSubNewBlock, msg); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // PublishAddressesAwaitingTrxs publishes addresses of the clients that have awaiting transactions.
 func (p *Publisher) PublishAddressesAwaitingTrxs(addresses []string, notaryNodeURL string) error {
-	protoAddresses := protobufcompiled.Addresses{}
-	protoAddresses.Array = addresses
-	protoAddresses.NotaryUrl = notaryNodeURL
+	protoAddresses := protobufcompiled.Addresses{
+		Array:     addresses,
+		NotaryUrl: notaryNodeURL,
+	}
 	msg, err := proto.Marshal(&protoAddresses)
 	if err != nil {
 		return err
@@ -58,6 +32,5 @@ func (p *Publisher) PublishAddressesAwaitingTrxs(addresses []string, notaryNodeU
 	if err := p.conn.Publish(PubSubAwaitingTrxs, msg); err != nil {
 		return err
 	}
-
 	return nil
 }

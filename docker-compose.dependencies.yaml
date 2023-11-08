@@ -26,24 +26,6 @@ services:
     networks:
       - computantis_network
   
-  postgres:
-    container_name: postgres
-    image: postgres:latest
-    environment:
-      POSTGRES_USER: "postgres"
-      POSTGRES_PASSWORD: "postgres"
-    volumes:
-      - ./docker_postgres_init.sql:/docker-entrypoint-initdb.d/docker_postgres_init.sql
-    ports:
-      - "5432:5432"
-    restart: unless-stopped
-    networks:
-      - computantis_network
-    healthcheck:
-      test: "pg_isready --username=postgres && psql --username=postgres --list"
-      timeout: 10s
-      retries: 20
-      
   zincsearch:
     image: public.ecr.aws/zinclabs/zincsearch:latest
     container_name: zincsearch
