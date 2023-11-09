@@ -1,12 +1,15 @@
 package notaryserver
 
 import (
+	"bytes"
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net/url"
 	"time"
 
+	"github.com/dgraph-io/badger/v4"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/monitor"
 	"github.com/gofiber/fiber/v2/middleware/recover"
@@ -15,6 +18,7 @@ import (
 	"github.com/bartossh/Computantis/accountant"
 	"github.com/bartossh/Computantis/logger"
 	"github.com/bartossh/Computantis/providers"
+	"github.com/bartossh/Computantis/storage"
 	"github.com/bartossh/Computantis/transaction"
 	"github.com/bartossh/Computantis/versioning"
 )
@@ -61,6 +65,7 @@ const rxNewTrxIssuerAddrBufferSize = 100
 var (
 	ErrWrongPortSpecified = errors.New("port must be between 1 and 65535")
 	ErrWrongMessageSize   = errors.New("message size must be between 1024 and 15000000")
+	ErrTrxAlreadyExists   = errors.New("transaction already exists")
 )
 
 type verifier interface {
@@ -69,6 +74,7 @@ type verifier interface {
 
 type accounter interface {
 	CreateLeaf(ctx context.Context, trx *transaction.Transaction) (accountant.Vertex, error)
+	ReadTransactionsByHashes(ctx context.Context, hashes [][32]byte) ([]transaction.Transaction, error)
 }
 
 // RandomDataProvideValidator provides random binary data for signing to prove identity and
@@ -84,9 +90,11 @@ type nodeNetworkingPublisher interface {
 
 // Config contains configuration of the server.
 type Config struct {
-	NodePublicURL string `yaml:"public_url"`      // Public URL at which node can be reached.
-	Port          int    `yaml:"port"`            // Port to listen on.
-	DataSizeBytes int    `yaml:"data_size_bytes"` // Size of the data to be stored in the transaction.
+	NodePublicURL           string `yaml:"public_url"`                  // Public URL at which node can be reached.
+	TrxAwaitedDBPath        string `yaml:"trx_awaited_db_path"`         // awaited transaction volume path
+	AddressAwaitedTrxDBPath string `yaml:"address_awaited_trx_db_path"` // wallet address awaited transaction volume path
+	Port                    int    `yaml:"port"`                        // Port to listen on.
+	DataSizeBytes           int    `yaml:"data_size_bytes"`             // Size of the data to be stored in the transaction.
 }
 
 type server struct {
@@ -98,6 +106,8 @@ type server struct {
 	vrxGossipCh          chan<- *accountant.Vertex
 	verifier             verifier
 	acc                  accounter
+	trxsAwaitedDB        *badger.DB
+	addressAwaitedTrxsDB *badger.DB
 	nodePublicURL        string
 	dataSize             int
 }
@@ -121,6 +131,15 @@ func Run(
 		return err
 	}
 
+	trxsAwaitedDB, err := storage.CreateBadgerDB(ctx, c.TrxAwaitedDBPath, log)
+	if err != nil {
+		return err
+	}
+	addressAwaitedTrxsDB, err := storage.CreateBadgerDB(ctx, c.AddressAwaitedTrxDBPath, log)
+	if err != nil {
+		return err
+	}
+
 	id := primitive.NewObjectID().Hex()
 
 	s := &server{
@@ -132,6 +151,8 @@ func Run(
 		vrxGossipCh:          vrxCh,
 		verifier:             v,
 		acc:                  acc,
+		trxsAwaitedDB:        trxsAwaitedDB,
+		addressAwaitedTrxsDB: addressAwaitedTrxsDB,
 		nodePublicURL:        c.NodePublicURL,
 		dataSize:             c.DataSizeBytes,
 	}
@@ -224,4 +245,44 @@ func (s *server) runSubscriber(ctx context.Context) {
 			receiverAddrSet = make(map[string]struct{}, 1000)
 		}
 	}
+}
+
+func add(originalValues, newValue []byte) []byte {
+	return append(originalValues, append([]byte{','}, newValue...)...)
+}
+
+func remove(values, removeValue []byte) []byte {
+	sl := bytes.Split(values, []byte{','})
+	newValues := make([]byte, 0, len(values))
+	for _, v := range sl {
+		if bytes.Equal(v, removeValue) {
+			continue
+		}
+		newValues = append(newValues, append([]byte{','}, v...)...)
+	}
+	return newValues
+}
+
+func checkNotEmpty(trx *transaction.Transaction) error {
+	if trx == nil {
+		return fiber.ErrBadRequest
+	}
+	if trx.Subject == "" || trx.IssuerAddress == "" ||
+		trx.ReceiverAddress == "" || trx.Hash == [32]byte{} ||
+		trx.CreatedAt.IsZero() || trx.IssuerSignature == nil {
+		return fiber.ErrBadRequest
+	}
+	return nil
+}
+
+func hexEncode(src []byte) []byte {
+	dst := make([]byte, 0)
+	hex.Encode(dst, src)
+	return dst
+}
+
+func hexDecode(src []byte) ([]byte, error) {
+	dst := make([]byte, 0)
+	_, err := hex.Decode(dst, src)
+	return dst, err
 }

@@ -256,8 +256,7 @@ func (c *Client) ReadWaitingTransactions(notaryNodeURL string) ([]transaction.Tr
 }
 
 // ReadApprovedTransactions reads approved transactions belonging to current wallet from the API server.
-// Method allows for paggination with offset and limit.
-func (c *Client) ReadApprovedTransactions(offset, limit int) ([]transaction.Transaction, error) {
+func (c *Client) ReadApprovedTransactions() ([]transaction.Transaction, error) {
 	if !c.ready {
 		return nil, httpclient.ErrWalletNotReady
 	}
@@ -273,8 +272,6 @@ func (c *Client) ReadApprovedTransactions(offset, limit int) ([]transaction.Tran
 		Data:      data.Data,
 		Hash:      hash,
 		Signature: signature,
-		Offset:    offset,
-		Limit:     limit,
 	}
 	var res notaryserver.TransactionsResponse
 	url := fmt.Sprintf("%s%s", c.apiRoot, notaryserver.ApprovedTransactionURL)

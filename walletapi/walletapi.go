@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"strconv"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -37,15 +36,15 @@ type app struct {
 }
 
 const (
-	MetricsURL              = notaryserver.MetricsURL                 // URL serves service metrics.
-	Alive                   = notaryserver.AliveURL                   // URL allows to check if server is alive and if sign service is of the same version.
-	Address                 = "/address"                              // URL allows to validate address and API verssion
-	IssueTransaction        = "/transactions/issue"                   // URL allows to issue transaction signed by the issuer.
-	ConfirmTransaction      = "/transaction/sign"                     // URL allows to sign transaction received by the receiver.
-	RejectTransactions      = "/transactions/reject"                  // URL allows to reject transactions received by the receiver.
-	GetWaitingTransactions  = "/transactions/waiting"                 // URL allows to get issued transactions for the issuer.
-	GetApprovedTransactions = "/transactions/approved/:offset/:limit" // URL allows to get approved transactions with pagination.
-	CreateUpdateWebhook     = "/webhook/create"                       // URL allows to creatre webhook
+	MetricsURL              = notaryserver.MetricsURL  // URL serves service metrics.
+	Alive                   = notaryserver.AliveURL    // URL allows to check if server is alive and if sign service is of the same version.
+	Address                 = "/address"               // URL allows to validate address and API version
+	IssueTransaction        = "/transactions/issue"    // URL allows to issue transaction signed by the issuer.
+	ConfirmTransaction      = "/transaction/sign"      // URL allows to sign transaction received by the receiver.
+	RejectTransactions      = "/transactions/reject"   // URL allows to reject transactions received by the receiver.
+	GetWaitingTransactions  = "/transactions/waiting"  // URL allows to get issued transactions for the issuer.
+	GetApprovedTransactions = "/transactions/approved" // URL allows to get approved transactions with pagination.
+	CreateUpdateWebhook     = "/webhook/create"        // URL allows to create webhook
 )
 
 // Run runs the service application that exposes the API for creating, validating and signing transactions.
@@ -291,21 +290,7 @@ func (a *app) waitingTransactions(c *fiber.Ctx) error {
 }
 
 func (a *app) approvedTransactions(c *fiber.Ctx) error {
-	offset := c.Params("offset")
-	limit := c.Params("limit")
-
-	offsetNum, err := strconv.Atoi(offset)
-	if err != nil {
-		a.log.Error(err.Error())
-		return c.JSON(TransactionResponse{Ok: false, Err: err.Error()})
-	}
-	limitNum, err := strconv.Atoi(limit)
-	if err != nil {
-		a.log.Error(err.Error())
-		return c.JSON(TransactionResponse{Ok: false, Err: err.Error()})
-	}
-
-	transactions, err := a.centralNodeClient.ReadApprovedTransactions(offsetNum, limitNum)
+	transactions, err := a.centralNodeClient.ReadApprovedTransactions()
 	if err != nil {
 		err := fmt.Errorf("error getting rejected transactions: %v", err)
 		a.log.Error(err.Error())

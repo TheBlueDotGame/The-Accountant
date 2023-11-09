@@ -35,7 +35,7 @@ type WalletClientAPIClient interface {
 	Alive(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*AliveInfo, error)
 	Address(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*WalletPublicAddress, error)
 	IssuedTransactions(ctx context.Context, in *NotaryNode, opts ...grpc.CallOption) (*Transactions, error)
-	ApprovedTransactions(ctx context.Context, in *Paggination, opts ...grpc.CallOption) (*Transactions, error)
+	ApprovedTransactions(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*Transactions, error)
 	Wallet(ctx context.Context, in *CreateWallet, opts ...grpc.CallOption) (*ServerInfo, error)
 	WebHook(ctx context.Context, in *CreateWebHook, opts ...grpc.CallOption) (*ServerInfo, error)
 }
@@ -75,7 +75,7 @@ func (c *walletClientAPIClient) IssuedTransactions(ctx context.Context, in *Nota
 	return out, nil
 }
 
-func (c *walletClientAPIClient) ApprovedTransactions(ctx context.Context, in *Paggination, opts ...grpc.CallOption) (*Transactions, error) {
+func (c *walletClientAPIClient) ApprovedTransactions(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*Transactions, error) {
 	out := new(Transactions)
 	err := c.cc.Invoke(ctx, WalletClientAPI_ApprovedTransactions_FullMethodName, in, out, opts...)
 	if err != nil {
@@ -109,7 +109,7 @@ type WalletClientAPIServer interface {
 	Alive(context.Context, *emptypb.Empty) (*AliveInfo, error)
 	Address(context.Context, *emptypb.Empty) (*WalletPublicAddress, error)
 	IssuedTransactions(context.Context, *NotaryNode) (*Transactions, error)
-	ApprovedTransactions(context.Context, *Paggination) (*Transactions, error)
+	ApprovedTransactions(context.Context, *emptypb.Empty) (*Transactions, error)
 	Wallet(context.Context, *CreateWallet) (*ServerInfo, error)
 	WebHook(context.Context, *CreateWebHook) (*ServerInfo, error)
 	mustEmbedUnimplementedWalletClientAPIServer()
@@ -128,7 +128,7 @@ func (UnimplementedWalletClientAPIServer) Address(context.Context, *emptypb.Empt
 func (UnimplementedWalletClientAPIServer) IssuedTransactions(context.Context, *NotaryNode) (*Transactions, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method IssuedTransactions not implemented")
 }
-func (UnimplementedWalletClientAPIServer) ApprovedTransactions(context.Context, *Paggination) (*Transactions, error) {
+func (UnimplementedWalletClientAPIServer) ApprovedTransactions(context.Context, *emptypb.Empty) (*Transactions, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ApprovedTransactions not implemented")
 }
 func (UnimplementedWalletClientAPIServer) Wallet(context.Context, *CreateWallet) (*ServerInfo, error) {
@@ -205,7 +205,7 @@ func _WalletClientAPI_IssuedTransactions_Handler(srv interface{}, ctx context.Co
 }
 
 func _WalletClientAPI_ApprovedTransactions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Paggination)
+	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -217,7 +217,7 @@ func _WalletClientAPI_ApprovedTransactions_Handler(srv interface{}, ctx context.
 		FullMethod: WalletClientAPI_ApprovedTransactions_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WalletClientAPIServer).ApprovedTransactions(ctx, req.(*Paggination))
+		return srv.(WalletClientAPIServer).ApprovedTransactions(ctx, req.(*emptypb.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }

@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/bartossh/Computantis/spice"
+	"github.com/shamaton/msgpack/v2"
+	msgpackv2 "github.com/shamaton/msgpack/v2"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -135,7 +137,7 @@ func (t *Transaction) Sign(receiver Signer, v Verifier) ([32]byte, error) {
 	return hash, nil
 }
 
-// IsContract returns true if the transaction contains data buffer that is recognised as transaction with contract.
+// IsContract returns true if the transaction contains not empty data buffer that is recognised as transaction with contract.
 func (t *Transaction) IsContract() bool {
 	return len(t.Data) != 0
 }
@@ -172,6 +174,22 @@ func (t *Transaction) GetMessage() []byte {
 	binary.LittleEndian.PutUint64(b, t.Spice.Currency)
 	binary.LittleEndian.PutUint64(b, t.Spice.SupplementaryCurrency)
 	return append(message, b...)
+}
+
+// Encode encodes transaction to bytes slice.
+func (t *Transaction) Encode() ([]byte, error) {
+	buf, err := msgpack.Marshal(*t)
+	if err != nil {
+		return nil, err
+	}
+	return buf, nil
+}
+
+// Decode decodes slice buffer to transaction.
+func Decode(buf []byte) (Transaction, error) {
+	var t Transaction
+	err := msgpackv2.Unmarshal(buf, &t)
+	return t, err
 }
 
 func addTime(t time.Time) time.Time {

@@ -18,6 +18,7 @@ import "github.com/bartossh/Computantis/accountant"
   - [func \(ab \*AccountingBook\) CreateLeaf\(ctx context.Context, trx \*transaction.Transaction\) \(Vertex, error\)](<#AccountingBook.CreateLeaf>)
   - [func \(ab \*AccountingBook\) DagLoaded\(\) bool](<#AccountingBook.DagLoaded>)
   - [func \(ab \*AccountingBook\) LoadDag\(ctx context.Context, cancelF context.CancelCauseFunc, cVrx \<\-chan \*Vertex\)](<#AccountingBook.LoadDag>)
+  - [func \(ab \*AccountingBook\) ReadTransactionsByHashes\(ctx context.Context, hashes \[\]\[32\]byte\) \(\[\]transaction.Transaction, error\)](<#AccountingBook.ReadTransactionsByHashes>)
   - [func \(ab \*AccountingBook\) RemoveTrustedNode\(trustedNodePublicAddress string\) error](<#AccountingBook.RemoveTrustedNode>)
   - [func \(ab \*AccountingBook\) StreamDAG\(ctx context.Context\) \(\<\-chan \*Vertex, \<\-chan error\)](<#AccountingBook.StreamDAG>)
 - [type Balance](<#Balance>)
@@ -137,6 +138,15 @@ func (ab *AccountingBook) LoadDag(ctx context.Context, cancelF context.CancelCau
 ```
 
 LoadDag loads stream of Vertices in to the DAG.
+
+<a name="AccountingBook.ReadTransactionsByHashes"></a>
+### func \(\*AccountingBook\) [ReadTransactionsByHashes](<https://github.com/bartossh/Computantis/blob/main/accountant/accountant.go#L918>)
+
+```go
+func (ab *AccountingBook) ReadTransactionsByHashes(ctx context.Context, hashes [][32]byte) ([]transaction.Transaction, error)
+```
+
+ReadTransactionsByHash reads transactions by hashes from DAG and DB.
 
 <a name="AccountingBook.RemoveTrustedNode"></a>
 ### func \(\*AccountingBook\) [RemoveTrustedNode](<https://github.com/bartossh/Computantis/blob/main/accountant/accountant.go#L549>)
@@ -1775,6 +1785,7 @@ import "github.com/bartossh/Computantis/notaryserver"
 - [type DataToSignResponse](<#DataToSignResponse>)
 - [type RandomDataProvideValidator](<#RandomDataProvideValidator>)
 - [type TransactionConfirmProposeResponse](<#TransactionConfirmProposeResponse>)
+- [type TransactionsByHashRequest](<#TransactionsByHashRequest>)
 - [type TransactionsRejectRequest](<#TransactionsRejectRequest>)
 - [type TransactionsRejectResponse](<#TransactionsRejectResponse>)
 - [type TransactionsRequest](<#TransactionsRequest>)
@@ -1806,11 +1817,12 @@ const (
 var (
     ErrWrongPortSpecified = errors.New("port must be between 1 and 65535")
     ErrWrongMessageSize   = errors.New("message size must be between 1024 and 15000000")
+    ErrTrxAlreadyExists   = errors.New("transaction already exists")
 )
 ```
 
 <a name="Run"></a>
-## func [Run](<https://github.com/bartossh/Computantis/blob/main/notaryserver/notaryserver.go#L107-L110>)
+## func [Run](<https://github.com/bartossh/Computantis/blob/main/notaryserver/notaryserver.go#L117-L120>)
 
 ```go
 func Run(ctx context.Context, c Config, pub nodeNetworkingPublisher, pv RandomDataProvideValidator, tele providers.HistogramProvider, log logger.Logger, v verifier, acc accounter, vrxCh chan<- *accountant.Vertex) error
@@ -1819,7 +1831,7 @@ func Run(ctx context.Context, c Config, pub nodeNetworkingPublisher, pv RandomDa
 Run initializes routing and runs the server. To stop the server cancel the context. It blocks until the context is canceled.
 
 <a name="AliveResponse"></a>
-## type [AliveResponse](<https://github.com/bartossh/Computantis/blob/main/notaryserver/rest.go#L14-L18>)
+## type [AliveResponse](<https://github.com/bartossh/Computantis/blob/main/notaryserver/rest.go#L19-L23>)
 
 AliveResponse is a response for alive and version check.
 
@@ -1832,20 +1844,22 @@ type AliveResponse struct {
 ```
 
 <a name="Config"></a>
-## type [Config](<https://github.com/bartossh/Computantis/blob/main/notaryserver/notaryserver.go#L86-L90>)
+## type [Config](<https://github.com/bartossh/Computantis/blob/main/notaryserver/notaryserver.go#L92-L98>)
 
 Config contains configuration of the server.
 
 ```go
 type Config struct {
-    NodePublicURL string `yaml:"public_url"`      // Public URL at which node can be reached.
-    Port          int    `yaml:"port"`            // Port to listen on.
-    DataSizeBytes int    `yaml:"data_size_bytes"` // Size of the data to be stored in the transaction.
+    NodePublicURL           string `yaml:"public_url"`                  // Public URL at which node can be reached.
+    TrxAwaitedDBPath        string `yaml:"trx_awaited_db_path"`         // awaited transaction volume path
+    AddressAwaitedTrxDBPath string `yaml:"address_awaited_trx_db_path"` // wallet address awaited transaction volume path
+    Port                    int    `yaml:"port"`                        // Port to listen on.
+    DataSizeBytes           int    `yaml:"data_size_bytes"`             // Size of the data to be stored in the transaction.
 }
 ```
 
 <a name="DataToSignRequest"></a>
-## type [DataToSignRequest](<https://github.com/bartossh/Computantis/blob/main/notaryserver/rest.go#L215-L217>)
+## type [DataToSignRequest](<https://github.com/bartossh/Computantis/blob/main/notaryserver/rest.go#L292-L294>)
 
 DataToSignRequest is a request to get data to sign for proving identity.
 
@@ -1856,7 +1870,7 @@ type DataToSignRequest struct {
 ```
 
 <a name="DataToSignResponse"></a>
-## type [DataToSignResponse](<https://github.com/bartossh/Computantis/blob/main/notaryserver/rest.go#L220-L222>)
+## type [DataToSignResponse](<https://github.com/bartossh/Computantis/blob/main/notaryserver/rest.go#L297-L299>)
 
 DataToSignRequest is a response containing data to sign for proving identity.
 
@@ -1867,7 +1881,7 @@ type DataToSignResponse struct {
 ```
 
 <a name="RandomDataProvideValidator"></a>
-## type [RandomDataProvideValidator](<https://github.com/bartossh/Computantis/blob/main/notaryserver/notaryserver.go#L76-L79>)
+## type [RandomDataProvideValidator](<https://github.com/bartossh/Computantis/blob/main/notaryserver/notaryserver.go#L82-L85>)
 
 RandomDataProvideValidator provides random binary data for signing to prove identity and the validator of data being valid and not expired.
 
@@ -1879,7 +1893,7 @@ type RandomDataProvideValidator interface {
 ```
 
 <a name="TransactionConfirmProposeResponse"></a>
-## type [TransactionConfirmProposeResponse](<https://github.com/bartossh/Computantis/blob/main/notaryserver/rest.go#L30-L33>)
+## type [TransactionConfirmProposeResponse](<https://github.com/bartossh/Computantis/blob/main/notaryserver/rest.go#L35-L38>)
 
 TransactionConfirmProposeResponse is a response for transaction propose.
 
@@ -1890,8 +1904,22 @@ type TransactionConfirmProposeResponse struct {
 }
 ```
 
+<a name="TransactionsByHashRequest"></a>
+## type [TransactionsByHashRequest](<https://github.com/bartossh/Computantis/blob/main/notaryserver/rest.go#L252-L257>)
+
+TransactionsByHashRequest is a request to get approved transactions that are part of the DAG.
+
+```go
+type TransactionsByHashRequest struct {
+    Address   string     `json:"address"`
+    Hashes    [][32]byte `json:"hashes"`
+    Signature []byte     `json:"signature"`
+    Hash      [32]byte   `json:"hash"`
+}
+```
+
 <a name="TransactionsRejectRequest"></a>
-## type [TransactionsRejectRequest](<https://github.com/bartossh/Computantis/blob/main/notaryserver/rest.go#L91-L97>)
+## type [TransactionsRejectRequest](<https://github.com/bartossh/Computantis/blob/main/notaryserver/rest.go#L136-L142>)
 
 TransactionsRejectRequest is a request to reject a transactions.
 
@@ -1906,7 +1934,7 @@ type TransactionsRejectRequest struct {
 ```
 
 <a name="TransactionsRejectResponse"></a>
-## type [TransactionsRejectResponse](<https://github.com/bartossh/Computantis/blob/main/notaryserver/rest.go#L100-L103>)
+## type [TransactionsRejectResponse](<https://github.com/bartossh/Computantis/blob/main/notaryserver/rest.go#L145-L148>)
 
 TransactionsRejectResponse is a response for transaction reject.
 
@@ -1918,9 +1946,9 @@ type TransactionsRejectResponse struct {
 ```
 
 <a name="TransactionsRequest"></a>
-## type [TransactionsRequest](<https://github.com/bartossh/Computantis/blob/main/notaryserver/rest.go#L145-L152>)
+## type [TransactionsRequest](<https://github.com/bartossh/Computantis/blob/main/notaryserver/rest.go#L206-L211>)
 
-TransactionsRequest is a request to get awaited, issued or added to the DAG transactions. Request contains of Address for which Transactions are requested, Data in binary format, Hash of Data and Signature of the Data to prove that entity doing the request is an Address owner.
+TransactionsRequest is a request to get awaited and issued to the DAG transactions. Request contains of Address for which Transactions are requested, Data in binary format, Hash of Data and Signature of the Data to prove that entity doing the request is an Address owner.
 
 ```go
 type TransactionsRequest struct {
@@ -1928,13 +1956,11 @@ type TransactionsRequest struct {
     Data      []byte   `json:"data"`
     Signature []byte   `json:"signature"`
     Hash      [32]byte `json:"hash"`
-    Offset    int      `json:"offset,omitempty"`
-    Limit     int      `json:"limit,omitempty"`
 }
 ```
 
 <a name="TransactionsResponse"></a>
-## type [TransactionsResponse](<https://github.com/bartossh/Computantis/blob/main/notaryserver/rest.go#L155-L158>)
+## type [TransactionsResponse](<https://github.com/bartossh/Computantis/blob/main/notaryserver/rest.go#L214-L217>)
 
 TransactionsResponse is a response for awaited or issued transactions request.
 
@@ -2063,14 +2089,6 @@ import "github.com/bartossh/Computantis/protobufcompiled"
   - [func \(x \*NotaryNode\) ProtoReflect\(\) protoreflect.Message](<#NotaryNode.ProtoReflect>)
   - [func \(x \*NotaryNode\) Reset\(\)](<#NotaryNode.Reset>)
   - [func \(x \*NotaryNode\) String\(\) string](<#NotaryNode.String>)
-- [type Paggination](<#Paggination>)
-  - [func \(\*Paggination\) Descriptor\(\) \(\[\]byte, \[\]int\)](<#Paggination.Descriptor>)
-  - [func \(x \*Paggination\) GetLimit\(\) int64](<#Paggination.GetLimit>)
-  - [func \(x \*Paggination\) GetOffset\(\) int64](<#Paggination.GetOffset>)
-  - [func \(\*Paggination\) ProtoMessage\(\)](<#Paggination.ProtoMessage>)
-  - [func \(x \*Paggination\) ProtoReflect\(\) protoreflect.Message](<#Paggination.ProtoReflect>)
-  - [func \(x \*Paggination\) Reset\(\)](<#Paggination.Reset>)
-  - [func \(x \*Paggination\) String\(\) string](<#Paggination.String>)
 - [type QueueListenerClient](<#QueueListenerClient>)
   - [func NewQueueListenerClient\(cc grpc.ClientConnInterface\) QueueListenerClient](<#NewQueueListenerClient>)
 - [type QueueListenerServer](<#QueueListenerServer>)
@@ -2146,7 +2164,7 @@ import "github.com/bartossh/Computantis/protobufcompiled"
 - [type UnimplementedWalletClientAPIServer](<#UnimplementedWalletClientAPIServer>)
   - [func \(UnimplementedWalletClientAPIServer\) Address\(context.Context, \*emptypb.Empty\) \(\*WalletPublicAddress, error\)](<#UnimplementedWalletClientAPIServer.Address>)
   - [func \(UnimplementedWalletClientAPIServer\) Alive\(context.Context, \*emptypb.Empty\) \(\*AliveInfo, error\)](<#UnimplementedWalletClientAPIServer.Alive>)
-  - [func \(UnimplementedWalletClientAPIServer\) ApprovedTransactions\(context.Context, \*Paggination\) \(\*Transactions, error\)](<#UnimplementedWalletClientAPIServer.ApprovedTransactions>)
+  - [func \(UnimplementedWalletClientAPIServer\) ApprovedTransactions\(context.Context, \*emptypb.Empty\) \(\*Transactions, error\)](<#UnimplementedWalletClientAPIServer.ApprovedTransactions>)
   - [func \(UnimplementedWalletClientAPIServer\) IssuedTransactions\(context.Context, \*NotaryNode\) \(\*Transactions, error\)](<#UnimplementedWalletClientAPIServer.IssuedTransactions>)
   - [func \(UnimplementedWalletClientAPIServer\) Wallet\(context.Context, \*CreateWallet\) \(\*ServerInfo, error\)](<#UnimplementedWalletClientAPIServer.Wallet>)
   - [func \(UnimplementedWalletClientAPIServer\) WebHook\(context.Context, \*CreateWebHook\) \(\*ServerInfo, error\)](<#UnimplementedWalletClientAPIServer.WebHook>)
@@ -3369,7 +3387,7 @@ func (x *NodeInfo) String() string
 
 
 <a name="NotaryNode"></a>
-## type [NotaryNode](<https://github.com/bartossh/Computantis/blob/main/protobufcompiled/wallet_client_api.pb.go#L511-L517>)
+## type [NotaryNode](<https://github.com/bartossh/Computantis/blob/main/protobufcompiled/wallet_client_api.pb.go#L456-L462>)
 
 
 
@@ -3381,7 +3399,7 @@ type NotaryNode struct {
 ```
 
 <a name="NotaryNode.Descriptor"></a>
-### func \(\*NotaryNode\) [Descriptor](<https://github.com/bartossh/Computantis/blob/main/protobufcompiled/wallet_client_api.pb.go#L547>)
+### func \(\*NotaryNode\) [Descriptor](<https://github.com/bartossh/Computantis/blob/main/protobufcompiled/wallet_client_api.pb.go#L492>)
 
 ```go
 func (*NotaryNode) Descriptor() ([]byte, []int)
@@ -3390,7 +3408,7 @@ func (*NotaryNode) Descriptor() ([]byte, []int)
 Deprecated: Use NotaryNode.ProtoReflect.Descriptor instead.
 
 <a name="NotaryNode.GetUrl"></a>
-### func \(\*NotaryNode\) [GetUrl](<https://github.com/bartossh/Computantis/blob/main/protobufcompiled/wallet_client_api.pb.go#L551>)
+### func \(\*NotaryNode\) [GetUrl](<https://github.com/bartossh/Computantis/blob/main/protobufcompiled/wallet_client_api.pb.go#L496>)
 
 ```go
 func (x *NotaryNode) GetUrl() string
@@ -3399,7 +3417,7 @@ func (x *NotaryNode) GetUrl() string
 
 
 <a name="NotaryNode.ProtoMessage"></a>
-### func \(\*NotaryNode\) [ProtoMessage](<https://github.com/bartossh/Computantis/blob/main/protobufcompiled/wallet_client_api.pb.go#L532>)
+### func \(\*NotaryNode\) [ProtoMessage](<https://github.com/bartossh/Computantis/blob/main/protobufcompiled/wallet_client_api.pb.go#L477>)
 
 ```go
 func (*NotaryNode) ProtoMessage()
@@ -3408,7 +3426,7 @@ func (*NotaryNode) ProtoMessage()
 
 
 <a name="NotaryNode.ProtoReflect"></a>
-### func \(\*NotaryNode\) [ProtoReflect](<https://github.com/bartossh/Computantis/blob/main/protobufcompiled/wallet_client_api.pb.go#L534>)
+### func \(\*NotaryNode\) [ProtoReflect](<https://github.com/bartossh/Computantis/blob/main/protobufcompiled/wallet_client_api.pb.go#L479>)
 
 ```go
 func (x *NotaryNode) ProtoReflect() protoreflect.Message
@@ -3417,7 +3435,7 @@ func (x *NotaryNode) ProtoReflect() protoreflect.Message
 
 
 <a name="NotaryNode.Reset"></a>
-### func \(\*NotaryNode\) [Reset](<https://github.com/bartossh/Computantis/blob/main/protobufcompiled/wallet_client_api.pb.go#L519>)
+### func \(\*NotaryNode\) [Reset](<https://github.com/bartossh/Computantis/blob/main/protobufcompiled/wallet_client_api.pb.go#L464>)
 
 ```go
 func (x *NotaryNode) Reset()
@@ -3426,86 +3444,10 @@ func (x *NotaryNode) Reset()
 
 
 <a name="NotaryNode.String"></a>
-### func \(\*NotaryNode\) [String](<https://github.com/bartossh/Computantis/blob/main/protobufcompiled/wallet_client_api.pb.go#L528>)
+### func \(\*NotaryNode\) [String](<https://github.com/bartossh/Computantis/blob/main/protobufcompiled/wallet_client_api.pb.go#L473>)
 
 ```go
 func (x *NotaryNode) String() string
-```
-
-
-
-<a name="Paggination"></a>
-## type [Paggination](<https://github.com/bartossh/Computantis/blob/main/protobufcompiled/wallet_client_api.pb.go#L456-L463>)
-
-
-
-```go
-type Paggination struct {
-    Offset int64 `protobuf:"varint,1,opt,name=offset,proto3" json:"offset,omitempty"`
-    Limit  int64 `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
-    // contains filtered or unexported fields
-}
-```
-
-<a name="Paggination.Descriptor"></a>
-### func \(\*Paggination\) [Descriptor](<https://github.com/bartossh/Computantis/blob/main/protobufcompiled/wallet_client_api.pb.go#L493>)
-
-```go
-func (*Paggination) Descriptor() ([]byte, []int)
-```
-
-Deprecated: Use Paggination.ProtoReflect.Descriptor instead.
-
-<a name="Paggination.GetLimit"></a>
-### func \(\*Paggination\) [GetLimit](<https://github.com/bartossh/Computantis/blob/main/protobufcompiled/wallet_client_api.pb.go#L504>)
-
-```go
-func (x *Paggination) GetLimit() int64
-```
-
-
-
-<a name="Paggination.GetOffset"></a>
-### func \(\*Paggination\) [GetOffset](<https://github.com/bartossh/Computantis/blob/main/protobufcompiled/wallet_client_api.pb.go#L497>)
-
-```go
-func (x *Paggination) GetOffset() int64
-```
-
-
-
-<a name="Paggination.ProtoMessage"></a>
-### func \(\*Paggination\) [ProtoMessage](<https://github.com/bartossh/Computantis/blob/main/protobufcompiled/wallet_client_api.pb.go#L478>)
-
-```go
-func (*Paggination) ProtoMessage()
-```
-
-
-
-<a name="Paggination.ProtoReflect"></a>
-### func \(\*Paggination\) [ProtoReflect](<https://github.com/bartossh/Computantis/blob/main/protobufcompiled/wallet_client_api.pb.go#L480>)
-
-```go
-func (x *Paggination) ProtoReflect() protoreflect.Message
-```
-
-
-
-<a name="Paggination.Reset"></a>
-### func \(\*Paggination\) [Reset](<https://github.com/bartossh/Computantis/blob/main/protobufcompiled/wallet_client_api.pb.go#L465>)
-
-```go
-func (x *Paggination) Reset()
-```
-
-
-
-<a name="Paggination.String"></a>
-### func \(\*Paggination\) [String](<https://github.com/bartossh/Computantis/blob/main/protobufcompiled/wallet_client_api.pb.go#L474>)
-
-```go
-func (x *Paggination) String() string
 ```
 
 
@@ -4241,7 +4183,7 @@ func (UnimplementedWalletClientAPIServer) Alive(context.Context, *emptypb.Empty)
 ### func \(UnimplementedWalletClientAPIServer\) [ApprovedTransactions](<https://github.com/bartossh/Computantis/blob/main/protobufcompiled/wallet_client_api_grpc.pb.go#L131>)
 
 ```go
-func (UnimplementedWalletClientAPIServer) ApprovedTransactions(context.Context, *Paggination) (*Transactions, error)
+func (UnimplementedWalletClientAPIServer) ApprovedTransactions(context.Context, *emptypb.Empty) (*Transactions, error)
 ```
 
 
@@ -4541,7 +4483,7 @@ type WalletClientAPIClient interface {
     Alive(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*AliveInfo, error)
     Address(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*WalletPublicAddress, error)
     IssuedTransactions(ctx context.Context, in *NotaryNode, opts ...grpc.CallOption) (*Transactions, error)
-    ApprovedTransactions(ctx context.Context, in *Paggination, opts ...grpc.CallOption) (*Transactions, error)
+    ApprovedTransactions(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*Transactions, error)
     Wallet(ctx context.Context, in *CreateWallet, opts ...grpc.CallOption) (*ServerInfo, error)
     WebHook(ctx context.Context, in *CreateWebHook, opts ...grpc.CallOption) (*ServerInfo, error)
 }
@@ -4566,7 +4508,7 @@ type WalletClientAPIServer interface {
     Alive(context.Context, *emptypb.Empty) (*AliveInfo, error)
     Address(context.Context, *emptypb.Empty) (*WalletPublicAddress, error)
     IssuedTransactions(context.Context, *NotaryNode) (*Transactions, error)
-    ApprovedTransactions(context.Context, *Paggination) (*Transactions, error)
+    ApprovedTransactions(context.Context, *emptypb.Empty) (*Transactions, error)
     Wallet(context.Context, *CreateWallet) (*ServerInfo, error)
     WebHook(context.Context, *CreateWebHook) (*ServerInfo, error)
     // contains filtered or unexported methods
@@ -5162,7 +5104,9 @@ import "github.com/bartossh/Computantis/transaction"
 - [Variables](<#variables>)
 - [type Signer](<#Signer>)
 - [type Transaction](<#Transaction>)
+  - [func Decode\(buf \[\]byte\) \(Transaction, error\)](<#Decode>)
   - [func New\(subject string, spice spice.Melange, data \[\]byte, receiverAddress string, issuer Signer\) \(Transaction, error\)](<#New>)
+  - [func \(t \*Transaction\) Encode\(\) \(\[\]byte, error\)](<#Transaction.Encode>)
   - [func \(t \*Transaction\) GetMessage\(\) \[\]byte](<#Transaction.GetMessage>)
   - [func \(t \*Transaction\) IsContract\(\) bool](<#Transaction.IsContract>)
   - [func \(t \*Transaction\) IsSpiceTransfer\(\) bool](<#Transaction.IsSpiceTransfer>)
@@ -5201,7 +5145,7 @@ var (
 ```
 
 <a name="Signer"></a>
-## type [Signer](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L31-L34>)
+## type [Signer](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L33-L36>)
 
 Signer provides signing and address methods.
 
@@ -5213,7 +5157,7 @@ type Signer interface {
 ```
 
 <a name="Transaction"></a>
-## type [Transaction](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L48-L59>)
+## type [Transaction](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L50-L61>)
 
 Transaction contains transaction information, subject type, subject data, signatures and public keys. Transaction is valid for a week from being issued. Subject represents an information how to read the Data and / or how to decode them. Data is not validated by the computantis server, Ladger ior block. What is stored in Data is not important for the whole Computantis system. It is only important that the data are signed by the issuer and the receiver and both parties agreed on them.
 
@@ -5232,8 +5176,17 @@ type Transaction struct {
 }
 ```
 
+<a name="Decode"></a>
+### func [Decode](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L189>)
+
+```go
+func Decode(buf []byte) (Transaction, error)
+```
+
+Decode decodes slice buffer to transaction.
+
 <a name="New"></a>
-### func [New](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L62>)
+### func [New](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L64>)
 
 ```go
 func New(subject string, spice spice.Melange, data []byte, receiverAddress string, issuer Signer) (Transaction, error)
@@ -5241,8 +5194,17 @@ func New(subject string, spice spice.Melange, data []byte, receiverAddress strin
 
 New creates new transaction signed by the issuer.
 
+<a name="Transaction.Encode"></a>
+### func \(\*Transaction\) [Encode](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L180>)
+
+```go
+func (t *Transaction) Encode() ([]byte, error)
+```
+
+Encode encodes transaction to bytes slice.
+
 <a name="Transaction.GetMessage"></a>
-### func \(\*Transaction\) [GetMessage](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L163>)
+### func \(\*Transaction\) [GetMessage](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L165>)
 
 ```go
 func (t *Transaction) GetMessage() []byte
@@ -5251,16 +5213,16 @@ func (t *Transaction) GetMessage() []byte
 GeMessage returns message used for signature validation.
 
 <a name="Transaction.IsContract"></a>
-### func \(\*Transaction\) [IsContract](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L139>)
+### func \(\*Transaction\) [IsContract](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L141>)
 
 ```go
 func (t *Transaction) IsContract() bool
 ```
 
-IsContract returns true if the transaction contains data buffer that is recognised as transaction with contract.
+IsContract returns true if the transaction contains not empty data buffer that is recognised as transaction with contract.
 
 <a name="Transaction.IsSpiceTransfer"></a>
-### func \(\*Transaction\) [IsSpiceTransfer](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L144>)
+### func \(\*Transaction\) [IsSpiceTransfer](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L146>)
 
 ```go
 func (t *Transaction) IsSpiceTransfer() bool
@@ -5269,7 +5231,7 @@ func (t *Transaction) IsSpiceTransfer() bool
 IsSpiceTransfer returns true if the transaction transfers spice.
 
 <a name="Transaction.Sign"></a>
-### func \(\*Transaction\) [Sign](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L101>)
+### func \(\*Transaction\) [Sign](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L103>)
 
 ```go
 func (t *Transaction) Sign(receiver Signer, v Verifier) ([32]byte, error)
@@ -5278,7 +5240,7 @@ func (t *Transaction) Sign(receiver Signer, v Verifier) ([32]byte, error)
 Sign verifies issuer signature and signs Transaction by the receiver.
 
 <a name="Transaction.VerifyIssuer"></a>
-### func \(\*Transaction\) [VerifyIssuer](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L148>)
+### func \(\*Transaction\) [VerifyIssuer](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L150>)
 
 ```go
 func (t *Transaction) VerifyIssuer(v Verifier) error
@@ -5287,7 +5249,7 @@ func (t *Transaction) VerifyIssuer(v Verifier) error
 
 
 <a name="Transaction.VerifyIssuerReceiver"></a>
-### func \(\*Transaction\) [VerifyIssuerReceiver](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L154>)
+### func \(\*Transaction\) [VerifyIssuerReceiver](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L156>)
 
 ```go
 func (t *Transaction) VerifyIssuerReceiver(v Verifier) error
@@ -5324,7 +5286,7 @@ type TransactionInBlock struct {
 ```
 
 <a name="TrxAddressesSubscriberCallback"></a>
-## type [TrxAddressesSubscriberCallback](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L28>)
+## type [TrxAddressesSubscriberCallback](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L30>)
 
 TrxAddressesSubscriberCallback is a method or function performing compoutantion on the transactions addresses.
 
@@ -5333,7 +5295,7 @@ type TrxAddressesSubscriberCallback func(addresses []string, storageNodeURL stri
 ```
 
 <a name="Verifier"></a>
-## type [Verifier](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L37-L39>)
+## type [Verifier](<https://github.com/bartossh/Computantis/blob/main/transaction/transaction.go#L39-L41>)
 
 Verifier provides signature verification method.
 
@@ -5538,20 +5500,20 @@ import "github.com/bartossh/Computantis/walletapi"
 
 ```go
 const (
-    MetricsURL              = notaryserver.MetricsURL                 // URL serves service metrics.
-    Alive                   = notaryserver.AliveURL                   // URL allows to check if server is alive and if sign service is of the same version.
-    Address                 = "/address"                              // URL allows to validate address and API verssion
-    IssueTransaction        = "/transactions/issue"                   // URL allows to issue transaction signed by the issuer.
-    ConfirmTransaction      = "/transaction/sign"                     // URL allows to sign transaction received by the receiver.
-    RejectTransactions      = "/transactions/reject"                  // URL allows to reject transactions received by the receiver.
-    GetWaitingTransactions  = "/transactions/waiting"                 // URL allows to get issued transactions for the issuer.
-    GetApprovedTransactions = "/transactions/approved/:offset/:limit" // URL allows to get approved transactions with pagination.
-    CreateUpdateWebhook     = "/webhook/create"                       // URL allows to creatre webhook
+    MetricsURL              = notaryserver.MetricsURL  // URL serves service metrics.
+    Alive                   = notaryserver.AliveURL    // URL allows to check if server is alive and if sign service is of the same version.
+    Address                 = "/address"               // URL allows to validate address and API version
+    IssueTransaction        = "/transactions/issue"    // URL allows to issue transaction signed by the issuer.
+    ConfirmTransaction      = "/transaction/sign"      // URL allows to sign transaction received by the receiver.
+    RejectTransactions      = "/transactions/reject"   // URL allows to reject transactions received by the receiver.
+    GetWaitingTransactions  = "/transactions/waiting"  // URL allows to get issued transactions for the issuer.
+    GetApprovedTransactions = "/transactions/approved" // URL allows to get approved transactions with pagination.
+    CreateUpdateWebhook     = "/webhook/create"        // URL allows to create webhook
 )
 ```
 
 <a name="Run"></a>
-## func [Run](<https://github.com/bartossh/Computantis/blob/main/walletapi/walletapi.go#L53-L55>)
+## func [Run](<https://github.com/bartossh/Computantis/blob/main/walletapi/walletapi.go#L52-L54>)
 
 ```go
 func Run(ctx context.Context, cfg Config, log logger.Logger, timeout time.Duration, fw transaction.Verifier, wrs walletmiddleware.WalletReadSaver, walletCreator walletmiddleware.NewSignValidatorCreator) error
@@ -5569,7 +5531,7 @@ func RunGRPC(ctx context.Context, cfg Config, log logger.Logger, timeout time.Du
 RunGRPC runs the service application that exposes the GRPC API for creating, validating and signing transactions. This blocks until the context is canceled.
 
 <a name="AddressResponse"></a>
-## type [AddressResponse](<https://github.com/bartossh/Computantis/blob/main/walletapi/walletapi.go#L131-L133>)
+## type [AddressResponse](<https://github.com/bartossh/Computantis/blob/main/walletapi/walletapi.go#L130-L132>)
 
 AddressResponse is wallet public address response.
 
@@ -5580,7 +5542,7 @@ type AddressResponse struct {
 ```
 
 <a name="AliveResponse"></a>
-## type [AliveResponse](<https://github.com/bartossh/Computantis/blob/main/walletapi/walletapi.go#L116>)
+## type [AliveResponse](<https://github.com/bartossh/Computantis/blob/main/walletapi/walletapi.go#L115>)
 
 AliveResponse is containing server alive data such as ApiVersion and APIHeader.
 
@@ -5589,7 +5551,7 @@ type AliveResponse notaryserver.AliveResponse
 ```
 
 <a name="Config"></a>
-## type [Config](<https://github.com/bartossh/Computantis/blob/main/walletapi/walletapi.go#L26-L30>)
+## type [Config](<https://github.com/bartossh/Computantis/blob/main/walletapi/walletapi.go#L25-L29>)
 
 Config is the configuration for the notaryserver
 
@@ -5602,7 +5564,7 @@ type Config struct {
 ```
 
 <a name="CreateWebHookRequest"></a>
-## type [CreateWebHookRequest](<https://github.com/bartossh/Computantis/blob/main/walletapi/walletapi.go#L318-L320>)
+## type [CreateWebHookRequest](<https://github.com/bartossh/Computantis/blob/main/walletapi/walletapi.go#L303-L305>)
 
 CreateWebHookRequest is a request to create a web hook
 
@@ -5613,7 +5575,7 @@ type CreateWebHookRequest struct {
 ```
 
 <a name="IssueTransactionRequest"></a>
-## type [IssueTransactionRequest](<https://github.com/bartossh/Computantis/blob/main/walletapi/walletapi.go#L151-L157>)
+## type [IssueTransactionRequest](<https://github.com/bartossh/Computantis/blob/main/walletapi/walletapi.go#L150-L156>)
 
 IssueTransactionRequest is a request message that contains data and subject of the transaction to be issued.
 
@@ -5628,7 +5590,7 @@ type IssueTransactionRequest struct {
 ```
 
 <a name="IssueTransactionResponse"></a>
-## type [IssueTransactionResponse](<https://github.com/bartossh/Computantis/blob/main/walletapi/walletapi.go#L160-L163>)
+## type [IssueTransactionResponse](<https://github.com/bartossh/Computantis/blob/main/walletapi/walletapi.go#L159-L162>)
 
 IssueTransactionResponse is response to issued transaction.
 
@@ -5640,7 +5602,7 @@ type IssueTransactionResponse struct {
 ```
 
 <a name="TransactionRequest"></a>
-## type [TransactionRequest](<https://github.com/bartossh/Computantis/blob/main/walletapi/walletapi.go#L226-L229>)
+## type [TransactionRequest](<https://github.com/bartossh/Computantis/blob/main/walletapi/walletapi.go#L225-L228>)
 
 TransactionRequest is a request to confirm transaction.
 
@@ -5652,7 +5614,7 @@ type TransactionRequest struct {
 ```
 
 <a name="TransactionResponse"></a>
-## type [TransactionResponse](<https://github.com/bartossh/Computantis/blob/main/walletapi/walletapi.go#L232-L235>)
+## type [TransactionResponse](<https://github.com/bartossh/Computantis/blob/main/walletapi/walletapi.go#L231-L234>)
 
 TransactionResponse is response of confirming transaction.
 
@@ -5664,7 +5626,7 @@ type TransactionResponse struct {
 ```
 
 <a name="TransactionsHashesResponse"></a>
-## type [TransactionsHashesResponse](<https://github.com/bartossh/Computantis/blob/main/walletapi/walletapi.go#L195-L199>)
+## type [TransactionsHashesResponse](<https://github.com/bartossh/Computantis/blob/main/walletapi/walletapi.go#L194-L198>)
 
 TransactionsHashesResponse is response of group of transactions hashes.
 
@@ -5677,7 +5639,7 @@ type TransactionsHashesResponse struct {
 ```
 
 <a name="TransactionsRequest"></a>
-## type [TransactionsRequest](<https://github.com/bartossh/Computantis/blob/main/walletapi/walletapi.go#L189-L192>)
+## type [TransactionsRequest](<https://github.com/bartossh/Computantis/blob/main/walletapi/walletapi.go#L188-L191>)
 
 TransactionsRequest is a request for group of transactions.
 
@@ -5689,7 +5651,7 @@ type TransactionsRequest struct {
 ```
 
 <a name="TransactionsResponse"></a>
-## type [TransactionsResponse](<https://github.com/bartossh/Computantis/blob/main/walletapi/walletapi.go#L262-L266>)
+## type [TransactionsResponse](<https://github.com/bartossh/Computantis/blob/main/walletapi/walletapi.go#L261-L265>)
 
 TransactionsResponse is a response containing transactions, success indicator and error.
 
@@ -5718,7 +5680,7 @@ import "github.com/bartossh/Computantis/walletmiddleware"
   - [func \(c \*Client\) FlushWalletFromMemory\(\)](<#Client.FlushWalletFromMemory>)
   - [func \(c \*Client\) NewWallet\(token string\) error](<#Client.NewWallet>)
   - [func \(c \*Client\) ProposeTransaction\(receiverAddr string, subject string, spc spice.Melange, data \[\]byte\) error](<#Client.ProposeTransaction>)
-  - [func \(c \*Client\) ReadApprovedTransactions\(offset, limit int\) \(\[\]transaction.Transaction, error\)](<#Client.ReadApprovedTransactions>)
+  - [func \(c \*Client\) ReadApprovedTransactions\(\) \(\[\]transaction.Transaction, error\)](<#Client.ReadApprovedTransactions>)
   - [func \(c \*Client\) ReadWaitingTransactions\(notaryNodeURL string\) \(\[\]transaction.Transaction, error\)](<#Client.ReadWaitingTransactions>)
   - [func \(c \*Client\) ReadWalletFromFile\(\) error](<#Client.ReadWalletFromFile>)
   - [func \(c \*Client\) RejectTransactions\(notaryNodeURL string, trxs \[\]transaction.Transaction\) \(\[\]\[32\]byte, error\)](<#Client.RejectTransactions>)
@@ -5768,7 +5730,7 @@ func (c *Client) ConfirmTransaction(notaryNodeURL string, trx *transaction.Trans
 ConfirmTransaction confirms transaction by signing it with the wallet and then sending it to the API server.
 
 <a name="Client.CreateWebhook"></a>
-### func \(\*Client\) [CreateWebhook](<https://github.com/bartossh/Computantis/blob/main/walletmiddleware/walletmiddleware.go#L341>)
+### func \(\*Client\) [CreateWebhook](<https://github.com/bartossh/Computantis/blob/main/walletmiddleware/walletmiddleware.go#L338>)
 
 ```go
 func (c *Client) CreateWebhook(webHookURL string) error
@@ -5777,7 +5739,7 @@ func (c *Client) CreateWebhook(webHookURL string) error
 
 
 <a name="Client.DataToSign"></a>
-### func \(\*Client\) [DataToSign](<https://github.com/bartossh/Computantis/blob/main/walletmiddleware/walletmiddleware.go#L314>)
+### func \(\*Client\) [DataToSign](<https://github.com/bartossh/Computantis/blob/main/walletmiddleware/walletmiddleware.go#L311>)
 
 ```go
 func (c *Client) DataToSign(notaryNodeURL string) (notaryserver.DataToSignResponse, error)
@@ -5786,7 +5748,7 @@ func (c *Client) DataToSign(notaryNodeURL string) (notaryserver.DataToSignRespon
 DataToSign returns data to sign for the current wallet. Data to sign are randomly generated bytes by the server and stored in pair with the address. Signing this data is a proof that the signing public address is the owner of the wallet a making request.
 
 <a name="Client.FlushWalletFromMemory"></a>
-### func \(\*Client\) [FlushWalletFromMemory](<https://github.com/bartossh/Computantis/blob/main/walletmiddleware/walletmiddleware.go#L389>)
+### func \(\*Client\) [FlushWalletFromMemory](<https://github.com/bartossh/Computantis/blob/main/walletmiddleware/walletmiddleware.go#L386>)
 
 ```go
 func (c *Client) FlushWalletFromMemory()
@@ -5813,13 +5775,13 @@ func (c *Client) ProposeTransaction(receiverAddr string, subject string, spc spi
 ProposeTransaction sends a Transaction proposal to the API server for provided receiver address. Subject describes how to read the data from the transaction. For example, if the subject is "json", then the data can by decoded to map\[sting\]any, when subject "pdf" than it should be decoded by proper pdf decoder, when "csv" then it should be decoded by proper csv decoder. Client is not responsible for decoding the data, it is only responsible for sending the data to the API server.
 
 <a name="Client.ReadApprovedTransactions"></a>
-### func \(\*Client\) [ReadApprovedTransactions](<https://github.com/bartossh/Computantis/blob/main/walletmiddleware/walletmiddleware.go#L260>)
+### func \(\*Client\) [ReadApprovedTransactions](<https://github.com/bartossh/Computantis/blob/main/walletmiddleware/walletmiddleware.go#L259>)
 
 ```go
-func (c *Client) ReadApprovedTransactions(offset, limit int) ([]transaction.Transaction, error)
+func (c *Client) ReadApprovedTransactions() ([]transaction.Transaction, error)
 ```
 
-ReadApprovedTransactions reads approved transactions belonging to current wallet from the API server. Method allows for paggination with offset and limit.
+ReadApprovedTransactions reads approved transactions belonging to current wallet from the API server.
 
 <a name="Client.ReadWaitingTransactions"></a>
 ### func \(\*Client\) [ReadWaitingTransactions](<https://github.com/bartossh/Computantis/blob/main/walletmiddleware/walletmiddleware.go#L220>)
@@ -5831,7 +5793,7 @@ func (c *Client) ReadWaitingTransactions(notaryNodeURL string) ([]transaction.Tr
 ReadWaitingTransactions reads all waiting transactions belonging to current wallet from the API server.
 
 <a name="Client.ReadWalletFromFile"></a>
-### func \(\*Client\) [ReadWalletFromFile](<https://github.com/bartossh/Computantis/blob/main/walletmiddleware/walletmiddleware.go#L301>)
+### func \(\*Client\) [ReadWalletFromFile](<https://github.com/bartossh/Computantis/blob/main/walletmiddleware/walletmiddleware.go#L298>)
 
 ```go
 func (c *Client) ReadWalletFromFile() error
@@ -5849,7 +5811,7 @@ func (c *Client) RejectTransactions(notaryNodeURL string, trxs []transaction.Tra
 RejectTransactions rejects given transactions. Transaction will be rejected if the transaction receiver is a given wellet public address. Returns hashes of all the rejected transactions or error otherwise.
 
 <a name="Client.SaveWalletToFile"></a>
-### func \(\*Client\) [SaveWalletToFile](<https://github.com/bartossh/Computantis/blob/main/walletmiddleware/walletmiddleware.go#L292>)
+### func \(\*Client\) [SaveWalletToFile](<https://github.com/bartossh/Computantis/blob/main/walletmiddleware/walletmiddleware.go#L289>)
 
 ```go
 func (c *Client) SaveWalletToFile() error
@@ -5858,7 +5820,7 @@ func (c *Client) SaveWalletToFile() error
 SaveWalletToFile saves the wallet to the file in the path.
 
 <a name="Client.Sign"></a>
-### func \(\*Client\) [Sign](<https://github.com/bartossh/Computantis/blob/main/walletmiddleware/walletmiddleware.go#L333>)
+### func \(\*Client\) [Sign](<https://github.com/bartossh/Computantis/blob/main/walletmiddleware/walletmiddleware.go#L330>)
 
 ```go
 func (c *Client) Sign(d []byte) (digest [32]byte, signature []byte, err error)

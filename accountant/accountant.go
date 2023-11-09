@@ -913,3 +913,79 @@ func (ab *AccountingBook) CalculateBalance(ctx context.Context, walletPubAddr st
 
 	return NewBalance(walletPubAddr, s), nil
 }
+
+// ReadTransactionsByHash reads transactions by hashes from DAG and DB.
+func (ab *AccountingBook) ReadTransactionsByHashes(ctx context.Context, hashes [][32]byte) ([]transaction.Transaction, error) {
+	trxs := make([]transaction.Transaction, 0, len(hashes))
+	vertexHashes := make([][]byte, 0, len(hashes))
+	if err := ab.trxsToVertxDB.View(func(txn *badger.Txn) error {
+		for _, h := range hashes {
+			item, err := txn.Get(h[:])
+			if err != nil {
+				if !errors.Is(err, badger.ErrKeyNotFound) {
+					ab.log.Error(fmt.Sprintf("accountant error with reading transaction to vertex mapping, %s", err))
+				}
+				continue
+			}
+
+			item.Value(func(val []byte) error {
+				vertexHashes = append(vertexHashes, val)
+				return nil
+			})
+		}
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	vrxNotFound := make([][]byte, 0, len(hashes))
+	for _, h := range vertexHashes {
+		item, err := ab.dag.GetVertex(string(h))
+		if err != nil {
+			if !errors.Is(err, dag.IDUnknownError{}) {
+				ab.log.Error(fmt.Sprintf("accountant error with reading vertex from DAG, %s", err))
+			}
+			vrxNotFound = append(vrxNotFound, h)
+			continue
+		}
+		switch vrx := item.(type) {
+		case *Vertex:
+			if vrx == nil {
+				return nil, ErrUnexpected
+			}
+			trxs = append(trxs, vrx.Transaction)
+
+		default:
+			return nil, ErrUnexpected
+		}
+	}
+
+	if len(vrxNotFound) == 0 {
+		return trxs, nil
+	}
+
+	if err := ab.verticesDB.View(func(txn *badger.Txn) error {
+		for _, h := range vrxNotFound {
+			item, err := txn.Get(h[:])
+			if err != nil {
+				if !errors.Is(err, badger.ErrKeyNotFound) {
+					ab.log.Error(fmt.Sprintf("accountant error with reading vertex from DB, %s", err))
+				}
+				continue
+			}
+
+			item.Value(func(val []byte) error {
+				vrx, err := decodeVertex(val)
+				if err != nil {
+					return errors.Join(ErrUnexpected, err)
+				}
+				trxs = append(trxs, vrx.Transaction)
+				return nil
+			})
+		}
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	return trxs, nil
+}

@@ -165,8 +165,8 @@ func (a *app) IssuedTransactions(ctx context.Context, notaryNode *protobufcompil
 
 // ApprovedTransactions implements wallet client API GRPC read approved transactions.
 // Procedure returns client approved transactions if exists in the system.
-func (a *app) ApprovedTransactions(ctx context.Context, paggination *protobufcompiled.Paggination) (*protobufcompiled.Transactions, error) {
-	transactions, err := a.centralNodeClient.ReadApprovedTransactions(int(paggination.Offset), int(paggination.Limit))
+func (a *app) ApprovedTransactions(ctx context.Context, _ *emptypb.Empty) (*protobufcompiled.Transactions, error) {
+	transactions, err := a.centralNodeClient.ReadApprovedTransactions()
 	if err != nil {
 		err := fmt.Errorf("error getting approved transactions: %v", err)
 		a.log.Error(err.Error())
