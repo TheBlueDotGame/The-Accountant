@@ -276,13 +276,13 @@ func checkNotEmpty(trx *transaction.Transaction) error {
 }
 
 func hexEncode(src []byte) []byte {
-	dst := make([]byte, 0)
+	dst := make([]byte, hex.EncodedLen(len(src)))
 	hex.Encode(dst, src)
 	return dst
 }
 
 func hexDecode(src []byte) ([]byte, error) {
-	dst := make([]byte, 0)
+	dst := make([]byte, hex.DecodedLen(len(src)))
 	_, err := hex.Decode(dst, src)
 	return dst, err
 }

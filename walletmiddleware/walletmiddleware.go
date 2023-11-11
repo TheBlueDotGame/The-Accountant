@@ -7,13 +7,13 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/bartossh/Computantis/helperserver"
 	"github.com/bartossh/Computantis/httpclient"
 	"github.com/bartossh/Computantis/notaryserver"
 	"github.com/bartossh/Computantis/spice"
 	"github.com/bartossh/Computantis/transaction"
 	"github.com/bartossh/Computantis/versioning"
 	"github.com/bartossh/Computantis/wallet"
+	"github.com/bartossh/Computantis/webhooksserver"
 )
 
 const (
@@ -127,11 +127,11 @@ func (c *Client) ProposeTransaction(receiverAddr string, subject string, spc spi
 	}
 
 	if !res.Success {
-		return errors.Join(httpclient.ErrRejectedByServer, errors.New("failed to propose transaction"))
+		return errors.Join(httpclient.ErrRejectedByServer, errors.New("failed to propose transaction, success is false"))
 	}
 
 	if !bytes.Equal(trx.Hash[:], res.TrxHash[:]) {
-		return errors.Join(httpclient.ErrServerReturnsInconsistentData, errors.New("failed to propose transaction"))
+		return errors.Join(httpclient.ErrServerReturnsInconsistentData, errors.New("failed to propose transaction, hashes are not equal"))
 	}
 
 	return nil
@@ -354,7 +354,7 @@ func (c *Client) CreateWebhook(webHookURL string) error {
 		return err
 	}
 
-	req := helperserver.CreateRemoveUpdateHookRequest{
+	req := webhooksserver.CreateRemoveUpdateHookRequest{
 		URL:       webHookURL,
 		Address:   addr,
 		Data:      data.Data,
@@ -362,9 +362,9 @@ func (c *Client) CreateWebhook(webHookURL string) error {
 		Signature: signature,
 	}
 
-	var res helperserver.CreateRemoveUpdateHookResponse
+	var res webhooksserver.CreateRemoveUpdateHookResponse
 
-	url := fmt.Sprintf("%s%s", c.apiRoot, helperserver.TransactionHookURL)
+	url := fmt.Sprintf("%s%s", c.apiRoot, webhooksserver.TransactionHookURL)
 	if err := httpclient.MakePost(c.timeout, url, req, &res); err != nil {
 		return err
 	}

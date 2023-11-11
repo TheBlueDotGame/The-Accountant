@@ -87,7 +87,7 @@ func makePost(req *fasthttp.Request, timeout time.Duration, out, in any) error {
 	defer fasthttp.ReleaseResponse(resp)
 
 	if err := fasthttp.DoTimeout(req, resp, timeout); err != nil {
-		return err
+		return fmt.Errorf("request failed %s", err)
 	}
 
 	switch resp.StatusCode() {
@@ -95,12 +95,12 @@ func makePost(req *fasthttp.Request, timeout time.Duration, out, in any) error {
 	case fasthttp.StatusNoContent:
 		return nil
 	default:
-		return fmt.Errorf("expected status code %d but got %d", fasthttp.StatusOK, resp.StatusCode())
+		return fmt.Errorf("request failed, expected status code %d but got %d", fasthttp.StatusOK, resp.StatusCode())
 	}
 
 	contentType := resp.Header.Peek("Content-Type")
 	if bytes.Index(contentType, []byte("application/json")) != 0 {
-		return fmt.Errorf("expected content type application/json but got %s", contentType)
+		return fmt.Errorf("request failed, expected content type application/json but got %s", contentType)
 	}
 
 	if in != nil {

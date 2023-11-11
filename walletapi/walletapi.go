@@ -11,7 +11,6 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/monitor"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 
-	"github.com/bartossh/Computantis/helperserver"
 	"github.com/bartossh/Computantis/logger"
 	"github.com/bartossh/Computantis/notaryserver"
 	"github.com/bartossh/Computantis/protobufcompiled"
@@ -19,6 +18,7 @@ import (
 	"github.com/bartossh/Computantis/transaction"
 	"github.com/bartossh/Computantis/versioning"
 	"github.com/bartossh/Computantis/walletmiddleware"
+	"github.com/bartossh/Computantis/webhooksserver"
 )
 
 // Config is the configuration for the notaryserver
@@ -29,10 +29,10 @@ type Config struct {
 }
 
 type app struct {
+	protobufcompiled.UnimplementedWalletClientAPIServer
 	log                 logger.Logger
 	centralNodeClient   walletmiddleware.Client
 	validatorNodeClient walletmiddleware.Client
-	protobufcompiled.UnimplementedWalletClientAPIServer
 }
 
 const (
@@ -317,7 +317,7 @@ func (a *app) createUpdateWebHook(c *fiber.Ctx) error {
 		return fiber.ErrBadGateway
 	}
 
-	var res helperserver.CreateRemoveUpdateHookResponse
+	var res webhooksserver.CreateRemoveUpdateHookResponse
 	if err := a.validatorNodeClient.CreateWebhook(req.URL); err != nil {
 		res.Ok = false
 		res.Err = err.Error()

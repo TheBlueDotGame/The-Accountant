@@ -130,7 +130,7 @@ func run(cfg configuration.Configuration) {
 		return
 	}
 
-	tele, err := telemetry.Run(ctx, cancel, 0)
+	tele, err := telemetry.Run(ctx, cancel, 2112)
 	if err != nil {
 		log.Error(err.Error())
 		c <- os.Interrupt

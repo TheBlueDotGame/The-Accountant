@@ -14,7 +14,6 @@ import (
 
 	"github.com/bartossh/Computantis/configuration"
 	"github.com/bartossh/Computantis/dataprovider"
-	"github.com/bartossh/Computantis/helperserver"
 	"github.com/bartossh/Computantis/logging"
 	"github.com/bartossh/Computantis/logo"
 	"github.com/bartossh/Computantis/natsclient"
@@ -22,10 +21,11 @@ import (
 	"github.com/bartossh/Computantis/telemetry"
 	"github.com/bartossh/Computantis/wallet"
 	"github.com/bartossh/Computantis/webhooks"
+	"github.com/bartossh/Computantis/webhooksserver"
 	"github.com/bartossh/Computantis/zincaddapter"
 )
 
-const usage = `runs The Computnantis-We-Hooks node that is responsible for informing subscribed clients about awiated transactions`
+const usage = `runs The Computnantis-Web-Hooks node that is responsible for informing subscribed clients about awiated transactions`
 
 func main() {
 	logo.Display()
@@ -45,7 +45,7 @@ func main() {
 	}
 
 	app := &cli.App{
-		Name:  "helper",
+		Name:  "webhooks",
 		Usage: usage,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -78,7 +78,6 @@ func run(cfg configuration.Configuration) {
 		defer pprof.StopCPUProfile()
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 
@@ -110,7 +109,7 @@ func run(cfg configuration.Configuration) {
 
 	dataProvider := dataprovider.New(ctx, cfg.DataProvider)
 
-	_, err = telemetry.Run(ctx, cancel, 0)
+	_, err = telemetry.Run(ctx, cancel, 2113)
 	if err != nil {
 		log.Error(err.Error())
 		c <- os.Interrupt
@@ -129,9 +128,9 @@ func run(cfg configuration.Configuration) {
 		}
 	}()
 
-	if err := helperserver.Run(ctx, cfg.HelperServer, sub, &log, &verify, wh, dataProvider); err != nil {
+	if err := webhooksserver.Run(ctx, cfg.WebhooksServer, sub, &log, &verify, wh, dataProvider); err != nil {
 		log.Error(err.Error())
-		time.Sleep(time.Second)
 		c <- os.Interrupt
 	}
+	time.Sleep(time.Second)
 }

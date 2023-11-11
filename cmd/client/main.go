@@ -23,8 +23,7 @@ import (
 	"github.com/bartossh/Computantis/zincaddapter"
 )
 
-const usage = `Client runs wallet API service that serves as a middleware between your application and central node.
-Wallet has cryptographic capabilities and uses GOB encoded and EAS encrypted wallet.`
+const usage = `client runs the Computantis wallet API service that serves as a middleware between your application and central node`
 
 const timeout = time.Second * 5
 
@@ -104,7 +103,7 @@ func run(cfg configuration.Configuration) {
 
 	verify := wallet.NewVerifier()
 
-	_, err = telemetry.Run(ctx, cancel, 0)
+	_, err = telemetry.Run(ctx, cancel, 2114)
 	if err != nil {
 		log.Error(err.Error())
 		c <- os.Interrupt
