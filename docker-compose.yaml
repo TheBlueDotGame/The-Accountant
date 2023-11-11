@@ -57,15 +57,15 @@ services:
     networks:
       - computantis_network
     depends_on:
-      zincsearch:
-        condition: service_healthy
+      nats:
+        condition: service_started
  
-  helper-node:
-    container_name: helper-node
+  webhooks-node:
+    container_name: webhooks-node
     build: 
       dockerfile: Dockerfile
       args: 
-        - "APPLICATION=helper"
+        - "APPLICATION=webhooks"
     restart: unless-stopped
     ports:
       - "8010:8000"
@@ -88,7 +88,7 @@ services:
     networks:
       - computantis_network
     depends_on:
-      helper-node:
+      webhooks-node:
         condition: service_started
 
   # demo only
@@ -107,7 +107,7 @@ services:
     networks:
       - computantis_network
     depends_on:
-      helper-node:
+      webhooks-node:
         condition: service_started
 
   # demo only
@@ -160,12 +160,9 @@ services:
       - "9100:9100"
     networks:
       - computantis_network
-    depends_on:
-      notary-node:
-        condition: service_started
 
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus
     container_name: prometheus
     restart: unless-stopped
     volumes:
@@ -183,9 +180,6 @@ services:
       - "9090:9090"
     networks:
       - computantis_network
-    depends_on:
-      notary-node:
-        condition: service_started
 
   grafana:
     image: grafana/grafana:latest

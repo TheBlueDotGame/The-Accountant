@@ -86,106 +86,24 @@
 
 ## Setup
 
-All services are using the setup file in a YAML format:
-- The notary node:
-```yaml
-is_profiling: false
-bookkeeper:
-  difficulty: 1
-  block_write_timestamp: 300
-  block_transactions_size: 1000
-notary_server:
-  node_public_url: notary-node:8000
-  port: 8000
-  data_size_bytes: 15000
-local_cache:
-  max_len: 5000
-nats:
-  server_address: "nats://nats:4222"
-  client_name: "notary-1"
-  token: "D9pHfuiEQPXtqPqPdyxozi8kU2FlHqC0FlSRIzpwDI0="
-storage_config:
-  transaction_database:
-    conn_str: "postgres://computantis:computantis@postgres:5432"
-    database_name: "computantis"
-    is_ssl: false
-  blockchain_database:
-    conn_str: "postgres://computantis:computantis@postgres:5432"
-    database_name: "computantis"
-    is_ssl: false
-  node_register_database:
-    conn_str: "postgres://computantis:computantis@postgres:5432"
-    database_name: "computantis"
-    is_ssl: false
-  address_database:
-    conn_str: "postgres://computantis:computantis@postgres:5432"
-    database_name: "computantis"
-    is_ssl: false
-  token_database:
-    conn_str: "postgres://computantis:computantis@postgres:5432"
-    database_name: "computantis"
-    is_ssl: false
-dataprovider:
-  longevity: 300
-zinc_logger:
-  address: http://zincsearch:4080 
-  index: notary-1
-  token: Basic YWRtaW46emluY3NlYXJjaA==
-```
+Use `setup_example.yaml` file as an example how to configure setup. The file is ready to be used with docker-compose command. 
 
-- The Web-Hook node:
-```yaml
-is_profiling: false
-helper_server:
-  port: 8000
-nats:
-  server_address: "nats://nats:4222"
-  client_name: "notary-1"
-  token: "D9pHfuiEQPXtqPqPdyxozi8kU2FlHqC0FlSRIzpwDI0="
-zinc_logger:
-  address: http://zincsearch:4080 
-  index: helper-1
-  token: Basic YWRtaW46emluY3NlYXJjaA==
-```
+## Start locally services
 
-- The client node:
-```yaml
-file_operator: # file operator allows to read wallet in gob and pem format from the file
-  wallet_path: "test_wallet"
-  wallet_passwd: "dc6b5b1635453e0eb57344ffb6cb293e8300fc4001fad3518e721d548459c09d"
-  pem_path: "ed25519"
-notary:
-  port: 8095
-  central_node_url: "http://localhost:8080" 
-  validator_node_url: "http://localhost:9090" 
-zinc_logger:  
-  address: http://zincsearch:4080 
-  index: wallet-1 
-  token: Basic YWRtaW46emluY3NlYXJjaA== 
-```
-
-- The emulator:
-```yaml
-emulator: # emulates data 
-  timeout_seconds: 20
-  tick_seconds: 1
-  random: false
-  client_url: "http://client-node:8000" # client node middleware URL
-  port: "8060"
-  public_url: "http://subscriber-node:8060" # If running emulators locally, best to set it up as your local network machine IP.
-```
-
-## Start locally all services
-
-Required services setup:
+1. Required minimal node services setup:
  - Computantis node
- - Web-Hook node
- - Client node
  - Exporter node
  - Prometheus node
  - Zincsearch node
- - Nats node
 
+The computantis network shall contains multiple nodes. More nodes in the network more secure and democratic the network becomes. 
+
+2. Additional services:
+ - Nats node
+ - Web-Hook node
+
+3. Edge device service:
+ - Client node
 
 Install protobuf generator: 
 ```sh
@@ -379,7 +297,7 @@ copy `wasm/bin/wallet.wasm` and `wasm/js/wasm_exec.js` to you fronted project an
  - Readability Counts.
  - Use composition over inheritance.
  - Avoid package level state.
- - Moderation is a virtue. Use with moderation: go routines, channels, atomic types, generics, interfaces, any and pointers.
+ - Moderation is a virtue. Use with moderation: go routines, channels, atomic types, generics, interfaces, 'any' type and pointers.
 
 
 

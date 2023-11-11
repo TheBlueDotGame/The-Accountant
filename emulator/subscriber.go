@@ -13,11 +13,11 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/pterm/pterm"
 
-	"github.com/bartossh/Computantis/helperserver"
 	"github.com/bartossh/Computantis/httpclient"
 	"github.com/bartossh/Computantis/transaction"
 	"github.com/bartossh/Computantis/walletapi"
 	"github.com/bartossh/Computantis/webhooks"
+	"github.com/bartossh/Computantis/webhooksserver"
 )
 
 const maxTrxInBuffer = 25
@@ -118,7 +118,7 @@ func RunSubscriber(ctx context.Context, cancel context.CancelFunc, config Config
 		return err
 	}
 
-	var resT helperserver.CreateRemoveUpdateHookResponse
+	var resT webhooksserver.CreateRemoveUpdateHookResponse
 	reqT := walletapi.CreateWebHookRequest{
 		URL: fmt.Sprintf("%s%s", config.PublicURL, WebHookEndpointTransaction),
 	}
@@ -207,7 +207,7 @@ func (sub *subscriber) actOnTransactions(notaryNodeURL string) {
 			var rejectRes walletapi.TransactionResponse
 			url := fmt.Sprintf("%s%s", sub.pub.clientURL, walletapi.RejectTransactions)
 			if err := httpclient.MakePost(sub.pub.timeout, url, rejectReq, &rejectRes); err != nil {
-				pterm.Error.Printf("Transaction faild to be rejected due to: %s.\n", err)
+				pterm.Error.Printf("Transaction failed to be rejected due to: %s.\n", err)
 			}
 
 			sub.appendToBuffer("rejected", trx)

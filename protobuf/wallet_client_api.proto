@@ -46,11 +46,6 @@ message WalletPublicAddress {
     string address = 2;
 }
 
-message Paggination {
-  int64 offset = 1;
-  int64 limit = 2;
-}
-
 message NotaryNode {
   string url = 1;
 }
@@ -59,7 +54,7 @@ service WalletClientAPI {
   rpc Alive(google.protobuf.Empty) returns (AliveInfo) {}
   rpc Address(google.protobuf.Empty) returns (WalletPublicAddress) {}
   rpc IssuedTransactions(NotaryNode) returns (Transactions) {}
-  rpc ApprovedTransactions(Paggination) returns (Transactions) {}
+  rpc ApprovedTransactions(google.protobuf.Empty) returns (Transactions) {}
   rpc Wallet(CreateWallet) returns (ServerInfo) {}
   rpc WebHook(CreateWebHook) returns (ServerInfo) {}
 }

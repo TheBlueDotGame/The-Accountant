@@ -1,4 +1,4 @@
-package helperserver
+package webhooksserver
 
 import (
 	"context"
@@ -11,7 +11,6 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/monitor"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 
-	"github.com/bartossh/Computantis/block"
 	"github.com/bartossh/Computantis/logger"
 	"github.com/bartossh/Computantis/notaryserver"
 	"github.com/bartossh/Computantis/transaction"
@@ -38,7 +37,6 @@ type Config struct {
 type WebhookCreateRemovePoster interface {
 	CreateWebhook(trigger byte, address string, h webhooks.Hook) error
 	RemoveWebhook(trigger byte, address string, h webhooks.Hook) error
-	PostWebhookBlock(blc *block.Block)
 	PostWebhookNewTransaction(publicAddresses []string, storingNodeURL string)
 }
 
@@ -52,7 +50,6 @@ type verifier interface {
 }
 
 type app struct {
-	cancel       context.CancelFunc
 	ver          verifier
 	wh           WebhookCreateRemovePoster
 	randDataProv notaryserver.RandomDataProvideValidator
@@ -66,13 +63,11 @@ func Run(
 	ctx context.Context, cfg Config, sub NodesComunicationSubscriber, log logger.Logger, ver verifier, wh WebhookCreateRemovePoster,
 	rdp notaryserver.RandomDataProvideValidator,
 ) error {
-	ctxx, cancel := context.WithCancel(ctx)
 	a := &app{
 		log:          log,
 		ver:          ver,
 		wh:           wh,
 		randDataProv: rdp,
-		cancel:       cancel,
 		mux:          sync.RWMutex{},
 	}
 
@@ -81,13 +76,14 @@ func Run(
 	}
 
 	if err := sub.SubscribeNewTransactionsForAddresses(a.processNewTrxIssuedByAddresses, log); err != nil {
+		log.Error(fmt.Sprintf("webhooks server failed, %s", err))
 		return err
 	}
 
-	return a.runServer(ctxx, cancel, cfg.Port)
+	return a.runServer(ctx, cfg.Port)
 }
 
-func (a *app) runServer(ctx context.Context, cancel context.CancelFunc, port int) error {
+func (a *app) runServer(ctx context.Context, port int) error {
 	router := fiber.New(fiber.Config{
 		Prefork:       false,
 		CaseSensitive: true,
@@ -105,20 +101,26 @@ func (a *app) runServer(ctx context.Context, cancel context.CancelFunc, port int
 	router.Post(notaryserver.DataToValidateURL, a.data)
 	router.Post(TransactionHookURL, a.transactions)
 
+	ctxx, cancel := context.WithCancel(ctx)
+
+	var err error
 	go func() {
-		err := router.Listen(fmt.Sprintf("0.0.0.0:%v", port))
+		err = router.Listen(fmt.Sprintf("0.0.0.0:%v", port))
 		if err != nil {
+			a.log.Error(fmt.Sprintf("webhooks server failure: %s", err))
 			cancel()
 		}
 	}()
 
-	<-ctx.Done()
+	a.log.Info(fmt.Sprintf("starting webhooks server on port %v", port))
 
-	if err := router.Shutdown(); err != nil {
-		return err
+	<-ctxx.Done()
+
+	if err != nil {
+		err = router.Shutdown()
 	}
 
-	return nil
+	return err
 }
 
 func (a *app) processNewTrxIssuedByAddresses(receivers []string, storingNodeURL string) {

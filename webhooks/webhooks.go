@@ -6,24 +6,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bartossh/Computantis/block"
 	"github.com/bartossh/Computantis/httpclient"
 	"github.com/bartossh/Computantis/logger"
 )
 
 const (
-	TriggerNewBlock       byte = iota // TriggerNewBlock is the trigger for new block. It is triggered when a new block is forged.
-	TriggerNewTransaction             // TriggerNewTransaction is a trigger for new transaction. It is triggered when a new transaction is received.
+	TriggerNewTransaction = iota // TriggerNewTransaction is a trigger for new transaction. It is triggered when a new transaction is received.
 )
 
 var ErrorHookNotImplemented = errors.New("hook not implemented")
-
-// WebHookNewBlockMessage is the message send to the webhook url about new forged block.
-type WebHookNewBlockMessage struct {
-	Token string      `json:"token"` // Token given to the webhook by the webhooks creator to validate the message source.
-	Block block.Block `json:"block"` // Block is the block that was mined.
-	Valid bool        `json:"valid"` // Valid is the flag that indicates if the block is valid.
-}
 
 const (
 	StateIssued      byte = 0 // StateIssued is state of the transaction meaning it is only signed by the issuer.
@@ -65,7 +56,7 @@ func New(l logger.Logger) *Service {
 // CreateWebhook creates new webhook or or updates existing one for given trigger.
 func (s *Service) CreateWebhook(trigger byte, publicAddress string, h Hook) error {
 	switch trigger {
-	case TriggerNewBlock, TriggerNewTransaction:
+	case TriggerNewTransaction:
 		s.insertHook(trigger, publicAddress, h)
 	default:
 		return ErrorHookNotImplemented
@@ -76,34 +67,12 @@ func (s *Service) CreateWebhook(trigger byte, publicAddress string, h Hook) erro
 // RemoveWebhook removes webhook for given trigger and Hook URL.
 func (s *Service) RemoveWebhook(trigger byte, publicAddress string, h Hook) error {
 	switch trigger {
-	case TriggerNewBlock, TriggerNewTransaction:
+	case TriggerNewTransaction:
 		s.removeHook(trigger, publicAddress, h)
 	default:
 		return ErrorHookNotImplemented
 	}
 	return nil
-}
-
-// PostWebhookBlock posts block to all webhooks that are subscribed to the new block trigger.
-func (s *Service) PostWebhookBlock(blc *block.Block) {
-	s.mux.RLock()
-	defer s.mux.RUnlock()
-	hs, ok := s.buffer[TriggerNewBlock]
-	if !ok {
-		return
-	}
-
-	in := make(map[string]interface{})
-	for _, h := range hs {
-		blcMsg := WebHookNewBlockMessage{
-			Token: h.Token,
-			Block: *blc,
-			Valid: true,
-		}
-		if err := httpclient.MakePost(time.Second*5, h.URL, blcMsg, &in); err != nil {
-			s.log.Error(fmt.Sprintf("webhook service error posting block to webhook url: %s, %s", h.URL, err.Error()))
-		}
-	}
 }
 
 // PostWebhookNewTransaction posts information to the corresponding public address.
