@@ -18,9 +18,9 @@ import (
 	"github.com/bartossh/Computantis/logger"
 	"github.com/bartossh/Computantis/protobufcompiled"
 	"github.com/bartossh/Computantis/providers"
-	"github.com/bartossh/Computantis/spice"
 	"github.com/bartossh/Computantis/storage"
 	"github.com/bartossh/Computantis/transaction"
+	"github.com/bartossh/Computantis/transformers"
 	"github.com/bartossh/Computantis/versioning"
 )
 
@@ -81,6 +81,7 @@ type Config struct {
 }
 
 type server struct {
+	protobufcompiled.UnimplementedNotaryAPIServer
 	pub                  nodeNetworkingPublisher
 	randDataProv         RandomDataProvideValidator
 	tele                 providers.HistogramProvider
@@ -93,7 +94,6 @@ type server struct {
 	addressAwaitedTrxsDB *badger.DB
 	nodePublicURL        string
 	dataSize             int
-	protobufcompiled.UnimplementedNotaryAPIServer
 }
 
 // Run initializes routing and runs the server. To stop the server cancel the context.
@@ -241,50 +241,6 @@ func hexDecode(src []byte) ([]byte, error) {
 	dst := make([]byte, hex.DecodedLen(len(src)))
 	_, err := hex.Decode(dst, src)
 	return dst, err
-}
-
-func trxToProtoTrx(trx *transaction.Transaction) (*protobufcompiled.Transaction, error) {
-	if trx == nil || trx.Subject == "" || trx.IssuerAddress == "" ||
-		trx.ReceiverAddress == "" || len(trx.Hash) == 0 ||
-		trx.CreatedAt.IsZero() || len(trx.IssuerSignature) == 0 {
-		return &protobufcompiled.Transaction{}, ErrProcessing
-	}
-	return &protobufcompiled.Transaction{
-		CreatedAt:         uint64(trx.CreatedAt.UnixNano()),
-		IssuerAddress:     trx.IssuerAddress,
-		ReceiverAddress:   trx.ReceiverAddress,
-		Subject:           trx.Subject,
-		IssuerSignature:   trx.IssuerSignature,
-		ReceiverSignature: trx.ReceiverSignature,
-		Data:              trx.Data,
-		Hash:              trx.Hash[:],
-		Spice: &protobufcompiled.Spice{
-			Currency:             trx.Spice.Currency,
-			SuplementaryCurrency: trx.Spice.SupplementaryCurrency,
-		},
-	}, nil
-}
-
-func protoTrxToTrx(prTrx *protobufcompiled.Transaction) (transaction.Transaction, error) {
-	if prTrx == nil || prTrx.Subject == "" || prTrx.IssuerAddress == "" ||
-		prTrx.ReceiverAddress == "" || len(prTrx.Hash) == 0 ||
-		prTrx.CreatedAt == 0 || len(prTrx.IssuerSignature) == 0 {
-		return transaction.Transaction{}, ErrRequestIsEmpty
-	}
-	return transaction.Transaction{
-		CreatedAt:         time.Unix(0, int64(prTrx.CreatedAt)),
-		IssuerAddress:     prTrx.IssuerAddress,
-		ReceiverAddress:   prTrx.ReceiverAddress,
-		Subject:           prTrx.Subject,
-		IssuerSignature:   prTrx.IssuerSignature,
-		ReceiverSignature: prTrx.ReceiverSignature,
-		Data:              prTrx.Data,
-		Hash:              [32]byte(prTrx.Hash),
-		Spice: spice.Melange{
-			Currency:              prTrx.Spice.Currency,
-			SupplementaryCurrency: prTrx.Spice.SuplementaryCurrency,
-		},
-	}, nil
 }
 
 func (s *server) saveAwaitedTrx(ctx context.Context, trx *transaction.Transaction) error {
@@ -452,7 +408,7 @@ func (s *server) Propose(ctx context.Context, in *protobufcompiled.Transaction) 
 	t := time.Now()
 	defer s.tele.RecordHistogramTime(proposeTrxTelemetryHistogram, time.Since(t))
 
-	trx, err := protoTrxToTrx(in)
+	trx, err := transformers.ProtoTrxToTrx(in)
 	if err != nil {
 		s.log.Error(fmt.Sprintf("propose endpoint, message is empty or invalid: %s", err))
 		return nil, err
@@ -496,7 +452,7 @@ func (s *server) Confirm(ctx context.Context, in *protobufcompiled.Transaction) 
 	t := time.Now()
 	defer s.tele.RecordHistogramTime(confirmTrxTelemetryHistogram, time.Since(t))
 
-	trx, err := protoTrxToTrx(in)
+	trx, err := transformers.ProtoTrxToTrx(in)
 	if err != nil {
 		s.log.Error(fmt.Sprintf("confirm endpoint, message is empty or invalid: %s", err))
 		return nil, err
@@ -544,7 +500,7 @@ func (s *server) Reject(ctx context.Context, in *protobufcompiled.SignedHash) (*
 		return nil, ErrProcessing
 	}
 
-	if err := s.removeAwaitedTrx(in.Hash, in.Address); err != nil {
+	if err := s.removeAwaitedTrx(in.Data, in.Address); err != nil {
 		s.log.Error(fmt.Sprintf("reject endpoint, failed removing transaction %v for address [ %s ]", in.Hash, in.Address))
 		return nil, ErrProcessing
 	}
@@ -573,7 +529,7 @@ func (s *server) Waiting(ctx context.Context, in *protobufcompiled.SignedHash) (
 	}
 	result := &protobufcompiled.Transactions{Array: make([]*protobufcompiled.Transaction, 0, len(trxs)), Len: uint64(len(trxs))}
 	for _, trx := range trxs {
-		protoTrx, err := trxToProtoTrx(&trx)
+		protoTrx, err := transformers.TrxToProtoTrx(&trx)
 		if err != nil {
 			s.log.Warn(fmt.Sprintf("waiting endpoint, failed to map trx to protobuf trx for address: %s, %s", in.Address, err))
 			continue
@@ -604,7 +560,7 @@ func (s *server) Saved(ctx context.Context, in *protobufcompiled.SignedHash) (*p
 		return nil, ErrProcessing
 	}
 
-	protoTrx, err := trxToProtoTrx(&trxs[0])
+	protoTrx, err := transformers.TrxToProtoTrx(&trxs[0])
 	if err != nil {
 		return nil, err
 	}

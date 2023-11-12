@@ -633,7 +633,7 @@ func mapAccountantVertexToProtoVertex(vrx *accountant.Vertex) *protobufcompiled.
 			Subject:           vrx.Transaction.Subject,
 			Data:              vrx.Transaction.Data,
 			Hash:              vrx.Transaction.Hash[:],
-			CreaterdAt:        uint64(vrx.Transaction.CreatedAt.UnixNano()),
+			CreatedAt:         uint64(vrx.Transaction.CreatedAt.UnixNano()),
 			ReceiverAddress:   vrx.Transaction.ReceiverAddress,
 			IssuerAddress:     vrx.Transaction.IssuerAddress,
 			ReceiverSignature: vrx.Transaction.ReceiverSignature,

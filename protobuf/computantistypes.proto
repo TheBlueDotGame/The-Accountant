@@ -4,11 +4,16 @@ package computantis;
 
 option go_package = "github.com/bartossh/Computantis/protobufcompiled";
 
+
+message DataBlob {
+    bytes blob = 1;
+}
+
 message Address {
     string public = 1;
 }
 
-message Addresses {
+message Addresges {
     string notary_url = 1;
     repeated string array = 2;
 }

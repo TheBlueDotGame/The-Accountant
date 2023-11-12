@@ -34,10 +34,10 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type WalletClientAPIClient interface {
-	Alive(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*AliveData, error)
+	Alive(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	WalletPublicAddress(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*Address, error)
 	Issue(ctx context.Context, in *IssueTrx, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	Approve(ctx context.Context, in *TrxHash, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	Approve(ctx context.Context, in *TransactionApproved, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	Reject(ctx context.Context, in *TrxHash, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	Waiting(ctx context.Context, in *NotaryNode, opts ...grpc.CallOption) (*Transactions, error)
 	Saved(ctx context.Context, in *TrxHash, opts ...grpc.CallOption) (*Transaction, error)
@@ -52,8 +52,8 @@ func NewWalletClientAPIClient(cc grpc.ClientConnInterface) WalletClientAPIClient
 	return &walletClientAPIClient{cc}
 }
 
-func (c *walletClientAPIClient) Alive(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*AliveData, error) {
-	out := new(AliveData)
+func (c *walletClientAPIClient) Alive(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, WalletClientAPI_Alive_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -79,7 +79,7 @@ func (c *walletClientAPIClient) Issue(ctx context.Context, in *IssueTrx, opts ..
 	return out, nil
 }
 
-func (c *walletClientAPIClient) Approve(ctx context.Context, in *TrxHash, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (c *walletClientAPIClient) Approve(ctx context.Context, in *TransactionApproved, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, WalletClientAPI_Approve_FullMethodName, in, out, opts...)
 	if err != nil {
@@ -128,10 +128,10 @@ func (c *walletClientAPIClient) WebHook(ctx context.Context, in *CreateWebHook, 
 // All implementations must embed UnimplementedWalletClientAPIServer
 // for forward compatibility
 type WalletClientAPIServer interface {
-	Alive(context.Context, *emptypb.Empty) (*AliveData, error)
+	Alive(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
 	WalletPublicAddress(context.Context, *emptypb.Empty) (*Address, error)
 	Issue(context.Context, *IssueTrx) (*emptypb.Empty, error)
-	Approve(context.Context, *TrxHash) (*emptypb.Empty, error)
+	Approve(context.Context, *TransactionApproved) (*emptypb.Empty, error)
 	Reject(context.Context, *TrxHash) (*emptypb.Empty, error)
 	Waiting(context.Context, *NotaryNode) (*Transactions, error)
 	Saved(context.Context, *TrxHash) (*Transaction, error)
@@ -143,7 +143,7 @@ type WalletClientAPIServer interface {
 type UnimplementedWalletClientAPIServer struct {
 }
 
-func (UnimplementedWalletClientAPIServer) Alive(context.Context, *emptypb.Empty) (*AliveData, error) {
+func (UnimplementedWalletClientAPIServer) Alive(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Alive not implemented")
 }
 func (UnimplementedWalletClientAPIServer) WalletPublicAddress(context.Context, *emptypb.Empty) (*Address, error) {
@@ -152,7 +152,7 @@ func (UnimplementedWalletClientAPIServer) WalletPublicAddress(context.Context, *
 func (UnimplementedWalletClientAPIServer) Issue(context.Context, *IssueTrx) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Issue not implemented")
 }
-func (UnimplementedWalletClientAPIServer) Approve(context.Context, *TrxHash) (*emptypb.Empty, error) {
+func (UnimplementedWalletClientAPIServer) Approve(context.Context, *TransactionApproved) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Approve not implemented")
 }
 func (UnimplementedWalletClientAPIServer) Reject(context.Context, *TrxHash) (*emptypb.Empty, error) {
@@ -235,7 +235,7 @@ func _WalletClientAPI_Issue_Handler(srv interface{}, ctx context.Context, dec fu
 }
 
 func _WalletClientAPI_Approve_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(TrxHash)
+	in := new(TransactionApproved)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -247,7 +247,7 @@ func _WalletClientAPI_Approve_Handler(srv interface{}, ctx context.Context, dec 
 		FullMethod: WalletClientAPI_Approve_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WalletClientAPIServer).Approve(ctx, req.(*TrxHash))
+		return srv.(WalletClientAPIServer).Approve(ctx, req.(*TransactionApproved))
 	}
 	return interceptor(ctx, in, info, handler)
 }
