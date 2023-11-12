@@ -4,14 +4,8 @@ package computantis;
 
 option go_package = "github.com/bartossh/Computantis/protobufcompiled";
 
-import "transaction.proto";
+import "computantistypes.proto";
 import "google/protobuf/empty.proto";
-
-message AliveData {
-  string api_version = 1;
-  string api_header = 2;
-  string public_address = 3;
-}
 
 message Vertex {
     string signer_public_address = 1;

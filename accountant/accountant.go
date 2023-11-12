@@ -989,3 +989,8 @@ func (ab *AccountingBook) ReadTransactionsByHashes(ctx context.Context, hashes [
 
 	return trxs, nil
 }
+
+// Address returns signer public address that is a core cryptographic padlock for the DAG Vertices.
+func (ab *AccountingBook) Address() string {
+	return ab.signer.Address()
+}

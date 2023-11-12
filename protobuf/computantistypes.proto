@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+package computantis;
+
+option go_package = "github.com/bartossh/Computantis/protobufcompiled";
+
+message Address {
+    string public = 1;
+}
+
+message Addresses {
+    string notary_url = 1;
+    repeated string array = 2;
+}
+
+message AliveData {
+  string api_version = 1;
+  string api_header = 2;
+  string public_address = 3;
+}
+
+message SignedHash {
+    string address = 1;
+    bytes data = 2;
+    bytes hash = 3;
+    bytes signature = 4;
+}
+
+message Spice {
+    uint64 currency = 1;
+    uint64 suplementary_currency = 2; 
+}
+
+message Transaction {
+    string subject = 1;
+    bytes data = 2;
+    bytes hash = 3;
+    uint64 created_at = 4;
+    string receiver_address = 5;
+    string issuer_address = 6;
+    bytes receiver_signature = 7;
+    bytes issuer_signature = 8;
+    Spice spice = 9  ;
+}
+
+message Transactions {
+    repeated Transaction array = 1;
+    uint64 len = 2;
+}
+
