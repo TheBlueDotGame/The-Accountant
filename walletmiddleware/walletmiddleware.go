@@ -1,24 +1,31 @@
 package walletmiddleware
 
 import (
-	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"net/url"
-	"time"
 
 	"github.com/bartossh/Computantis/httpclient"
-	"github.com/bartossh/Computantis/notaryserver"
+	"github.com/bartossh/Computantis/protobufcompiled"
 	"github.com/bartossh/Computantis/spice"
 	"github.com/bartossh/Computantis/transaction"
+	"github.com/bartossh/Computantis/transformers"
 	"github.com/bartossh/Computantis/versioning"
 	"github.com/bartossh/Computantis/wallet"
-	"github.com/bartossh/Computantis/webhooksserver"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 const (
 	checksumLength = 4
 	version        = byte(0x00)
+)
+
+var (
+	ErrEmptyMessage   = errors.New("unexpected empty message")
+	ErrWalletNotReady = errors.New("wallet not ready")
 )
 
 // WalletReadSaver allows to read and save the wallet.
@@ -38,43 +45,59 @@ type Client struct {
 	verifier      transaction.Verifier
 	wrs           WalletReadSaver
 	walletCreator NewSignValidatorCreator
+	conn          *grpc.ClientConn
+	client        protobufcompiled.NotaryAPIClient
 	apiRoot       string
 	w             wallet.Wallet
-	timeout       time.Duration
 	ready         bool
 }
 
 // NewClient creates a new rest client.
 func NewClient(
-	apiRoot string, timeout time.Duration, fw transaction.Verifier,
+	apiRoot string, fw transaction.Verifier,
 	wrs WalletReadSaver, walletCreator NewSignValidatorCreator,
-) *Client {
-	return &Client{apiRoot: apiRoot, timeout: timeout, verifier: fw, wrs: wrs, walletCreator: walletCreator}
+) (*Client, error) {
+	opts := grpc.WithTransportCredentials(insecure.NewCredentials()) // TODO: remove when credentials are set
+	conn, err := grpc.Dial(apiRoot, opts)
+	if err != nil {
+		return nil, fmt.Errorf("dial failed, %s", err)
+	}
+
+	client := protobufcompiled.NewNotaryAPIClient(conn)
+
+	return &Client{apiRoot: apiRoot, verifier: fw, wrs: wrs, walletCreator: walletCreator, conn: conn, client: client}, nil
+}
+
+// Close closes connection with the notary node.
+func (c *Client) Close() error {
+	return c.conn.Close()
 }
 
 // ValidateApiVersion makes a call to the API server and validates client and server API versions and header correctness.
 // If API version not much it is returning an error as accessing the API server with different API version
 // may lead to unexpected results.
-func (c *Client) ValidateApiVersion() error {
-	var alive notaryserver.AliveResponse
-	url := fmt.Sprintf("%s%s", c.apiRoot, notaryserver.AliveURL)
-	if err := httpclient.MakeGet(c.timeout, url, &alive); err != nil {
-		return fmt.Errorf("check notary node alive on URL: [ %s ], %w", url, err)
+func (c *Client) ValidateApiVersion(ctx context.Context) error {
+	alive, err := c.client.Alive(ctx, &emptypb.Empty{})
+	if err != nil {
+		return err
+	}
+	if alive == nil {
+		return ErrEmptyMessage
 	}
 
-	if alive.APIVersion != versioning.ApiVersion {
-		return errors.Join(httpclient.ErrApiVersionMismatch, fmt.Errorf("expected %s but got %s", versioning.ApiVersion, alive.APIVersion))
+	if alive.ApiVersion != versioning.ApiVersion {
+		return errors.Join(httpclient.ErrApiVersionMismatch, fmt.Errorf("expected %s but got %s", versioning.ApiVersion, alive.ApiVersion))
 	}
 
-	if alive.APIHeader != versioning.Header {
-		return errors.Join(httpclient.ErrApiHeaderMismatch, fmt.Errorf("expected %s but got %s", versioning.Header, alive.APIHeader))
+	if alive.ApiHeader != versioning.Header {
+		return errors.Join(httpclient.ErrApiHeaderMismatch, fmt.Errorf("expected %s but got %s", versioning.Header, alive.ApiHeader))
 	}
 
 	return nil
 }
 
 // NewWallet creates a new wallet.
-func (c *Client) NewWallet(token string) error {
+func (c *Client) NewWallet() error {
 	w, err := c.walletCreator()
 	if err != nil {
 		return err
@@ -95,24 +118,10 @@ func (c *Client) NewWallet(token string) error {
 	return nil
 }
 
-// Address reads the wallet address.
-// Address is a string representation of wallet public key.
-func (c *Client) Address() (string, error) {
+// ProposeTransaction proposes transaction to the Computantis DAG.
+func (c *Client) ProposeTransaction(ctx context.Context, receiverAddr string, subject string, spc spice.Melange, data []byte) error {
 	if !c.ready {
-		return "", httpclient.ErrWalletNotReady
-	}
-
-	return c.w.Address(), nil
-}
-
-// ProposeTransaction sends a Transaction proposal to the API server for provided receiver address.
-// Subject describes how to read the data from the transaction. For example, if the subject is "json",
-// then the data can by decoded to map[sting]any, when subject "pdf" than it should be decoded by proper pdf decoder,
-// when "csv" then it should be decoded by proper csv decoder.
-// Client is not responsible for decoding the data, it is only responsible for sending the data to the API server.
-func (c *Client) ProposeTransaction(receiverAddr string, subject string, spc spice.Melange, data []byte) error {
-	if !c.ready {
-		return httpclient.ErrWalletNotReady
+		return ErrWalletNotReady
 	}
 
 	trx, err := transaction.New(subject, spc, data, receiverAddr, &c.w)
@@ -120,26 +129,18 @@ func (c *Client) ProposeTransaction(receiverAddr string, subject string, spc spi
 		return errors.Join(httpclient.ErrSigningFailed, err)
 	}
 
-	var res notaryserver.TransactionConfirmProposeResponse
-	url := fmt.Sprintf("%s%s", c.apiRoot, notaryserver.ProposeTransactionURL)
-	if err := httpclient.MakePost(c.timeout, url, trx, &res); err != nil {
-		return errors.Join(httpclient.ErrRejectedByServer, err)
+	protoTrx, err := transformers.TrxToProtoTrx(&trx)
+	if err != nil {
+		return err
 	}
 
-	if !res.Success {
-		return errors.Join(httpclient.ErrRejectedByServer, errors.New("failed to propose transaction, success is false"))
-	}
+	_, err = c.client.Propose(ctx, protoTrx)
 
-	if !bytes.Equal(trx.Hash[:], res.TrxHash[:]) {
-		return errors.Join(httpclient.ErrServerReturnsInconsistentData, errors.New("failed to propose transaction, hashes are not equal"))
-	}
-
-	return nil
+	return err
 }
 
-// ConfirmTransaction confirms transaction by signing it with the wallet
-// and then sending it to the API server.
-func (c *Client) ConfirmTransaction(notaryNodeURL string, trx *transaction.Transaction) error {
+// ConfirmTransaction confirms transaction by signing it with the wallet.
+func (c *Client) ConfirmTransaction(ctx context.Context, notaryNodeURL string, trx *transaction.Transaction) error {
 	if !c.ready {
 		return httpclient.ErrWalletNotReady
 	}
@@ -148,141 +149,124 @@ func (c *Client) ConfirmTransaction(notaryNodeURL string, trx *transaction.Trans
 		return errors.Join(httpclient.ErrSigningFailed, err)
 	}
 
-	rootURL := c.apiRoot
-	if notaryNodeURL != "" {
-		_, err := url.Parse(notaryNodeURL)
+	protoTrx, err := transformers.TrxToProtoTrx(trx)
+	if err != nil {
+		return err
+	}
+
+	client := c.client
+	if notaryNodeURL != c.apiRoot {
+		opts := grpc.WithTransportCredentials(insecure.NewCredentials()) // TODO: remove when credentials are set
+		conn, err := grpc.Dial(notaryNodeURL, opts)
 		if err != nil {
-			rootURL = notaryNodeURL
+			return fmt.Errorf("dial failed, %s", err)
 		}
+		defer conn.Close()
+		client = protobufcompiled.NewNotaryAPIClient(conn)
 	}
 
-	var res notaryserver.TransactionConfirmProposeResponse
-	url := fmt.Sprintf("%s%s", rootURL, notaryserver.ConfirmTransactionURL)
-	if err := httpclient.MakePost(c.timeout, url, trx, &res); err != nil {
-		return errors.Join(httpclient.ErrRejectedByServer, err)
-	}
-
-	if !res.Success {
-		return errors.Join(httpclient.ErrRejectedByServer, errors.New("failed to confirm transaction"))
-	}
-
-	if !bytes.Equal(trx.Hash[:], res.TrxHash[:]) {
-		return errors.Join(httpclient.ErrServerReturnsInconsistentData, errors.New("failed to confirm transaction"))
+	if _, err := client.Confirm(ctx, protoTrx); err != nil {
+		return err
 	}
 
 	return nil
 }
 
-// RejectTransactions rejects given transactions.
-// Transaction will be rejected if the transaction receiver is a given wellet public address.
-// Returns hashes of all the rejected transactions or error otherwise.
-func (c *Client) RejectTransactions(notaryNodeURL string, trxs []transaction.Transaction) ([][32]byte, error) {
-	addr, err := c.Address()
+// RejectTransactions rejects given transaction by the hash. Can by performed only by the receiver.
+func (c *Client) RejectTransactions(ctx context.Context, notaryNodeURL string, hash [32]byte) error {
+	if !c.ready {
+		return httpclient.ErrWalletNotReady
+	}
+
+	digest, signature := c.w.Sign(hash[:])
+
+	client := c.client
+	if notaryNodeURL != c.apiRoot {
+		opts := grpc.WithTransportCredentials(insecure.NewCredentials()) // TODO: remove when credentials are set
+		conn, err := grpc.Dial(notaryNodeURL, opts)
+		if err != nil {
+			return fmt.Errorf("dial failed, %s", err)
+		}
+		defer conn.Close()
+		client = protobufcompiled.NewNotaryAPIClient(conn)
+	}
+
+	if _, err := client.Reject(ctx, &protobufcompiled.SignedHash{
+		Address:   c.w.Address(),
+		Data:      hash[:],
+		Signature: signature,
+		Hash:      digest[:],
+	}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ReadWaitingTransactions reads all waiting transactions belonging to current wallet.
+func (c *Client) ReadWaitingTransactions(ctx context.Context, notaryNodeURL string) ([]transaction.Transaction, error) {
+	if !c.ready {
+		return nil, httpclient.ErrWalletNotReady
+	}
+
+	client := c.client
+	if notaryNodeURL != c.apiRoot {
+		opts := grpc.WithTransportCredentials(insecure.NewCredentials()) // TODO: remove when credentials are set
+		conn, err := grpc.Dial(notaryNodeURL, opts)
+		if err != nil {
+			return nil, fmt.Errorf("dial failed, %s", err)
+		}
+		defer conn.Close()
+		client = protobufcompiled.NewNotaryAPIClient(conn)
+	}
+
+	data, err := client.Data(ctx, &protobufcompiled.Address{Public: c.w.Address()})
 	if err != nil {
 		return nil, err
 	}
 
-	rootURL := c.apiRoot
-	if notaryNodeURL != "" {
-		_, err := url.Parse(notaryNodeURL)
-		if err != nil {
-			rootURL = notaryNodeURL
-		}
-	}
-
-	data, err := c.DataToSign(rootURL)
+	digest, signature := c.w.Sign(data.Blob)
+	proto, err := client.Waiting(ctx, &protobufcompiled.SignedHash{
+		Address:   c.w.Address(),
+		Data:      data.Blob,
+		Signature: signature,
+		Hash:      digest[:],
+	})
 	if err != nil {
-		return nil, errors.Join(httpclient.ErrRejectedByServer, err)
+		return nil, err
 	}
 
-	hash, signature := c.w.Sign(data.Data)
-	req := notaryserver.TransactionsRejectRequest{
-		Address:      addr,
-		Data:         data.Data,
-		Hash:         hash,
-		Signature:    signature,
-		Transactions: trxs,
+	trxs := make([]transaction.Transaction, 0, len(proto.Array))
+	for _, protoTrx := range proto.Array {
+		trx, err := transformers.ProtoTrxToTrx(protoTrx)
+		if err != nil {
+			continue
+		}
+		trxs = append(trxs, trx)
 	}
 
-	var res notaryserver.TransactionsRejectResponse
-	url := fmt.Sprintf("%s%s", rootURL, notaryserver.RejectTransactionURL)
-	if err := httpclient.MakePost(c.timeout, url, req, &res); err != nil {
-		return nil, errors.Join(httpclient.ErrRejectedByServer, err)
-	}
-	if !res.Success {
-		return nil, errors.Join(httpclient.ErrRejectedByServer, errors.New("failed to reject transactions"))
-	}
-
-	return res.TrxHashes, nil
+	return trxs, nil
 }
 
-// ReadWaitingTransactions reads all waiting transactions belonging to current wallet from the API server.
-func (c *Client) ReadWaitingTransactions(notaryNodeURL string) ([]transaction.Transaction, error) {
+// ReadSavedTransaction reads saved transaction from connected node.
+func (c *Client) ReadSavedTransaction(ctx context.Context, hash [32]byte) (transaction.Transaction, error) {
 	if !c.ready {
-		return nil, httpclient.ErrWalletNotReady
+		return transaction.Transaction{}, httpclient.ErrWalletNotReady
 	}
 
-	rootURL := c.apiRoot
-	if notaryNodeURL != "" {
-		_, err := url.Parse(notaryNodeURL)
-		if err != nil {
-			rootURL = notaryNodeURL
-		}
-	}
+	digest, signature := c.w.Sign(hash[:])
 
-	data, err := c.DataToSign(rootURL)
-	if err != nil {
-		return nil, errors.Join(httpclient.ErrRejectedByServer, err)
-	}
-
-	hash, signature := c.w.Sign(data.Data)
-	req := notaryserver.TransactionsRequest{
+	protoTrx, err := c.client.Saved(ctx, &protobufcompiled.SignedHash{
 		Address:   c.w.Address(),
-		Data:      data.Data,
-		Hash:      hash,
+		Data:      hash[:],
 		Signature: signature,
-	}
-	url := fmt.Sprintf("%s%s", rootURL, notaryserver.AwaitedTransactionURL)
-
-	var res notaryserver.TransactionsResponse
-	if err := httpclient.MakePost(c.timeout, url, req, &res); err != nil {
-		return nil, errors.Join(httpclient.ErrRejectedByServer, err)
-	}
-	if !res.Success {
-		return nil, errors.Join(httpclient.ErrRejectedByServer, errors.New("failed to read waiting transactions"))
-	}
-
-	return res.Transactions, nil
-}
-
-// ReadApprovedTransactions reads approved transactions belonging to current wallet from the API server.
-func (c *Client) ReadApprovedTransactions() ([]transaction.Transaction, error) {
-	if !c.ready {
-		return nil, httpclient.ErrWalletNotReady
-	}
-
-	data, err := c.DataToSign(c.apiRoot)
+		Hash:      digest[:],
+	})
 	if err != nil {
-		return nil, errors.Join(httpclient.ErrRejectedByServer, err)
+		return transaction.Transaction{}, err
 	}
 
-	hash, signature := c.w.Sign(data.Data)
-	req := notaryserver.TransactionsRequest{
-		Address:   c.w.Address(),
-		Data:      data.Data,
-		Hash:      hash,
-		Signature: signature,
-	}
-	var res notaryserver.TransactionsResponse
-	url := fmt.Sprintf("%s%s", c.apiRoot, notaryserver.ApprovedTransactionURL)
-	if err := httpclient.MakePost(c.timeout, url, req, &res); err != nil {
-		return nil, errors.Join(httpclient.ErrRejectedByServer, err)
-	}
-	if !res.Success {
-		return nil, errors.Join(httpclient.ErrRejectedByServer, errors.New("failed to read approved transactions"))
-	}
-
-	return res.Transactions, nil
+	return transformers.ProtoTrxToTrx(protoTrx)
 }
 
 // SaveWalletToFile saves the wallet to the file in the path.
@@ -305,78 +289,47 @@ func (c *Client) ReadWalletFromFile() error {
 	return nil
 }
 
-// DataToSign returns data to sign for the current wallet.
-// Data to sign are randomly generated bytes by the server and stored in pair with the address.
-// Signing this data is a proof that the signing public address is the owner of the wallet a making request.
-func (c *Client) DataToSign(notaryNodeURL string) (notaryserver.DataToSignResponse, error) {
-	addr, err := c.Address()
-	if err != nil {
-		return notaryserver.DataToSignResponse{}, err
-	}
-
-	req := notaryserver.DataToSignRequest{
-		Address: addr,
-	}
-	var resp notaryserver.DataToSignResponse
-	url := fmt.Sprintf("%s%s", notaryNodeURL, notaryserver.DataToValidateURL)
-	if err := httpclient.MakePost(c.timeout, url, req, &resp); err != nil {
-		return notaryserver.DataToSignResponse{}, err
-	}
-	return resp, nil
-}
-
-// Sign signs the given data with the wallet and returns digest and signature or error otherwise.
-// This process creates a proof for the API server that requesting client is the owner of the wallet.
-func (c *Client) Sign(d []byte) (digest [32]byte, signature []byte, err error) {
-	if !c.ready {
-		return digest, signature, httpclient.ErrWalletNotReady
-	}
-	digest, signature = c.w.Sign(d)
-	return
-}
-
-func (c *Client) CreateWebhook(webHookURL string) error {
-	data, err := c.DataToSign(c.apiRoot)
-	if err != nil {
+// CreateWebhook creates webhook in the webhooks server.
+func (c *Client) CreateWebhook(ctx context.Context, webHookURL, clientURL string) error {
+	if _, err := url.Parse(webHookURL); err != nil {
 		return err
 	}
-
-	buf := make([]byte, 0, len(data.Data)+len(webHookURL))
-	buf = append(buf, append(data.Data, []byte(webHookURL)...)...)
-
-	digest, signature, err := c.Sign(buf)
-	if err != nil {
+	if _, err := url.Parse(clientURL); err != nil {
 		return err
 	}
-
-	addr, err := c.Address()
+	opts := grpc.WithTransportCredentials(insecure.NewCredentials()) // TODO: remove when credentials are set
+	conn, err := grpc.Dial(webHookURL, opts)
 	if err != nil {
-		return err
+		return fmt.Errorf("dial failed, %s", err)
 	}
+	defer conn.Close()
+	client := protobufcompiled.NewWebhooksAPIClient(conn)
 
-	req := webhooksserver.CreateRemoveUpdateHookRequest{
-		URL:       webHookURL,
-		Address:   addr,
-		Data:      data.Data,
-		Digest:    digest,
+	digest, signature := c.w.Sign([]byte(clientURL))
+
+	_, err = client.Webhooks(ctx, &protobufcompiled.SignedHash{
+		Address:   c.w.Address(),
+		Data:      []byte(clientURL),
 		Signature: signature,
-	}
-
-	var res webhooksserver.CreateRemoveUpdateHookResponse
-
-	url := fmt.Sprintf("%s%s", c.apiRoot, webhooksserver.TransactionHookURL)
-	if err := httpclient.MakePost(c.timeout, url, req, &res); err != nil {
+		Hash:      digest[:],
+	})
+	if err != nil {
 		return err
-	}
-
-	if !res.Ok {
-		if res.Err != "" {
-			return errors.New(res.Err)
-		}
-		return errors.New("failed to create webhook, something went wrong")
 	}
 
 	return nil
+}
+
+// Address returns public address of the wallet.
+func (c *Client) Address() (string, error) {
+	if !c.ready {
+		return "", ErrWalletNotReady
+	}
+	return c.w.Address(), nil
+}
+
+func (c *Client) URL() string {
+	return c.apiRoot
 }
 
 // FlushWalletFromMemory flushes the wallet from the memory.

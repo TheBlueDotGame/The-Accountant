@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/bartossh/Computantis/spice"
-	"github.com/shamaton/msgpack/v2"
 	msgpackv2 "github.com/shamaton/msgpack/v2"
+	"github.com/vmihailenco/msgpack"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 

@@ -25,14 +25,12 @@ const (
 type AwaitingTransactionsMessage struct {
 	Time          time.Time `json:"time"`
 	NotaryNodeURL string    `json:"notary_node_url"` // NotaryNodeURL tells the webhook creator where the transactions which notary node stores transactions.
-	Token         string    `json:"token"`
 	State         byte      `json:"state"`
 }
 
 // Hook is the hook that is used to trigger the webhook.
 type Hook struct {
-	URL   string `json:"address"` // URL is a url  of the webhook.
-	Token string `json:"token"`   // Token is the token added to the webhook to verify that the message comes from the valid source.
+	URL string `json:"address"` // URL is a url  of the webhook.
 }
 
 type hooks map[string]Hook
@@ -95,7 +93,6 @@ func (s *Service) PostWebhookNewTransaction(publicAddresses []string, storingNod
 			NotaryNodeURL: storingNodeURL,
 			State:         StateIssued,
 			Time:          time.Now(),
-			Token:         h.Token,
 		}
 		if err := httpclient.MakePost(time.Second*5, h.URL, transactionMsg, &in); err != nil {
 			s.log.Error(fmt.Sprintf("webhook service error posting transaction to webhook url: %s, %s", h.URL, err.Error()))

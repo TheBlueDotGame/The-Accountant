@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package computantis;
+
+option go_package = "github.com/bartossh/Computantis/protobufcompiled";
+
+import "computantistypes.proto";
+import "google/protobuf/empty.proto";
+
+message IssueTrx {
+  string subject = 1;
+  string receiver_address = 2;
+  bytes data = 3;
+  Spice spice = 4;
+}
+
+message CreateWebHook {
+  string url = 1;
+}
+
+message NotaryNode {
+  string url = 1;
+}
+
+message TrxHash {
+    bytes hash = 1;
+    string url = 2;
+}
+
+message TransactionApproved {
+    Transaction transaction = 1;
+    string url = 2;
+}
+
+service WalletClientAPI {
+  rpc Alive(google.protobuf.Empty) returns (google.protobuf.Empty) {}
+  rpc WalletPublicAddress(google.protobuf.Empty) returns (Address) {}
+  rpc Issue(IssueTrx) returns (google.protobuf.Empty) {}
+  rpc Approve(TransactionApproved) returns (google.protobuf.Empty) {}
+  rpc Reject(TrxHash) returns (google.protobuf.Empty) {}
+  rpc Waiting(NotaryNode) returns (Transactions) {}
+  rpc Saved(TrxHash) returns (Transaction) {}
+  rpc WebHook(CreateWebHook) returns (google.protobuf.Empty) {}
+}

@@ -34,7 +34,6 @@ client:
   notary_node_url: "http://notary-node:8000"
   helper_node_url: "http://helper-node:8000"
 emulator:
-  timeout_seconds: 20
   tick_seconds: 1
   random: false
   client_url: "http://client-node:8000"

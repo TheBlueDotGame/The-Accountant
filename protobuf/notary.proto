@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package computantis;
+
+option go_package = "github.com/bartossh/Computantis/protobufcompiled";
+
+import "computantistypes.proto";
+import "google/protobuf/empty.proto";
+
+service NotaryAPI {
+    rpc Alive(google.protobuf.Empty) returns (AliveData) {}
+    rpc Propose(Transaction) returns (google.protobuf.Empty) {}
+    rpc Confirm(Transaction) returns (google.protobuf.Empty) {}
+    rpc Reject(SignedHash) returns (google.protobuf.Empty) {}
+    rpc Waiting(SignedHash) returns(Transactions) {}
+    rpc Saved(SignedHash) returns(Transaction) {}
+    rpc Data(Address) returns (DataBlob) {}
+}

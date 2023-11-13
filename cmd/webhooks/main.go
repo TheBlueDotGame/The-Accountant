@@ -13,7 +13,6 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/bartossh/Computantis/configuration"
-	"github.com/bartossh/Computantis/dataprovider"
 	"github.com/bartossh/Computantis/logging"
 	"github.com/bartossh/Computantis/logo"
 	"github.com/bartossh/Computantis/natsclient"
@@ -107,8 +106,6 @@ func run(cfg configuration.Configuration) {
 
 	wh := webhooks.New(log)
 
-	dataProvider := dataprovider.New(ctx, cfg.DataProvider)
-
 	_, err = telemetry.Run(ctx, cancel, 2113)
 	if err != nil {
 		log.Error(err.Error())
@@ -128,9 +125,9 @@ func run(cfg configuration.Configuration) {
 		}
 	}()
 
-	if err := webhooksserver.Run(ctx, cfg.WebhooksServer, sub, &log, &verify, wh, dataProvider); err != nil {
+	if err := webhooksserver.Run(ctx, cfg.WebhooksServer, sub, &log, &verify, wh); err != nil {
 		log.Error(err.Error())
 		c <- os.Interrupt
 	}
-	time.Sleep(time.Second)
+	time.Sleep(time.Second) // Sleep one seccond so all the goroutines will finish. It is important for logging to the external micorservice.
 }

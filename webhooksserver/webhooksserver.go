@@ -4,15 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync"
-	"time"
+	"net"
+	"net/url"
 
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/monitor"
-	"github.com/gofiber/fiber/v2/middleware/recover"
+	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/bartossh/Computantis/logger"
-	"github.com/bartossh/Computantis/notaryserver"
+	"github.com/bartossh/Computantis/protobufcompiled"
 	"github.com/bartossh/Computantis/transaction"
 	"github.com/bartossh/Computantis/versioning"
 	"github.com/bartossh/Computantis/webhooks"
@@ -22,10 +21,9 @@ const (
 	Header = "Computantis-Web-Hooks"
 )
 
-const (
-	AliveURL           = notaryserver.AliveURL   // URL to check is service alive
-	MetricsURL         = notaryserver.MetricsURL // URL to serve service metrics over http.
-	TransactionHookURL = "/transaction/new"      // URL allows to create transaction hook.
+var (
+	ErrNotAuthorized     = errors.New("not authoriozed")
+	ErrProcessingFailure = errors.New("processing failed")
 )
 
 // Config contains configuration of the validator.
@@ -50,25 +48,21 @@ type verifier interface {
 }
 
 type app struct {
-	ver          verifier
-	wh           WebhookCreateRemovePoster
-	randDataProv notaryserver.RandomDataProvideValidator
-	log          logger.Logger
-	mux          sync.RWMutex
+	protobufcompiled.UnimplementedWebhooksAPIServer
+	ver verifier
+	wh  WebhookCreateRemovePoster
+	log logger.Logger
 }
 
-// Run initializes routing and runs the validator. To stop the validator cancel the context.
+// Run initializes webhooks server and GRPC API server.
 // It will block until the context is canceled.
 func Run(
 	ctx context.Context, cfg Config, sub NodesComunicationSubscriber, log logger.Logger, ver verifier, wh WebhookCreateRemovePoster,
-	rdp notaryserver.RandomDataProvideValidator,
 ) error {
 	a := &app{
-		log:          log,
-		ver:          ver,
-		wh:           wh,
-		randDataProv: rdp,
-		mux:          sync.RWMutex{},
+		log: log,
+		ver: ver,
+		wh:  wh,
 	}
 
 	if cfg.Port < 0 || cfg.Port > 65535 {
@@ -84,41 +78,29 @@ func Run(
 }
 
 func (a *app) runServer(ctx context.Context, port int) error {
-	router := fiber.New(fiber.Config{
-		Prefork:       false,
-		CaseSensitive: true,
-		StrictRouting: true,
-		ReadTimeout:   time.Second * 5,
-		WriteTimeout:  time.Second * 5,
-		ServerHeader:  versioning.Header,
-		AppName:       versioning.ApiVersion,
-		Concurrency:   4096,
-	})
-	router.Use(recover.New())
-	router.Get(MetricsURL, monitor.New(monitor.Config{Title: Header}))
-	router.Get(AliveURL, a.alive)
-
-	router.Post(notaryserver.DataToValidateURL, a.data)
-	router.Post(TransactionHookURL, a.transactions)
-
 	ctxx, cancel := context.WithCancel(ctx)
+	lis, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%s", port))
+	if err != nil {
+		cancel()
+		return err
+	}
 
-	var err error
+	grpcServer := grpc.NewServer()
+	protobufcompiled.RegisterWebhooksAPIServer(grpcServer, a)
+
 	go func() {
-		err = router.Listen(fmt.Sprintf("0.0.0.0:%v", port))
-		if err != nil {
-			a.log.Error(fmt.Sprintf("webhooks server failure: %s", err))
+		if err = grpcServer.Serve(lis); err != nil {
 			cancel()
 		}
 	}()
 
-	a.log.Info(fmt.Sprintf("starting webhooks server on port %v", port))
-
 	<-ctxx.Done()
 
 	if err != nil {
-		err = router.Shutdown()
+		return err
 	}
+
+	grpcServer.GracefulStop()
 
 	return err
 }
@@ -127,64 +109,30 @@ func (a *app) processNewTrxIssuedByAddresses(receivers []string, storingNodeURL 
 	go a.wh.PostWebhookNewTransaction(receivers, storingNodeURL) // post concurrently
 }
 
-func (s *app) alive(c *fiber.Ctx) error {
-	return c.JSON(
-		notaryserver.AliveResponse{
-			Alive:      true,
-			APIVersion: versioning.ApiVersion,
-			APIHeader:  Header,
-		})
+// Alive returns alive data such as API Version and API Header.
+func (a *app) Alive(_ context.Context, _ *emptypb.Empty) (*protobufcompiled.AliveData, error) {
+	return &protobufcompiled.AliveData{ApiVersion: versioning.ApiVersion, ApiHeader: versioning.WebhooksHeader, PublicAddress: ""}, nil
 }
 
-func (a *app) data(c *fiber.Ctx) error {
-	var req notaryserver.DataToSignRequest
-	if err := c.BodyParser(&req); err != nil {
-		a.log.Error(fmt.Sprintf("/data endpoint, failed to parse request body: %s", err.Error()))
-		return fiber.ErrBadRequest
+// Webhooks creates a webhook for the client.
+func (a *app) Webhooks(ctx context.Context, in *protobufcompiled.SignedHash) (*emptypb.Empty, error) {
+	if err := a.ver.Verify(in.Data, in.Signature, [32]byte(in.Hash), in.Address); err != nil {
+		a.log.Error(fmt.Sprintf("create webhook invalid signature: %s", err.Error()))
+		return nil, ErrNotAuthorized
 	}
 
-	if req.Address == "" {
-		a.log.Error("wrong JSON format for requesting data to sing")
-		return fiber.ErrBadRequest
-	}
-
-	d := a.randDataProv.ProvideData(req.Address)
-	return c.JSON(notaryserver.DataToSignResponse{Data: d})
-}
-
-func (a *app) transactions(c *fiber.Ctx) error {
-	var req CreateRemoveUpdateHookRequest
-	if err := c.BodyParser(&req); err != nil {
-		a.log.Error(fmt.Sprintf("%s endpoint, failed to parse request body: %s", TransactionHookURL, err.Error()))
-		return fiber.ErrBadRequest
-	}
-
-	if req.Address == "" || req.Data == nil || req.Signature == nil || req.URL == "" || req.Digest == [32]byte{} {
-		a.log.Error("wrong JSON format when requesting blocks")
-		return fiber.ErrBadRequest
-	}
-
-	if ok := a.randDataProv.ValidateData(req.Address, req.Data); !ok {
-		a.log.Error("%s endpoint, corrupted data")
-		return fiber.ErrForbidden
-	}
-
-	buf := make([]byte, 0, len(req.Data)+len(req.URL))
-	buf = append(buf, append(req.Data, []byte(req.URL)...)...)
-
-	if err := a.ver.Verify(buf, req.Signature, [32]byte(req.Digest), req.Address); err != nil {
-		a.log.Error(fmt.Sprintf("%s endpoint, invalid signature: %s", TransactionHookURL, err.Error()))
-		return fiber.ErrForbidden
+	_, err := url.Parse(string(in.Data))
+	if err != nil {
+		return nil, ErrProcessingFailure
 	}
 
 	h := webhooks.Hook{
-		URL:   req.URL,
-		Token: string(req.Data),
+		URL: string(in.Data),
 	}
-	if err := a.wh.CreateWebhook(webhooks.TriggerNewTransaction, req.Address, h); err != nil {
-		a.log.Error(fmt.Sprintf("%s failed to create webhook: %s", TransactionHookURL, err.Error()))
-		return c.JSON(CreateRemoveUpdateHookResponse{Ok: false, Err: err.Error()})
+	if err := a.wh.CreateWebhook(webhooks.TriggerNewTransaction, in.Address, h); err != nil {
+		a.log.Error(fmt.Sprintf("create webhook failed, %s", err.Error()))
+		return nil, ErrProcessingFailure
 	}
 
-	return c.JSON(CreateRemoveUpdateHookResponse{Ok: true})
+	return &emptypb.Empty{}, nil
 }
