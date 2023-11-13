@@ -114,7 +114,7 @@ func (x *Address) GetPublic() string {
 	return ""
 }
 
-type Addresges struct {
+type Addresses struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -123,8 +123,8 @@ type Addresges struct {
 	Array     []string `protobuf:"bytes,2,rep,name=array,proto3" json:"array,omitempty"`
 }
 
-func (x *Addresges) Reset() {
-	*x = Addresges{}
+func (x *Addresses) Reset() {
+	*x = Addresses{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_computantistypes_proto_msgTypes[2]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -132,13 +132,13 @@ func (x *Addresges) Reset() {
 	}
 }
 
-func (x *Addresges) String() string {
+func (x *Addresses) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Addresges) ProtoMessage() {}
+func (*Addresses) ProtoMessage() {}
 
-func (x *Addresges) ProtoReflect() protoreflect.Message {
+func (x *Addresses) ProtoReflect() protoreflect.Message {
 	mi := &file_computantistypes_proto_msgTypes[2]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -150,19 +150,19 @@ func (x *Addresges) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Addresges.ProtoReflect.Descriptor instead.
-func (*Addresges) Descriptor() ([]byte, []int) {
+// Deprecated: Use Addresses.ProtoReflect.Descriptor instead.
+func (*Addresses) Descriptor() ([]byte, []int) {
 	return file_computantistypes_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *Addresges) GetNotaryUrl() string {
+func (x *Addresses) GetNotaryUrl() string {
 	if x != nil {
 		return x.NotaryUrl
 	}
 	return ""
 }
 
-func (x *Addresges) GetArray() []string {
+func (x *Addresses) GetArray() []string {
 	if x != nil {
 		return x.Array
 	}
@@ -534,7 +534,7 @@ var file_computantistypes_proto_rawDesc = []byte{
 	0x04, 0x62, 0x6c, 0x6f, 0x62, 0x22, 0x21, 0x0a, 0x07, 0x41, 0x64, 0x64, 0x72, 0x65, 0x73, 0x73,
 	0x12, 0x16, 0x0a, 0x06, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x63, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09,
 	0x52, 0x06, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x63, 0x22, 0x40, 0x0a, 0x09, 0x41, 0x64, 0x64, 0x72,
-	0x65, 0x73, 0x67, 0x65, 0x73, 0x12, 0x1d, 0x0a, 0x0a, 0x6e, 0x6f, 0x74, 0x61, 0x72, 0x79, 0x5f,
+	0x65, 0x73, 0x73, 0x65, 0x73, 0x12, 0x1d, 0x0a, 0x0a, 0x6e, 0x6f, 0x74, 0x61, 0x72, 0x79, 0x5f,
 	0x75, 0x72, 0x6c, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x6e, 0x6f, 0x74, 0x61, 0x72,
 	0x79, 0x55, 0x72, 0x6c, 0x12, 0x14, 0x0a, 0x05, 0x61, 0x72, 0x72, 0x61, 0x79, 0x18, 0x02, 0x20,
 	0x03, 0x28, 0x09, 0x52, 0x05, 0x61, 0x72, 0x72, 0x61, 0x79, 0x22, 0x72, 0x0a, 0x09, 0x41, 0x6c,
@@ -605,7 +605,7 @@ var file_computantistypes_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_computantistypes_proto_goTypes = []interface{}{
 	(*DataBlob)(nil),     // 0: computantis.DataBlob
 	(*Address)(nil),      // 1: computantis.Address
-	(*Addresges)(nil),    // 2: computantis.Addresges
+	(*Addresses)(nil),    // 2: computantis.Addresses
 	(*AliveData)(nil),    // 3: computantis.AliveData
 	(*SignedHash)(nil),   // 4: computantis.SignedHash
 	(*Spice)(nil),        // 5: computantis.Spice
@@ -653,7 +653,7 @@ func file_computantistypes_proto_init() {
 			}
 		}
 		file_computantistypes_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Addresges); i {
+			switch v := v.(*Addresses); i {
 			case 0:
 				return &v.state
 			case 1:

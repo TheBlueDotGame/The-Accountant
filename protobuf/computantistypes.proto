@@ -13,7 +13,7 @@ message Address {
     string public = 1;
 }
 
-message Addresges {
+message Addresses {
     string notary_url = 1;
     repeated string array = 2;
 }

@@ -110,7 +110,7 @@ func run(cfg configuration.Configuration) {
 		return
 	}
 
-	err = walletapi.Run(ctx, cfg.Client, log, timeout, verify, fo, wallet.New) // TODO: Indicate the client wallet source: (new, pem, gob)
+	err = walletapi.Run(ctx, cfg.Client, log, verify, fo, wallet.New) // TODO: Indicate the client wallet source: (new, pem, gob)
 
 	if err != nil {
 		log.Error(err.Error())
