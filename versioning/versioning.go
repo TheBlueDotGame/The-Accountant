@@ -1,6 +1,7 @@
 package versioning
 
 const (
-	ApiVersion = "1.0.0"
-	Header     = "Computantis-Notary"
+	ApiVersion     = "1.0.0"
+	Header         = "Computantis-Notary"
+	WebhooksHeader = "Computantis-WebHooks"
 )

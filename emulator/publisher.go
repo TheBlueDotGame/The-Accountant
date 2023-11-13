@@ -3,23 +3,23 @@ package emulator
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math/rand"
 	"time"
 
 	"github.com/pterm/pterm"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/protobuf/types/known/emptypb"
 
-	"github.com/bartossh/Computantis/httpclient"
-	"github.com/bartossh/Computantis/versioning"
-	"github.com/bartossh/Computantis/walletapi"
+	"github.com/bartossh/Computantis/protobufcompiled"
 )
 
 type publisher struct {
-	clientURL string
-	timeout   time.Duration
-	position  int
-	random    bool
+	conn     *grpc.ClientConn
+	client   protobufcompiled.WalletClientAPIClient
+	position int
+	random   bool
 }
 
 // RunPublisher runs publisher emulator that emulates data in a buffer.
@@ -40,27 +40,23 @@ func RunPublisher(ctx context.Context, cancel context.CancelFunc, config Config,
 		return fmt.Errorf("wrong tick_seconds parameter, expected value between 1 and 60 inclusive")
 	}
 
+	opts := grpc.WithTransportCredentials(insecure.NewCredentials()) // TODO: remove when credentials are set
+	conn, err := grpc.Dial(config.ClientURL, opts)
+	if err != nil {
+		return fmt.Errorf("dial failed, %s", err)
+	}
+	defer conn.Close()
+	client := protobufcompiled.NewWalletClientAPIClient(conn)
+
 	p := publisher{
-		timeout:   time.Second * time.Duration(config.TimeoutSeconds),
-		clientURL: config.ClientURL,
-		random:    config.Random,
+		conn:   conn,
+		client: client,
+		random: config.Random,
 	}
 
-	var alive walletapi.AliveResponse
-	url := fmt.Sprintf("%s%s", p.clientURL, walletapi.Alive)
-	if err := httpclient.MakeGet(p.timeout, url, &alive); err != nil {
+	address, err := p.client.WalletPublicAddress(ctx, &emptypb.Empty{})
+	if err != nil {
 		return err
-	}
-	if alive.APIVersion != versioning.ApiVersion || alive.APIHeader != versioning.Header {
-		return fmt.Errorf(
-			"emulation not possible due to wrong headers and/or version, expected header %s, version %s, received header %s, version %s",
-			versioning.Header, versioning.ApiVersion, alive.APIHeader, alive.APIVersion)
-	}
-
-	var addr walletapi.AddressResponse
-	url = fmt.Sprintf("%s%s", p.clientURL, walletapi.Address)
-	if err := httpclient.MakeGet(p.timeout, url, &addr); err != nil {
-		return fmt.Errorf("cannot read public address, %s", err)
 	}
 
 	t := time.NewTicker(time.Duration(config.TickSeconds) * time.Second)
@@ -70,7 +66,7 @@ func RunPublisher(ctx context.Context, cancel context.CancelFunc, config Config,
 		case <-ctx.Done():
 			return nil
 		case <-t.C:
-			if err := p.emulate(ctx, addr.Address, measurtements); err != nil {
+			if err := p.emulate(ctx, address.Public, measurtements); err != nil {
 				return err
 			}
 			pterm.Info.Printf("Emulated and published [ %d ] transaction from the given dataset.\n", p.position+1)
@@ -90,43 +86,22 @@ func (p *publisher) emulate(ctx context.Context, receiver string, measurements [
 		p.position = 0
 	}
 
-	t := time.NewTimer(time.Second * time.Duration(p.timeout))
-	defer t.Stop()
-	d := make(chan struct{}, 1)
-
 	var err error
-	go func() {
-		defer func() {
-			d <- struct{}{}
-		}()
-		var data []byte
-		data, err = json.Marshal(measurements[p.position])
-		if err != nil {
-			return
-		}
-		req := walletapi.IssueTransactionRequest{
-			ReceiverAddress: receiver,
-			Subject:         "emulator-test",
-			Data:            data,
-		}
-		var resp walletapi.IssueTransactionResponse
-		url := fmt.Sprintf("%s%s", p.clientURL, walletapi.IssueTransaction)
-		err = httpclient.MakePost(p.timeout, url, req, &resp)
-		if resp.Err != "" {
-			err = errors.New(resp.Err)
-			return
-		}
-		if !resp.Ok {
-			err = errors.New("unexpected error")
-		}
-	}()
-
-	select {
-	case <-ctx.Done():
-		return nil
-	case <-d:
+	var data []byte
+	data, err = json.Marshal(measurements[p.position])
+	if err != nil {
 		return err
-	case <-t.C:
-		return errors.New("timeout")
 	}
+	if _, err := p.client.Issue(ctx, &protobufcompiled.IssueTrx{
+		Subject:         fmt.Sprintf("measurement %v", p.position),
+		ReceiverAddress: receiver,
+		Data:            data,
+		Spice: &protobufcompiled.Spice{
+			Currency:             0,
+			SuplementaryCurrency: 0,
+		},
+	}); err != nil {
+		return err
+	}
+	return nil
 }

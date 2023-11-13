@@ -394,10 +394,10 @@ func (s *server) removeAwaitedTrx(h []byte, receiver string) error {
 	return err
 }
 
-// Alive returns alive information such as public address API version and API header of running server.
+// Alive returns alive information such as wallet public address API version and API header of running server.
 func (s *server) Alive(ctx context.Context, _ *emptypb.Empty) (*protobufcompiled.AliveData, error) {
 	return &protobufcompiled.AliveData{
-		PublicAddress: s.nodePublicURL,
+		PublicAddress: s.acc.Address(),
 		ApiVersion:    versioning.ApiVersion,
 		ApiHeader:     versioning.Header,
 	}, nil

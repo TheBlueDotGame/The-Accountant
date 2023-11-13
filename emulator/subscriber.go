@@ -12,12 +12,13 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/pterm/pterm"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
-	"github.com/bartossh/Computantis/httpclient"
+	"github.com/bartossh/Computantis/protobufcompiled"
 	"github.com/bartossh/Computantis/transaction"
-	"github.com/bartossh/Computantis/walletapi"
+	"github.com/bartossh/Computantis/transformers"
 	"github.com/bartossh/Computantis/webhooks"
-	"github.com/bartossh/Computantis/webhooksserver"
 )
 
 const maxTrxInBuffer = 25
@@ -29,7 +30,6 @@ const (
 
 const (
 	WebHookEndpointTransaction = "/hook/transaction"
-	WebHookEndpointBlock       = "hook/block"
 	MessageEndpoint            = "/message"
 )
 
@@ -59,7 +59,9 @@ type subscriber struct {
 func RunSubscriber(ctx context.Context, cancel context.CancelFunc, config Config, data []byte) error {
 	defer cancel()
 	var m [2]Measurement
-	if err := json.Unmarshal(data, &m); err != nil {
+	var err error
+	err = json.Unmarshal(data, &m)
+	if err != nil {
 		return fmt.Errorf("cannot unmarshal data, %s", err)
 	}
 
@@ -67,10 +69,22 @@ func RunSubscriber(ctx context.Context, cancel context.CancelFunc, config Config
 		return fmt.Errorf("wrong timeout_seconds parameter, expected value between 1 and 20 inclusive")
 	}
 
+	opts := grpc.WithTransportCredentials(insecure.NewCredentials()) // TODO: remove when credentials are set
+	var conn *grpc.ClientConn
+	conn, err = grpc.Dial(config.ClientURL, opts)
+	if err != nil {
+		return fmt.Errorf("dial failed, %s", err)
+	}
+	defer conn.Close()
+	client := protobufcompiled.NewWalletClientAPIClient(conn)
+	_, err = client.WebHook(ctx, &protobufcompiled.CreateWebHook{Url: config.PublicURL})
+	if err != nil {
+		return err
+	}
 	p := publisher{
-		timeout:   time.Second * time.Duration(config.TimeoutSeconds),
-		clientURL: config.ClientURL,
-		random:    config.Random,
+		conn:   conn,
+		client: client,
+		random: config.Random,
 	}
 
 	s := subscriber{
@@ -95,7 +109,6 @@ func RunSubscriber(ctx context.Context, cancel context.CancelFunc, config Config
 	router.Post(WebHookEndpointTransaction, s.hookTransaction)
 	router.Get(MessageEndpoint, s.messages)
 
-	var err error
 	isServerRunning := true
 	go func() {
 		err = router.Listen(fmt.Sprintf("0.0.0.0:%v", config.Port))
@@ -116,22 +129,6 @@ func RunSubscriber(ctx context.Context, cancel context.CancelFunc, config Config
 
 	if !isServerRunning {
 		return err
-	}
-
-	var resT webhooksserver.CreateRemoveUpdateHookResponse
-	reqT := walletapi.CreateWebHookRequest{
-		URL: fmt.Sprintf("%s%s", config.PublicURL, WebHookEndpointTransaction),
-	}
-	url := fmt.Sprintf("%s%s", s.pub.clientURL, walletapi.CreateUpdateWebhook)
-	if err := httpclient.MakePost(s.pub.timeout, url, reqT, &resT); err != nil {
-		return err
-	}
-
-	if !resT.Ok {
-		if resT.Err != "" {
-			return errors.New(resT.Err)
-		}
-		return errors.New("unexpected error when creating the webkhook")
 	}
 
 	<-ctx.Done()
@@ -179,36 +176,22 @@ func (sub *subscriber) actOnTransactions(notaryNodeURL string) {
 	sub.mux.Lock()
 	defer sub.mux.Unlock()
 
-	var resReceivedTransactions walletapi.TransactionsResponse
-	url := fmt.Sprintf("%s%s", sub.pub.clientURL, walletapi.GetWaitingTransactions)
-	if err := httpclient.MakePost(sub.pub.timeout, url, notaryNodeURL, &resReceivedTransactions); err != nil {
-		pterm.Error.Println(err.Error())
-		return
-	}
-
-	if !resReceivedTransactions.Ok {
-		if resReceivedTransactions.Err != "" {
-			pterm.Error.Println(resReceivedTransactions.Err)
-		}
+	protoTrxs, err := sub.pub.client.Waiting(context.Background(), &protobufcompiled.NotaryNode{Url: notaryNodeURL})
+	if err != nil || protoTrxs == nil {
 		return
 	}
 
 	var counter int
-	var confirmRes walletapi.TransactionResponse
 
-	for _, trx := range resReceivedTransactions.Transactions {
+	for _, protoTrx := range protoTrxs.Array {
+		trx, err := transformers.ProtoTrxToTrx(protoTrx)
+		if err != nil {
+			continue
+		}
 		if err := sub.validateData(trx.Data); err != nil {
 			pterm.Warning.Printf("Trx [ %x ] data [ %s ] rejected, %s.\n", trx.Hash[:], trx.Data, err)
 
-			rejectReq := walletapi.TransactionsRequest{
-				NotaryNodeURL: notaryNodeURL,
-				Transactions:  []transaction.Transaction{trx},
-			}
-			var rejectRes walletapi.TransactionResponse
-			url := fmt.Sprintf("%s%s", sub.pub.clientURL, walletapi.RejectTransactions)
-			if err := httpclient.MakePost(sub.pub.timeout, url, rejectReq, &rejectRes); err != nil {
-				pterm.Error.Printf("Transaction failed to be rejected due to: %s.\n", err)
-			}
+			sub.pub.client.Reject(context.Background(), &protobufcompiled.TrxHash{Hash: trx.Hash[:], Url: notaryNodeURL})
 
 			sub.appendToBuffer("rejected", trx)
 			continue
@@ -216,36 +199,18 @@ func (sub *subscriber) actOnTransactions(notaryNodeURL string) {
 
 		pterm.Info.Printf("Trx [ %x ] data [ %s ] accepted.\n", trx.Hash[:], string(trx.Data))
 
-		confirmReq := walletapi.TransactionRequest{
-			NotaryNodeURL: notaryNodeURL,
-			Transaction:   trx,
-		}
-
-		url := fmt.Sprintf("%s%s", sub.pub.clientURL, walletapi.ConfirmTransaction)
-		if err := httpclient.MakePost(sub.pub.timeout, url, confirmReq, &confirmRes); err != nil {
-			pterm.Error.Printf("Transaction failed to be signed due to: %s.\n", err)
-			continue
-		}
-
-		if !confirmRes.Ok {
-			if confirmRes.Err != "" {
-				pterm.Error.Printf("Transaction cannot be signed, %.s\n", confirmRes.Err)
-				continue
-			}
-			pterm.Error.Println("Transaction cannot be signed.")
-			continue
-		}
+		sub.pub.client.Approve(context.Background(), &protobufcompiled.TransactionApproved{Transaction: protoTrx, Url: notaryNodeURL})
 
 		sub.appendToBuffer("accepted", trx)
 
 		counter++
 	}
 
-	if counter == len(resReceivedTransactions.Transactions) {
+	if counter == int(protoTrxs.Len) {
 		pterm.Info.Printf("Signed all of [ %v ] received transactions.\n", counter)
 		return
 	}
-	pterm.Warning.Printf("Signed [ %v ] of [ %v ] received transactions.\n", counter, len(resReceivedTransactions.Transactions))
+	pterm.Warning.Printf("Signed [ %v ] of [ %v ] received transactions.\n", counter, protoTrxs.Len)
 }
 
 func (sub *subscriber) validateData(data []byte) error {
