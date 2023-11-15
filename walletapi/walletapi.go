@@ -18,9 +18,9 @@ import (
 
 // Config is the configuration for the notaryserver
 type Config struct {
-	Port          string `yaml:"port"`
-	NotaryNodeURL string `yaml:"notary_node_url"`
-	HelperNodeURL string `yaml:"helper_node_url"`
+	Port            string `yaml:"port"`
+	NotaryNodeURL   string `yaml:"notary_node_url"`
+	WebhooksNodeURL string `yaml:"webhooks_node_url"`
 }
 
 type app struct {
@@ -48,7 +48,7 @@ func Run(ctx context.Context, cfg Config, log logger.Logger, fw transaction.Veri
 		log.Info(fmt.Sprintf("error with reading wallet from file: %s", err))
 	}
 
-	s := app{log: log, centralNodeClient: *c, webhooksURL: cfg.HelperNodeURL}
+	s := app{log: log, centralNodeClient: *c, webhooksURL: cfg.WebhooksNodeURL}
 	defer s.close()
 
 	lis, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%s", cfg.Port))
@@ -161,7 +161,7 @@ func (a *app) Saved(ctx context.Context, in *protobufcompiled.TrxHash) (*protobu
 
 // WebHook creates a web-hook on the WebHook Computantis node.
 func (a *app) WebHook(ctx context.Context, in *protobufcompiled.CreateWebHook) (*emptypb.Empty, error) {
-	err := a.centralNodeClient.CreateWebhook(ctx, a.webhooksURL, a.centralNodeClient.URL())
+	err := a.centralNodeClient.CreateWebhook(ctx, a.webhooksURL, in.Url)
 	if err != nil {
 		return nil, err
 	}

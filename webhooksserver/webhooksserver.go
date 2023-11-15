@@ -79,7 +79,7 @@ func Run(
 
 func (a *app) runServer(ctx context.Context, port int) error {
 	ctxx, cancel := context.WithCancel(ctx)
-	lis, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%s", port))
+	lis, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%v", port))
 	if err != nil {
 		cancel()
 		return err

@@ -66,6 +66,8 @@ services:
       dockerfile: Dockerfile
       args: 
         - "APPLICATION=webhooks"
+    environment:
+     - GOMAXPROCS=1
     restart: unless-stopped
     ports:
       - "8010:8000"
@@ -82,6 +84,8 @@ services:
       args: 
         - "APPLICATION=client"
     profiles: ["demo"]
+    environment:
+     - GOMAXPROCS=1
     restart: unless-stopped
     ports:
       - "8020:8000"
@@ -95,11 +99,13 @@ services:
   subscriber-node:
     container_name: subscriber-node
     build:
-      dockerfile: Dockerfile-emulators
+      dockerfile: Dockerfile.emulators
       args:
         - "APPLICATION=emulator"
         - "ROLE=subscriber"
         - "DATAFILE=minmax.json"
+    environment:
+     - GOMAXPROCS=1
     profiles: ["demo"]
     restart: unless-stopped
     ports:
@@ -119,6 +125,8 @@ services:
         - "APPLICATION=emulator"
         - "ROLE=publisher"
         - "DATAFILE=data.json"
+    environment:
+     - GOMAXPROCS=1
     profiles: ["demo"]
     restart: unless-stopped
     networks:
@@ -127,24 +135,12 @@ services:
       subscriber-node:
         condition: service_started
   
-  stress-node:
-    container_name: stress-node
-    build:
-      dockerfile: Dockerfile.stress
-      args:
-        - "APPLICATION=stress"
-    profiles: ["stress"]
-    restart: unless-stopped
-    networks:
-      - computantis_network
-    depends_on:
-      notary-node:
-        condition: service_started
- 
   node-exporter:
     image: prom/node-exporter:latest
     container_name: node-exporter
     restart: unless-stopped
+    environment:
+     - GOMAXPROCS=2
     volumes:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro

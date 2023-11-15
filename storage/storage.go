@@ -16,11 +16,11 @@ const (
 
 // Create storage returns a BadgerDB storage and runs the Garbage Collection concurrently.
 // To stop the storage and disconnect from database cancel the context.
-func CreateBadgerDB(ctx context.Context, path string, l logger.Logger) (*badger.DB, error) {
+func CreateBadgerDB(ctx context.Context, path string, l logger.Logger, detectConflicts bool) (*badger.DB, error) {
 	var opt badger.Options
 	switch path {
 	case "":
-		opt = badger.DefaultOptions("").WithInMemory(true)
+		opt = badger.DefaultOptions("").WithInMemory(true).WithDetectConflicts(detectConflicts)
 	default:
 		if _, err := os.Stat(path); err != nil {
 			return nil, err

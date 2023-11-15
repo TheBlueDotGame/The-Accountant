@@ -7,7 +7,6 @@ import (
 )
 
 const (
-	PubSubNewBlock     string = "new_block"
 	PubSubAwaitingTrxs string = "awaiting_trxs_for_addresses"
 )
 

@@ -65,10 +65,6 @@ func RunSubscriber(ctx context.Context, cancel context.CancelFunc, config Config
 		return fmt.Errorf("cannot unmarshal data, %s", err)
 	}
 
-	if config.TimeoutSeconds < 1 || config.TimeoutSeconds > 20 {
-		return fmt.Errorf("wrong timeout_seconds parameter, expected value between 1 and 20 inclusive")
-	}
-
 	opts := grpc.WithTransportCredentials(insecure.NewCredentials()) // TODO: remove when credentials are set
 	var conn *grpc.ClientConn
 	conn, err = grpc.Dial(config.ClientURL, opts)
@@ -77,7 +73,7 @@ func RunSubscriber(ctx context.Context, cancel context.CancelFunc, config Config
 	}
 	defer conn.Close()
 	client := protobufcompiled.NewWalletClientAPIClient(conn)
-	_, err = client.WebHook(ctx, &protobufcompiled.CreateWebHook{Url: config.PublicURL})
+	_, err = client.WebHook(ctx, &protobufcompiled.CreateWebHook{Url: fmt.Sprintf("%s%s", config.PublicURL, WebHookEndpointTransaction)})
 	if err != nil {
 		return err
 	}
@@ -98,8 +94,8 @@ func RunSubscriber(ctx context.Context, cancel context.CancelFunc, config Config
 		Prefork:       false,
 		CaseSensitive: true,
 		StrictRouting: true,
-		ReadTimeout:   time.Second * time.Duration(config.TimeoutSeconds),
-		WriteTimeout:  time.Second * time.Duration(config.TimeoutSeconds),
+		ReadTimeout:   time.Second,
+		WriteTimeout:  time.Second,
 		ServerHeader:  header,
 		AppName:       apiVersion,
 		Concurrency:   16,
@@ -180,6 +176,9 @@ func (sub *subscriber) actOnTransactions(notaryNodeURL string) {
 	if err != nil || protoTrxs == nil {
 		return
 	}
+	if len(protoTrxs.Array) == 0 {
+		return
+	}
 
 	var counter int
 
@@ -191,7 +190,7 @@ func (sub *subscriber) actOnTransactions(notaryNodeURL string) {
 		if err := sub.validateData(trx.Data); err != nil {
 			pterm.Warning.Printf("Trx [ %x ] data [ %s ] rejected, %s.\n", trx.Hash[:], trx.Data, err)
 
-			sub.pub.client.Reject(context.Background(), &protobufcompiled.TrxHash{Hash: trx.Hash[:], Url: notaryNodeURL})
+			go sub.pub.client.Reject(context.Background(), &protobufcompiled.TrxHash{Hash: trx.Hash[:], Url: notaryNodeURL})
 
 			sub.appendToBuffer("rejected", trx)
 			continue
@@ -199,7 +198,7 @@ func (sub *subscriber) actOnTransactions(notaryNodeURL string) {
 
 		pterm.Info.Printf("Trx [ %x ] data [ %s ] accepted.\n", trx.Hash[:], string(trx.Data))
 
-		sub.pub.client.Approve(context.Background(), &protobufcompiled.TransactionApproved{Transaction: protoTrx, Url: notaryNodeURL})
+		go sub.pub.client.Approve(context.Background(), &protobufcompiled.TransactionApproved{Transaction: protoTrx, Url: notaryNodeURL})
 
 		sub.appendToBuffer("accepted", trx)
 

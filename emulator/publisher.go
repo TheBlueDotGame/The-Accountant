@@ -32,10 +32,6 @@ func RunPublisher(ctx context.Context, cancel context.CancelFunc, config Config,
 		return fmt.Errorf("cannot unmarshal data, %s", err)
 	}
 
-	if config.TimeoutSeconds < 1 || config.TimeoutSeconds > 20 {
-		return fmt.Errorf("wrong timeout_seconds parameter, expected value between 1 and 20 inclusive")
-	}
-
 	if config.TickSeconds < 1 || config.TickSeconds > 60 {
 		return fmt.Errorf("wrong tick_seconds parameter, expected value between 1 and 60 inclusive")
 	}

@@ -119,7 +119,7 @@ func RunGRPC(ctx context.Context, cfg Config, l logger.Logger, t time.Duration, 
 	ctxx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	db, err := storage.CreateBadgerDB(ctx, cfg.VerticesDBPath, l)
+	db, err := storage.CreateBadgerDB(ctx, cfg.VerticesDBPath, l, true)
 	if err != nil {
 		return err
 	}

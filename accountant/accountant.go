@@ -59,7 +59,6 @@ type AccountingBook struct {
 	log            logger.Logger
 	dag            *dag.DAG
 	trustedNodesDB *badger.DB
-	tokensDB       *badger.DB
 	trxsToVertxDB  *badger.DB
 	verticesDB     *badger.DB
 	lastVertexHash chan [32]byte
@@ -73,19 +72,15 @@ type AccountingBook struct {
 // New creates new AccountingBook.
 // New AccountingBook will start internally the garbage collection loop, to stop it from running cancel the context.
 func NewAccountingBook(ctx context.Context, cfg Config, verifier signatureVerifier, signer signer, l logger.Logger) (*AccountingBook, error) {
-	trustedNodesDB, err := storage.CreateBadgerDB(ctx, cfg.TrustedNodesDBPath, l)
+	trustedNodesDB, err := storage.CreateBadgerDB(ctx, cfg.TrustedNodesDBPath, l, true)
 	if err != nil {
 		return nil, err
 	}
-	tokensDB, err := storage.CreateBadgerDB(ctx, cfg.TokensDBPath, l)
+	trxsToVertxDB, err := storage.CreateBadgerDB(ctx, cfg.TraxsToVerticesMapDBPath, l, true)
 	if err != nil {
 		return nil, err
 	}
-	trxsToVertxDB, err := storage.CreateBadgerDB(ctx, cfg.TraxsToVerticesMapDBPath, l)
-	if err != nil {
-		return nil, err
-	}
-	verticesDB, err := storage.CreateBadgerDB(ctx, cfg.VerticesDBPath, l)
+	verticesDB, err := storage.CreateBadgerDB(ctx, cfg.VerticesDBPath, l, true)
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +89,6 @@ func NewAccountingBook(ctx context.Context, cfg Config, verifier signatureVerifi
 		signer:         signer,
 		dag:            dag.NewDAG(),
 		trustedNodesDB: trustedNodesDB,
-		tokensDB:       tokensDB,
 		trxsToVertxDB:  trxsToVertxDB,
 		verticesDB:     verticesDB,
 		lastVertexHash: make(chan [32]byte, lastVertexHashes),

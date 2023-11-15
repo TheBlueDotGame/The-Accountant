@@ -172,28 +172,11 @@ This will compile all the components when docker image is run. All the processes
 
 ## Run emulation demo:
 
-1. There is a possibility to run the example demo that will emulate subscriber and publisher:
-- Publisher is publishing the messages from `data.json` and it is possible to alter the data, but the structure and format and data types shall be preserved.
-- Subscriber will subscribe ans validate transmitted transactions and data in the transaction based on `minmax.json` file, it is possible to alter the data but the structure and format and data types shall be preserved.
-2. The configuration for each service is in the `setup_example.yaml` and only one parameter needs to be adjusted. 
-- Check your machine IP address in the local network `ifconfig` on Linux.
-- Set this parameter in `setup_example.yaml`: `public_url: "http://<your.local.ip.address>:8060"`
-
-3. Run the demo.
-- CAUTION: THIS NEEDS TO BE RUN IN DEVELOPMENT ENVIRONMENT AND ALL THE DATA ON YOUR LOCAL COMPUTANTIS ENVIRONMENT WILL BE ALTERED.
-- There will be three steps:
-    - Run `make docker-all`.
-    - Run `go run cmd/emulator/main.go -c setup_example.yaml -d data.json p`
-    - Run `go run cmd/emulator/main.go -c setup_example.yaml -d minmax.json s`
-- Enjoy.
-
-## Stress test
-
-Directory `stress/` contains central node REST API performance tests.
-Bottleneck is on I/O calls, mostly database writes.
-Single PostgreSQL database instance run in docker 1CPU and 2GB RAM allows for 
-full cycle processing of 750 transactions per second. This is rough estimate and 
-I would soon provide more precise benchmarks.
+Easiest way to run demo with emulation is to use docker-compose.yaml configuration.
+Run with command:
+```sh 
+docker-compose --profile demo up -d
+```
 
 ## Vulnerability scanning.
 
