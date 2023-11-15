@@ -31,12 +31,12 @@ webhooks_server:
   port: 8000
 client:
   port: 8000
-  notary_node_url: "http://notary-node:8000"
-  helper_node_url: "http://helper-node:8000"
+  notary_node_url: "notary-node:8000"
+  webhooks_node_url: "webhooks-node:8000"
 emulator:
   tick_seconds: 1
   random: false
-  client_url: "http://client-node:8000"
+  client_url: "client-node:8000"
   port: "8060"
   public_url: "http://subscriber-node:8060" # If running emulators locally, best to set it up as your local network machine IP.
 zinc_logger:

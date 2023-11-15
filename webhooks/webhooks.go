@@ -95,7 +95,7 @@ func (s *Service) PostWebhookNewTransaction(publicAddresses []string, storingNod
 			Time:          time.Now(),
 		}
 		if err := httpclient.MakePost(time.Second*5, h.URL, transactionMsg, &in); err != nil {
-			s.log.Error(fmt.Sprintf("webhook service error posting transaction to webhook url: %s, %s", h.URL, err.Error()))
+			s.log.Error(fmt.Sprintf("webhook service error posting transaction to webhook URL: %s, %s", h.URL, err.Error()))
 		}
 	}
 }

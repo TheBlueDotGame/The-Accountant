@@ -13,5 +13,6 @@ COPY --from=builder /app/cmd/${APPLICATION}/main ./
 COPY --from=builder /app/setup_example.yaml ./
 COPY --from=builder /app/test_wallet ./
 EXPOSE 8000
+EXPOSE 8020
 
-ENTRYPOINT ["./main", "-c", "setup_example.yaml"]
+ENTRYPOINT ./main -c setup_example.yaml

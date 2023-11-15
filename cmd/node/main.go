@@ -162,4 +162,5 @@ func run(cfg configuration.Configuration) {
 	if err != nil {
 		log.Error(err.Error())
 	}
+	time.Sleep(time.Second)
 }

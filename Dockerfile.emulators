@@ -21,3 +21,4 @@ ENV ROLE=${ROLE}
 # what role the emulator will play (publisher, or subscriber), and as a result, which
 # data file it needs.
 ENTRYPOINT ./main -c setup_example.yaml -d ${DATAFILE} ${ROLE}
+

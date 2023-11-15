@@ -115,11 +115,11 @@ func Run(
 		return err
 	}
 
-	trxsAwaitedDB, err := storage.CreateBadgerDB(ctx, c.TrxAwaitedDBPath, log)
+	trxsAwaitedDB, err := storage.CreateBadgerDB(ctx, c.TrxAwaitedDBPath, log, true)
 	if err != nil {
 		return err
 	}
-	addressAwaitedTrxsDB, err := storage.CreateBadgerDB(ctx, c.AddressAwaitedTrxDBPath, log)
+	addressAwaitedTrxsDB, err := storage.CreateBadgerDB(ctx, c.AddressAwaitedTrxDBPath, log, false)
 	if err != nil {
 		return err
 	}
@@ -219,8 +219,12 @@ func add(originalValues, newValue []byte) []byte {
 	return append(originalValues, append([]byte{','}, newValue...)...)
 }
 
+func read(val []byte) [][]byte {
+	return bytes.Split(val, []byte{','})
+}
+
 func remove(values, removeValue []byte) []byte {
-	sl := bytes.Split(values, []byte{','})
+	sl := read(values)
 	newValues := make([]byte, 0, len(values))
 	for _, v := range sl {
 		if bytes.Equal(v, removeValue) {
@@ -265,16 +269,29 @@ func (s *server) saveAwaitedTrx(ctx context.Context, trx *transaction.Transactio
 	}
 
 	hashHex := hexEncode(trx.Hash[:])
-
-	for _, address := range []string{trx.IssuerAddress, trx.ReceiverAddress} {
-		m := s.addressAwaitedTrxsDB.GetMergeOperator([]byte(address), add, time.Nanosecond)
-		if err := m.Add(hashHex); err != nil {
-			s.log.Error(fmt.Sprintf("saving address awaited failed for [ %s ], hex %v", address, hashHex))
+	return s.addressAwaitedTrxsDB.Update(func(txn *badger.Txn) error {
+		for _, address := range []string{trx.IssuerAddress, trx.ReceiverAddress} {
+			item, err := txn.Get([]byte(address))
+			if err != nil && !errors.Is(err, badger.ErrKeyNotFound) {
+				return err
+			}
+			var updated []byte
+			switch item {
+			case nil:
+				updated = add(updated, hashHex)
+			default:
+				item.Value(func(val []byte) error {
+					updated = add(val, hashHex)
+					return nil
+				})
+			}
+			err = txn.SetEntry(badger.NewEntry([]byte(address), updated))
+			if err != nil {
+				return err
+			}
 		}
-		m.Stop()
-	}
-
-	return nil
+		return nil
+	})
 }
 
 func (s *server) readAwaitedTrx(address string) ([]transaction.Transaction, error) {
@@ -288,13 +305,14 @@ func (s *server) readAwaitedTrx(address string) ([]transaction.Transaction, erro
 			return err
 		}
 
-		if err := item.Value(func(val []byte) error {
-			hashesHex = bytes.Split(val, []byte{','})
-			return nil
-		}); err != nil {
-			return err
+		switch item {
+		case nil:
+		default:
+			item.Value(func(val []byte) error {
+				hashesHex = read(val)
+				return nil
+			})
 		}
-
 		return nil
 	})
 	if err != nil {
@@ -315,12 +333,13 @@ func (s *server) readAwaitedTrx(address string) ([]transaction.Transaction, erro
 			}
 			item, err := txn.Get(hash)
 			if err != nil {
-				if errors.Is(err, badger.ErrKeyNotFound) {
+				if errors.Is(err, badger.ErrKeyNotFound) || item == nil {
 					cleanup = append(cleanup, h)
 					continue
 				}
 				return err
 			}
+
 			if err := item.Value(func(val []byte) error {
 				trx, err := transaction.Decode(val)
 				if err != nil {
@@ -340,15 +359,26 @@ func (s *server) readAwaitedTrx(address string) ([]transaction.Transaction, erro
 		return trxs, err
 	}
 
-	m := s.addressAwaitedTrxsDB.GetMergeOperator([]byte(address), remove, time.Nanosecond)
-	defer m.Stop()
-	for _, h := range cleanup {
-		err := m.Add(h)
-		if err != nil {
-			s.log.Error(fmt.Sprintf("cleanup for hex hash %v failed, %s", h, err))
+	err = s.addressAwaitedTrxsDB.Update(func(txn *badger.Txn) error {
+		item, err := txn.Get([]byte(address))
+		if err != nil && !errors.Is(err, badger.ErrKeyNotFound) {
+			return err
 		}
-	}
-
+		var values []byte
+		switch item {
+		case nil:
+			return nil
+		default:
+			item.Value(func(val []byte) error {
+				values = val
+				return nil
+			})
+		}
+		for _, value := range cleanup {
+			values = remove(values, value)
+		}
+		return txn.SetEntry(badger.NewEntry([]byte(address), values))
+	})
 	return trxs, err
 }
 
@@ -358,6 +388,9 @@ func (s *server) removeAwaitedTrx(h []byte, receiver string) error {
 		item, err := txn.Get(h)
 		if err != nil {
 			return err
+		}
+		if item == nil {
+			return badger.ErrKeyNotFound
 		}
 		if err := item.Value(func(val []byte) error {
 			var err error
@@ -383,14 +416,30 @@ func (s *server) removeAwaitedTrx(h []byte, receiver string) error {
 	}
 
 	hashHex := hexEncode(h)
-	for _, address := range [2]string{trx.IssuerAddress, receiver} {
-		m := s.addressAwaitedTrxsDB.GetMergeOperator([]byte(address), remove, time.Nanosecond)
-		if err := m.Add(hashHex); err != nil {
-			s.log.Error(fmt.Sprintf("removing address of  awaited failed for [ %s ], hex %v", address, hashHex))
-		}
-		m.Stop()
-	}
 
+	err = s.addressAwaitedTrxsDB.Update(func(txn *badger.Txn) error {
+		for _, address := range [2]string{trx.IssuerAddress, receiver} {
+			item, err := txn.Get([]byte(address))
+			if err != nil && !errors.Is(err, badger.ErrKeyNotFound) {
+				return err
+			}
+			var values []byte
+			switch item {
+			case nil:
+				continue
+			default:
+				item.Value(func(val []byte) error {
+					values = val
+					return nil
+				})
+			}
+			values = remove(values, hashHex)
+			if err = txn.SetEntry(badger.NewEntry([]byte(address), values)); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 	return err
 }
 
