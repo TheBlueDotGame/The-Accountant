@@ -52,6 +52,7 @@ type subscriber struct {
 	allowedIssuerAddress string
 	buffer               []Message
 	allowdMeasurements   [2]Measurement
+	ticker               time.Duration
 }
 
 // RunSubscriber runs subscriber emulator.
@@ -88,6 +89,7 @@ func RunSubscriber(ctx context.Context, cancel context.CancelFunc, config Config
 		pub:                 p,
 		lastTransactionTime: time.Now(),
 		allowdMeasurements:  m,
+		ticker:              time.Duration(config.TickSeconds) * 2,
 	}
 
 	router := fiber.New(fiber.Config{
@@ -199,6 +201,7 @@ func (sub *subscriber) actOnTransactions(notaryNodeURL string) {
 		pterm.Info.Printf("Trx [ %x ] data [ %s ] accepted.\n", trx.Hash[:], string(trx.Data))
 
 		go sub.pub.client.Approve(context.Background(), &protobufcompiled.TransactionApproved{Transaction: protoTrx, Url: notaryNodeURL})
+		go sub.checkIsAccepted(trx.Hash, notaryNodeURL)
 
 		sub.appendToBuffer("accepted", trx)
 
@@ -246,4 +249,14 @@ func (sub *subscriber) appendToBuffer(status string, trx transaction.Transaction
 	if len(sub.buffer) > maxTrxInBuffer {
 		sub.buffer = sub.buffer[len(sub.buffer)-maxTrxInBuffer:]
 	}
+}
+
+func (sub *subscriber) checkIsAccepted(hash [32]byte, notaryNodeURL string) {
+	time.Sleep(sub.ticker)
+	trx, err := sub.pub.client.Saved(context.Background(), &protobufcompiled.TrxHash{Hash: []byte(hash[:]), Url: notaryNodeURL})
+	if err != nil || trx == nil {
+		pterm.Info.Printf("Transaction with hash: %x not saved in node %s\n", hash, notaryNodeURL)
+		return
+	}
+	pterm.Info.Printf("Transaction with hash %x saved in node %s and signed by the receiver %s .\n", trx.Hash, notaryNodeURL, trx.ReceiverAddress)
 }
