@@ -395,7 +395,8 @@ func (g *gossiper) runTimeSortVertexGossip(ctx context.Context, cancel context.C
 			go func(vrx *accountant.Vertex) {
 				vg := mapAccountantVertexToProtoVertex(vrx)
 				g.vertexGossipCh <- &protobufcompiled.VertexGossip{
-					Vertex: vg,
+					Vertex:    vg,
+					Gossipers: []string{g.signer.Address()},
 				}
 			}(vrx)
 		case vg := <-g.vertexGossipCh:
