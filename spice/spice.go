@@ -23,8 +23,8 @@ var (
 
 // Melange is an asset that is digitally transferable between two wallets.
 type Melange struct {
-	Currency              uint64
-	SupplementaryCurrency uint64
+	Currency              uint64 `yaml:"currency"`
+	SupplementaryCurrency uint64 `yaml:"supplementary_currency"`
 }
 
 // New creates new spice Melange from given currency and supplementary currency values.

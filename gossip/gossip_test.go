@@ -77,7 +77,10 @@ func (t *testAccountant) StreamDAG(ctx context.Context) (<-chan *accountant.Vert
 }
 
 func (t *testAccountant) LoadDag(ctx context.Context, cancelF context.CancelCauseFunc, cVrx <-chan *accountant.Vertex) {
-	return
+}
+
+func (t *testAccountant) CreateGenesis(subject string, spc spice.Melange, data []byte, receiver accountant.Signer) (accountant.Vertex, error) {
+	return accountant.Vertex{}, nil
 }
 
 func (t *testAccountant) DagLoaded() bool {
