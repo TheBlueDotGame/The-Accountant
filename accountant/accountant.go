@@ -47,7 +47,8 @@ type signatureVerifier interface {
 	Verify(message, signature []byte, hash [32]byte, address string) error
 }
 
-type signer interface {
+// Signer signs the given message and has a public address.
+type Signer interface {
 	Sign(message []byte) (digest [32]byte, signature []byte)
 	Address() string
 }
@@ -55,7 +56,7 @@ type signer interface {
 // AccountingBook is an entity that represents the accounting process of all received transactions.
 type AccountingBook struct {
 	verifier       signatureVerifier
-	signer         signer
+	signer         Signer
 	log            logger.Logger
 	dag            *dag.DAG
 	trustedNodesDB *badger.DB
@@ -71,7 +72,7 @@ type AccountingBook struct {
 
 // New creates new AccountingBook.
 // New AccountingBook will start internally the garbage collection loop, to stop it from running cancel the context.
-func NewAccountingBook(ctx context.Context, cfg Config, verifier signatureVerifier, signer signer, l logger.Logger) (*AccountingBook, error) {
+func NewAccountingBook(ctx context.Context, cfg Config, verifier signatureVerifier, signer Signer, l logger.Logger) (*AccountingBook, error) {
 	trustedNodesDB, err := storage.CreateBadgerDB(ctx, cfg.TrustedNodesDBPath, l, true)
 	if err != nil {
 		return nil, err
@@ -96,7 +97,6 @@ func NewAccountingBook(ctx context.Context, cfg Config, verifier signatureVerifi
 		log:            l,
 		weight:         atomic.Uint64{},
 		throughput:     atomic.Uint64{},
-		dagLoaded:      !cfg.LoadDAG,
 	}
 
 	ab.unregister() // on new AccountingBook creation send to the register channel to unblock the register queue.
@@ -386,7 +386,7 @@ func (ab *AccountingBook) isValidWeight(weight uint64) bool {
 }
 
 // CreateGenesis creates genesis vertex that will transfer spice to current node as a receiver.
-func (ab *AccountingBook) CreateGenesis(subject string, spc spice.Melange, data []byte, receiver signer) (Vertex, error) {
+func (ab *AccountingBook) CreateGenesis(subject string, spc spice.Melange, data []byte, receiver Signer) (Vertex, error) {
 	ab.register()
 	defer ab.unregister()
 	trx, err := transaction.New(subject, spc, data, receiver.Address(), ab.signer)
@@ -412,6 +412,8 @@ func (ab *AccountingBook) CreateGenesis(subject string, spc spice.Melange, data 
 
 	ab.lastVertexHash <- vrx.Hash
 	ab.lastVertexHash <- vrx.Hash
+
+	ab.dagLoaded = true
 
 	return vrx, nil
 }

@@ -9,6 +9,9 @@ gossip_server:
   url: "notary-node:8080"
   genesis_url:
   load_dag_url:
+  genesis_spice:
+    currency: 1000000000000
+    supplementary_currency: 0
   vertices_db_path:
   port: 8080
 accountant:

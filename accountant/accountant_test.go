@@ -502,8 +502,7 @@ func TestMultipleIssuerMultipleReceiversMultipleAccountantSpiceTransferLegitimat
 		verifier := wallet.NewVerifier()
 		signer, err := wallet.New()
 		assert.NilError(t, err)
-		loadDag := i > 0 // NOTE: crucial for tests, on all node genesis nodes dag shall be loaded from genessis
-		ab, err := NewAccountingBook(ctx, Config{LoadDAG: loadDag}, verifier, &signer, l)
+		ab, err := NewAccountingBook(ctx, Config{}, verifier, &signer, l)
 		assert.NilError(t, err)
 
 		switch i {
@@ -587,7 +586,7 @@ func TestMultipleIssuerMultipleReceiversMultipleAccountantSpiceLoadDAG(t *testin
 	verifier := wallet.NewVerifier()
 	signer, err := wallet.New()
 	assert.NilError(t, err)
-	ab, err := NewAccountingBook(ctx, Config{LoadDAG: false}, verifier, &signer, l)
+	ab, err := NewAccountingBook(ctx, Config{}, verifier, &signer, l)
 	assert.NilError(t, err)
 
 	genesisSpice := spice.New(math.MaxUint64-1, 0)
@@ -624,7 +623,7 @@ func TestMultipleIssuerMultipleReceiversMultipleAccountantSpiceLoadDAG(t *testin
 	balanceGenessis, err := ab.CalculateBalance(ctx, receiver.Address())
 	assert.NilError(t, err)
 	// Load Dag test.
-	abLoad, err := NewAccountingBook(ctx, Config{LoadDAG: true}, verifier, &signer, l)
+	abLoad, err := NewAccountingBook(ctx, Config{}, verifier, &signer, l)
 	assert.NilError(t, err)
 
 	ctxx, cancelF := context.WithCancelCause(ctx)

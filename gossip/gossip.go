@@ -51,12 +51,14 @@ type nodeData struct {
 	url    string
 }
 
+// Config is a configuration for the gossip node.
 type Config struct {
-	URL            string `yaml:"url"`
-	GenesisURL     string `yaml:"genesis_url"`
-	LoadDagURL     string `yaml:"load_dag_url"`
-	VerticesDBPath string `yaml:"vertices_db_path"`
-	Port           int    `yaml:"port"`
+	URL            string        `yaml:"url"`
+	GenesisURL     string        `yaml:"genesis_url"`
+	LoadDagURL     string        `yaml:"load_dag_url"`
+	VerticesDBPath string        `yaml:"vertices_db_path"`
+	GenesisSpice   spice.Melange `yaml:"genesis_spice"`
+	Port           int           `yaml:"port"`
 }
 
 func (c Config) verify() error {
@@ -79,12 +81,8 @@ type signatureVerifier interface {
 	Verify(message, signature []byte, hash [32]byte, address string) error
 }
 
-type signer interface {
-	Sign(message []byte) (digest [32]byte, signature []byte)
-	Address() string
-}
-
 type accounter interface {
+	CreateGenesis(subject string, spc spice.Melange, data []byte, receiver accountant.Signer) (accountant.Vertex, error)
 	AddLeaf(ctx context.Context, leaf *accountant.Vertex) error
 	StreamDAG(ctx context.Context) (<-chan *accountant.Vertex, <-chan error)
 	LoadDag(ctx context.Context, cancelF context.CancelCauseFunc, cVrx <-chan *accountant.Vertex)
@@ -95,7 +93,7 @@ type gossiper struct {
 	protobufcompiled.UnimplementedGossipAPIServer
 	accounter                accounter
 	verifier                 signatureVerifier
-	signer                   signer
+	signer                   accountant.Signer
 	log                      logger.Logger
 	vertexCache              *badger.DB
 	vrxCh                    <-chan *accountant.Vertex
@@ -109,7 +107,7 @@ type gossiper struct {
 
 // RunGRPC runs the service application that exposes the GRPC API for gossip protocol.
 // To stop server cancel the context.
-func RunGRPC(ctx context.Context, cfg Config, l logger.Logger, t time.Duration, s signer,
+func RunGRPC(ctx context.Context, cfg Config, l logger.Logger, t time.Duration, s accountant.Signer,
 	v signatureVerifier, a accounter, vrxCh <-chan *accountant.Vertex,
 ) error {
 	if err := cfg.verify(); err != nil {
@@ -139,7 +137,10 @@ func RunGRPC(ctx context.Context, cfg Config, l logger.Logger, t time.Duration, 
 		timeout:                  t,
 	}
 
-	if cfg.LoadDagURL != "" {
+	switch cfg.LoadDagURL {
+	case "":
+		g.accounter.CreateGenesis("Genesis Vertex", spice.New(cfg.GenesisSpice.Currency, cfg.GenesisSpice.SupplementaryCurrency), []byte{}, s)
+	default:
 		if err := g.updateDag(ctx, cfg.LoadDagURL); err != nil {
 			cancel()
 			g.log.Error(fmt.Sprintf("Failed loading DAG: %s", err))

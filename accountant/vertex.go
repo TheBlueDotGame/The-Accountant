@@ -32,7 +32,7 @@ type Vertex struct {
 func NewVertex(
 	trx transaction.Transaction,
 	leftParentHash, rightParentHash [32]byte,
-	weight uint64, signer signer,
+	weight uint64, signer Signer,
 ) (Vertex, error) {
 	candidate := Vertex{
 		SignerPublicAddress: signer.Address(),
@@ -61,7 +61,7 @@ func (v *Vertex) initData() []byte {
 	)
 }
 
-func (v *Vertex) sign(signer signer) {
+func (v *Vertex) sign(signer Signer) {
 	data := v.initData()
 	v.Hash, v.Signature = signer.Sign(data)
 }
