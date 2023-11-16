@@ -89,7 +89,7 @@ func RunSubscriber(ctx context.Context, cancel context.CancelFunc, config Config
 		pub:                 p,
 		lastTransactionTime: time.Now(),
 		allowdMeasurements:  m,
-		ticker:              time.Duration(config.TickSeconds) * 2,
+		ticker:              time.Duration(config.TickSeconds) * 5,
 	}
 
 	router := fiber.New(fiber.Config{
@@ -254,9 +254,12 @@ func (sub *subscriber) appendToBuffer(status string, trx transaction.Transaction
 func (sub *subscriber) checkIsAccepted(hash [32]byte, notaryNodeURL string) {
 	time.Sleep(sub.ticker)
 	trx, err := sub.pub.client.Saved(context.Background(), &protobufcompiled.TrxHash{Hash: []byte(hash[:]), Url: notaryNodeURL})
-	if err != nil || trx == nil {
-		pterm.Info.Printf("Transaction with hash: %x not saved in node %s\n", hash, notaryNodeURL)
+	if err != nil {
+		pterm.Warning.Printf("Transaction with hash: %x not saved in node %s, %s\n", hash, notaryNodeURL, err)
 		return
 	}
-	pterm.Info.Printf("Transaction with hash %x saved in node %s and signed by the receiver %s .\n", trx.Hash, notaryNodeURL, trx.ReceiverAddress)
+	if trx == nil {
+		pterm.Warning.Printf("Transaction with hash: %x not saved in node %s, transaction is nil\n", hash, notaryNodeURL)
+	}
+	pterm.Info.Printf("Transaction with hash %x is secured in node %s and signed by the receiver %s .\n", trx.Hash, notaryNodeURL, trx.ReceiverAddress)
 }

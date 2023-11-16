@@ -40,7 +40,8 @@ var (
 	ErrTrxInVertexAlreadyExists              = errors.New("transaction in vertex already exists")
 	ErrTrxToVertexNotFound                   = errors.New("trx mapping to vertex do not found, transaction doesn't exist")
 	ErrUnexpected                            = errors.New("unexpected failure")
-	ErrTransferringFoundsFailure             = errors.New("transferring founds failure")
+	ErrTransferringFoundsFailure             = errors.New("transferring spice failure")
+	ErrEntityNotFound                        = errors.New("entity not found")
 )
 
 type signatureVerifier interface {
@@ -911,79 +912,68 @@ func (ab *AccountingBook) CalculateBalance(ctx context.Context, walletPubAddr st
 }
 
 // ReadTransactionsByHash reads transactions by hashes from DAG and DB.
-func (ab *AccountingBook) ReadTransactionsByHashes(ctx context.Context, hashes [][32]byte) ([]transaction.Transaction, error) {
-	trxs := make([]transaction.Transaction, 0, len(hashes))
-	vertexHashes := make([][]byte, 0, len(hashes))
+func (ab *AccountingBook) ReadTransactionsByHash(ctx context.Context, hash [32]byte) (transaction.Transaction, error) {
+	var vertexHash []byte
 	if err := ab.trxsToVertxDB.View(func(txn *badger.Txn) error {
-		for _, h := range hashes {
-			item, err := txn.Get(h[:])
-			if err != nil {
-				if !errors.Is(err, badger.ErrKeyNotFound) {
-					ab.log.Error(fmt.Sprintf("accountant error with reading transaction to vertex mapping, %s", err))
-				}
-				continue
+		item, err := txn.Get(hash[:])
+		if err != nil {
+			if !errors.Is(err, badger.ErrKeyNotFound) {
+				ab.log.Error(fmt.Sprintf("accountant error with reading transaction to vertex mapping, %s", err))
 			}
-
-			item.Value(func(val []byte) error {
-				vertexHashes = append(vertexHashes, val)
-				return nil
-			})
+			return err
 		}
+
+		item.Value(func(val []byte) error {
+			vertexHash = val
+			return nil
+		})
 		return nil
 	}); err != nil {
-		return nil, err
+		return transaction.Transaction{}, err
 	}
-	vrxNotFound := make([][]byte, 0, len(hashes))
-	for _, h := range vertexHashes {
-		item, err := ab.dag.GetVertex(string(h))
-		if err != nil {
-			if !errors.Is(err, dag.IDUnknownError{}) {
-				ab.log.Error(fmt.Sprintf("accountant error with reading vertex from DAG, %s", err))
-			}
-			vrxNotFound = append(vrxNotFound, h)
-			continue
-		}
+	item, err := ab.dag.GetVertex(string(vertexHash))
+	switch err {
+	case nil:
 		switch vrx := item.(type) {
 		case *Vertex:
 			if vrx == nil {
-				return nil, ErrUnexpected
+				return transaction.Transaction{}, ErrUnexpected
 			}
-			trxs = append(trxs, vrx.Transaction)
-
+			return vrx.Transaction, nil // success
 		default:
-			return nil, ErrUnexpected
+			return transaction.Transaction{}, ErrUnexpected
+		}
+	default:
+		if !errors.Is(err, dag.IDUnknownError{}) {
+			ab.log.Error(fmt.Sprintf("accountant error with reading vertex from DAG, %s", err))
 		}
 	}
 
-	if len(vrxNotFound) == 0 {
-		return trxs, nil
-	}
-
+	var trx transaction.Transaction
 	if err := ab.verticesDB.View(func(txn *badger.Txn) error {
-		for _, h := range vrxNotFound {
-			item, err := txn.Get(h[:])
-			if err != nil {
-				if !errors.Is(err, badger.ErrKeyNotFound) {
-					ab.log.Error(fmt.Sprintf("accountant error with reading vertex from DB, %s", err))
-				}
-				continue
+		item, err := txn.Get(vertexHash)
+		if err != nil {
+			if !errors.Is(err, badger.ErrKeyNotFound) {
+				ab.log.Error(fmt.Sprintf("accountant error with reading vertex from DB, %s", err))
+				return err
 			}
-
-			item.Value(func(val []byte) error {
-				vrx, err := decodeVertex(val)
-				if err != nil {
-					return errors.Join(ErrUnexpected, err)
-				}
-				trxs = append(trxs, vrx.Transaction)
-				return nil
-			})
+			return ErrEntityNotFound
 		}
+
+		item.Value(func(val []byte) error {
+			vrx, err := decodeVertex(val)
+			if err != nil {
+				return errors.Join(ErrUnexpected, err)
+			}
+			trx = vrx.Transaction
+			return nil
+		})
 		return nil
 	}); err != nil {
-		return nil, err
+		return trx, err
 	}
 
-	return trxs, nil
+	return trx, nil // success
 }
 
 // Address returns signer public address that is a core cryptographic padlock for the DAG Vertices.

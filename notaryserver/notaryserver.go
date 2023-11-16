@@ -48,6 +48,7 @@ var (
 	ErrVerification       = errors.New("verification failed, forbidden")
 	ErrDataEmpty          = errors.New("empty data, invalid contract")
 	ErrProcessing         = errors.New("processing request failed")
+	ErrNoDataPresent      = errors.New("no entity found")
 )
 
 type verifier interface {
@@ -57,7 +58,7 @@ type verifier interface {
 type accounter interface {
 	Address() string
 	CreateLeaf(ctx context.Context, trx *transaction.Transaction) (accountant.Vertex, error)
-	ReadTransactionsByHashes(ctx context.Context, hashes [][32]byte) ([]transaction.Transaction, error)
+	ReadTransactionsByHash(ctx context.Context, hashe [32]byte) (transaction.Transaction, error)
 }
 
 // RandomDataProvideValidator provides random binary data for signing to prove identity and
@@ -598,18 +599,18 @@ func (s *server) Saved(ctx context.Context, in *protobufcompiled.SignedHash) (*p
 		return nil, ErrVerification
 	}
 
-	trxs, err := s.acc.ReadTransactionsByHashes(ctx, [][32]byte{[32]byte(in.Hash)})
+	trx, err := s.acc.ReadTransactionsByHash(ctx, [32]byte(in.Data))
 	if err != nil {
 		s.log.Error(fmt.Sprintf("approved transactions endpoint, failed to read hash %v for address: %s, %s", in.Hash, in.Address, err))
 		return nil, ErrProcessing
 	}
 
-	if len(trxs) == 0 {
-		s.log.Error(fmt.Sprintf("approved transactions endpoint, failed to read hash %v for address: %s", in.Hash, in.Address))
-		return nil, ErrProcessing
+	if trx.Hash == [32]byte{} {
+		s.log.Error(fmt.Sprintf("approved transactions endpoint, failed to read hash %v for address: %s, %s", in.Hash, in.Address, ErrNoDataPresent))
+		return nil, ErrNoDataPresent
 	}
 
-	protoTrx, err := transformers.TrxToProtoTrx(&trxs[0])
+	protoTrx, err := transformers.TrxToProtoTrx(&trx)
 	if err != nil {
 		return nil, err
 	}
