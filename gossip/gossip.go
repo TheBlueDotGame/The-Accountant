@@ -442,9 +442,12 @@ func (g *gossiper) runProcessVertexGossip(ctx context.Context) {
 			if vg == nil {
 				continue
 			}
-			go g.sendToAccountant(ctx, vg.Vertex)
-			vg.Gossipers = append(vg.Gossipers, g.signer.Address())
 			set := toSet(vg.Gossipers)
+			if _, ok := set[g.signer.Address()]; !ok {
+				go g.sendToAccountant(ctx, vg.Vertex)
+				vg.Gossipers = append(vg.Gossipers, g.signer.Address())
+
+			}
 			vg.Gossipers = toSlice(set)
 			g.mux.RLock()
 			for addr, nd := range g.nodes {
