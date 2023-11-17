@@ -69,9 +69,6 @@ services:
         - "APPLICATION=node"
         - "CONFIG=setup_example_notary_one.yaml"
     restart: unless-stopped
-    ports:
-      - "8000:8000"
-      - "8080:8080"
     expose:
      - 8000
      - 8080
@@ -89,9 +86,6 @@ services:
         - "APPLICATION=node"
         - "CONFIG=setup_example_notary_two.yaml"
     restart: unless-stopped
-    ports:
-      - "8000:8000"
-      - "8080:8080"
     expose:
      - 8000
      - 8080
