@@ -2,11 +2,11 @@ is_profiling: false
 notary_server:
   trx_awaited_db_path:
   address_awaited_trx_db_path:
-  public_url: notary-node:8000
+  public_url: notary-node-genesis:8000
   port: 8000
   data_size_bytes: 15000
 gossip_server:
-  url: "notary-node:8080"
+  url: "notary-node-genesis:8080"
   genesis_url:
   load_dag_url:
   genesis_spice:
@@ -22,7 +22,7 @@ accountant:
   load_dag: false
 nats:
   server_address: "nats://nats:4222"
-  client_name: "notary-1"
+  client_name: "notary-genesis"
   token: "D9pHfuiEQPXtqPqPdyxozi8kU2FlHqC0FlSRIzpwDI0="
 dataprovider:
   longevity: 300
@@ -34,10 +34,10 @@ webhooks_server:
   port: 8000
 client:
   port: 8000
-  notary_node_url: "notary-node:8000"
+  notary_node_url: "notary-node-genesis:8000"
   webhooks_node_url: "webhooks-node:8000"
 emulator:
-  tick_millisecond: 100
+  tick_millisecond: 20
   random: false
   client_url: "client-node:8000"
   port: "8060"
