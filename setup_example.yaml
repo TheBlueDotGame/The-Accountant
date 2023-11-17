@@ -37,7 +37,7 @@ client:
   notary_node_url: "notary-node:8000"
   webhooks_node_url: "webhooks-node:8000"
 emulator:
-  tick_seconds: 1
+  tick_millisecond: 100
   random: false
   client_url: "client-node:8000"
   port: "8060"

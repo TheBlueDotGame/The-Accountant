@@ -32,8 +32,8 @@ func RunPublisher(ctx context.Context, cancel context.CancelFunc, config Config,
 		return fmt.Errorf("cannot unmarshal data, %s", err)
 	}
 
-	if config.TickSeconds < 1 || config.TickSeconds > 60 {
-		return fmt.Errorf("wrong tick_seconds parameter, expected value between 1 and 60 inclusive")
+	if config.TickMillisecond == 0 || config.TickMillisecond > 60000 {
+		return fmt.Errorf("wrong tick_millisecond parameter, expected value between 1 and 60000 inclusive")
 	}
 
 	opts := grpc.WithTransportCredentials(insecure.NewCredentials()) // TODO: remove when credentials are set
@@ -55,7 +55,7 @@ func RunPublisher(ctx context.Context, cancel context.CancelFunc, config Config,
 		return err
 	}
 
-	t := time.NewTicker(time.Duration(config.TickSeconds) * time.Second)
+	t := time.NewTicker(time.Duration(config.TickMillisecond) * time.Millisecond)
 	defer t.Stop()
 	for {
 		select {

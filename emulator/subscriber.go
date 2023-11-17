@@ -21,7 +21,11 @@ import (
 	"github.com/bartossh/Computantis/webhooks"
 )
 
-const maxTrxInBuffer = 25
+const (
+	maxTrxInBuffer           = 25
+	hashesBuffLen            = 10000
+	tickerSaveReadMultiplier = 5
+)
 
 const (
 	header     = "SubscriberEmulator"
@@ -34,6 +38,11 @@ const (
 )
 
 var ErrFailedHook = errors.New("failed to create web hook")
+
+type hashToValidate struct {
+	hash          [32]byte
+	notaryNodeUrl string
+}
 
 // Message holds timestamp info.
 type Message struct {
@@ -53,6 +62,7 @@ type subscriber struct {
 	buffer               []Message
 	allowdMeasurements   [2]Measurement
 	ticker               time.Duration
+	validateCh           chan hashToValidate
 }
 
 // RunSubscriber runs subscriber emulator.
@@ -89,8 +99,11 @@ func RunSubscriber(ctx context.Context, cancel context.CancelFunc, config Config
 		pub:                 p,
 		lastTransactionTime: time.Now(),
 		allowdMeasurements:  m,
-		ticker:              time.Duration(config.TickSeconds) * 5,
+		ticker:              time.Duration(config.TickMillisecond) * time.Millisecond * tickerSaveReadMultiplier,
+		validateCh:          make(chan hashToValidate, hashesBuffLen),
 	}
+	defer close(s.validateCh)
+	go s.runCheckSaved(ctx)
 
 	router := fiber.New(fiber.Config{
 		Prefork:       false,
@@ -201,7 +214,8 @@ func (sub *subscriber) actOnTransactions(notaryNodeURL string) {
 		pterm.Info.Printf("Trx [ %x ] data [ %s ] accepted.\n", trx.Hash[:], string(trx.Data))
 
 		go sub.pub.client.Approve(context.Background(), &protobufcompiled.TransactionApproved{Transaction: protoTrx, Url: notaryNodeURL})
-		go sub.checkIsAccepted(trx.Hash, notaryNodeURL)
+
+		sub.validateCh <- hashToValidate{trx.Hash, notaryNodeURL}
 
 		sub.appendToBuffer("accepted", trx)
 
@@ -213,6 +227,28 @@ func (sub *subscriber) actOnTransactions(notaryNodeURL string) {
 		return
 	}
 	pterm.Warning.Printf("Signed [ %v ] of [ %v ] received transactions.\n", counter, protoTrxs.Len)
+}
+
+func (sub *subscriber) runCheckSaved(ctx context.Context) {
+	t := time.NewTicker(sub.ticker)
+	defer t.Stop()
+	buffer := make([]hashToValidate, 0, hashesBuffLen)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case h := <-sub.validateCh:
+			if h.hash == [32]byte{} {
+				return
+			}
+			buffer = append(buffer, h)
+		case <-t.C:
+			for _, h := range buffer {
+				sub.checkIsAccepted(h.hash, h.notaryNodeUrl)
+			}
+			buffer = make([]hashToValidate, 0, hashesBuffLen)
+		}
+	}
 }
 
 func (sub *subscriber) validateData(data []byte) error {
@@ -252,7 +288,6 @@ func (sub *subscriber) appendToBuffer(status string, trx transaction.Transaction
 }
 
 func (sub *subscriber) checkIsAccepted(hash [32]byte, notaryNodeURL string) {
-	time.Sleep(sub.ticker)
 	trx, err := sub.pub.client.Saved(context.Background(), &protobufcompiled.TrxHash{Hash: []byte(hash[:]), Url: notaryNodeURL})
 	if err != nil {
 		pterm.Warning.Printf("Transaction with hash: %x not saved in node %s, %s\n", hash, notaryNodeURL, err)
