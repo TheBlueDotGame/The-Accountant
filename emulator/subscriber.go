@@ -12,6 +12,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/pterm/pterm"
+	"golang.org/x/exp/rand"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
@@ -63,6 +64,7 @@ type subscriber struct {
 	allowdMeasurements   [2]Measurement
 	ticker               time.Duration
 	validateCh           chan hashToValidate
+	knownNodes           []string
 }
 
 // RunSubscriber runs subscriber emulator.
@@ -101,6 +103,7 @@ func RunSubscriber(ctx context.Context, cancel context.CancelFunc, config Config
 		allowdMeasurements:  m,
 		ticker:              time.Duration(config.TickMillisecond) * time.Millisecond * tickerSaveReadMultiplier,
 		validateCh:          make(chan hashToValidate, hashesBuffLen),
+		knownNodes:          config.NotaryNodes,
 	}
 	defer close(s.validateCh)
 	go s.runCheckSaved(ctx)
@@ -214,6 +217,11 @@ func (sub *subscriber) actOnTransactions(notaryNodeURL string) {
 		pterm.Info.Printf("Trx [ %x ] data [ %s ] accepted.\n", trx.Hash[:], string(trx.Data))
 
 		go sub.pub.client.Approve(context.Background(), &protobufcompiled.TransactionApproved{Transaction: protoTrx, Url: notaryNodeURL})
+
+		if len(sub.knownNodes) > 0 {
+			idx := rand.Intn(len(sub.knownNodes))
+			notaryNodeURL = sub.knownNodes[idx]
+		}
 
 		sub.validateCh <- hashToValidate{trx.Hash, notaryNodeURL}
 
