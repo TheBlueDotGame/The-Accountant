@@ -41,12 +41,13 @@ services:
     networks:
       - computantis_network
 
-  notary-node:
-    container_name: notary-node
+  notary-node-genesis:
+    container_name: notary-node-genesis
     build: 
       dockerfile: Dockerfile
       args: 
         - "APPLICATION=node"
+        - "CONFIG=setup_example.yaml"
     restart: unless-stopped
     ports:
       - "8000:8000"
@@ -59,6 +60,40 @@ services:
     depends_on:
       nats:
         condition: service_started
+  
+  notary-node-one:
+    container_name: notary-node-one
+    build: 
+      dockerfile: Dockerfile
+      args: 
+        - "APPLICATION=node"
+        - "CONFIG=setup_example_notary_one.yaml"
+    restart: unless-stopped
+    expose:
+     - 8000
+     - 8080
+    networks:
+      - computantis_network
+    depends_on:
+      notary-node-genesis:
+        condition: service_started
+  
+  notary-node-two:
+    container_name: notary-node-two
+    build: 
+      dockerfile: Dockerfile
+      args: 
+        - "APPLICATION=node"
+        - "CONFIG=setup_example_notary_two.yaml"
+    restart: unless-stopped
+    expose:
+     - 8000
+     - 8080
+    networks:
+      - computantis_network
+    depends_on:
+      notary-node-genesis:
+        condition: service_started
  
   webhooks-node:
     container_name: webhooks-node
@@ -66,6 +101,7 @@ services:
       dockerfile: Dockerfile
       args: 
         - "APPLICATION=webhooks"
+        - "CONFIG=setup_example.yaml"
     environment:
      - GOMAXPROCS=1
     restart: unless-stopped
@@ -74,7 +110,7 @@ services:
     networks:
       - computantis_network
     depends_on:
-      notary-node:
+      notary-node-two:
         condition: service_started
   
   client-node:
@@ -83,6 +119,7 @@ services:
       dockerfile: Dockerfile
       args: 
         - "APPLICATION=client"
+        - "CONFIG=setup_example.yaml"
     profiles: ["demo"]
     environment:
      - GOMAXPROCS=1

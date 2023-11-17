@@ -2,15 +2,15 @@ is_profiling: false
 notary_server:
   trx_awaited_db_path:
   address_awaited_trx_db_path:
-  public_url: localhost:8000
+  public_url: notary-node-one:8000
   port: 8000
   data_size_bytes: 15000
 gossip_server:
-  url: "localhost:8080"
-  genesis_url:
-  load_dag_url:
+  url: "notary-node-one:8080"
+  genesis_url: "notary-node-genesis:8080"
+  load_dag_url: "notary-node-genesis:8080"
   genesis_spice:
-    currency: 1000000000000
+    currency: 0
     supplementary_currency: 0
   vertices_db_path:
   port: 8080
@@ -20,8 +20,8 @@ accountant:
   trxs_to_vertices_map_db_path:
   vertices_db_path:
 nats:
-  server_address: "nats://localhost:4222"
-  client_name: "node-1"
+  server_address: "nats://nats:4222"
+  client_name: "notary-one"
   token: "D9pHfuiEQPXtqPqPdyxozi8kU2FlHqC0FlSRIzpwDI0="
 dataprovider:
   longevity: 300
@@ -30,18 +30,8 @@ file_operator:
   wallet_passwd: "dc6b5b1635453e0eb57344ffb6cb293e8300fc4001fad3518e721d548459c09d"
   pem_path: "ed25519"
 webhooks_server:
-  port: 8888
-client:
-  port: 6666
-  notary_node_url: "localhost:8000"
-  webhooks_node_url: "localhost:8888"
-emulator:
-  tick_millisecond: 100
-  random: true
-  client_url: "localhost:6666"
-  port: 6060
-  public_url: "http://localhost:6060" # If running emulators locally, best to set it up as your local network machine IP.
+  port: 8000
 zinc_logger:
-  address: http://localhost:4080 
+  address: http://zincsearch:4080 
   index: notary
   token: Basic YWRtaW46emluY3NlYXJjaA==

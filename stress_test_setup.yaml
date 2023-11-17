@@ -1,3 +1,0 @@
-central_node_ip: notary-node
-central_node_port: 8000
-process_tick_ms: 10
