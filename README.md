@@ -2,7 +2,7 @@
 
 [![CodeQL](https://github.com/bartossh/Computantis/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/bartossh/Computantis/actions/workflows/github-code-scanning/codeql)
 
-![Computantis Logo](https://github.com/bartossh/computantis/blob/master/artefacts/logo.png?raw=true)
+[Computantis Logo](https://github.com/bartossh/computantis/blob/master/artefacts/logo.png?raw=true)
 
 
 
@@ -22,7 +22,7 @@ The Computantis contains of:
 
 ### The Computantis system schema
 
-![Computantis Diagram](https://github.com/bartossh/computantis/blob/master/artefacts/Computantis-diagram.png?raw=true)
+[Computantis Diagram](https://github.com/bartossh/computantis/blob/master/artefacts/Computantis-diagram.png?raw=true)
 
 #### The computantis system network.
 
