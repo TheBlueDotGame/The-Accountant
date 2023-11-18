@@ -88,7 +88,7 @@ docker-logs:
 	docker compose logs -f
 
 docker-restart-node:
-	docker-compose up -d --no-deps --build node-node
+	docker-compose up -d --no-deps --build notary-node
 
 docker-restart-webhooks:
 	docker-compose up -d --no-deps --build webhooks-node
@@ -96,7 +96,7 @@ docker-restart-webhooks:
 docker-build-all: docker-build-node docker-build-webhooks docker-build-client docker-build-subscriber docker-build-publisher
 
 docker-build-node:
-	docker compose build node-node
+	docker compose build notary-node
 
 docker-build-webhooks:
 	docker compose build webhooks-node

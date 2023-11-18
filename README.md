@@ -1,120 +1,106 @@
 # Computantis
 
 [![CodeQL](https://github.com/bartossh/Computantis/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/bartossh/Computantis/actions/workflows/github-code-scanning/codeql)
-[![pages-build-deployment](https://github.com/bartossh/Computantis/actions/workflows/pages/pages-build-deployment/badge.svg)](https://github.com/bartossh/Computantis/actions/workflows/pages/pages-build-deployment)
-## Computantis DAG cryptographic protocol.
 
-1. The network.
+![Computantis Logo](https://github.com/bartossh/computantis/blob/master/artefacts/logo.png?raw=true)
 
-- The protocol works within the application layer in the OSI network model.
-- The protocol wraps data within the transaction.
-- The transaction seals the data cryptographically.
-- The transaction data are irrelevant to the protocol, and so is its encoding. Encoding is the responsibility of the final application.
-- The node participates in the transmission process of the transaction.
-- The node acts as a middleware service and ensures transaction legitimacy.
-- The transaction receiver and the transaction issuer are known as the client.
-- The clients are not aware of each other network URLs, they participate in the transaction transmission using the central node (network of central nodes).
-- The client URL is known only for the computantis nodes in the network.
-- The URL of the client may change while data are transmitted and it is not affecting the transmission consistency.
-- The client is recognized in the network by the public address of cryptographic key pairs
-- The client may listen on a webhook for approved transactions on dedicated node that has supporting functionalities.
-- The client node is working on the client machine or as an edge device proxying traffic to the device or a client application.
-- The traffic cannot omit the computantis network when transaction is transmitted from client to client.
-- The client is additionally validating the message's legitimacy, decrypting and decoding the message.
-- The central nodes stores all the transactions in the immutable repository in the form of a DAG with Hashed edges and signed vertices.
-- The central nodes are concurrently cooperating in creating and validating the DAG vertices and edges.
-- The value transfer in form of the 'spice' token may occur and is a subject of validation. The double spending and sufficient amount of tokens is calculated and validated. This process is described in the DAG protocol section.
-- When a vertex is created on the node, it is shared with other nodes participating in the network by using gossip about gossip protocol.
-- Nodes sends the message containing vertex and list of nodes that knows about the vertex to all nodes that are known to the node, adding itself to the list of nodes.
-- Each node receiving the message continues to share the message with all the nodes that are known for the receiving node that are not on the list, but first node adds itself to the list. Process continues until message list contains all the nodes in the network.
-- This form of sharing the information creates a redundancy in the traffic, but prevents the bad actors from rejecting legitimate vertices by stopping the message to spread. This as well allows the message to reach nodes that are not connected to the message source node.
 
-2. The transaction.
 
-- Transaction is a central entity of the protocol. 
-- The transaction consists of the minimal information required to seal the protocol:
-    - ID: Unique repository key / or hash, it is not transmitted over the network.
-    - CreatedAt: Timestamp when the transaction was created.
-    - IssuerAddress: Public address of the client issuing the transaction.
-    - ReceiverAddress: Public address of the client that is the receiver of the transaction.
-    - Subject: The string representing the data encoding, type or else, known for the client. The receiver and the issuer node can agree on any enumeration of that variable. For example, if the receiver and the issuer are sending data in many different formats they may indicate it in the subject.
-    - Data: Data that are sealed by cryptographic signatures of the receiver and the issuer and encoded with private keys if necessary.
-    - IssuerSignature: The cryptographic signature of the issuer.
-    - ReceiverSignature: The cryptographic signature of the receiver.
-    - Hash: Message hash acting as the control sum of the transaction.
-    - Spice: The amount of tokens in the transactions. Spice is transferred always from the Issuer to the Receiver.
-- The transaction footprint on the transmitted data size depends on the relation between the size of the ‘Data’ field in the transaction. That is highly recommended to transmit as much data in a single request as possible. 
-- The transaction has an upper limit on the size of transmitted data, that is set according to the requirements.
-- The transaction is validated on any mutation by the central node:
-    - If it is a new transaction, the issuer's signature and hash are checked.
-    - If it is signed by the receiver, the issuer signature, receiver signature and hash are checked.
-- The client node validates the transaction before it transmits to the application:
-    - The issuer address is checked to ensure messages from the given address can be used.
-    - The issuer signature and hash are validated.
-    - The message is encoded using a private key if necessary.
-- Transaction have three possible types.
-    - Only the 'spice' transfer, when no 'Data' field is populated and 'spice' has a value. This requires to be only signed by the issuer to be validated and added to DAG.
-    - Only contract agreement, when no 'spice' is transferred but 'Data' field is populated. This requires to be signed by the issuer and receiver in order to be added to DAG.
-    - Both, the 'spice' transfer and the contract agreement, when the 'spice' has a value and the 'Data' field is populated, This requires to be signed by the issuer and receiver in order to be added to DAG.
+## Project overview
 
-3. The DAG.
+The Computantis is a backbone service for creating secure, reliable and performant solution for transaction exchange and Byzantine fault tolerant systems.
 
-- DAG stands for Directed Acyclic Graph.
-- DAG contains leafs, vertices and edges.
-- Leafs are like vertices but are not confirmed yet, so they have no children connected by the edges.
-- Vertices are connected by the edges and have children which proofs them being valid.
-- Edges are connecting vertices and leafs. Edges are single direction connection, from the parent vertex to the child vertex or a leaf.
-- Vertex contains the transaction and seals it by the signature of the node that validated the transaction and digest of all the data vertex contains, Vertex is identified in the graph by its digest.
-- Connection between vertices in the graph is achieved by the reference to the vertex digest - hash. 
-- If two edges are connecting two leafs with two parent vertices, those parent vertices are assumed to be valid and to contain valid transaction. Valid transaction is checked for sufficient spice and is not having a double spending transaction.  
-- DAG seals the transactions immutability and allows for the accounting of the spice transfer.
-- DAG is truncated and all the edges and vertices are stored in permanent storage.
-- When truncated all the transactions are accounted and the next vertex is created and signed by the node with all the leafs being referred in the edge between new leaf vertex and leafs from the truncated DAG.
-- The leaf validation may happen in any node, not only the one that created the leaf.
-- Creating a leaf means to create a new leaf with the transaction embedded in to the leaf and then the leaf is gossiped to other nodes in the node network.
-- Adding a leaf means it was created by other node and shared with the nodes network in gossip protocol.
-- Adding and creating a leaf in to the DAG per node is done in a consecutive way to allow for transaction validation consistency.
-- Adding and creating a leaf in to the DAG in the network of nodes is done in the concurrent way. This allows for application scaling, more nodes may compute more transactions.
+### Services and tools
 
-4. Wallet 
+The Computantis contains of:
+ - Notary Node - is the main service in the Computantis system, offers secure transfer of transactions within the system, securing data in the DAG structure
+ - Webhooks Node - is supporting node that offers webhooks for clients that want to listen for incoming transactions.
+ - Client Node - is wallet middleware that abstracts away whole security complexity of request sending, singing transactions and validating transactions and can run alongside client application on the same machine or in proximity of client application.
+ - Wallet Tool - is a tool to manage wallet, create the wallet and save it to different formats.
+ - Generator Tool - is a helper for creating data for the emulator.
+ - Emulator Tool - is a helper for development and testing that pretends to be the client application issuer and receiver sending data via the Computantis system.
 
-- Wallet is the central entity allowing for sealing data with signatures.
-- Wallet holds a pair of asymmetric cryptographic keys. In this case we are implementing asymmetric cryptography based on 256 bits ed25519 elliptic curve algorithm. 
-- Wallet public address is encoded in to the transaction as well shared over network as a base58 encoded string. (Bitcoin standard).
-- Wallet has capability to create data digest, and sign that digest cryptographically.
-- Wallet has capabilities to validate signatures.
+### The Computantis system schema
 
-## Setup
+![Computantis Diagram](https://github.com/bartossh/computantis/blob/master/artefacts/Computantis-diagram.png?raw=true)
 
-Use `setup_example.yaml` file as an example how to configure setup. The file is ready to be used with docker-compose command. 
+#### The computantis system network.
 
-## Start locally services
+ - Nodes pursue to discover full network and connect to all available nodes.
+ - If connection is impossible it is not a problem as gossip about gossip protocol allows to transmit message between not connected nodes via other nodes.
+ - Blue node named A is an message issuer. This node is commanding all other receiver nodes to perform action based on the message. 
+ - All the green nodes are good actors in the network, while red nodes are bad actors.
+ - When transferring the message bad actor receiving the message cannot corrupt the message as the message is cryptographically secured via ED25519 asymmetric signature.
+ - Bad actor is required to send the message intact, if he refuses to all the network nodes that knows the node will constantly try to send the message to the bad actor due to the gossip about gossip protocol not seeing the node on the message list of acknowledged nodes.
+ - The message will rich all the nodes until there is more connections between nodes than bad actors.
+ - Message cannot be replied later as each message is in secured by the unique transaction.
+ - Message will be resent to other nodes only if receiving nodes acknowledges the message as cryptographically valid.
 
-1. Required minimal node services setup:
- - Computantis node
- - Exporter node
- - Prometheus node
- - Zincsearch node
+### The transaction
 
-The computantis network shall contains multiple nodes. More nodes in the network more secure and democratic the network becomes. 
+ - Transaction is secured by the asymmetric key cryptography signature, it can use different protocols but for now uses ED25519 asymmetric key signature.
+ - The data are the core entity and all the other fields in the message are just for the data security.
+ - The data are of no significant value for the Computantis system, can be encrypted or decrypted, it is not the case of the Computantis system to validate or use them. 
+- The Computantis is responsible for securing data from corruption, saving them in immutable distributed storage and ensuring data to reach the receiver. 
 
-2. Additional services:
- - Nats node
- - Web-Hook node
+### The secure storage - DAG
 
-3. Edge device service:
- - Client node
+ - DAG stands for Direct Acyclic Graph and is post blockchain technology allowing for faster operations on transactions, near zero transaction confirmation time and more democratic data distribution. Very important factor is that securing the DAG is much less computational expensive then the blockchain forging process and may use cheaper and less complicated hardware.
+ - On the diagram all the green boxes are the vertices that contains and cryptographically secure the transactions.
+ - The red box is a leaf. Leaf when added to the graph needs to validate two of the existing leafs or a leaf and vertex with the highest weight.
+ - The leaf when added to the graph is retransmitted to all the nodes in the network, so each of them is able to validate that leaf and transaction against their own DAGs. Because edges which specifies one direction connection between the vertices are based on hashes of vertices all the good players will keep the same vertices and edges in the DAG.
+ - The vertex is unique in the DAG and inner transaction is unique per DAG. Sending the same transaction to many nodes will end up in collision and only the first one, received by most of the nodes will be accepted and retransmitted, all the rest of redundant transactions will be rejected.
+ - Leaf isn't proving transaction validity until it becomes a vertex by having an edge created from other leaf or vertex.
 
-Install protobuf generator: 
+## Development
+
+### Only dependencies
+
+To develop and run node with only dependencies:
+
+ - Start all the dependencies:
 ```sh
-go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+docker compose up -f docker-compose.dependencies.yaml -d
 ```
+or use a makefile:
+```sh
+make docker-dependencies
+```
+
+- Then run node with `go` and passing `setup_bare.yaml` configuration. 
+```sh
+go run cmd/node/main.go -c setup_bare.yaml
+```
+
+### Dependencies with network
+
+- Start all dependencies and run three notary nodes:
+```sh
+docker compose up -d
+```
+- To restart the notary genesis node after the code change run:
+```sh
+docker compose up --no-deps -build notary-node-genessis -d
+```
+
+### Dependencies with emulation tests
+- Start all dependencies and run three notary nodes:
+```sh
+docker compose --profile demo up-d
+```
+- To restart the notary node after the code change run:
+```sh
+docker compose up --no-deps -build notary-node-genessis -d
+```
+
+### Building GRPC dependencies and compiling packages
 
 Generate protobuf files with:
 ```sh
 protoc --proto_path=protobuf --go_out=protobufcompiled --go_opt=paths=source_relative block.proto addresses.proto
 ```
 
+### Building binaries
 
 Run in terminal to run services in separate docker containers:
 
@@ -123,68 +109,13 @@ Run in terminal to run services in separate docker containers:
 make docker-all
 ```
 
-- dependencies only
-```sh
-make docker-dependencies
-```
-
-## Run services one by one
-
-```sh
-make build-local
-```
-
- - Computnatis Node:
-   
-   ```sh
-    ./bin/dedicated/node -c setup_example.yaml
-
-   ``` 
- - Computantis Web-Hooks:
-
-   ```sh
-    ./bin/dedicated/webhooks -c setup_example.yaml
-
-   ``` 
-
- - Client:
-
-   ```sh
-    ./bin/dedicated/client -c setup_example.yaml
-
-   ``` 
-
- - Emulator subscriber:
-
-   ```sh
-    ./bin/dedicated/emulator -c setup_example.yaml -d minmax.json subscriber
-
-   ``` 
-
- - Emulator publisher:
-
-   ```sh
-    ./bin/dedicated/emulator -c setup_example.yaml -d data.json publisher
-
-   ``` 
-
-This will compile all the components when docker image is run. All the processes are running in the single docker container.
-
-## Run emulation demo:
-
-Easiest way to run demo with emulation is to use docker-compose.yaml configuration.
-Run with command:
-```sh 
-docker-compose --profile demo up -d
-```
-
-## Vulnerability scanning.
+### Vulnerability scanning.
 
 Install govulncheck to perform vulnerability scanning  `go install golang.org/x/vuln/cmd/govulncheck@latest`.
 
-## C - implementation
+### C - implementation
 
-### Development
+#### Development
 
 C version of client-node isn't cross platform.
 This software is developed to be run on Linux OS and is tested for x86_64 Linux 5.15.0-76-generic kernel version, but it runs on aarch64 architecture too.
@@ -235,37 +166,13 @@ All below commands shall be run from `c/` folder in the terminal.
 
 UNDER CONSTRUCTION
 
-### Production
+## Production
+
+### K8s
+
+### Bare metal
 
 UNDER CONSTRUCTION
-
-## GO Packages Documentation:
-
-1. Install gomarkdoc to generate documentation: `go install github.com/princjef/gomarkdoc/cmd/gomarkdoc@latest`.
-
-Documentation is generated using `header.md` file and the code documentation, then saved in the `README.md`.
-Do not modify `README.md` file, all the changes will be overwritten. 
-
-## Package provides webassembly package that expose client API to the front-end applications.
-
-To use client API allowing for creating a wallet and communication with Central Server REST API
-copy `wasm/bin/wallet.wasm` and `wasm/js/wasm_exec.js` to you fronted project and execute as in example below.
-
-```html
-<html>  
-    <head>
-        <meta charset="utf-8"/>
-        <script src="wasm_exec.js"></script>
-        <script>
-            const go = new Go();
-            WebAssembly.instantiateStreaming(fetch("wallet.wasm"), go.importObject).then((result) => {
-                go.run(result.instance);
-            });
-        </script>
-    </head>
-    <body></body>
-</html>  
-```
 
 ## Coding Philosophy
 
