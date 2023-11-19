@@ -113,3 +113,8 @@ docker-build-publisher:
 scan:
 	govulncheck ./...
 
+k8s-set-konfig:
+	export KUBECONFIG=${PWD}/kubeconfig.yaml
+
+k8s-set-secret-wallet: k8s-set-konfig
+	kubectl create secret generic wallet-secret --from-file=walet=test_wallet
