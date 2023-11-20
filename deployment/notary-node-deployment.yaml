@@ -1,0 +1,54 @@
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: notary-node
+spec:
+  ports:
+    - name: "api"
+      port: 8000
+      protocol: TCP
+      targetPort: 8000
+      nodePort: 30080
+    - name: "gossip"
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
+      nodePort: 30880
+  selector:
+    app: notary-node
+  sessionAffinity: ClientIP
+  type: LoadBalancer
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notary-node-deployment
+  labels:
+    app: nota-node
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notary-node
+  template:
+    metadata:
+      labels:
+        app: notary-node
+    spec:
+      imagePullSecrets:
+      - name: regcred
+      containers:
+        - name: notary-node
+          image: alogorythmos/computantis
+          env:
+            - name: GOMAXPROCS
+              value: "2"
+          ports:
+            - name: tcp-api
+              containerPort: 8000
+              protocol: TCP
+            - name: tcp-gossip
+              containerPort: 8080
+              protocol: TCP

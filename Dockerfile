@@ -3,7 +3,7 @@ ARG APPLICATION
 WORKDIR /app
 COPY . .
 RUN go mod tidy
-RUN CGO_ENABLED=0 go build -a -installsuffix cgo -o cmd/${APPLICATION}/main -ldflags="-s -w" cmd/${APPLICATION}/main.go
+RUN GOOS=linux GOARCH=arm64  CGO_ENABLED=0 go build -a -installsuffix cgo -o cmd/${APPLICATION}/main -ldflags="-s -w" cmd/${APPLICATION}/main.go
 
 FROM alpine AS app
 ARG APPLICATION

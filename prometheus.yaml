@@ -11,13 +11,21 @@ scrape_configs:
     static_configs:
       - targets: ['node-exporter:9100']
 
-  - job_name: 'central'
+  - job_name: 'notary-genesis'
     static_configs:
-      - targets: ['central-node:2112']
+      - targets: ['notary-node-genesis:2112']
   
-  - job_name: 'validator'
+  - job_name: 'notary-one'
     static_configs:
-      - targets: ['validator-node:2112']
+      - targets: ['notary-node-one:2112']
+  
+  - job_name: 'notary-two'
+    static_configs:
+      - targets: ['notary-node-two:2112']
+  
+  - job_name: 'webhooks'
+    static_configs:
+      - targets: ['webhooks-node:2112']
   
   - job_name: 'client'
     static_configs:

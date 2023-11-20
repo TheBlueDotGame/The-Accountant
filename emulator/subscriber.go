@@ -303,6 +303,7 @@ func (sub *subscriber) checkIsAccepted(hash [32]byte, notaryNodeURL string) {
 	}
 	if trx == nil {
 		pterm.Warning.Printf("Transaction with hash: %x not saved in node %s, transaction is nil\n", hash, notaryNodeURL)
+		return
 	}
 	pterm.Info.Printf("Transaction with hash %x is secured in node %s and signed by the receiver %s .\n", trx.Hash, notaryNodeURL, trx.ReceiverAddress)
 }
