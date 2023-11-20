@@ -22,7 +22,7 @@ spec:
             - "--storage.tsdb.path=/prometheus/"
           env:
             - name: GOMAXPROCS
-              value: "2"
+              value: "1"
           ports:
             - containerPort: 9090
           volumeMounts:

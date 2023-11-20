@@ -17,6 +17,9 @@ spec:
           image: nats:latest
           ports:
             - containerPort: 4222
+          env:
+            - name: GOMAXPROCS
+              value: "1"
 
 ---
 apiVersion: v1

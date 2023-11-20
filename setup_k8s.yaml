@@ -22,7 +22,6 @@ accountant:
 nats:
   server_address: "nats://nats:4222"
   client_name: "notary"
-  token: "D9pHfuiEQPXtqPqPdyxozi8kU2FlHqC0FlSRIzpwDI0="
 dataprovider:
   longevity: 300
 file_operator:
