@@ -1,2 +1,2 @@
 #!/bin/bash
-gomarkdoc ./... >golangdocs.md
+gomarkdoc ./src/... >golangdocs.md

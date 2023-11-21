@@ -69,14 +69,14 @@ make docker-dependencies
 
 - Then run node with `go` and passing `setup_bare.yaml` configuration. 
 ```sh
-go run cmd/node/main.go -c setup_bare.yaml
+go run src/cmd/node/main.go -c conf/setup_bare.yaml
 ```
 
 ### Dependencies with network
 
 - Start all dependencies and run three notary nodes:
 ```sh
-docker compose up -d
+docker compose -f docker_deployment/docker-compose.yaml up -d
 ```
 - To restart the notary genesis node after the code change run:
 ```sh
@@ -86,7 +86,7 @@ docker compose up --no-deps -build notary-node-genessis -d
 ### Dependencies with emulation tests
 - Start all dependencies and run three notary nodes:
 ```sh
-docker compose --profile demo up-d
+docker compose -f docker_deployment/docker-compose.yaml --profile demo up-d
 ```
 - To restart the notary node after the code change run:
 ```sh
@@ -97,7 +97,7 @@ docker compose up --no-deps -build notary-node-genessis -d
 
 Generate protobuf files with:
 ```sh
-protoc --proto_path=protobuf --go_out=protobufcompiled --go_opt=paths=source_relative block.proto addresses.proto
+protoc --proto_path=protobuf --go-grpc_out=src/protobufcompiled --go_out=src/protobufcompiled --go-grpc_opt=paths=source_relative --go_opt=paths=source_relative  computantistypes.proto wallet.proto gossip.proto notary.proto webhooks.proto
 ```
 
 ### Building binaries
@@ -106,12 +106,18 @@ Run in terminal to run services in separate docker containers:
 
 - all services
 ```sh
-make docker-all
+make build-all
 ```
 
 ### Vulnerability scanning.
 
 Install govulncheck to perform vulnerability scanning  `go install golang.org/x/vuln/cmd/govulncheck@latest`.
+
+Run 
+
+```sh
+govulncheck src/...
+```
 
 ### C - implementation
 

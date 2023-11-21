@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package computantis;
 
-option go_package = "github.com/bartossh/Computantis/protobufcompiled";
+option go_package = "github.com/bartossh/Computantis/src/protobufcompiled";
 
 
 message DataBlob {
