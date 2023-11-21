@@ -60,7 +60,7 @@ To develop and run node with only dependencies:
 
  - Start all the dependencies:
 ```sh
-docker compose up -f docker-compose.dependencies.yaml -d
+docker compose up -f docker_deployment/docker-compose.dependencies.yaml -d
 ```
 or use a makefile:
 ```sh
@@ -69,7 +69,7 @@ make docker-dependencies
 
 - Then run node with `go` and passing `setup_bare.yaml` configuration. 
 ```sh
-go run src/cmd/node/main.go -c conf/setup_bare.yaml
+cd src && go run cmd/node/main.go -c ../conf/setup_bare.yaml
 ```
 
 ### Dependencies with network
