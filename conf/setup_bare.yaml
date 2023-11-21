@@ -1,0 +1,47 @@
+is_profiling: false
+notary_server:
+  trx_awaited_db_path:
+  address_awaited_trx_db_path:
+  public_url: localhost:8000
+  port: 8000
+  data_size_bytes: 15000
+gossip_server:
+  url: "localhost:8080"
+  genesis_url:
+  load_dag_url:
+  genesis_spice:
+    currency: 1000000000000
+    supplementary_currency: 0
+  vertices_db_path:
+  port: 8080
+accountant:
+  trusted_nodes_db_path:
+  tokens_db_path:
+  trxs_to_vertices_map_db_path:
+  vertices_db_path:
+nats:
+  server_address: "nats://localhost:4222"
+  client_name: "node-1"
+  token: "D9pHfuiEQPXtqPqPdyxozi8kU2FlHqC0FlSRIzpwDI0="
+dataprovider:
+  longevity: 300
+file_operator:
+  wallet_path: "artefacts/test_wallet"
+  wallet_passwd: "dc6b5b1635453e0eb57344ffb6cb293e8300fc4001fad3518e721d548459c09d"
+  pem_path: "artefacts/ed25519"
+webhooks_server:
+  port: 8888
+client:
+  port: 6666
+  notary_node_url: "localhost:8000"
+  webhooks_node_url: "localhost:8888"
+emulator:
+  tick_millisecond: 100
+  random: true
+  client_url: "localhost:6666"
+  port: 6060
+  public_url: "http://localhost:6060" # If running emulators locally, best to set it up as your local network machine IP.
+zinc_logger:
+  address: http://localhost:4080 
+  index: notary
+  token: Basic YWRtaW46emluY3NlYXJjaA==
