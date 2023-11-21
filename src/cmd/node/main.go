@@ -49,7 +49,6 @@ func main() {
 		if err != nil {
 			return cfg, err
 		}
-
 		return cfg, nil
 	}
 

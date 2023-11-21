@@ -1,43 +1,43 @@
 build-local:
-	CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/dedicated/node -ldflags="-s -w" src/cmd/node/main.go
-	CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/dedicated/webhooks -ldflags="-s -w" src/cmd/webhooks/main.go
-	CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/dedicated/client -ldflags="-s -w" src/cmd/client/main.go
-	CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/dedicated/emulator -ldflags="-s -w" src/cmd/emulator/main.go
+	cd src && CGO_ENABLED=0 go build -a -installsuffix cgo -o ../bin/dedicated/node -ldflags="-s -w" cmd/node/main.go
+	cd src && CGO_ENABLED=0 go build -a -installsuffix cgo -o ../bin/dedicated/webhooks -ldflags="-s -w" cmd/webhooks/main.go
+	cd src && CGO_ENABLED=0 go build -a -installsuffix cgo -o ../bin/dedicated/client -ldflags="-s -w" cmd/client/main.go
+	cd src && CGO_ENABLED=0 go build -a -installsuffix cgo -o ../bin/dedicated/emulator -ldflags="-s -w" cmd/emulator/main.go
 
 build-all: build-local
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/linux_x86/node -ldflags="-s -w" src/cmd/node/main.go
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/linux_x86/webhooks -ldflags="-s -w" src/cmd/webhooks/main.go
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/linux_x86/client -ldflags="-s -w" src/cmd/client/main.go
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/linux_x86/emulator -ldflags="-s -w" src/cmd/emulator/main.go
+	cd src && GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -o ../bin/linux_x86/node -ldflags="-s -w" cmd/node/main.go
+	cd src && GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -o ../bin/linux_x86/webhooks -ldflags="-s -w" cmd/webhooks/main.go
+	cd src && GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -o ../bin/linux_x86/client -ldflags="-s -w" cmd/client/main.go
+	cd src && GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -o ../bin/linux_x86/emulator -ldflags="-s -w" cmd/emulator/main.go
 
-	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/linux_arm/node -ldflags="-s -w" src/cmd/node/main.go
-	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/linux_arm/webhooks -ldflags="-s -w" src/cmd/webhooks/main.go
-	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/linux_arm/client -ldflags="-s -w" src/cmd/client/main.go
-	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/linux_arm/emulator -ldflags="-s -w" src/cmd/emulator/main.go
+	cd src && GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o ../bin/linux_arm/node -ldflags="-s -w" cmd/node/main.go
+	cd src && GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o ../bin/linux_arm/webhooks -ldflags="-s -w" cmd/webhooks/main.go
+	cd src && GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o ../bin/linux_arm/client -ldflags="-s -w" cmd/client/main.go
+	cd src && GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o ../bin/linux_arm/emulator -ldflags="-s -w" cmd/emulator/main.go
 
-	GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/darwin_arm/node -ldflags="-s -w" src/cmd/node/main.go
-	GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/darwin_arm/webhooks -ldflags="-s -w" src/cmd/webhooks/main.go
-	GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/darwin_arm/client -ldflags="-s -w" src/cmd/client/main.go
-	GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/darwin_arm/emulator -ldflags="-s -w" src/cmd/emulator/main.go
+	cd src && GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o ../bin/darwin_arm/node -ldflags="-s -w" cmd/node/main.go
+	cd src && GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o ../bin/darwin_arm/webhooks -ldflags="-s -w" cmd/webhooks/main.go
+	cd src && GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o ../bin/darwin_arm/client -ldflags="-s -w" cmd/client/main.go
+	cd src && GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o ../bin/darwin_arm/emulator -ldflags="-s -w" cmd/emulator/main.go
 
-	GOOS=linux GOARCH=arm GOARM=5 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/raspberry_pi_zero/node -ldflags="-s -w" src/cmd/node/main.go
-	GOOS=linux GOARCH=arm GOARM=5 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/raspberry_pi_zero/webhooks -ldflags="-s -w" src/cmd/webhooks/main.go
+	cd src && GOOS=linux GOARCH=arm GOARM=5 CGO_ENABLED=0 go build -a -installsuffix cgo -o ../bin/raspberry_pi_zero/node -ldflags="-s -w" cmd/node/main.go
+	cd src && GOOS=linux GOARCH=arm GOARM=5 CGO_ENABLED=0 go build -a -installsuffix cgo -o ../bin/raspberry_pi_zero/webhooks -ldflags="-s -w" cmd/webhooks/main.go
 
 build-tools:
-	CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/dedicated/generator -ldflags="-s -w" -gcflags -m src/cmd/generator/main.go
-	CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/dedicated/wallet -ldflags="-s -w" -gcflags -m src/cmd/wallet/main.go
+	cd src && CGO_ENABLED=0 go build -a -installsuffix cgo -o ../bin/dedicated/generator -ldflags="-s -w" -gcflags -m cmd/generator/main.go
+	cd src && CGO_ENABLED=0 go build -a -installsuffix cgo -o ../bin/dedicated/wallet -ldflags="-s -w" -gcflags -m cmd/wallet/main.go
 
 build-tools-all: build-tools
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/linux_x86/generator -ldflags="-s -w" src/cmd/generator/main.go
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/linux_x86/wallet -ldflags="-s -w" src/cmd/wallet/main.go
+	cd src && GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -o ../bin/linux_x86/generator -ldflags="-s -w" cmd/generator/main.go
+	cd src && GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -o ../bin/linux_x86/wallet -ldflags="-s -w" cmd/wallet/main.go
 
-	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/linux_arm/generator -ldflags="-s -w" src/cmd/generator/main.go
-	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/linux_arm/wallet -ldflags="-s -w" src/cmd/wallet/main.go
+	cd src && GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o ../bin/linux_arm/generator -ldflags="-s -w" cmd/generator/main.go
+	cd src && GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o ../bin/linux_arm/wallet -ldflags="-s -w" cmd/wallet/main.go
 
-	GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/darwin_arm/generator -ldflags="-s -w" src/cmd/generator/main.go
-	GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/darwin_arm/wallet -ldflags="-s -w" src/cmd/wallet/main.go
+	cd src && GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o ../bin/darwin_arm/generator -ldflags="-s -w" cmd/generator/main.go
+	cd src && GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -a -installsuffix cgo -o ../bin/darwin_arm/wallet -ldflags="-s -w" cmd/wallet/main.go
 
-	GOOS=linux GOARCH=arm GOARM=5 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/raspberry_pi_zero/wallet -ldflags="-s -w" src/cmd/wallet/main.go
+	cd src && GOOS=linux GOARCH=arm GOARM=5 CGO_ENABLED=0 go build -a -installsuffix cgo -o ../bin/raspberry_pi_zero/wallet -ldflags="-s -w" cmd/wallet/main.go
 
 documentation:
 	./gendocs.sh
