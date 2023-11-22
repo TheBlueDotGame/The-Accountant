@@ -24,6 +24,7 @@ var (
 	ErrSignatureNotValidOrDataCorrupted = errors.New("signature not valid or data are corrupted")
 	ErrSubjectIsEmpty                   = errors.New("subject cannot be empty")
 	ErrAddressIsInvalid                 = errors.New("address is invalid")
+	ErrNilTransaction                   = errors.New("nil transaction")
 )
 
 // TrxAddressesSubscriberCallback is a method or function performing compoutantion on the transactions addresses.
@@ -174,6 +175,35 @@ func (t *Transaction) GetMessage() []byte {
 	binary.LittleEndian.PutUint64(b, t.Spice.Currency)
 	binary.LittleEndian.PutUint64(b, t.Spice.SupplementaryCurrency)
 	return append(message, b...)
+}
+
+// CompareIssuerData compare transactions from Issuer perspective.
+func (t *Transaction) CompareIssuerData(tx *Transaction) (bool, error) {
+	if t == nil || tx == nil {
+		return false, ErrNilTransaction
+	}
+	if t.Hash != tx.Hash {
+		return false, nil
+	}
+	if t.IssuerAddress != tx.IssuerAddress {
+		return false, nil
+	}
+	if t.ReceiverAddress != tx.ReceiverAddress {
+		return false, nil
+	}
+	if !t.CreatedAt.Equal(tx.CreatedAt) {
+		return false, nil
+	}
+	if !bytes.Equal(t.IssuerSignature, tx.IssuerSignature) {
+		return false, nil
+	}
+	if !bytes.Equal(t.Data, tx.Data) {
+		return false, nil
+	}
+	if t.Spice.Currency != tx.Spice.Currency || t.Spice.SupplementaryCurrency != tx.Spice.SupplementaryCurrency {
+		return false, nil
+	}
+	return true, nil
 }
 
 // Encode encodes transaction to bytes slice.
