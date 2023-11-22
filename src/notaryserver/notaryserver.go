@@ -383,7 +383,7 @@ func (s *server) readAwaitedTrx(address string) ([]transaction.Transaction, erro
 	return trxs, err
 }
 
-func (s *server) removeAwaitedTrx(h []byte, receiver string) error {
+func (s *server) removeAwaitedTrx(h []byte, receiver string) (transaction.Transaction, error) {
 	var trx transaction.Transaction
 	err := s.trxsAwaitedDB.Update(func(txn *badger.Txn) error {
 		item, err := txn.Get(h)
@@ -410,10 +410,7 @@ func (s *server) removeAwaitedTrx(h []byte, receiver string) error {
 		return txn.Delete(h)
 	})
 	if err != nil {
-		if errors.Is(err, badger.ErrKeyNotFound) {
-			return nil
-		}
-		return err
+		return transaction.Transaction{}, err
 	}
 
 	hashHex := hexEncode(h)
@@ -421,7 +418,10 @@ func (s *server) removeAwaitedTrx(h []byte, receiver string) error {
 	err = s.addressAwaitedTrxsDB.Update(func(txn *badger.Txn) error {
 		for _, address := range [2]string{trx.IssuerAddress, receiver} {
 			item, err := txn.Get([]byte(address))
-			if err != nil && !errors.Is(err, badger.ErrKeyNotFound) {
+			if err != nil {
+				if errors.Is(err, badger.ErrKeyNotFound) {
+					return nil
+				}
 				return err
 			}
 			var values []byte
@@ -441,7 +441,10 @@ func (s *server) removeAwaitedTrx(h []byte, receiver string) error {
 		}
 		return nil
 	})
-	return err
+	if err != nil {
+		return transaction.Transaction{}, err
+	}
+	return trx, nil
 }
 
 // Alive returns alive information such as wallet public address API version and API header of running server.
@@ -515,12 +518,27 @@ func (s *server) Confirm(ctx context.Context, in *protobufcompiled.Transaction) 
 		return nil, ErrVerification
 	}
 
-	if err := s.removeAwaitedTrx(trx.Hash[:], trx.ReceiverAddress); err != nil {
+	savedTrx, err := s.removeAwaitedTrx(trx.Hash[:], trx.ReceiverAddress)
+	if err != nil {
 		s.log.Error(
 			fmt.Sprintf(
 				"confirm endpoint, failed to remove awaited trx hash %v from receiver [ %s ] , %s", trx.Hash, trx.ReceiverAddress, err.Error(),
 			))
+		if errors.Is(err, badger.ErrKeyNotFound) {
+			return nil, ErrNoDataPresent
+		}
 		return nil, ErrProcessing
+	}
+
+	ok, err := trx.CompareIssuerData(&savedTrx)
+	if err != nil {
+		return nil, ErrRequestIsEmpty
+	}
+	if !ok {
+		if err := s.saveAwaitedTrx(ctx, &trx); err != nil {
+			s.log.Error(fmt.Sprintf("confirm endpoint, failed re-saving transaction %v after comparing to the original failed, %s", trx.Hash, err))
+		}
+		return nil, ErrVerification
 	}
 
 	vrx, err := s.acc.CreateLeaf(ctx, &trx)
@@ -550,10 +568,25 @@ func (s *server) Reject(ctx context.Context, in *protobufcompiled.SignedHash) (*
 		return nil, ErrProcessing
 	}
 
-	if err := s.removeAwaitedTrx(in.Data, in.Address); err != nil {
+	trx, err := s.removeAwaitedTrx(in.Data, in.Address)
+	if err != nil {
 		s.log.Error(fmt.Sprintf("reject endpoint, failed removing transaction %v for address [ %s ]", in.Hash, in.Address))
+		if errors.Is(err, badger.ErrKeyNotFound) {
+			return nil, ErrNoDataPresent
+		}
 		return nil, ErrProcessing
 	}
+
+	vrx, err := s.acc.CreateLeaf(ctx, &trx)
+	if err != nil {
+		s.log.Error(fmt.Sprintf("confirm endpoint, creating leaf: %s", err))
+		return nil, ErrProcessing
+	}
+
+	go func(v *accountant.Vertex) {
+		s.vrxGossipCh <- v
+	}(&vrx)
+
 	return &emptypb.Empty{}, nil
 }
 
