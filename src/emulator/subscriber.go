@@ -298,13 +298,13 @@ func (sub *subscriber) checkIsAccepted(hash [32]byte, notaryNodeURL string) {
 	switch len(trx.ReceiverSignature) != 0 {
 	case true:
 		pterm.Info.Printf(
-			"Transaction with hash [ %x ] is secured in DAG node URL [ %s ] and <-ACCEPTED-> by the receiver [ %s ] for data %v .\n",
-			trx.Hash, notaryNodeURL, trx.ReceiverAddress, trx.Data,
+			"Transaction with hash [ %x ] is secured in DAG node URL [ %s ] and <-ACCEPTED-> by the receiver [ %s ] for data %s .\n",
+			trx.Hash, notaryNodeURL, trx.ReceiverAddress, string(trx.Data),
 		)
 	default:
 		pterm.Info.Printf(
-			"Transaction with hash [ %x ] is secured in DAG node URL [ %s ] and <-REJECTED-> by the receiver [ %s ] for data %v .\n",
-			trx.Hash, notaryNodeURL, trx.ReceiverAddress, trx.Data,
+			"Transaction with hash [ %x ] is secured in DAG node URL [ %s ] and <-REJECTED-> by the receiver [ %s ] for data %s .\n",
+			trx.Hash, notaryNodeURL, trx.ReceiverAddress, string(trx.Data),
 		)
 	}
 }
