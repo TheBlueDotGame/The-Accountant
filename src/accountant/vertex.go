@@ -67,7 +67,7 @@ func (v *Vertex) sign(signer Signer) {
 }
 
 func (v *Vertex) verify(verifier signatureVerifier) error {
-	switch v.Transaction.IsContract() {
+	switch len(v.Transaction.ReceiverSignature) != 0 {
 	case true:
 		if err := v.Transaction.VerifyIssuerReceiver(verifier); err != nil {
 			return err

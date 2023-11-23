@@ -209,6 +209,7 @@ func (sub *subscriber) actOnTransactions(notaryNodeURL string) {
 			pterm.Warning.Printf("Trx [ %x ] data [ %s ] rejected, %s.\n", trx.Hash[:], trx.Data, err)
 
 			go sub.pub.client.Reject(context.Background(), &protobufcompiled.TrxHash{Hash: trx.Hash[:], Url: notaryNodeURL})
+			go sub.sendToValidationQueue(trx, notaryNodeURL)
 
 			continue
 		}
@@ -216,13 +217,7 @@ func (sub *subscriber) actOnTransactions(notaryNodeURL string) {
 		pterm.Info.Printf("Trx [ %x ] data [ %s ] accepted.\n", trx.Hash[:], string(trx.Data))
 
 		go sub.pub.client.Approve(context.Background(), &protobufcompiled.TransactionApproved{Transaction: protoTrx, Url: notaryNodeURL})
-
-		if len(sub.knownNodes) > 0 {
-			idx := rand.Intn(len(sub.knownNodes))
-			notaryNodeURL = sub.knownNodes[idx]
-		}
-
-		sub.validateCh <- hashToValidate{trx.Hash, notaryNodeURL}
+		go sub.sendToValidationQueue(trx, notaryNodeURL)
 
 		counter++
 	}
@@ -232,6 +227,15 @@ func (sub *subscriber) actOnTransactions(notaryNodeURL string) {
 		return
 	}
 	pterm.Warning.Printf("Signed [ %v ] of [ %v ] received transactions.\n", counter, protoTrxs.Len)
+}
+
+func (sub *subscriber) sendToValidationQueue(trx transaction.Transaction, notaryNodeURL string) {
+	if len(sub.knownNodes) > 0 {
+		idx := rand.Intn(len(sub.knownNodes))
+		notaryNodeURL = sub.knownNodes[idx]
+	}
+
+	sub.validateCh <- hashToValidate{trx.Hash, notaryNodeURL}
 }
 
 func (sub *subscriber) runCheckSaved(ctx context.Context) {
@@ -275,12 +279,32 @@ func (sub *subscriber) validateData(data []byte) error {
 func (sub *subscriber) checkIsAccepted(hash [32]byte, notaryNodeURL string) {
 	trx, err := sub.pub.client.Saved(context.Background(), &protobufcompiled.TrxHash{Hash: []byte(hash[:]), Url: notaryNodeURL})
 	if err != nil {
-		pterm.Warning.Printf("Transaction with hash: %x not saved in node %s, %s\n", hash, notaryNodeURL, err)
+		pterm.Warning.Printf("Transaction with hash: [ %x ] not saved in DAG node URL [ %s ], %s\n", hash, notaryNodeURL, err)
 		return
 	}
 	if trx == nil {
-		pterm.Warning.Printf("Transaction with hash: %x not saved in node %s, transaction is nil\n", hash, notaryNodeURL)
+		pterm.Warning.Printf("Transaction with hash: [ %x ] not saved in node URL [ %s ], transaction is nil\n", hash, notaryNodeURL)
 		return
 	}
-	pterm.Info.Printf("Transaction with hash %x is secured in node %s and signed by the receiver %s .\n", trx.Hash, notaryNodeURL, trx.ReceiverAddress)
+
+	if trx.Spice.Currency != 0 || trx.Spice.SuplementaryCurrency != 0 {
+		pterm.Info.Printf(
+			"Transaction with hash [ %x ] is secured in DAG node URL [ %s ] for SPICE TRANSFER: [ %s ].\n",
+			trx.Hash, notaryNodeURL, trx.Spice,
+		)
+		return
+	}
+
+	switch len(trx.ReceiverSignature) != 0 {
+	case true:
+		pterm.Info.Printf(
+			"Transaction with hash [ %x ] is secured in DAG node URL [ %s ] and <-ACCEPTED-> by the receiver [ %s ] for data %v .\n",
+			trx.Hash, notaryNodeURL, trx.ReceiverAddress, trx.Data,
+		)
+	default:
+		pterm.Info.Printf(
+			"Transaction with hash [ %x ] is secured in DAG node URL [ %s ] and <-REJECTED-> by the receiver [ %s ] for data %v .\n",
+			trx.Hash, notaryNodeURL, trx.ReceiverAddress, trx.Data,
+		)
+	}
 }
