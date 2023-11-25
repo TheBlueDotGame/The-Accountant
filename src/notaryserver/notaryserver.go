@@ -289,7 +289,7 @@ func (s *server) Confirm(ctx context.Context, in *protobufcompiled.Transaction) 
 	if err != nil {
 		s.log.Error(
 			fmt.Sprintf(
-				"confirm endpoint, failed to remove awaited trx hash %v from receiver [ %s ] , %s", trx.Hash, trx.ReceiverAddress, err.Error(),
+				"confirm endpoint, failed to remove awaited trx hash %v from receiver [ %s ] , %s", trx.Hash, trx.ReceiverAddress, err,
 			))
 		if errors.Is(err, cache.ErrTransactionNotFound) {
 			return nil, ErrNoDataPresent
@@ -326,7 +326,7 @@ func (s *server) Reject(ctx context.Context, in *protobufcompiled.SignedHash) (*
 
 	trx, err := s.cache.RemoveAwaitedTransaction([32]byte(in.Hash), in.Address)
 	if err != nil {
-		s.log.Error(fmt.Sprintf("reject endpoint, failed removing transaction %v for address [ %s ]", in.Hash, in.Address))
+		s.log.Error(fmt.Sprintf("reject endpoint, failed removing transaction %v for address [ %s ], %s", in.Hash, in.Address, err))
 		if errors.Is(err, cache.ErrTransactionNotFound) {
 			return nil, ErrNoDataPresent
 		}

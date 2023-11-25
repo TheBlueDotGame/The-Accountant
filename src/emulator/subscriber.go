@@ -227,7 +227,7 @@ func (sub *subscriber) actOnTransactions(notaryNodeURL string) {
 			pterm.Warning.Printf("Trx [ %x ] data [ %s ] rejected, %s.\n", trx.Hash[:], trx.Data, err)
 
 			go sub.pub.client.Reject(context.Background(), &protobufcompiled.TrxHash{Hash: trx.Hash[:], Url: notaryNodeURL})
-			go sub.sendToValidationQueue(trx, notaryNodeURL)
+			go sub.sendToValidationQueue(trx.Hash, notaryNodeURL)
 
 			continue
 		}
@@ -235,7 +235,7 @@ func (sub *subscriber) actOnTransactions(notaryNodeURL string) {
 		pterm.Info.Printf("Trx [ %x ] data [ %s ] accepted.\n", trx.Hash[:], string(trx.Data))
 
 		go sub.pub.client.Approve(context.Background(), &protobufcompiled.TransactionApproved{Transaction: protoTrxs.Array[i], Url: notaryNodeURL})
-		go sub.sendToValidationQueue(trx, notaryNodeURL)
+		go sub.sendToValidationQueue(trx.Hash, notaryNodeURL)
 
 		counter++
 	}
@@ -247,13 +247,13 @@ func (sub *subscriber) actOnTransactions(notaryNodeURL string) {
 	pterm.Warning.Printf("Signed [ %v ] of [ %v ] received transactions.\n", counter, protoTrxs.Len)
 }
 
-func (sub *subscriber) sendToValidationQueue(trx transaction.Transaction, notaryNodeURL string) {
+func (sub *subscriber) sendToValidationQueue(h [32]byte, notaryNodeURL string) {
 	if len(sub.knownNodes) > 0 {
 		idx := rand.Intn(len(sub.knownNodes))
 		notaryNodeURL = sub.knownNodes[idx]
 	}
 
-	sub.validateCh <- hashToValidate{trx.Hash, notaryNodeURL}
+	sub.validateCh <- hashToValidate{h, notaryNodeURL}
 }
 
 func (sub *subscriber) runCheckSaved(ctx context.Context) {
