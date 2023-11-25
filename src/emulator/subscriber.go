@@ -203,6 +203,15 @@ func (sub *subscriber) actOnTransactions(notaryNodeURL string) {
 		return
 	}
 
+	set := make(map[[32]byte]struct{}, len(protoTrxs.Array))
+	for _, trx := range protoTrxs.Array {
+		set[[32]byte(trx.Hash)] = struct{}{}
+	}
+
+	if len(set) != len(protoTrxs.Array) {
+		pterm.Warning.Printf("Waiting trxs array contains %v trxs where %v is unique.\n", len(protoTrxs.Array), len(set))
+	}
+
 	var counter int
 
 	for _, protoTrx := range protoTrxs.Array {
