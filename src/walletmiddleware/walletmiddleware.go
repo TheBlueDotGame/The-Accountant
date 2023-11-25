@@ -237,8 +237,8 @@ func (c *Client) ReadWaitingTransactions(ctx context.Context, notaryNodeURL stri
 	}
 
 	trxs := make([]transaction.Transaction, 0, len(proto.Array))
-	for _, protoTrx := range proto.Array {
-		trx, err := transformers.ProtoTrxToTrx(protoTrx)
+	for i := range proto.Array {
+		trx, err := transformers.ProtoTrxToTrx(proto.Array[i])
 		if err != nil {
 			continue
 		}
