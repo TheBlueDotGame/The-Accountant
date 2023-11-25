@@ -24,7 +24,7 @@ nats:
 dataprovider:
   longevity: 300
 file_operator:
-  wallet_path: "test_wallet"
+  wallet_path: "../artefacts/test_wallet"
   wallet_passwd: "dc6b5b1635453e0eb57344ffb6cb293e8300fc4001fad3518e721d548459c09d"
   pem_path: "ed25519"
 webhooks_server:
