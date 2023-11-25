@@ -67,8 +67,12 @@ func (h *Hippocampus) SaveAwaitedTransaction(trx *transaction.Transaction) error
 
 	trxKey := encodeTrxKey(trx.Hash[:])
 
-	if _, err := h.mem.Get(trxKey); err == nil || !errors.Is(err, bigcache.ErrEntryNotFound) {
+	_, err := h.mem.Get(trxKey)
+	if err == nil {
 		return ErrTrxAlredyExists
+	}
+	if !errors.Is(err, bigcache.ErrEntryNotFound) {
+		return err
 	}
 
 	raw, err := trx.Encode()

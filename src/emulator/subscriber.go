@@ -190,6 +190,11 @@ func (sub *subscriber) actOnTransactions(notaryNodeURL string) {
 	sub.mux.Lock()
 	defer sub.mux.Unlock()
 
+	if len(sub.knownNodes) > 0 {
+		idx := rand.Intn(len(sub.knownNodes))
+		notaryNodeURL = sub.knownNodes[idx]
+	}
+
 	protoTrxs, err := sub.pub.client.Waiting(context.Background(), &protobufcompiled.NotaryNode{Url: notaryNodeURL})
 	if err != nil || protoTrxs == nil {
 		return
@@ -201,6 +206,10 @@ func (sub *subscriber) actOnTransactions(notaryNodeURL string) {
 	var counter int
 
 	for _, protoTrx := range protoTrxs.Array {
+		if len(sub.knownNodes) > 0 {
+			idx := rand.Intn(len(sub.knownNodes))
+			notaryNodeURL = sub.knownNodes[idx]
+		}
 		trx, err := transformers.ProtoTrxToTrx(protoTrx)
 		if err != nil {
 			continue

@@ -81,9 +81,11 @@ func TestReadFromCacheSuccess(t *testing.T) {
 	assert.NilError(t, err)
 
 	trxNum := 100
+	hashes := make(map[[32]byte]struct{}, trxNum)
 	for i := 0; i < trxNum; i++ {
 		trx, err := createRandomTransaction(&w, &wr, r)
 		assert.NilError(t, err)
+		hashes[trx.Hash] = struct{}{}
 
 		err = hippo.SaveAwaitedTransaction(&trx)
 		assert.NilError(t, err)
@@ -92,6 +94,10 @@ func TestReadFromCacheSuccess(t *testing.T) {
 	trxs, err := hippo.ReadTransactions(w.Address())
 	assert.NilError(t, err)
 	assert.Equal(t, len(trxs), trxNum)
+	for _, trx := range trxs {
+		_, ok := hashes[trx.Hash]
+		assert.Equal(t, ok, true)
+	}
 }
 
 func TestReadFromCacheSucessEdgeCaseIssuerAndReceiverTheSame(t *testing.T) {
@@ -104,9 +110,11 @@ func TestReadFromCacheSucessEdgeCaseIssuerAndReceiverTheSame(t *testing.T) {
 	assert.NilError(t, err)
 
 	trxNum := 100
+	hashes := make(map[[32]byte]struct{}, trxNum)
 	for i := 0; i < trxNum; i++ {
 		trx, err := createRandomTransaction(&w, &w, r)
 		assert.NilError(t, err)
+		hashes[trx.Hash] = struct{}{}
 
 		err = hippo.SaveAwaitedTransaction(&trx)
 		assert.NilError(t, err)
@@ -114,6 +122,10 @@ func TestReadFromCacheSucessEdgeCaseIssuerAndReceiverTheSame(t *testing.T) {
 	trxs, err := hippo.ReadTransactions(w.Address())
 	assert.NilError(t, err)
 	assert.Equal(t, len(trxs), trxNum)
+	for _, trx := range trxs {
+		_, ok := hashes[trx.Hash]
+		assert.Equal(t, ok, true)
+	}
 }
 
 func BenchmarkReadCacheSuccess(b *testing.B) {

@@ -8,11 +8,12 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/dgraph-io/badger/v4"
+	"golang.org/x/exp/maps"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/bartossh/Computantis/src/accountant"
+	"github.com/bartossh/Computantis/src/cache"
 	"github.com/bartossh/Computantis/src/logger"
 	"github.com/bartossh/Computantis/src/protobufcompiled"
 	"github.com/bartossh/Computantis/src/providers"
@@ -83,17 +84,17 @@ type Config struct {
 
 type server struct {
 	protobufcompiled.UnimplementedNotaryAPIServer
-	pub                  nodeNetworkingPublisher
-	randDataProv         RandomDataProvideValidator
-	tele                 providers.HistogramProvider
-	log                  logger.Logger
-	rxNewTrxIssuerAddrCh chan string
-	verifier             verifier
-	acc                  accounter
-	cache                providers.AwaitedTrxCacheProvider
-	piper                piper
-	nodePublicURL        string
-	dataSize             int
+	pub               nodeNetworkingPublisher
+	randDataProv      RandomDataProvideValidator
+	tele              providers.HistogramProvider
+	log               logger.Logger
+	rxNewTrxRecAddrCh chan string
+	verifier          verifier
+	acc               accounter
+	cache             providers.AwaitedTrxCacheProvider
+	piper             piper
+	nodePublicURL     string
+	dataSize          int
 }
 
 // Run initializes routing and runs the server. To stop the server cancel the context.
@@ -115,17 +116,17 @@ func Run(
 	}
 
 	s := &server{
-		pub:                  pub,
-		randDataProv:         pv,
-		tele:                 tele,
-		log:                  log,
-		rxNewTrxIssuerAddrCh: make(chan string, rxNewTrxIssuerAddrBufferSize),
-		verifier:             v,
-		acc:                  acc,
-		cache:                cache,
-		piper:                p,
-		nodePublicURL:        c.NodePublicURL,
-		dataSize:             c.DataSizeBytes,
+		pub:               pub,
+		randDataProv:      pv,
+		tele:              tele,
+		log:               log,
+		rxNewTrxRecAddrCh: make(chan string, rxNewTrxIssuerAddrBufferSize),
+		verifier:          v,
+		acc:               acc,
+		cache:             cache,
+		piper:             p,
+		nodePublicURL:     c.NodePublicURL,
+		dataSize:          c.DataSizeBytes,
 	}
 
 	s.tele.CreateUpdateObservableHistogtram(proposeTrxTelemetryHistogram, "Propose trx endpoint request duration on [ ms ].")
@@ -185,13 +186,12 @@ func (s *server) runSubscriber(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
-		case recAddr := <-s.rxNewTrxIssuerAddrCh:
+		case recAddr := <-s.rxNewTrxRecAddrCh:
 			receiverAddrSet[recAddr] = struct{}{}
 		case <-ticker.C:
 			if len(receiverAddrSet) == 0 {
 				continue
 			}
-			length := len(receiverAddrSet)
 
 			addresses := make([]string, 0, len(receiverAddrSet))
 			for addr := range receiverAddrSet {
@@ -200,7 +200,7 @@ func (s *server) runSubscriber(ctx context.Context) {
 
 			s.pub.PublishAddressesAwaitingTrxs(addresses, s.nodePublicURL)
 
-			receiverAddrSet = make(map[string]struct{}, length)
+			maps.Clear(receiverAddrSet)
 		}
 	}
 }
@@ -244,8 +244,7 @@ func (s *server) Propose(ctx context.Context, in *protobufcompiled.Transaction) 
 			if ok := s.piper.SendTrx(tx); !ok {
 				s.log.Error(fmt.Sprintf("sending trx %v to gossiper failed, channel is closed", trx.Hash))
 			}
-			s.rxNewTrxIssuerAddrCh <- tx.IssuerAddress
-			s.rxNewTrxIssuerAddrCh <- tx.ReceiverAddress
+			s.rxNewTrxRecAddrCh <- tx.ReceiverAddress
 		}(in)
 
 		return &emptypb.Empty{}, nil
@@ -292,6 +291,10 @@ func (s *server) Confirm(ctx context.Context, in *protobufcompiled.Transaction) 
 			fmt.Sprintf(
 				"confirm endpoint, failed to remove awaited trx hash %v from receiver [ %s ] , %s", trx.Hash, trx.ReceiverAddress, err.Error(),
 			))
+		if errors.Is(err, cache.ErrTransactionNotFound) {
+			return nil, ErrNoDataPresent
+		}
+		return nil, ErrProcessing
 	}
 
 	vrx, err := s.acc.CreateLeaf(ctx, &trx)
@@ -324,7 +327,7 @@ func (s *server) Reject(ctx context.Context, in *protobufcompiled.SignedHash) (*
 	trx, err := s.cache.RemoveAwaitedTransaction([32]byte(in.Hash), in.Address)
 	if err != nil {
 		s.log.Error(fmt.Sprintf("reject endpoint, failed removing transaction %v for address [ %s ]", in.Hash, in.Address))
-		if errors.Is(err, badger.ErrKeyNotFound) {
+		if errors.Is(err, cache.ErrTransactionNotFound) {
 			return nil, ErrNoDataPresent
 		}
 		return nil, ErrProcessing

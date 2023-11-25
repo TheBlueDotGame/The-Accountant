@@ -19,6 +19,7 @@ import (
 	"github.com/bartossh/Computantis/src/spice"
 	"github.com/bartossh/Computantis/src/storage"
 	"github.com/bartossh/Computantis/src/transaction"
+	"github.com/bartossh/Computantis/src/transformers"
 	"github.com/bartossh/Computantis/src/versioning"
 	"github.com/dgraph-io/badger/v4"
 	"golang.org/x/exp/maps"
@@ -482,12 +483,17 @@ func (g *gossiper) runTransactionGossipProcess(ctx context.Context) {
 			}
 			set := g.verifyGossipers([32]byte(tg.Trx.Hash), tg.Gossipers)
 			if _, ok := set[g.signer.Address()]; !ok {
-				trx := mapProtoTrxToTrx(tg.Trx)
+				trx, err := transformers.ProtoTrxToTrx(tg.Trx)
+				if err != nil {
+					continue
+				}
 				if err := trx.VerifyIssuer(g.verifier); err != nil {
 					g.log.Error(fmt.Sprintf("transaction gossiper trx %v verification failed, %s", trx.Hash, err))
 					continue
 				}
-				g.trxCache.SaveAwaitedTransaction(trx)
+				if err := g.trxCache.SaveAwaitedTransaction(&trx); err != nil {
+					g.log.Error(fmt.Sprintf("transaction gossiper trx %v saving failed, %s", trx.Hash, err))
+				}
 				digest, signature := g.signer.Sign(createGossiperMessageToSign(g.signer.Address(), [32]byte(tg.Trx.Hash)))
 				set[g.signer.Address()] = &protobufcompiled.Gossiper{
 					Address:   g.signer.Address(),
@@ -727,23 +733,6 @@ func mapAccountantVertexToProtoVertex(vrx *accountant.Vertex) *protobufcompiled.
 		LeftParentHash:  vrx.LeftParentHash[:],
 		RightParentHash: vrx.RightParentHash[:],
 		Weight:          vrx.Weight,
-	}
-}
-
-func mapProtoTrxToTrx(trx *protobufcompiled.Transaction) *transaction.Transaction {
-	return &transaction.Transaction{
-		CreatedAt:         time.Unix(0, int64(trx.CreatedAt)),
-		IssuerAddress:     trx.IssuerAddress,
-		ReceiverAddress:   trx.ReceiverAddress,
-		Subject:           trx.Subject,
-		Data:              trx.Data,
-		IssuerSignature:   trx.IssuerSignature,
-		ReceiverSignature: trx.ReceiverSignature,
-		Hash:              [32]byte(trx.Hash),
-		Spice: spice.Melange{
-			Currency:              trx.Spice.Currency,
-			SupplementaryCurrency: trx.Spice.SuplementaryCurrency,
-		},
 	}
 }
 

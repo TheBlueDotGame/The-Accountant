@@ -65,7 +65,6 @@ func RunPublisher(ctx context.Context, cancel context.CancelFunc, config Config,
 			if err := p.emulate(ctx, address.Public, measurtements); err != nil {
 				return err
 			}
-			pterm.Info.Printf("Emulated and published [ %d ] transaction from the given dataset.\n", p.position+1)
 		}
 	}
 }
@@ -99,5 +98,7 @@ func (p *publisher) emulate(ctx context.Context, receiver string, measurements [
 	}); err != nil {
 		return err
 	}
+	m := measurements[p.position]
+	pterm.Info.Printf("Emulated and published [ %d ] transaction [ %v | %v | %v ].\n", p.position+1, m.Mamps, m.Power, m.Volts)
 	return nil
 }
