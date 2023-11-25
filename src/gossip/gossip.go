@@ -488,11 +488,11 @@ func (g *gossiper) runTransactionGossipProcess(ctx context.Context) {
 					continue
 				}
 				if err := trx.VerifyIssuer(g.verifier); err != nil {
-					g.log.Error(fmt.Sprintf("transaction gossiper trx %v verification failed, %s", trx.Hash, err))
+					g.log.Error(fmt.Sprintf("Transaction gossiper trx %v verification failed, %s", trx.Hash, err))
 					continue
 				}
 				if err := g.trxCache.SaveAwaitedTransaction(&trx); err != nil {
-					g.log.Error(fmt.Sprintf("transaction gossiper trx %v saving failed, %s", trx.Hash, err))
+					g.log.Error(fmt.Sprintf("Transaction gossiper trx %v saving failed, %s", trx.Hash, err))
 				}
 				digest, signature := g.signer.Sign(createGossiperMessageToSign(g.signer.Address(), [32]byte(tg.Trx.Hash)))
 				set[g.signer.Address()] = &protobufcompiled.Gossiper{
@@ -566,7 +566,7 @@ func (g *gossiper) updateNodesConnectionsFromGensisNode(ctx context.Context, gen
 	}
 	defer func() {
 		if err := conn.Close(); err != nil {
-			g.log.Error(fmt.Sprintf("connection close error: %s", err))
+			g.log.Error(fmt.Sprintf("Connection close error: %s", err))
 		}
 	}()
 
@@ -643,7 +643,7 @@ func (g *gossiper) verifyGossipers(hash [32]byte, s []*protobufcompiled.Gossiper
 	for _, member := range s {
 		err := g.verifier.Verify(createGossiperMessageToSign(member.Address, hash), member.Signature, [32]byte(member.Digest), member.Address)
 		if err != nil {
-			g.log.Error(fmt.Sprintf("verifying gossiper address [ %s ] invalid signature for hash %v gossip", member.Address, hash))
+			g.log.Error(fmt.Sprintf("Verifying gossiper address [ %s ] invalid signature for hash %v gossip", member.Address, hash))
 			continue
 		}
 		m[member.Address] = member

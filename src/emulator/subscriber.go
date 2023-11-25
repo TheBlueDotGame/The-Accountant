@@ -214,12 +214,12 @@ func (sub *subscriber) actOnTransactions(notaryNodeURL string) {
 
 	var counter int
 
-	for _, protoTrx := range protoTrxs.Array {
+	for i := range protoTrxs.Array {
 		if len(sub.knownNodes) > 0 {
 			idx := rand.Intn(len(sub.knownNodes))
 			notaryNodeURL = sub.knownNodes[idx]
 		}
-		trx, err := transformers.ProtoTrxToTrx(protoTrx)
+		trx, err := transformers.ProtoTrxToTrx(protoTrxs.Array[i])
 		if err != nil {
 			continue
 		}
@@ -234,7 +234,7 @@ func (sub *subscriber) actOnTransactions(notaryNodeURL string) {
 
 		pterm.Info.Printf("Trx [ %x ] data [ %s ] accepted.\n", trx.Hash[:], string(trx.Data))
 
-		go sub.pub.client.Approve(context.Background(), &protobufcompiled.TransactionApproved{Transaction: protoTrx, Url: notaryNodeURL})
+		go sub.pub.client.Approve(context.Background(), &protobufcompiled.TransactionApproved{Transaction: protoTrxs.Array[i], Url: notaryNodeURL})
 		go sub.sendToValidationQueue(trx, notaryNodeURL)
 
 		counter++
