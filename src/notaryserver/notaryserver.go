@@ -33,7 +33,7 @@ const (
 
 const (
 	checkForRegisteredNodesInterval = 5 * time.Second
-	transactionsUpdateTick          = time.Millisecond * 100
+	transactionsUpdateTick          = time.Millisecond * 1000
 )
 
 const rxNewTrxIssuerAddrBufferSize = 50
@@ -370,23 +370,12 @@ func (s *server) Waiting(ctx context.Context, in *protobufcompiled.SignedHash) (
 	result := &protobufcompiled.Transactions{Array: make([]*protobufcompiled.Transaction, 0, len(trxs)), Len: uint64(len(trxs))}
 	for _, trx := range trxs {
 		protoTrx, err := transformers.TrxToProtoTrx(trx)
-		// _ = protoTrx.Hash
 		if err != nil {
 			s.log.Warn(fmt.Sprintf("waiting endpoint, failed to map trx to protobuf trx for address: %s, %s", in.Address, err))
 			continue
 		}
 		result.Array = append(result.Array, protoTrx)
 	}
-	// TODO: REMOVE AFTER TEST -- START
-	set := make(map[[32]byte]struct{}, len(result.Array))
-	for _, trx := range result.Array {
-		set[[32]byte(trx.Hash)] = struct{}{}
-	}
-
-	if len(set) != len(result.Array) {
-		s.log.Error(fmt.Sprintf("Waiting trxs array contains %v trxs where %v is unique.\n", len(result.Array), len(set)))
-	}
-	// TODO: REMOVE AFTER TEST -- END
 
 	return result, nil
 }
