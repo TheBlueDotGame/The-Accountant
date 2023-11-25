@@ -367,17 +367,6 @@ func (s *server) Waiting(ctx context.Context, in *protobufcompiled.SignedHash) (
 		return nil, ErrProcessing
 	}
 
-	// TODO: REMOVE AFTER TEST -- START
-	set := make(map[[32]byte]struct{}, len(trxs))
-	for _, trx := range trxs {
-		set[[32]byte(trx.Hash)] = struct{}{}
-	}
-
-	if len(set) != len(trxs) {
-		s.log.Error(fmt.Sprintf("Waiting trxs array contains %v trxs where %v is unique.\n", len(trxs), len(set)))
-	}
-	// TODO: REMOVE AFTER TEST -- END
-
 	result := &protobufcompiled.Transactions{Array: make([]*protobufcompiled.Transaction, 0, len(trxs)), Len: uint64(len(trxs))}
 	for _, trx := range trxs {
 		protoTrx, err := transformers.TrxToProtoTrx(&trx)
@@ -387,6 +376,17 @@ func (s *server) Waiting(ctx context.Context, in *protobufcompiled.SignedHash) (
 		}
 		result.Array = append(result.Array, protoTrx)
 	}
+
+	// TODO: REMOVE AFTER TEST -- START
+	set := make(map[[32]byte]struct{}, len(result.Array))
+	for _, trx := range result.Array {
+		set[[32]byte(trx.Hash)] = struct{}{}
+	}
+
+	if len(set) != len(result.Array) {
+		s.log.Error(fmt.Sprintf("Waiting trxs array contains %v trxs where %v is unique.\n", len(result.Array), len(set)))
+	}
+	// TODO: REMOVE AFTER TEST -- END
 
 	return result, nil
 }
