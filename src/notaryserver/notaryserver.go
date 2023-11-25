@@ -369,14 +369,14 @@ func (s *server) Waiting(ctx context.Context, in *protobufcompiled.SignedHash) (
 
 	result := &protobufcompiled.Transactions{Array: make([]*protobufcompiled.Transaction, 0, len(trxs)), Len: uint64(len(trxs))}
 	for _, trx := range trxs {
-		protoTrx, err := transformers.TrxToProtoTrx(&trx)
+		protoTrx, err := transformers.TrxToProtoTrx(trx)
+		// _ = protoTrx.Hash
 		if err != nil {
 			s.log.Warn(fmt.Sprintf("waiting endpoint, failed to map trx to protobuf trx for address: %s, %s", in.Address, err))
 			continue
 		}
 		result.Array = append(result.Array, protoTrx)
 	}
-
 	// TODO: REMOVE AFTER TEST -- START
 	set := make(map[[32]byte]struct{}, len(result.Array))
 	for _, trx := range result.Array {
@@ -411,7 +411,7 @@ func (s *server) Saved(ctx context.Context, in *protobufcompiled.SignedHash) (*p
 		return nil, ErrNoDataPresent
 	}
 
-	protoTrx, err := transformers.TrxToProtoTrx(&trx)
+	protoTrx, err := transformers.TrxToProtoTrx(trx)
 	if err != nil {
 		return nil, err
 	}

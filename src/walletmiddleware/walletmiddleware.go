@@ -129,7 +129,7 @@ func (c *Client) ProposeTransaction(ctx context.Context, receiverAddr string, su
 		return errors.Join(httpclient.ErrSigningFailed, err)
 	}
 
-	protoTrx, err := transformers.TrxToProtoTrx(&trx)
+	protoTrx, err := transformers.TrxToProtoTrx(trx)
 	if err != nil {
 		return err
 	}
@@ -149,7 +149,7 @@ func (c *Client) ConfirmTransaction(ctx context.Context, notaryNodeURL string, t
 		return errors.Join(httpclient.ErrSigningFailed, err)
 	}
 
-	protoTrx, err := transformers.TrxToProtoTrx(trx)
+	protoTrx, err := transformers.TrxToProtoTrx(*trx)
 	if err != nil {
 		return err
 	}

@@ -14,8 +14,8 @@ var (
 	ErrTrxIsEmpty = errors.New("trx is empty")
 )
 
-func TrxToProtoTrx(trx *transaction.Transaction) (*protobufcompiled.Transaction, error) {
-	if trx == nil || trx.Subject == "" || trx.IssuerAddress == "" ||
+func TrxToProtoTrx(trx transaction.Transaction) (*protobufcompiled.Transaction, error) {
+	if trx.Subject == "" || trx.IssuerAddress == "" ||
 		trx.ReceiverAddress == "" || len(trx.Hash) == 0 ||
 		trx.CreatedAt.IsZero() || len(trx.IssuerSignature) == 0 {
 		return &protobufcompiled.Transaction{}, ErrProcessing
