@@ -11,6 +11,7 @@ import (
 
 	"github.com/bartossh/Computantis/src/accountant"
 	"github.com/bartossh/Computantis/src/aeswrapper"
+	"github.com/bartossh/Computantis/src/cache"
 	"github.com/bartossh/Computantis/src/configuration"
 	"github.com/bartossh/Computantis/src/dataprovider"
 	"github.com/bartossh/Computantis/src/fileoperations"
@@ -19,6 +20,7 @@ import (
 	"github.com/bartossh/Computantis/src/logo"
 	"github.com/bartossh/Computantis/src/natsclient"
 	"github.com/bartossh/Computantis/src/notaryserver"
+	"github.com/bartossh/Computantis/src/pipe"
 	"github.com/bartossh/Computantis/src/stdoutwriter"
 	"github.com/bartossh/Computantis/src/telemetry"
 	"github.com/bartossh/Computantis/src/wallet"
@@ -30,8 +32,13 @@ import (
 const usage = `runs the Computantis node that connects in to the Computantis network`
 
 const (
-	rxBufferSize  = 100
-	vrxBufferSize = 100
+	trxChSize = 100
+	vrxChSize = 100
+)
+
+const (
+	maxCacheSizeMB = 1024
+	maxEntrySize   = 32 * 10_000
 )
 
 const gossipTimeout = time.Second * 5
@@ -113,7 +120,6 @@ func run(cfg configuration.Configuration) {
 	log := logging.New(callbackOnErr, callbackOnFatal, stdoutwriter.Logger{}, &zinc)
 	dataProvider := dataprovider.New(ctx, cfg.DataProvider)
 	verifier := wallet.NewVerifier()
-	vrxCh := make(chan *accountant.Vertex)
 	h := fileoperations.New(cfg.FileOperator, aeswrapper.New())
 	wlt, err := h.ReadWallet()
 	if err != nil {
@@ -136,6 +142,16 @@ func run(cfg configuration.Configuration) {
 		return
 	}
 
+	juggler := pipe.New(trxChSize, vrxChSize)
+	defer juggler.Close()
+	hippo, err := cache.New(&log, maxEntrySize, maxCacheSizeMB)
+	if err != nil {
+		log.Error(err.Error())
+		c <- os.Interrupt
+		return
+	}
+	defer hippo.Close()
+
 	pub, err := natsclient.PublisherConnect(cfg.Nats)
 	if err != nil {
 		log.Error(err.Error())
@@ -149,7 +165,7 @@ func run(cfg configuration.Configuration) {
 	}()
 
 	go func() {
-		err = gossip.RunGRPC(ctx, cfg.Gossip, &log, gossipTimeout, &wlt, &verifier, acc, vrxCh)
+		err = gossip.RunGRPC(ctx, cfg.Gossip, &log, gossipTimeout, &wlt, &verifier, acc, hippo, juggler)
 		if err != nil {
 			log.Error(err.Error())
 			c <- os.Interrupt
@@ -157,7 +173,7 @@ func run(cfg configuration.Configuration) {
 		}
 	}()
 
-	err = notaryserver.Run(ctx, cfg.NotaryServer, pub, dataProvider, tele, &log, &verifier, acc, vrxCh)
+	err = notaryserver.Run(ctx, cfg.NotaryServer, pub, dataProvider, tele, &log, &verifier, acc, hippo, juggler)
 	if err != nil {
 		log.Error(err.Error())
 	}

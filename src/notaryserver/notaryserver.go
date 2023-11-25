@@ -1,9 +1,7 @@
 package notaryserver
 
 import (
-	"bytes"
 	"context"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"net"
@@ -18,7 +16,6 @@ import (
 	"github.com/bartossh/Computantis/src/logger"
 	"github.com/bartossh/Computantis/src/protobufcompiled"
 	"github.com/bartossh/Computantis/src/providers"
-	"github.com/bartossh/Computantis/src/storage"
 	"github.com/bartossh/Computantis/src/transaction"
 	"github.com/bartossh/Computantis/src/transformers"
 	"github.com/bartossh/Computantis/src/versioning"
@@ -38,7 +35,7 @@ const (
 	transactionsUpdateTick          = time.Millisecond * 100
 )
 
-const rxNewTrxIssuerAddrBufferSize = 100
+const rxNewTrxIssuerAddrBufferSize = 50
 
 var (
 	ErrWrongPortSpecified = errors.New("port must be between 1 and 65535")
@@ -72,13 +69,16 @@ type nodeNetworkingPublisher interface {
 	PublishAddressesAwaitingTrxs(addresses []string, notaryNodeURL string) error
 }
 
+type piper interface {
+	SendTrx(trx *protobufcompiled.Transaction) bool
+	SendVrx(vrx *accountant.Vertex) bool
+}
+
 // Config contains configuration of the server.
 type Config struct {
-	NodePublicURL           string `yaml:"public_url"`                  // Public URL at which node can be reached.
-	TrxAwaitedDBPath        string `yaml:"trx_awaited_db_path"`         // awaited transaction volume path
-	AddressAwaitedTrxDBPath string `yaml:"address_awaited_trx_db_path"` // wallet address awaited transaction volume path
-	Port                    int    `yaml:"port"`                        // Port to listen on.
-	DataSizeBytes           int    `yaml:"data_size_bytes"`             // Size of the data to be stored in the transaction.
+	NodePublicURL string `yaml:"public_url"`      // Public URL at which node can be reached.
+	Port          int    `yaml:"port"`            // Port to listen on.
+	DataSizeBytes int    `yaml:"data_size_bytes"` // Size of the data to be stored in the transaction.
 }
 
 type server struct {
@@ -88,11 +88,10 @@ type server struct {
 	tele                 providers.HistogramProvider
 	log                  logger.Logger
 	rxNewTrxIssuerAddrCh chan string
-	vrxGossipCh          chan<- *accountant.Vertex
 	verifier             verifier
 	acc                  accounter
-	trxsAwaitedDB        *badger.DB
-	addressAwaitedTrxsDB *badger.DB
+	cache                providers.AwaitedTrxCacheProvider
+	piper                piper
 	nodePublicURL        string
 	dataSize             int
 }
@@ -101,12 +100,11 @@ type server struct {
 // It blocks until the context is canceled.
 func Run(
 	ctx context.Context, c Config, pub nodeNetworkingPublisher, pv RandomDataProvideValidator, tele providers.HistogramProvider,
-	log logger.Logger, v verifier, acc accounter, vrxCh chan<- *accountant.Vertex,
+	log logger.Logger, v verifier, acc accounter, cache providers.AwaitedTrxCacheProvider, p piper,
 ) error {
 	var err error
 	ctxx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	defer close(vrxCh)
 
 	if err = validateConfig(&c); err != nil {
 		return err
@@ -116,26 +114,16 @@ func Run(
 		return err
 	}
 
-	trxsAwaitedDB, err := storage.CreateBadgerDB(ctx, c.TrxAwaitedDBPath, log, true)
-	if err != nil {
-		return err
-	}
-	addressAwaitedTrxsDB, err := storage.CreateBadgerDB(ctx, c.AddressAwaitedTrxDBPath, log, false)
-	if err != nil {
-		return err
-	}
-
 	s := &server{
 		pub:                  pub,
 		randDataProv:         pv,
 		tele:                 tele,
 		log:                  log,
 		rxNewTrxIssuerAddrCh: make(chan string, rxNewTrxIssuerAddrBufferSize),
-		vrxGossipCh:          vrxCh,
 		verifier:             v,
 		acc:                  acc,
-		trxsAwaitedDB:        trxsAwaitedDB,
-		addressAwaitedTrxsDB: addressAwaitedTrxsDB,
+		cache:                cache,
+		piper:                p,
 		nodePublicURL:        c.NodePublicURL,
 		dataSize:             c.DataSizeBytes,
 	}
@@ -203,6 +191,7 @@ func (s *server) runSubscriber(ctx context.Context) {
 			if len(receiverAddrSet) == 0 {
 				continue
 			}
+			length := len(receiverAddrSet)
 
 			addresses := make([]string, 0, len(receiverAddrSet))
 			for addr := range receiverAddrSet {
@@ -211,240 +200,9 @@ func (s *server) runSubscriber(ctx context.Context) {
 
 			s.pub.PublishAddressesAwaitingTrxs(addresses, s.nodePublicURL)
 
-			receiverAddrSet = make(map[string]struct{}, 1000)
+			receiverAddrSet = make(map[string]struct{}, length)
 		}
 	}
-}
-
-func add(originalValues, newValue []byte) []byte {
-	return append(originalValues, append([]byte{','}, newValue...)...)
-}
-
-func read(val []byte) [][]byte {
-	return bytes.Split(val, []byte{','})
-}
-
-func remove(values, removeValue []byte) []byte {
-	sl := read(values)
-	newValues := make([]byte, 0, len(values))
-	for _, v := range sl {
-		if bytes.Equal(v, removeValue) {
-			continue
-		}
-		newValues = append(newValues, append([]byte{','}, v...)...)
-	}
-	return newValues
-}
-
-func hexEncode(src []byte) []byte {
-	dst := make([]byte, hex.EncodedLen(len(src)))
-	hex.Encode(dst, src)
-	return dst
-}
-
-func hexDecode(src []byte) ([]byte, error) {
-	dst := make([]byte, hex.DecodedLen(len(src)))
-	_, err := hex.Decode(dst, src)
-	return dst, err
-}
-
-func (s *server) saveAwaitedTrx(ctx context.Context, trx *transaction.Transaction) error {
-	if trx == nil {
-		return nil
-	}
-	buf, err := trx.Encode()
-	if err != nil {
-		return err
-	}
-	err = s.trxsAwaitedDB.Update(func(txn *badger.Txn) error {
-		if _, err := txn.Get(trx.Hash[:]); err == nil {
-			return ErrTrxAlreadyExists
-		}
-		return txn.SetEntry(badger.NewEntry(trx.Hash[:], buf))
-	})
-	if err != nil {
-		if errors.Is(err, ErrTrxAlreadyExists) {
-			return nil
-		}
-		return err
-	}
-
-	hashHex := hexEncode(trx.Hash[:])
-	return s.addressAwaitedTrxsDB.Update(func(txn *badger.Txn) error {
-		for _, address := range []string{trx.IssuerAddress, trx.ReceiverAddress} {
-			item, err := txn.Get([]byte(address))
-			if err != nil && !errors.Is(err, badger.ErrKeyNotFound) {
-				return err
-			}
-			var updated []byte
-			switch item {
-			case nil:
-				updated = add(updated, hashHex)
-			default:
-				item.Value(func(val []byte) error {
-					updated = add(val, hashHex)
-					return nil
-				})
-			}
-			err = txn.SetEntry(badger.NewEntry([]byte(address), updated))
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-}
-
-func (s *server) readAwaitedTrx(address string) ([]transaction.Transaction, error) {
-	hashesHex := make([][]byte, 0)
-	err := s.addressAwaitedTrxsDB.View(func(txn *badger.Txn) error {
-		item, err := txn.Get([]byte(address))
-		if err != nil {
-			if errors.Is(err, badger.ErrKeyNotFound) {
-				return nil
-			}
-			return err
-		}
-
-		switch item {
-		case nil:
-		default:
-			item.Value(func(val []byte) error {
-				hashesHex = read(val)
-				return nil
-			})
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	if len(hashesHex) == 0 {
-		return nil, nil
-	}
-
-	cleanup := make([][]byte, 0)
-	trxs := make([]transaction.Transaction, 0)
-	err = s.trxsAwaitedDB.View(func(txn *badger.Txn) error {
-		for _, h := range hashesHex {
-			hash, err := hexDecode(h)
-			if err != nil {
-				s.log.Error(fmt.Sprintf("read awaited trxs failed to decode hex hash %v for address [ %s ]", h, address))
-				continue
-			}
-			item, err := txn.Get(hash)
-			if err != nil {
-				if errors.Is(err, badger.ErrKeyNotFound) || item == nil {
-					cleanup = append(cleanup, h)
-					continue
-				}
-				return err
-			}
-
-			if err := item.Value(func(val []byte) error {
-				trx, err := transaction.Decode(val)
-				if err != nil {
-					return err
-				}
-				trxs = append(trxs, trx)
-				return nil
-			}); err != nil {
-				return err
-			}
-			return nil
-		}
-		return nil
-	})
-
-	if len(cleanup) == 0 {
-		return trxs, err
-	}
-
-	err = s.addressAwaitedTrxsDB.Update(func(txn *badger.Txn) error {
-		item, err := txn.Get([]byte(address))
-		if err != nil && !errors.Is(err, badger.ErrKeyNotFound) {
-			return err
-		}
-		var values []byte
-		switch item {
-		case nil:
-			return nil
-		default:
-			item.Value(func(val []byte) error {
-				values = val
-				return nil
-			})
-		}
-		for _, value := range cleanup {
-			values = remove(values, value)
-		}
-		return txn.SetEntry(badger.NewEntry([]byte(address), values))
-	})
-	return trxs, err
-}
-
-func (s *server) removeAwaitedTrx(h []byte, receiver string) (transaction.Transaction, error) {
-	var trx transaction.Transaction
-	err := s.trxsAwaitedDB.Update(func(txn *badger.Txn) error {
-		item, err := txn.Get(h)
-		if err != nil {
-			return err
-		}
-		if item == nil {
-			return badger.ErrKeyNotFound
-		}
-		if err := item.Value(func(val []byte) error {
-			var err error
-			trx, err = transaction.Decode(val)
-			if err != nil {
-				return err
-			}
-			if trx.ReceiverAddress != receiver {
-				return errors.New("transaction receiver is not matching provided receiver")
-			}
-			return nil
-		}); err != nil {
-			return err
-		}
-
-		return txn.Delete(h)
-	})
-	if err != nil {
-		return transaction.Transaction{}, err
-	}
-
-	hashHex := hexEncode(h)
-
-	err = s.addressAwaitedTrxsDB.Update(func(txn *badger.Txn) error {
-		for _, address := range [2]string{trx.IssuerAddress, receiver} {
-			item, err := txn.Get([]byte(address))
-			if err != nil {
-				if errors.Is(err, badger.ErrKeyNotFound) {
-					return nil
-				}
-				return err
-			}
-			var values []byte
-			switch item {
-			case nil:
-				continue
-			default:
-				item.Value(func(val []byte) error {
-					values = val
-					return nil
-				})
-			}
-			values = remove(values, hashHex)
-			if err = txn.SetEntry(badger.NewEntry([]byte(address), values)); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		return transaction.Transaction{}, err
-	}
-	return trx, nil
 }
 
 // Alive returns alive information such as wallet public address API version and API header of running server.
@@ -461,6 +219,10 @@ func (s *server) Propose(ctx context.Context, in *protobufcompiled.Transaction) 
 	t := time.Now()
 	defer s.tele.RecordHistogramTime(proposeTrxTelemetryHistogram, time.Since(t))
 
+	if in == nil {
+		return nil, ErrNoDataPresent
+	}
+
 	trx, err := transformers.ProtoTrxToTrx(in)
 	if err != nil {
 		s.log.Error(fmt.Sprintf("propose endpoint, message is empty or invalid: %s", err))
@@ -472,29 +234,35 @@ func (s *server) Propose(ctx context.Context, in *protobufcompiled.Transaction) 
 		return nil, ErrVerification
 	}
 
-	switch trx.IsContract() {
-	case true:
-		if err := s.saveAwaitedTrx(ctx, &trx); err != nil {
+	if trx.IsContract() {
+		if err := s.cache.SaveAwaitedTransaction(&trx); err != nil {
 			s.log.Error(fmt.Sprintf("propose endpoint, saving awaited trx for issuer [ %s ], %s", trx.IssuerAddress, err))
 			return nil, ErrProcessing
 		}
-		addresses := []string{trx.IssuerAddress, trx.ReceiverAddress}
-		if err := s.pub.PublishAddressesAwaitingTrxs(addresses, s.nodePublicURL); err != nil {
-			s.log.Error(fmt.Sprintf("propose endpoint, publishing awaited trx for addresses %v, failed, %s", addresses, err))
-		}
-	default:
-		if len(trx.Data) > s.dataSize {
-			s.log.Error(fmt.Sprintf("propose endpoint, invalid transaction data size: %d", len(trx.Data)))
-			return nil, ErrProcessing
-		}
-		vrx, err := s.acc.CreateLeaf(ctx, &trx)
-		if err != nil {
-			s.log.Error(fmt.Sprintf("propose endpoint, creating leaf: %s", err))
-			return nil, ErrProcessing
-		}
-		go func(v *accountant.Vertex) {
-			s.vrxGossipCh <- v
-		}(&vrx)
+
+		go func(tx *protobufcompiled.Transaction) {
+			if ok := s.piper.SendTrx(tx); !ok {
+				s.log.Error(fmt.Sprintf("sending trx %v to gossiper failed, channel is closed", trx.Hash))
+			}
+			s.rxNewTrxIssuerAddrCh <- tx.IssuerAddress
+			s.rxNewTrxIssuerAddrCh <- tx.ReceiverAddress
+		}(in)
+
+		return &emptypb.Empty{}, nil
+	}
+
+	if len(trx.Data) > s.dataSize {
+		s.log.Error(fmt.Sprintf("propose endpoint, invalid transaction data size: %d", len(trx.Data)))
+		return nil, ErrProcessing
+	}
+	vrx, err := s.acc.CreateLeaf(ctx, &trx)
+	if err != nil {
+		s.log.Error(fmt.Sprintf("propose endpoint, creating leaf: %s", err))
+		return nil, ErrProcessing
+	}
+
+	if ok := s.piper.SendVrx(&vrx); !ok {
+		return nil, ErrProcessing
 	}
 
 	return &emptypb.Empty{}, nil
@@ -518,27 +286,12 @@ func (s *server) Confirm(ctx context.Context, in *protobufcompiled.Transaction) 
 		return nil, ErrVerification
 	}
 
-	savedTrx, err := s.removeAwaitedTrx(trx.Hash[:], trx.ReceiverAddress)
+	_, err = s.cache.RemoveAwaitedTransaction(trx.Hash, trx.ReceiverAddress)
 	if err != nil {
 		s.log.Error(
 			fmt.Sprintf(
 				"confirm endpoint, failed to remove awaited trx hash %v from receiver [ %s ] , %s", trx.Hash, trx.ReceiverAddress, err.Error(),
 			))
-		if errors.Is(err, badger.ErrKeyNotFound) {
-			return nil, ErrNoDataPresent
-		}
-		return nil, ErrProcessing
-	}
-
-	ok, err := trx.CompareIssuerData(&savedTrx)
-	if err != nil {
-		return nil, ErrRequestIsEmpty
-	}
-	if !ok {
-		if err := s.saveAwaitedTrx(ctx, &trx); err != nil {
-			s.log.Error(fmt.Sprintf("confirm endpoint, failed re-saving transaction %v after comparing to the original failed, %s", trx.Hash, err))
-		}
-		return nil, ErrVerification
 	}
 
 	vrx, err := s.acc.CreateLeaf(ctx, &trx)
@@ -547,9 +300,9 @@ func (s *server) Confirm(ctx context.Context, in *protobufcompiled.Transaction) 
 		return nil, ErrProcessing
 	}
 
-	go func(v *accountant.Vertex) {
-		s.vrxGossipCh <- v
-	}(&vrx)
+	if ok := s.piper.SendVrx(&vrx); !ok {
+		return nil, ErrProcessing
+	}
 
 	return &emptypb.Empty{}, nil
 }
@@ -568,7 +321,7 @@ func (s *server) Reject(ctx context.Context, in *protobufcompiled.SignedHash) (*
 		return nil, ErrProcessing
 	}
 
-	trx, err := s.removeAwaitedTrx(in.Data, in.Address)
+	trx, err := s.cache.RemoveAwaitedTransaction([32]byte(in.Hash), in.Address)
 	if err != nil {
 		s.log.Error(fmt.Sprintf("reject endpoint, failed removing transaction %v for address [ %s ]", in.Hash, in.Address))
 		if errors.Is(err, badger.ErrKeyNotFound) {
@@ -583,9 +336,9 @@ func (s *server) Reject(ctx context.Context, in *protobufcompiled.SignedHash) (*
 		return nil, ErrProcessing
 	}
 
-	go func(v *accountant.Vertex) {
-		s.vrxGossipCh <- v
-	}(&vrx)
+	if ok := s.piper.SendVrx(&vrx); !ok {
+		return nil, ErrProcessing
+	}
 
 	return &emptypb.Empty{}, nil
 }
@@ -605,7 +358,7 @@ func (s *server) Waiting(ctx context.Context, in *protobufcompiled.SignedHash) (
 		return nil, ErrVerification
 	}
 
-	trxs, err := s.readAwaitedTrx(in.Address)
+	trxs, err := s.cache.ReadTransactions(in.Address)
 	if err != nil {
 		s.log.Error(fmt.Sprintf("waiting endpoint, failed to read awaited transactions for address: %s, %s", in.Address, err))
 		return nil, ErrProcessing

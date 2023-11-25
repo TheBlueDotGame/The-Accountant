@@ -18,9 +18,20 @@ message Vertex {
     uint64 weight = 8;
 }
 
-message VertexGossip {
+message Gossiper {
+    string address = 1;
+    bytes digest = 2;
+    bytes signature = 3;
+}
+
+message VrxMsgGossip {
     Vertex vertex = 1;
-    repeated string gossipers = 2;
+    repeated Gossiper gossipers = 2;
+}
+
+message TrxMsgGossip {
+    Transaction trx = 1;
+    repeated Gossiper gossipers = 2;
 }
 
 message ConnectionData {
@@ -41,5 +52,6 @@ service GossipAPI {
     rpc LoadDag(google.protobuf.Empty) returns (stream Vertex) {} 
     rpc Announce(ConnectionData) returns (google.protobuf.Empty) {}
     rpc Discover(ConnectionData) returns (ConnectedNodes) {}
-    rpc Gossip(VertexGossip) returns (google.protobuf.Empty) {}
+    rpc GossipVrx(VrxMsgGossip) returns (google.protobuf.Empty) {}
+    rpc GossipTrx(TrxMsgGossip) returns (google.protobuf.Empty) {}
 }
