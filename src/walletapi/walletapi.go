@@ -156,7 +156,7 @@ func (a *app) Saved(ctx context.Context, in *protobufcompiled.TrxHash) (*protobu
 	if err != nil {
 		return nil, err
 	}
-	return transformers.TrxToProtoTrx(&trx)
+	return transformers.TrxToProtoTrx(trx)
 }
 
 // WebHook creates a web-hook on the WebHook Computantis node.
