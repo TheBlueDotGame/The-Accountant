@@ -20,11 +20,12 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	GossipAPI_Alive_FullMethodName    = "/computantis.GossipAPI/Alive"
-	GossipAPI_LoadDag_FullMethodName  = "/computantis.GossipAPI/LoadDag"
-	GossipAPI_Announce_FullMethodName = "/computantis.GossipAPI/Announce"
-	GossipAPI_Discover_FullMethodName = "/computantis.GossipAPI/Discover"
-	GossipAPI_Gossip_FullMethodName   = "/computantis.GossipAPI/Gossip"
+	GossipAPI_Alive_FullMethodName     = "/computantis.GossipAPI/Alive"
+	GossipAPI_LoadDag_FullMethodName   = "/computantis.GossipAPI/LoadDag"
+	GossipAPI_Announce_FullMethodName  = "/computantis.GossipAPI/Announce"
+	GossipAPI_Discover_FullMethodName  = "/computantis.GossipAPI/Discover"
+	GossipAPI_GossipVrx_FullMethodName = "/computantis.GossipAPI/GossipVrx"
+	GossipAPI_GossipTrx_FullMethodName = "/computantis.GossipAPI/GossipTrx"
 )
 
 // GossipAPIClient is the client API for GossipAPI service.
@@ -35,7 +36,8 @@ type GossipAPIClient interface {
 	LoadDag(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (GossipAPI_LoadDagClient, error)
 	Announce(ctx context.Context, in *ConnectionData, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	Discover(ctx context.Context, in *ConnectionData, opts ...grpc.CallOption) (*ConnectedNodes, error)
-	Gossip(ctx context.Context, in *VertexGossip, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	GossipVrx(ctx context.Context, in *VrxMsgGossip, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	GossipTrx(ctx context.Context, in *TrxMsgGossip, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type gossipAPIClient struct {
@@ -105,9 +107,18 @@ func (c *gossipAPIClient) Discover(ctx context.Context, in *ConnectionData, opts
 	return out, nil
 }
 
-func (c *gossipAPIClient) Gossip(ctx context.Context, in *VertexGossip, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (c *gossipAPIClient) GossipVrx(ctx context.Context, in *VrxMsgGossip, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, GossipAPI_Gossip_FullMethodName, in, out, opts...)
+	err := c.cc.Invoke(ctx, GossipAPI_GossipVrx_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *gossipAPIClient) GossipTrx(ctx context.Context, in *TrxMsgGossip, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, GossipAPI_GossipTrx_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +133,8 @@ type GossipAPIServer interface {
 	LoadDag(*emptypb.Empty, GossipAPI_LoadDagServer) error
 	Announce(context.Context, *ConnectionData) (*emptypb.Empty, error)
 	Discover(context.Context, *ConnectionData) (*ConnectedNodes, error)
-	Gossip(context.Context, *VertexGossip) (*emptypb.Empty, error)
+	GossipVrx(context.Context, *VrxMsgGossip) (*emptypb.Empty, error)
+	GossipTrx(context.Context, *TrxMsgGossip) (*emptypb.Empty, error)
 	mustEmbedUnimplementedGossipAPIServer()
 }
 
@@ -142,8 +154,11 @@ func (UnimplementedGossipAPIServer) Announce(context.Context, *ConnectionData) (
 func (UnimplementedGossipAPIServer) Discover(context.Context, *ConnectionData) (*ConnectedNodes, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Discover not implemented")
 }
-func (UnimplementedGossipAPIServer) Gossip(context.Context, *VertexGossip) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Gossip not implemented")
+func (UnimplementedGossipAPIServer) GossipVrx(context.Context, *VrxMsgGossip) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GossipVrx not implemented")
+}
+func (UnimplementedGossipAPIServer) GossipTrx(context.Context, *TrxMsgGossip) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GossipTrx not implemented")
 }
 func (UnimplementedGossipAPIServer) mustEmbedUnimplementedGossipAPIServer() {}
 
@@ -233,20 +248,38 @@ func _GossipAPI_Discover_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
-func _GossipAPI_Gossip_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(VertexGossip)
+func _GossipAPI_GossipVrx_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(VrxMsgGossip)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(GossipAPIServer).Gossip(ctx, in)
+		return srv.(GossipAPIServer).GossipVrx(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: GossipAPI_Gossip_FullMethodName,
+		FullMethod: GossipAPI_GossipVrx_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(GossipAPIServer).Gossip(ctx, req.(*VertexGossip))
+		return srv.(GossipAPIServer).GossipVrx(ctx, req.(*VrxMsgGossip))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GossipAPI_GossipTrx_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TrxMsgGossip)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GossipAPIServer).GossipTrx(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: GossipAPI_GossipTrx_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GossipAPIServer).GossipTrx(ctx, req.(*TrxMsgGossip))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -271,8 +304,12 @@ var GossipAPI_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _GossipAPI_Discover_Handler,
 		},
 		{
-			MethodName: "Gossip",
-			Handler:    _GossipAPI_Gossip_Handler,
+			MethodName: "GossipVrx",
+			Handler:    _GossipAPI_GossipVrx_Handler,
+		},
+		{
+			MethodName: "GossipTrx",
+			Handler:    _GossipAPI_GossipTrx_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

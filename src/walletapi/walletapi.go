@@ -141,7 +141,7 @@ func (a *app) Waiting(ctx context.Context, in *protobufcompiled.NotaryNode) (*pr
 	}
 	result := &protobufcompiled.Transactions{Array: make([]*protobufcompiled.Transaction, 0, len(trxs)), Len: uint64(len(trxs))}
 	for _, trx := range trxs {
-		protoTrx, err := transformers.TrxToProtoTrx(&trx)
+		protoTrx, err := transformers.TrxToProtoTrx(trx)
 		if err != nil {
 			continue
 		}
@@ -156,7 +156,7 @@ func (a *app) Saved(ctx context.Context, in *protobufcompiled.TrxHash) (*protobu
 	if err != nil {
 		return nil, err
 	}
-	return transformers.TrxToProtoTrx(&trx)
+	return transformers.TrxToProtoTrx(trx)
 }
 
 // WebHook creates a web-hook on the WebHook Computantis node.

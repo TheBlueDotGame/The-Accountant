@@ -129,7 +129,7 @@ func (c *Client) ProposeTransaction(ctx context.Context, receiverAddr string, su
 		return errors.Join(httpclient.ErrSigningFailed, err)
 	}
 
-	protoTrx, err := transformers.TrxToProtoTrx(&trx)
+	protoTrx, err := transformers.TrxToProtoTrx(trx)
 	if err != nil {
 		return err
 	}
@@ -149,7 +149,7 @@ func (c *Client) ConfirmTransaction(ctx context.Context, notaryNodeURL string, t
 		return errors.Join(httpclient.ErrSigningFailed, err)
 	}
 
-	protoTrx, err := transformers.TrxToProtoTrx(trx)
+	protoTrx, err := transformers.TrxToProtoTrx(*trx)
 	if err != nil {
 		return err
 	}
@@ -237,10 +237,13 @@ func (c *Client) ReadWaitingTransactions(ctx context.Context, notaryNodeURL stri
 	}
 
 	trxs := make([]transaction.Transaction, 0, len(proto.Array))
-	for _, protoTrx := range proto.Array {
-		trx, err := transformers.ProtoTrxToTrx(protoTrx)
+	for i := range proto.Array {
+		trx, err := transformers.ProtoTrxToTrx(proto.Array[i])
 		if err != nil {
-			continue
+			return nil, err
+		}
+		if err := trx.VerifyIssuer(c.verifier); err != nil {
+			return nil, err
 		}
 		trxs = append(trxs, trx)
 	}
@@ -266,7 +269,20 @@ func (c *Client) ReadSavedTransaction(ctx context.Context, hash [32]byte) (trans
 		return transaction.Transaction{}, err
 	}
 
-	return transformers.ProtoTrxToTrx(protoTrx)
+	trx, err := transformers.ProtoTrxToTrx(protoTrx)
+	if err != nil {
+		return transaction.Transaction{}, err
+	}
+	switch trx.ReceiverAddress != "" {
+	case true:
+		err = trx.VerifyIssuer(c.verifier)
+	default:
+		err = trx.VerifyIssuerReceiver(c.verifier)
+	}
+	if err != nil {
+		return transaction.Transaction{}, err
+	}
+	return trx, nil
 }
 
 // SaveWalletToFile saves the wallet to the file in the path.

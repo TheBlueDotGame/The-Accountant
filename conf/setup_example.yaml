@@ -1,7 +1,5 @@
 is_profiling: false
 notary_server:
-  trx_awaited_db_path:
-  address_awaited_trx_db_path:
   public_url: notary-node-genesis:8000
   port: 8000
   data_size_bytes: 15000
@@ -36,7 +34,7 @@ client:
   notary_node_url: "notary-node-genesis:8000"
   webhooks_node_url: "webhooks-node:8000"
 emulator:
-  tick_millisecond: 5
+  tick_millisecond: 100
   random: false
   client_url: "client-node:8000"
   port: "8060"

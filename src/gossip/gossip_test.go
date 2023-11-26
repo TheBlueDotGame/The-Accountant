@@ -12,12 +12,19 @@ import (
 	"time"
 
 	"github.com/bartossh/Computantis/src/accountant"
+	"github.com/bartossh/Computantis/src/cache"
 	"github.com/bartossh/Computantis/src/logging"
+	"github.com/bartossh/Computantis/src/pipe"
 	"github.com/bartossh/Computantis/src/protobufcompiled"
 	"github.com/bartossh/Computantis/src/spice"
 	"github.com/bartossh/Computantis/src/stdoutwriter"
 	"github.com/bartossh/Computantis/src/wallet"
 	"gotest.tools/v3/assert"
+)
+
+const (
+	maxCacheSizeMB = 16
+	maxEntrySize   = 32 * 100
 )
 
 func generateData(l int) []byte {
@@ -130,9 +137,14 @@ func TestDiscoverProtocol(t *testing.T) {
 				GenesisURL: "",
 				Port:       c.nodes[0],
 			}
+
+			juggler := pipe.New(100, 100)
+			hippo, err := cache.New(&l, maxEntrySize, maxCacheSizeMB)
+			assert.NilError(t, err)
+
 			go func() {
 				acc := testAccountant{}
-				err := RunGRPC(ctx, genessisConfig, l, time.Second*1, &w, v, &acc, nil)
+				err := RunGRPC(ctx, genessisConfig, l, time.Second*1, &w, v, &acc, hippo, juggler)
 				assert.NilError(t, err)
 			}()
 
@@ -147,7 +159,10 @@ func TestDiscoverProtocol(t *testing.T) {
 					w, err := wallet.New()
 					assert.NilError(t, err)
 					v := wallet.NewVerifier()
-					err = RunGRPC(ctx, cfg, l, time.Second*1, &w, v, &acc, nil)
+					juggler := pipe.New(100, 100)
+					hippo, err := cache.New(&l, maxEntrySize, maxCacheSizeMB)
+					assert.NilError(t, err)
+					err = RunGRPC(ctx, cfg, l, time.Second*1, &w, v, &acc, hippo, juggler)
 					assert.NilError(t, err)
 				}(cfg)
 			}
@@ -204,7 +219,10 @@ func TestGossipProtocol(t *testing.T) {
 			}
 			go func() {
 				acc := testAccountant{}
-				err := RunGRPC(ctx, genessisConfig, l, time.Second*1, &w, v, &acc, nil)
+				juggler := pipe.New(100, 100)
+				hippo, err := cache.New(&l, maxEntrySize, maxCacheSizeMB)
+				assert.NilError(t, err)
+				err = RunGRPC(ctx, genessisConfig, l, time.Second*1, &w, v, &acc, hippo, juggler)
 				assert.NilError(t, err)
 				assert.Equal(t, acc.readCounter(), uint64(len(c.nodes)*vertexRoundsPerNode))
 			}()
@@ -226,7 +244,10 @@ func TestGossipProtocol(t *testing.T) {
 						time.Sleep(time.Second)
 						wg.Done()
 					}()
-					err = RunGRPC(ctx, cfg, l, time.Second*1, &w, v, &acc, nil)
+					juggler := pipe.New(100, 100)
+					hippo, err := cache.New(&l, maxEntrySize, maxCacheSizeMB)
+					assert.NilError(t, err)
+					err = RunGRPC(ctx, cfg, l, time.Second*1, &w, v, &acc, hippo, juggler)
 					assert.NilError(t, err)                                                      // if fails it means nodes are overloded or are not able to handle connections.
 					assert.Equal(t, acc.readCounter(), uint64(len(c.nodes)*vertexRoundsPerNode)) // NOTE: The assertion for test of gossip protoco happens here.
 					// NOTE: we want to each node to receive exactly the amount of propagated certexes per each node.
@@ -241,7 +262,7 @@ func TestGossipProtocol(t *testing.T) {
 					assert.NilError(t, err)
 					for i := 0; i < vertexRoundsPerNode; i++ {
 						time.Sleep(time.Millisecond)
-						vd := protobufcompiled.VertexGossip{
+						vd := protobufcompiled.VrxMsgGossip{
 							Vertex: &protobufcompiled.Vertex{
 								Hash:       generateData(32), // TODO: generate real hash and Trx data when accountant is implemented
 								CreaterdAt: uint64(time.Now().UnixNano()),
@@ -252,9 +273,9 @@ func TestGossipProtocol(t *testing.T) {
 								LeftParentHash:  generateData(32),
 								RightParentHash: generateData(32),
 							},
-							Gossipers: []string{},
+							Gossipers: []*protobufcompiled.Gossiper{},
 						}
-						_, err := nd.client.Gossip(ctx, &vd)
+						_, err := nd.client.GossipVrx(ctx, &vd)
 						assert.NilError(t, err)
 					}
 					nd.conn.Close()
@@ -321,7 +342,10 @@ func TestDAGWithGossip(t *testing.T) {
 					accGenesis.CreateGenesis("Genesis Test Transaction", spice.New(1000000000000000, 0), []byte{}, &genessisReceiver)
 					close(doneGenesis)
 				}()
-				err = RunGRPC(ctx, genessisConfigNode, l, time.Second*1, &w, v, accGenesis, nil)
+				juggler := pipe.New(100, 100)
+				hippo, err := cache.New(&l, maxEntrySize, maxCacheSizeMB)
+				assert.NilError(t, err)
+				err = RunGRPC(ctx, genessisConfigNode, l, time.Second*1, &w, v, accGenesis, hippo, juggler)
 				assert.NilError(t, err)
 			}()
 
@@ -349,7 +373,10 @@ func TestDAGWithGossip(t *testing.T) {
 						time.Sleep(time.Millisecond * 100)
 						wg.Done()
 					}()
-					err = RunGRPC(ctx, cfg, counterLogger, time.Second*1, &w, v, acc, nil)
+					juggler := pipe.New(100, 100)
+					hippo, err := cache.New(&l, maxEntrySize, maxCacheSizeMB)
+					assert.NilError(t, err)
+					err = RunGRPC(ctx, cfg, counterLogger, time.Second*1, &w, v, acc, hippo, juggler)
 					assert.NilError(t, err)
 				}(cfg)
 			}

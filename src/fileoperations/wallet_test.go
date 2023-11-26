@@ -24,7 +24,7 @@ func TestSaveReadWalletEncodeDecodeSuccess(t *testing.T) {
 			assert.Nil(t, err)
 
 			helper := New(Config{
-				WalletPath:   "../artefacts/test_wallet",
+				WalletPath:   "../../artefacts/test_wallet",
 				WalletPasswd: hex.EncodeToString(key),
 			}, s)
 
@@ -55,7 +55,7 @@ func TestSaveReadWalletEncodeDecodeEncryptDecryptSuccess(t *testing.T) {
 			assert.Nil(t, err)
 
 			helper := New(Config{
-				WalletPath:   "../artefacts/test_wallet",
+				WalletPath:   "../../artefacts/test_wallet",
 				WalletPasswd: hex.EncodeToString(key),
 			}, s)
 
@@ -107,9 +107,9 @@ func BenchmarkSaveReadWalletEncodeDecodeSuccess(b *testing.B) {
 	_, err := io.ReadFull(rand.Reader, key)
 	assert.Nil(b, err)
 	helper := New(Config{
-		WalletPath:    "../artefacts/test_wallet",
+		WalletPath:    "../../artefacts/test_wallet",
 		WalletPasswd:  hex.EncodeToString(key),
-		WalletPemPath: "../artefacts/ed25519",
+		WalletPemPath: "../../artefacts/ed25519",
 	}, s)
 	for i := 0; i < b.N; i++ {
 		w0, err := wallet.New()

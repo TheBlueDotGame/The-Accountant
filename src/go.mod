@@ -3,8 +3,10 @@ module github.com/bartossh/Computantis/src
 go 1.21
 
 require (
+	github.com/allegro/bigcache v1.2.1
 	github.com/dgraph-io/badger/v4 v4.2.0
 	github.com/gofiber/fiber/v2 v2.50.0
+	github.com/golang/protobuf v1.5.3
 	github.com/heimdalr/dag v1.3.1
 	github.com/mr-tron/base58 v1.2.0
 	github.com/nats-io/nats.go v1.30.2
@@ -40,7 +42,6 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/glog v1.1.0 // indirect
 	github.com/golang/groupcache v0.0.0-20190702054246-869f871628b6 // indirect
-	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/golang/snappy v0.0.3 // indirect
 	github.com/google/flatbuffers v1.12.1 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
