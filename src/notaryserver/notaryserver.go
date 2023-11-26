@@ -36,7 +36,7 @@ const (
 	transactionsUpdateTick          = time.Millisecond * 1000
 )
 
-const rxNewTrxIssuerAddrBufferSize = 50
+const rxNewTrxIssuerAddrBufferSize = 800 // this value shall to be slightly bigger then maximum expected transaction throughput
 
 var (
 	ErrWrongPortSpecified = errors.New("port must be between 1 and 65535")

@@ -23,7 +23,7 @@ type publisher struct {
 }
 
 // RunPublisher runs publisher emulator that emulates data in a buffer.
-// Running emmulator is stopped by canceling context.
+// Running emulator is stopped by canceling context.
 func RunPublisher(ctx context.Context, cancel context.CancelFunc, config Config, data []byte) error {
 	defer cancel()
 
@@ -62,14 +62,12 @@ func RunPublisher(ctx context.Context, cancel context.CancelFunc, config Config,
 		case <-ctx.Done():
 			return nil
 		case <-t.C:
-			if err := p.emulate(ctx, address.Public, measurtements); err != nil {
-				return err
-			}
+			p.emulate(ctx, address.Public, measurtements)
 		}
 	}
 }
 
-func (p *publisher) emulate(ctx context.Context, receiver string, measurements []Measurement) error {
+func (p *publisher) emulate(ctx context.Context, receiver string, measurements []Measurement) {
 	switch p.random {
 	case true:
 		p.position = rand.Intn(len(measurements))
@@ -85,7 +83,8 @@ func (p *publisher) emulate(ctx context.Context, receiver string, measurements [
 	var data []byte
 	data, err = json.Marshal(measurements[p.position])
 	if err != nil {
-		return err
+		pterm.Error.Printf("Emulator cannot marshal data position [ %d ]\n", p.position+1)
+		return
 	}
 	if _, err := p.client.Issue(ctx, &protobufcompiled.IssueTrx{
 		Subject:         fmt.Sprintf("measurement %v", p.position),
@@ -96,9 +95,9 @@ func (p *publisher) emulate(ctx context.Context, receiver string, measurements [
 			SuplementaryCurrency: 0,
 		},
 	}); err != nil {
-		return err
+		pterm.Error.Printf("Emulator cannot send data position [ %d ], %s\n", p.position+1, err)
+		return
 	}
 	m := measurements[p.position]
 	pterm.Info.Printf("Emulated and published [ %d ] transaction [ %v | %v | %v ].\n", p.position+1, m.Mamps, m.Power, m.Volts)
-	return nil
 }

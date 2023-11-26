@@ -222,7 +222,7 @@ func TestRemoveFromCacheFailureWrongAddress(t *testing.T) {
 
 	for _, hash := range trxHases {
 		_, err := hippo.RemoveAwaitedTransaction(hash, w.Address()) // try to remove by issuer impossible
-		assert.Error(t, err, ErrUnauthorized.Error())
+		assert.ErrorContains(t, err, ErrUnauthorized.Error())
 	}
 
 	trxs, err = hippo.ReadTransactions(w.Address())

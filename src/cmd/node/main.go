@@ -32,8 +32,8 @@ import (
 const usage = `runs the Computantis node that connects in to the Computantis network`
 
 const (
-	trxChSize = 100
-	vrxChSize = 100
+	trxChSize = 800 // set it bigger then expected transaction throughput
+	vrxChSize = 800 // set it bigger then expected transaction throughput
 )
 
 const (

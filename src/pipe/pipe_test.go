@@ -1,6 +1,7 @@
 package pipe
 
 import (
+	"context"
 	"crypto/rand"
 	"testing"
 	"time"
@@ -35,19 +36,26 @@ func TestJugglerPipe(t *testing.T) {
 
 	trxs := make(map[[32]byte]struct{})
 	vrxs := make(map[[32]byte]struct{})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	go func(cancel context.CancelFunc) {
+		time.Sleep(time.Second)
+		cancel()
+	}(cancel)
+
 Outer:
 	for {
 		select {
+		case <-ctx.Done():
+			break Outer
 		case trx := <-juggler.SubscribeToTrx():
-			if trx == nil {
-				break Outer
+			if trx != nil {
+				trxs[[32]byte(trx.Hash)] = struct{}{}
 			}
-			trxs[[32]byte(trx.Hash)] = struct{}{}
 		case vrx := <-juggler.SubscribeToVrx():
-			if vrx == nil {
-				break Outer
+			if vrx != nil {
+				vrxs[vrx.Hash] = struct{}{}
 			}
-			vrxs[vrx.Hash] = struct{}{}
 		}
 	}
 
