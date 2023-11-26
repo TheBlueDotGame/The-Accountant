@@ -240,7 +240,10 @@ func (c *Client) ReadWaitingTransactions(ctx context.Context, notaryNodeURL stri
 	for i := range proto.Array {
 		trx, err := transformers.ProtoTrxToTrx(proto.Array[i])
 		if err != nil {
-			continue
+			return nil, err
+		}
+		if err := trx.VerifyIssuer(c.verifier); err != nil {
+			return nil, err
 		}
 		trxs = append(trxs, trx)
 	}
@@ -266,7 +269,20 @@ func (c *Client) ReadSavedTransaction(ctx context.Context, hash [32]byte) (trans
 		return transaction.Transaction{}, err
 	}
 
-	return transformers.ProtoTrxToTrx(protoTrx)
+	trx, err := transformers.ProtoTrxToTrx(protoTrx)
+	if err != nil {
+		return transaction.Transaction{}, err
+	}
+	switch trx.ReceiverAddress != "" {
+	case true:
+		err = trx.VerifyIssuer(c.verifier)
+	default:
+		err = trx.VerifyIssuerReceiver(c.verifier)
+	}
+	if err != nil {
+		return transaction.Transaction{}, err
+	}
+	return trx, nil
 }
 
 // SaveWalletToFile saves the wallet to the file in the path.

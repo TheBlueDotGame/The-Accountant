@@ -156,10 +156,10 @@ func RunGRPC(ctx context.Context, cfg Config, l logger.Logger, t time.Duration, 
 	default:
 		if err := g.updateDag(ctx, cfg.LoadDagURL); err != nil {
 			cancel()
-			g.log.Error(fmt.Sprintf("Failed loading DAG: %s", err))
+			g.log.Error(fmt.Sprintf("failed loading DAG: %s", err))
 			return err
 		}
-		g.log.Info(fmt.Sprintf("Node %s loaded DAG from URL: %s.", g.signer.Address(), cfg.URL))
+		g.log.Info(fmt.Sprintf("node %s loaded DAG from URL: %s.", g.signer.Address(), cfg.URL))
 	}
 
 	defer g.closeAllNodesConnections()
@@ -181,7 +181,7 @@ func RunGRPC(ctx context.Context, cfg Config, l logger.Logger, t time.Duration, 
 	go func() {
 		err = grpcServer.Serve(lis)
 		if err != nil {
-			g.log.Fatal(fmt.Sprintf("Node [ %s ] cannot start server on port [ %v ], %s", s.Address(), cfg.Port, err))
+			g.log.Fatal(fmt.Sprintf("node [ %s ] cannot start server on port [ %v ], %s", s.Address(), cfg.Port, err))
 			cancel()
 		}
 	}()
@@ -193,7 +193,7 @@ func RunGRPC(ctx context.Context, cfg Config, l logger.Logger, t time.Duration, 
 	if err == nil {
 		if err := g.updateNodesConnectionsFromGensisNode(ctx, cfg.GenesisURL); err != nil {
 			g.log.Fatal(
-				fmt.Sprintf("Updating nodes on genesis URL [ %s ] for node [ %s ] failed, %s",
+				fmt.Sprintf("updating nodes on genesis URL [ %s ] for node [ %s ] failed, %s",
 					cfg.GenesisURL, g.signer.Address(), err.Error(),
 				),
 			)
@@ -201,7 +201,7 @@ func RunGRPC(ctx context.Context, cfg Config, l logger.Logger, t time.Duration, 
 		}
 	}
 
-	g.log.Info(fmt.Sprintf("Server started on port [ %v ] for node [ %s ].", cfg.Port, s.Address()))
+	g.log.Info(fmt.Sprintf("server started on port [ %v ] for node [ %s ].", cfg.Port, s.Address()))
 
 	<-ctxx.Done()
 
@@ -219,7 +219,7 @@ func (g *gossiper) Alive(_ context.Context, _ *emptypb.Empty) (*protobufcompiled
 func (g *gossiper) Announce(_ context.Context, cd *protobufcompiled.ConnectionData) (*emptypb.Empty, error) {
 	err := g.validateSignature(cd.PublicAddress, cd.PublicAddress, cd.Url, cd.CreatedAt, cd.Signature, [32]byte(cd.Digest))
 	if err != nil {
-		g.log.Info(fmt.Sprintf("Discovery attempt failed, public address [ %s ] with URL [ %s ], %s", cd.PublicAddress, cd.Url, err))
+		g.log.Info(fmt.Sprintf("discovery attempt failed, public address [ %s ] with URL [ %s ], %s", cd.PublicAddress, cd.Url, err))
 		return nil, ErrDiscoveryAttmeptSignatureFailed
 	}
 	g.mux.Lock()
@@ -234,7 +234,7 @@ func (g *gossiper) Announce(_ context.Context, cd *protobufcompiled.ConnectionDa
 	}
 
 	g.nodes[cd.PublicAddress] = nd
-	g.log.Info(fmt.Sprintf("Node [ %s ] connected to [ %s ] with URL [ %s ].", g.signer.Address(), cd.PublicAddress, cd.Url))
+	g.log.Info(fmt.Sprintf("node [ %s ] connected to [ %s ] with URL [ %s ].", g.signer.Address(), cd.PublicAddress, cd.Url))
 
 	return &emptypb.Empty{}, nil
 }
@@ -242,7 +242,7 @@ func (g *gossiper) Announce(_ context.Context, cd *protobufcompiled.ConnectionDa
 func (g *gossiper) Discover(_ context.Context, cd *protobufcompiled.ConnectionData) (*protobufcompiled.ConnectedNodes, error) {
 	err := g.validateSignature(cd.PublicAddress, cd.PublicAddress, cd.Url, cd.CreatedAt, cd.Signature, [32]byte(cd.Digest))
 	if err != nil {
-		g.log.Info(fmt.Sprintf("Discovery attempt failed, public address [ %s ] with URL [ %s ], %s", cd.PublicAddress, cd.Url, err))
+		g.log.Info(fmt.Sprintf("discovery attempt failed, public address [ %s ] with URL [ %s ], %s", cd.PublicAddress, cd.Url, err))
 		return nil, ErrDiscoveryAttmeptSignatureFailed
 	}
 
@@ -259,7 +259,7 @@ func (g *gossiper) Discover(_ context.Context, cd *protobufcompiled.ConnectionDa
 	}
 
 	g.nodes[cd.PublicAddress] = nd
-	g.log.Info(fmt.Sprintf("Node [ %s ] connected to [ %s ] with URL [ %s ].", g.signer.Address(), cd.PublicAddress, cd.Url))
+	g.log.Info(fmt.Sprintf("node [ %s ] connected to [ %s ] with URL [ %s ].", g.signer.Address(), cd.PublicAddress, cd.Url))
 
 	connected := &protobufcompiled.ConnectedNodes{
 		SignerPublicAddress: g.signer.Address(),
@@ -436,12 +436,12 @@ func (g *gossiper) runVertexGossipProcess(ctx context.Context) {
 			set := g.verifyGossipers([32]byte(vg.Vertex.Hash), vg.Gossipers)
 			if _, ok := set[g.signer.Address()]; !ok {
 				if err := g.sendToAccountant(ctx, vg.Vertex); err != nil {
-					g.log.Info(fmt.Sprintf("Node [ %s ] adding leaf error: %s.", g.signer.Address(), err))
+					g.log.Info(fmt.Sprintf("node [ %s ] adding leaf error: %s.", g.signer.Address(), err))
 					continue
 				}
 				_, err := g.trxCache.RemoveAwaitedTransaction([32]byte(vg.Vertex.Transaction.Hash), vg.Vertex.Transaction.ReceiverAddress)
 				if err != nil {
-					g.log.Info(fmt.Sprintf("Node [ %s ] removing trx %v from cache error: %s.", g.signer.Address(), vg.Vertex.Transaction.Hash, err))
+					g.log.Info(fmt.Sprintf("node [ %s ] removing trx %v from cache error: %s.", g.signer.Address(), vg.Vertex.Transaction.Hash, err))
 				}
 				digest, signature := g.signer.Sign(createGossiperMessageToSign(g.signer.Address(), [32]byte(vg.Vertex.Hash)))
 				set[g.signer.Address()] = &protobufcompiled.Gossiper{
@@ -488,11 +488,11 @@ func (g *gossiper) runTransactionGossipProcess(ctx context.Context) {
 					continue
 				}
 				if err := trx.VerifyIssuer(g.verifier); err != nil {
-					g.log.Error(fmt.Sprintf("Transaction gossiper trx %v verification failed, %s", trx.Hash, err))
+					g.log.Error(fmt.Sprintf("transaction gossiper trx %v verification failed, %s", trx.Hash, err))
 					continue
 				}
 				if err := g.trxCache.SaveAwaitedTransaction(&trx); err != nil {
-					g.log.Error(fmt.Sprintf("Transaction gossiper trx %v saving failed, %s", trx.Hash, err))
+					g.log.Error(fmt.Sprintf("transaction gossiper trx %v saving failed, %s", trx.Hash, err))
 				}
 				digest, signature := g.signer.Sign(createGossiperMessageToSign(g.signer.Address(), [32]byte(tg.Trx.Hash)))
 				set[g.signer.Address()] = &protobufcompiled.Gossiper{
@@ -518,7 +518,7 @@ func (g *gossiper) gossipVertex(ctx context.Context, vg *protobufcompiled.VrxMsg
 			if _, err := client.GossipVrx(ctx, vg); err != nil {
 				g.log.Error(
 					fmt.Sprintf(
-						"Gossiping to [ %s ] with URL [ %s ] vertex %v failed with err: %s",
+						"gossiping to [ %s ] with URL [ %s ] vertex %v failed with err: %s",
 						addr, url, vg.Vertex.Hash, err),
 				)
 			}
@@ -537,7 +537,7 @@ func (g *gossiper) gossipTransaction(ctx context.Context, tg *protobufcompiled.T
 			if _, err := client.GossipTrx(ctx, tg); err != nil {
 				g.log.Error(
 					fmt.Sprintf(
-						"Gossiping to [ %s ] with URL [ %s ] transaction %v failed with err: %s",
+						"gossiping to [ %s ] with URL [ %s ] transaction %v failed with err: %s",
 						addr, url, tg.Trx.Hash, err),
 				)
 			}
@@ -548,7 +548,7 @@ func (g *gossiper) gossipTransaction(ctx context.Context, tg *protobufcompiled.T
 func (g *gossiper) closeAllNodesConnections() {
 	for addr, nd := range g.nodes {
 		if err := nd.conn.Close(); err != nil {
-			g.log.Error(fmt.Sprintf("Closing connection to address [ %s ] with URL [ %s ] failed.", addr, nd.url))
+			g.log.Error(fmt.Sprintf("closing connection to address [ %s ] with URL [ %s ] failed.", addr, nd.url))
 		}
 	}
 	maps.Clear(g.nodes)
@@ -556,7 +556,7 @@ func (g *gossiper) closeAllNodesConnections() {
 
 func (g *gossiper) updateNodesConnectionsFromGensisNode(ctx context.Context, genesisURL string) error {
 	if genesisURL == "" {
-		g.log.Info(fmt.Sprintf("Genesis Node URL is not specified. Node [ %s ] runs as Genesis Node.", g.signer.Address()))
+		g.log.Info(fmt.Sprintf("genesis Node URL is not specified. Node [ %s ] runs as Genesis Node.", g.signer.Address()))
 		return nil
 	}
 	opts := grpc.WithTransportCredentials(insecure.NewCredentials()) // TODO: remove when credentials are set
@@ -566,7 +566,7 @@ func (g *gossiper) updateNodesConnectionsFromGensisNode(ctx context.Context, gen
 	}
 	defer func() {
 		if err := conn.Close(); err != nil {
-			g.log.Error(fmt.Sprintf("Connection close error: %s", err))
+			g.log.Error(fmt.Sprintf("connection close error: %s", err))
 		}
 	}()
 
@@ -598,24 +598,24 @@ func (g *gossiper) updateNodesConnectionsFromGensisNode(ctx context.Context, gen
 		err := g.validateSignature(result.SignerPublicAddress, n.PublicAddress, n.Url, n.CreatedAt, n.Signature, [32]byte(n.Digest))
 		if err != nil {
 			g.log.Warn(
-				fmt.Sprintf("Received connection [ %s ] for URL [ %s ] has corrupted signature. Signer [ %s ], %s.",
+				fmt.Sprintf("received connection [ %s ] for URL [ %s ] has corrupted signature. Signer [ %s ], %s.",
 					n.PublicAddress, n.Url, result.SignerPublicAddress, err),
 			)
 			continue
 		}
 		nd, err := connectToNode(n.Url)
 		if err != nil {
-			g.log.Error(fmt.Sprintf("Connection to  [ %s ] for URL [ %s ] failed, %s.", n.PublicAddress, n.Url, err))
+			g.log.Error(fmt.Sprintf("connection to  [ %s ] for URL [ %s ] failed, %s.", n.PublicAddress, n.Url, err))
 			continue
 		}
 		g.nodes[n.PublicAddress] = nd
-		g.log.Info(fmt.Sprintf("Node [ %s ] connected to [ %s ] with URL [ %s ].", g.signer.Address(), n.PublicAddress, n.Url))
+		g.log.Info(fmt.Sprintf("node [ %s ] connected to [ %s ] with URL [ %s ].", g.signer.Address(), n.PublicAddress, n.Url))
 
 		if n.Url == genesisURL {
 			continue
 		}
 		if _, err := nd.client.Announce(ctx, cd); err != nil {
-			g.log.Info(fmt.Sprintf("Node [ %s ] connection back to [ %s ] with URL [ %s ] failed.", g.signer.Address(), n.PublicAddress, n.Url))
+			g.log.Info(fmt.Sprintf("node [ %s ] connection back to [ %s ] with URL [ %s ] failed.", g.signer.Address(), n.PublicAddress, n.Url))
 		}
 	}
 
@@ -643,7 +643,7 @@ func (g *gossiper) verifyGossipers(hash [32]byte, s []*protobufcompiled.Gossiper
 	for _, member := range s {
 		err := g.verifier.Verify(createGossiperMessageToSign(member.Address, hash), member.Signature, [32]byte(member.Digest), member.Address)
 		if err != nil {
-			g.log.Error(fmt.Sprintf("Verifying gossiper address [ %s ] invalid signature for hash %v gossip", member.Address, hash))
+			g.log.Error(fmt.Sprintf("verifying gossiper address [ %s ] invalid signature for hash %v gossip", member.Address, hash))
 			continue
 		}
 		m[member.Address] = member

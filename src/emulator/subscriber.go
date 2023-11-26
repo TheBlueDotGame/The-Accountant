@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/rand"
 	"sync"
 	"time"
 
@@ -12,13 +13,11 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/pterm/pterm"
-	"golang.org/x/exp/rand"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/bartossh/Computantis/src/protobufcompiled"
 	"github.com/bartossh/Computantis/src/transaction"
-	"github.com/bartossh/Computantis/src/transformers"
 	"github.com/bartossh/Computantis/src/webhooks"
 )
 
@@ -190,12 +189,7 @@ func (sub *subscriber) actOnTransactions(notaryNodeURL string) {
 	sub.mux.Lock()
 	defer sub.mux.Unlock()
 
-	if len(sub.knownNodes) > 0 {
-		idx := rand.Intn(len(sub.knownNodes))
-		notaryNodeURL = sub.knownNodes[idx]
-	}
-
-	protoTrxs, err := sub.pub.client.Waiting(context.Background(), &protobufcompiled.NotaryNode{Url: notaryNodeURL})
+	protoTrxs, err := sub.pub.client.Waiting(context.Background(), &protobufcompiled.NotaryNode{Url: sub.getRandomNodeURLFromList(notaryNodeURL)})
 	if err != nil || protoTrxs == nil {
 		return
 	}
@@ -215,27 +209,20 @@ func (sub *subscriber) actOnTransactions(notaryNodeURL string) {
 	var counter int
 
 	for i := range protoTrxs.Array {
-		if len(sub.knownNodes) > 0 {
-			idx := rand.Intn(len(sub.knownNodes))
-			notaryNodeURL = sub.knownNodes[idx]
-		}
-		trx, err := transformers.ProtoTrxToTrx(protoTrxs.Array[i])
-		if err != nil {
-			continue
-		}
-		if err := sub.validateData(trx.Data); err != nil {
-			pterm.Warning.Printf("Trx [ %x ] data [ %s ] rejected, %s.\n", trx.Hash[:], trx.Data, err)
+		notaryNodeURL = sub.getRandomNodeURLFromList(notaryNodeURL)
+		if err := sub.validateData(protoTrxs.Array[i].Data); err != nil {
+			pterm.Warning.Printf("Trx [ %x ] data [ %s ] rejected, %s.\n", protoTrxs.Array[i].Hash, protoTrxs.Array[i].Data, err)
 
-			go sub.pub.client.Reject(context.Background(), &protobufcompiled.TrxHash{Hash: trx.Hash[:], Url: notaryNodeURL})
-			go sub.sendToValidationQueue(trx.Hash, notaryNodeURL)
+			go sub.pub.client.Reject(context.Background(), &protobufcompiled.TrxHash{Hash: protoTrxs.Array[i].Hash, Url: notaryNodeURL})
+			go sub.sendToValidationQueue([32]byte(protoTrxs.Array[i].Hash), notaryNodeURL)
 
 			continue
 		}
 
-		pterm.Info.Printf("Trx [ %x ] data [ %s ] accepted.\n", trx.Hash[:], string(trx.Data))
+		pterm.Info.Printf("Trx [ %x ] data [ %s ] accepted.\n", protoTrxs.Array[i].Hash, protoTrxs.Array[i].Data)
 
 		go sub.pub.client.Approve(context.Background(), &protobufcompiled.TransactionApproved{Transaction: protoTrxs.Array[i], Url: notaryNodeURL})
-		go sub.sendToValidationQueue(trx.Hash, notaryNodeURL)
+		go sub.sendToValidationQueue([32]byte(protoTrxs.Array[i].Hash), notaryNodeURL)
 
 		counter++
 	}
@@ -248,10 +235,7 @@ func (sub *subscriber) actOnTransactions(notaryNodeURL string) {
 }
 
 func (sub *subscriber) sendToValidationQueue(h [32]byte, notaryNodeURL string) {
-	if len(sub.knownNodes) > 0 {
-		idx := rand.Intn(len(sub.knownNodes))
-		notaryNodeURL = sub.knownNodes[idx]
-	}
+	notaryNodeURL = sub.getRandomNodeURLFromList(notaryNodeURL)
 
 	sub.validateCh <- hashToValidate{h, notaryNodeURL}
 }
@@ -325,4 +309,12 @@ func (sub *subscriber) checkIsAccepted(hash [32]byte, notaryNodeURL string) {
 			trx.Hash, notaryNodeURL, trx.ReceiverAddress, string(trx.Data),
 		)
 	}
+}
+
+func (sub *subscriber) getRandomNodeURLFromList(notaryNodeURL string) string {
+	if len(sub.knownNodes) > 0 {
+		idx := rand.Intn(len(sub.knownNodes))
+		notaryNodeURL = sub.knownNodes[idx]
+	}
+	return notaryNodeURL
 }

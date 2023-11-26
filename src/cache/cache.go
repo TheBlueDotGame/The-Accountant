@@ -123,7 +123,7 @@ func (h *Hippocampus) RemoveAwaitedTransaction(hash [32]byte, address string) (t
 	if err != nil {
 		switch errors.Is(err, bigcache.ErrEntryNotFound) {
 		case true:
-			return transaction.Transaction{}, ErrTransactionNotFound
+			return transaction.Transaction{}, errors.Join(ErrTransactionNotFound, errors.New("get found no entity"))
 		default:
 			h.log.Error(fmt.Sprintf("error removing transaction with hash %v, lookup failed, %s", hash, err))
 			return transaction.Transaction{}, errors.Join(ErrProccessingFailed, errors.New("getting transaction by the key failed"))
@@ -138,16 +138,16 @@ func (h *Hippocampus) RemoveAwaitedTransaction(hash [32]byte, address string) (t
 
 	if trx.ReceiverAddress != address {
 		h.log.Error(fmt.Sprintf("error removing transaction with hash %v, wrong receiver address", hash))
-		return transaction.Transaction{}, ErrUnauthorized
+		return transaction.Transaction{}, errors.Join(ErrUnauthorized, errors.New("provided address isn't matching receiver address"))
 	}
 
 	if err := h.mem.Delete(trxKey); err != nil {
 		switch errors.Is(err, bigcache.ErrEntryNotFound) {
 		case true:
-			return transaction.Transaction{}, ErrTransactionNotFound
+			return transaction.Transaction{}, errors.Join(ErrTransactionNotFound, errors.New("delete found no entity"))
 		default:
 			h.log.Error(fmt.Sprintf("error removing transaction with hash %v, deletion failed, %s", hash, err))
-			return transaction.Transaction{}, errors.Join(ErrProccessingFailed, errors.New("deleteing trx failed"))
+			return transaction.Transaction{}, errors.Join(ErrProccessingFailed, errors.New("deleting trx failed"))
 		}
 	}
 	addresses := []string{encodeAddressKey(trx.IssuerAddress), encodeAddressKey(trx.ReceiverAddress)}

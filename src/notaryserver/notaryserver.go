@@ -280,7 +280,7 @@ func (s *server) Confirm(ctx context.Context, in *protobufcompiled.Transaction) 
 
 	if err := trx.VerifyIssuerReceiver(s.verifier); err != nil {
 		s.log.Error(fmt.Sprintf(
-			"confirm endpoint, failed to verify trx hash %v from receiver [ %s ], %s", trx.Hash, trx.ReceiverAddress, err.Error(),
+			"confirm endpoint, failed to verify trx hash [ %x ] from receiver [ %s ], %s", trx.Hash, trx.ReceiverAddress, err.Error(),
 		))
 		return nil, ErrVerification
 	}
@@ -289,7 +289,7 @@ func (s *server) Confirm(ctx context.Context, in *protobufcompiled.Transaction) 
 	if err != nil {
 		s.log.Error(
 			fmt.Sprintf(
-				"confirm endpoint, failed to remove awaited trx hash %v from receiver [ %s ] , %s", trx.Hash, trx.ReceiverAddress, err,
+				"confirm endpoint, failed to remove awaited trx hash [ %x ] from receiver [ %s ] , %s", trx.Hash, trx.ReceiverAddress, err,
 			))
 		if errors.Is(err, cache.ErrTransactionNotFound) {
 			return nil, ErrNoDataPresent
@@ -299,7 +299,7 @@ func (s *server) Confirm(ctx context.Context, in *protobufcompiled.Transaction) 
 
 	vrx, err := s.acc.CreateLeaf(ctx, &trx)
 	if err != nil {
-		s.log.Error(fmt.Sprintf("confirm endpoint, creating leaf: %s", err))
+		s.log.Error(fmt.Sprintf("confirm endpoint, creating leaf for transaction [ %x ] : %s", in.Hash, err))
 		return nil, ErrProcessing
 	}
 
@@ -320,13 +320,13 @@ func (s *server) Reject(ctx context.Context, in *protobufcompiled.SignedHash) (*
 	}
 
 	if err := s.verifier.Verify(in.Data, in.Signature, [32]byte(in.Hash), in.Address); err != nil {
-		s.log.Error(fmt.Sprintf("reject endpoint, failed to verify signature for address: %s, %s", in.Address, err))
+		s.log.Error(fmt.Sprintf("reject endpoint, failed to verify signature of transaction [ %x ] for address: %s, %s", in.Hash, in.Address, err))
 		return nil, ErrProcessing
 	}
 
-	trx, err := s.cache.RemoveAwaitedTransaction([32]byte(in.Hash), in.Address)
+	trx, err := s.cache.RemoveAwaitedTransaction([32]byte(in.Data), in.Address) // in.Data holds the transaction hash where in.Hash is a message digest
 	if err != nil {
-		s.log.Error(fmt.Sprintf("reject endpoint, failed removing transaction %v for address [ %s ], %s", in.Hash, in.Address, err))
+		s.log.Error(fmt.Sprintf("reject endpoint, failed removing transaction [ %x ] for address [ %s ], %s", in.Hash, in.Address, err))
 		if errors.Is(err, cache.ErrTransactionNotFound) {
 			return nil, ErrNoDataPresent
 		}
@@ -335,7 +335,7 @@ func (s *server) Reject(ctx context.Context, in *protobufcompiled.SignedHash) (*
 
 	vrx, err := s.acc.CreateLeaf(ctx, &trx)
 	if err != nil {
-		s.log.Error(fmt.Sprintf("confirm endpoint, creating leaf: %s", err))
+		s.log.Error(fmt.Sprintf("reject endpoint, creating leaf for transaction [ %x ] : %s", in.Hash, err))
 		return nil, ErrProcessing
 	}
 
@@ -391,12 +391,12 @@ func (s *server) Saved(ctx context.Context, in *protobufcompiled.SignedHash) (*p
 
 	trx, err := s.acc.ReadTransactionsByHash(ctx, [32]byte(in.Data))
 	if err != nil {
-		s.log.Error(fmt.Sprintf("approved transactions endpoint, failed to read hash %v for address: %s, %s", in.Hash, in.Address, err))
+		s.log.Error(fmt.Sprintf("approved transactions endpoint, failed to read hash [ %x ] for address: %s, %s", in.Hash, in.Address, err))
 		return nil, ErrProcessing
 	}
 
 	if trx.Hash == [32]byte{} {
-		s.log.Error(fmt.Sprintf("approved transactions endpoint, failed to read hash %v for address: %s, %s", in.Hash, in.Address, ErrNoDataPresent))
+		s.log.Error(fmt.Sprintf("approved transactions endpoint, failed to read hash [ %x ] for address: %s, %s", in.Hash, in.Address, ErrNoDataPresent))
 		return nil, ErrNoDataPresent
 	}
 
