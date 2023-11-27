@@ -144,13 +144,21 @@ func run(cfg configuration.Configuration) {
 
 	juggler := pipe.New(trxChSize, vrxChSize)
 	defer juggler.Close()
-	hippo, err := cache.New(&log, maxEntrySize, maxCacheSizeMB)
+	hippo, err := cache.New(maxEntrySize, maxCacheSizeMB)
 	if err != nil {
 		log.Error(err.Error())
 		c <- os.Interrupt
 		return
 	}
 	defer hippo.Close()
+
+	flash, err := cache.NewFlash()
+	if err != nil {
+		log.Error(err.Error())
+		c <- os.Interrupt
+		return
+	}
+	defer flash.Close()
 
 	pub, err := natsclient.PublisherConnect(cfg.Nats)
 	if err != nil {
@@ -165,7 +173,7 @@ func run(cfg configuration.Configuration) {
 	}()
 
 	go func() {
-		err = gossip.RunGRPC(ctx, cfg.Gossip, &log, gossipTimeout, &wlt, &verifier, acc, hippo, juggler)
+		err = gossip.RunGRPC(ctx, cfg.Gossip, &log, gossipTimeout, &wlt, &verifier, acc, hippo, flash, juggler)
 		if err != nil {
 			log.Error(err.Error())
 			c <- os.Interrupt
