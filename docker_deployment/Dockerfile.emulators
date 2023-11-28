@@ -9,16 +9,18 @@ FROM alpine AS app
 ARG APPLICATION
 ARG DATAFILE
 ARG ROLE
+ARG CONFIG
 RUN apk --no-cache add ca-certificates
 WORKDIR /app
 COPY --from=builder /app/bin/${APPLICATION}/main ./
-COPY --from=builder /app/conf/setup_example.yaml ./
+COPY --from=builder /app/conf/${CONFIG} ./
 COPY --from=builder /app/artefacts/${DATAFILE} ./
 ENV DATAFILE=${DATAFILE}
 ENV ROLE=${ROLE}
+ENV CONFIG=${CONFIG}
 
 # ENTRYPOINT in shell form to allow ENV variable expansion.  This is needed to determine
 # what role the emulator will play (publisher, or subscriber), and as a result, which
 # data file it needs.
-ENTRYPOINT ./main -c setup_example.yaml -d ${DATAFILE} ${ROLE}
+ENTRYPOINT ./main -c ${CONFIG} -d ${DATAFILE} ${ROLE}
 

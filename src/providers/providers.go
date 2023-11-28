@@ -30,3 +30,8 @@ type AwaitedTrxCacheProvider interface {
 	RemoveAwaitedTransaction(hash [32]byte, address string) (transaction.Transaction, error)
 	ReadTransactions(address string) ([]transaction.Transaction, error)
 }
+
+// FlashbackMemoryProvider provides very short flashback memory about the hash.
+type FlashbackMemoryProvider interface {
+	HasHash(h []byte) (bool, error)
+}

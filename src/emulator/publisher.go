@@ -16,10 +16,11 @@ import (
 )
 
 type publisher struct {
-	conn     *grpc.ClientConn
-	client   protobufcompiled.WalletClientAPIClient
-	position int
-	random   bool
+	conn       *grpc.ClientConn
+	client     protobufcompiled.WalletClientAPIClient
+	position   int
+	random     bool
+	knownNodes []string
 }
 
 // RunPublisher runs publisher emulator that emulates data in a buffer.
@@ -45,9 +46,10 @@ func RunPublisher(ctx context.Context, cancel context.CancelFunc, config Config,
 	client := protobufcompiled.NewWalletClientAPIClient(conn)
 
 	p := publisher{
-		conn:   conn,
-		client: client,
-		random: config.Random,
+		conn:       conn,
+		client:     client,
+		random:     config.Random,
+		knownNodes: config.NotaryNodes,
 	}
 
 	address, err := p.client.WalletPublicAddress(ctx, &emptypb.Empty{})
@@ -100,4 +102,12 @@ func (p *publisher) emulate(ctx context.Context, receiver string, measurements [
 	}
 	m := measurements[p.position]
 	pterm.Info.Printf("Emulated and published [ %d ] transaction [ %v | %v | %v ].\n", p.position+1, m.Mamps, m.Power, m.Volts)
+}
+
+func (pub *publisher) getRandomNodeURLFromList(notaryNodeURL string) string {
+	if len(pub.knownNodes) > 0 {
+		idx := rand.Intn(len(pub.knownNodes))
+		notaryNodeURL = pub.knownNodes[idx]
+	}
+	return notaryNodeURL
 }

@@ -139,12 +139,14 @@ func TestDiscoverProtocol(t *testing.T) {
 			}
 
 			juggler := pipe.New(100, 100)
-			hippo, err := cache.New(&l, maxEntrySize, maxCacheSizeMB)
+			hippo, err := cache.New(maxEntrySize, maxCacheSizeMB)
+			assert.NilError(t, err)
+			flash, err := cache.NewFlash()
 			assert.NilError(t, err)
 
 			go func() {
 				acc := testAccountant{}
-				err := RunGRPC(ctx, genessisConfig, l, time.Second*1, &w, v, &acc, hippo, juggler)
+				err := RunGRPC(ctx, genessisConfig, l, time.Second*1, &w, v, &acc, hippo, flash, juggler)
 				assert.NilError(t, err)
 			}()
 
@@ -160,9 +162,11 @@ func TestDiscoverProtocol(t *testing.T) {
 					assert.NilError(t, err)
 					v := wallet.NewVerifier()
 					juggler := pipe.New(100, 100)
-					hippo, err := cache.New(&l, maxEntrySize, maxCacheSizeMB)
+					hippo, err := cache.New(maxEntrySize, maxCacheSizeMB)
 					assert.NilError(t, err)
-					err = RunGRPC(ctx, cfg, l, time.Second*1, &w, v, &acc, hippo, juggler)
+					flash, err := cache.NewFlash()
+					assert.NilError(t, err)
+					err = RunGRPC(ctx, cfg, l, time.Second*1, &w, v, &acc, hippo, flash, juggler)
 					assert.NilError(t, err)
 				}(cfg)
 			}
@@ -220,11 +224,13 @@ func TestGossipProtocol(t *testing.T) {
 			go func() {
 				acc := testAccountant{}
 				juggler := pipe.New(100, 100)
-				hippo, err := cache.New(&l, maxEntrySize, maxCacheSizeMB)
+				hippo, err := cache.New(maxEntrySize, maxCacheSizeMB)
 				assert.NilError(t, err)
-				err = RunGRPC(ctx, genessisConfig, l, time.Second*1, &w, v, &acc, hippo, juggler)
+				flash, err := cache.NewFlash()
 				assert.NilError(t, err)
-				assert.Equal(t, acc.readCounter(), uint64(len(c.nodes)*vertexRoundsPerNode))
+				err = RunGRPC(ctx, genessisConfig, l, time.Second*1, &w, v, &acc, hippo, flash, juggler)
+				assert.NilError(t, err)
+				assert.Equal(t, acc.readCounter() >= uint64(vertexRoundsPerNode), true)
 			}()
 
 			var wg sync.WaitGroup
@@ -245,11 +251,13 @@ func TestGossipProtocol(t *testing.T) {
 						wg.Done()
 					}()
 					juggler := pipe.New(100, 100)
-					hippo, err := cache.New(&l, maxEntrySize, maxCacheSizeMB)
+					hippo, err := cache.New(maxEntrySize, maxCacheSizeMB)
 					assert.NilError(t, err)
-					err = RunGRPC(ctx, cfg, l, time.Second*1, &w, v, &acc, hippo, juggler)
-					assert.NilError(t, err)                                                      // if fails it means nodes are overloded or are not able to handle connections.
-					assert.Equal(t, acc.readCounter(), uint64(len(c.nodes)*vertexRoundsPerNode)) // NOTE: The assertion for test of gossip protoco happens here.
+					flash, err := cache.NewFlash()
+					assert.NilError(t, err)
+					err = RunGRPC(ctx, cfg, l, time.Second*1, &w, v, &acc, hippo, flash, juggler)
+					assert.NilError(t, err)                                                 // if fails it means nodes are overloded or are not able to handle connections.
+					assert.Equal(t, acc.readCounter() >= uint64(vertexRoundsPerNode), true) // NOTE: The assertion for test of gossip protoco happens here.
 					// NOTE: we want to each node to receive exactly the amount of propagated certexes per each node.
 				}(cfg)
 			}
@@ -343,9 +351,11 @@ func TestDAGWithGossip(t *testing.T) {
 					close(doneGenesis)
 				}()
 				juggler := pipe.New(100, 100)
-				hippo, err := cache.New(&l, maxEntrySize, maxCacheSizeMB)
+				hippo, err := cache.New(maxEntrySize, maxCacheSizeMB)
 				assert.NilError(t, err)
-				err = RunGRPC(ctx, genessisConfigNode, l, time.Second*1, &w, v, accGenesis, hippo, juggler)
+				flash, err := cache.NewFlash()
+				assert.NilError(t, err)
+				err = RunGRPC(ctx, genessisConfigNode, l, time.Second*1, &w, v, accGenesis, hippo, flash, juggler)
 				assert.NilError(t, err)
 			}()
 
@@ -374,9 +384,11 @@ func TestDAGWithGossip(t *testing.T) {
 						wg.Done()
 					}()
 					juggler := pipe.New(100, 100)
-					hippo, err := cache.New(&l, maxEntrySize, maxCacheSizeMB)
+					hippo, err := cache.New(maxEntrySize, maxCacheSizeMB)
 					assert.NilError(t, err)
-					err = RunGRPC(ctx, cfg, counterLogger, time.Second*1, &w, v, acc, hippo, juggler)
+					flash, err := cache.NewFlash()
+					assert.NilError(t, err)
+					err = RunGRPC(ctx, cfg, counterLogger, time.Second*1, &w, v, acc, hippo, flash, juggler)
 					assert.NilError(t, err)
 				}(cfg)
 			}

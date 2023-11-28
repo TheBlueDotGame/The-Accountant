@@ -17,11 +17,9 @@ import (
 	"github.com/bartossh/Computantis/src/protobufcompiled"
 	"github.com/bartossh/Computantis/src/providers"
 	"github.com/bartossh/Computantis/src/spice"
-	"github.com/bartossh/Computantis/src/storage"
 	"github.com/bartossh/Computantis/src/transaction"
 	"github.com/bartossh/Computantis/src/transformers"
 	"github.com/bartossh/Computantis/src/versioning"
-	"github.com/dgraph-io/badger/v4"
 	"golang.org/x/exp/maps"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -102,25 +100,23 @@ type piper interface {
 
 type gossiper struct {
 	protobufcompiled.UnimplementedGossipAPIServer
-	accounter      accounter
-	verifier       signatureVerifier
-	signer         accountant.Signer
-	log            logger.Logger
-	trxCache       providers.AwaitedTrxCacheProvider
-	vertexCache    *badger.DB
-	piper          piper
-	vertexGossipCh chan *protobufcompiled.VrxMsgGossip
-	trxGossipCh    chan *protobufcompiled.TrxMsgGossip
-	nodes          map[string]nodeData
-	url            string
-	mux            sync.RWMutex
-	timeout        time.Duration
+	accounter accounter
+	verifier  signatureVerifier
+	signer    accountant.Signer
+	log       logger.Logger
+	trxCache  providers.AwaitedTrxCacheProvider
+	flash     providers.FlashbackMemoryProvider
+	piper     piper
+	nodes     map[string]nodeData
+	url       string
+	mux       sync.RWMutex
+	timeout   time.Duration
 }
 
 // RunGRPC runs the service application that exposes the GRPC API for gossip protocol.
 // To stop server cancel the context.
 func RunGRPC(ctx context.Context, cfg Config, l logger.Logger, t time.Duration, s accountant.Signer,
-	v signatureVerifier, a accounter, trxCache providers.AwaitedTrxCacheProvider, p piper,
+	v signatureVerifier, a accounter, trxCache providers.AwaitedTrxCacheProvider, flash providers.FlashbackMemoryProvider, p piper,
 ) error {
 	if err := cfg.verify(); err != nil {
 		return err
@@ -129,25 +125,18 @@ func RunGRPC(ctx context.Context, cfg Config, l logger.Logger, t time.Duration, 
 	ctxx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	db, err := storage.CreateBadgerDB(ctx, cfg.VerticesDBPath, l, true)
-	if err != nil {
-		return err
-	}
-
 	g := gossiper{
-		accounter:      a,
-		verifier:       v,
-		signer:         s,
-		log:            l,
-		trxCache:       trxCache,
-		vertexCache:    db,
-		piper:          p,
-		vertexGossipCh: make(chan *protobufcompiled.VrxMsgGossip, vertexGossipChCapacity),
-		trxGossipCh:    make(chan *protobufcompiled.TrxMsgGossip, trxGossipChCappacity),
-		nodes:          make(map[string]nodeData),
-		url:            cfg.URL,
-		mux:            sync.RWMutex{},
-		timeout:        t,
+		accounter: a,
+		verifier:  v,
+		signer:    s,
+		log:       l,
+		trxCache:  trxCache,
+		flash:     flash,
+		piper:     p,
+		nodes:     make(map[string]nodeData),
+		url:       cfg.URL,
+		mux:       sync.RWMutex{},
+		timeout:   t,
 	}
 
 	switch cfg.LoadDagURL {
@@ -163,8 +152,6 @@ func RunGRPC(ctx context.Context, cfg Config, l logger.Logger, t time.Duration, 
 	}
 
 	defer g.closeAllNodesConnections()
-	defer close(g.vertexGossipCh)
-	defer close(g.trxGossipCh)
 
 	lis, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%v", cfg.Port))
 	if err != nil {
@@ -325,28 +312,33 @@ func (g *gossiper) GossipVrx(ctx context.Context, vg *protobufcompiled.VrxMsgGos
 	if vg.Vertex == nil {
 		return nil, ErrNilVertex
 	}
-	err := g.vertexCache.Update(func(txn *badger.Txn) error {
-		_, err := txn.Get(vg.Vertex.Hash)
-		switch err {
-		case nil:
-			return ErrVertexInCache
-		default:
-			switch errors.Is(err, badger.ErrKeyNotFound) {
-			case true:
-			default:
-				return err
-			}
-		}
-		return txn.SetEntry(badger.NewEntry(vg.Vertex.Hash, []byte{}).WithTTL(vertexCacheLongevity))
-	})
+	ok, err := g.flash.HasHash(vg.Vertex.Hash)
 	if err != nil {
-		if errors.Is(err, ErrVertexInCache) || errors.Is(err, badger.ErrConflict) {
-			return &emptypb.Empty{}, nil
-		}
-		return nil, ErrUnexpectedGossipFailure
+		g.log.Error(fmt.Sprintf("gossip vertex failed reading flashback memory about hash [ %x ], %s", vg.Vertex.Hash, err))
+	}
+	if ok {
+		return &emptypb.Empty{}, nil
 	}
 
-	g.vertexGossipCh <- vg
+	set := g.verifyGossipers([32]byte(vg.Vertex.Hash), vg.Gossipers)
+	if _, ok := set[g.signer.Address()]; !ok {
+		if err := g.sendToAccountant(ctx, vg.Vertex); err != nil {
+			g.log.Info(fmt.Sprintf("node [ %s ] adding leaf error: %s.", g.signer.Address(), err))
+			return nil, ErrFailedToProcessGossip
+		}
+		_, err := g.trxCache.RemoveAwaitedTransaction([32]byte(vg.Vertex.Transaction.Hash), vg.Vertex.Transaction.ReceiverAddress)
+		if err != nil {
+			g.log.Info(fmt.Sprintf("node [ %s ] removing trx %v from cache error: %s.", g.signer.Address(), vg.Vertex.Transaction.Hash, err))
+		}
+		digest, signature := g.signer.Sign(createGossiperMessageToSign(g.signer.Address(), [32]byte(vg.Vertex.Hash)))
+		set[g.signer.Address()] = &protobufcompiled.Gossiper{
+			Address:   g.signer.Address(),
+			Digest:    digest[:],
+			Signature: signature,
+		}
+		vg.Gossipers = toSlice(set)
+		g.gossipVertex(ctx, vg, set)
+	}
 
 	return &emptypb.Empty{}, nil
 }
@@ -359,9 +351,37 @@ func (g *gossiper) GossipTrx(ctx context.Context, tg *protobufcompiled.TrxMsgGos
 		return nil, ErrNilTrx
 	}
 
-	go func(tg *protobufcompiled.TrxMsgGossip) {
-		g.trxGossipCh <- tg
-	}(tg)
+	ok, err := g.flash.HasHash(tg.Trx.Hash)
+	if err != nil {
+		g.log.Error(fmt.Sprintf("gossip trx failed reading flashback memory about hash [ %x ], %s", tg.Trx.Hash, err))
+	}
+	if ok {
+		return &emptypb.Empty{}, nil
+	}
+
+	set := g.verifyGossipers([32]byte(tg.Trx.Hash), tg.Gossipers)
+	if _, ok := set[g.signer.Address()]; !ok {
+		trx, err := transformers.ProtoTrxToTrx(tg.Trx)
+		if err != nil {
+			g.log.Error(fmt.Sprintf("transaction gossiper trx %v transformation failed, %s", trx.Hash, err))
+			return nil, ErrFailedToProcessGossip
+		}
+		if err := trx.VerifyIssuer(g.verifier); err != nil {
+			g.log.Error(fmt.Sprintf("transaction gossiper trx %v verification failed, %s", trx.Hash, err))
+			return nil, ErrFailedToProcessGossip
+		}
+		if err := g.trxCache.SaveAwaitedTransaction(&trx); err != nil {
+			g.log.Error(fmt.Sprintf("transaction gossiper trx %v saving failed, %s", trx.Hash, err))
+		}
+		digest, signature := g.signer.Sign(createGossiperMessageToSign(g.signer.Address(), [32]byte(tg.Trx.Hash)))
+		set[g.signer.Address()] = &protobufcompiled.Gossiper{
+			Address:   g.signer.Address(),
+			Digest:    digest[:],
+			Signature: signature,
+		}
+		tg.Gossipers = toSlice(set)
+		g.gossipTransaction(ctx, tg, set)
+	}
 	return &emptypb.Empty{}, nil
 }
 
@@ -429,29 +449,6 @@ func (g *gossiper) runVertexGossipProcess(ctx context.Context) {
 			}
 			set := map[string]*protobufcompiled.Gossiper{g.signer.Address(): gossiper}
 			g.gossipVertex(ctx, vg, set)
-		case vg := <-g.vertexGossipCh:
-			if vg == nil || vg.Vertex == nil {
-				continue
-			}
-			set := g.verifyGossipers([32]byte(vg.Vertex.Hash), vg.Gossipers)
-			if _, ok := set[g.signer.Address()]; !ok {
-				if err := g.sendToAccountant(ctx, vg.Vertex); err != nil {
-					g.log.Info(fmt.Sprintf("node [ %s ] adding leaf error: %s.", g.signer.Address(), err))
-					continue
-				}
-				_, err := g.trxCache.RemoveAwaitedTransaction([32]byte(vg.Vertex.Transaction.Hash), vg.Vertex.Transaction.ReceiverAddress)
-				if err != nil {
-					g.log.Info(fmt.Sprintf("node [ %s ] removing trx %v from cache error: %s.", g.signer.Address(), vg.Vertex.Transaction.Hash, err))
-				}
-				digest, signature := g.signer.Sign(createGossiperMessageToSign(g.signer.Address(), [32]byte(vg.Vertex.Hash)))
-				set[g.signer.Address()] = &protobufcompiled.Gossiper{
-					Address:   g.signer.Address(),
-					Digest:    digest[:],
-					Signature: signature,
-				}
-				vg.Gossipers = toSlice(set)
-				g.gossipVertex(ctx, vg, set)
-			}
 		}
 	}
 }
@@ -477,32 +474,6 @@ func (g *gossiper) runTransactionGossipProcess(ctx context.Context) {
 			}
 			set := map[string]*protobufcompiled.Gossiper{g.signer.Address(): gossiper}
 			g.gossipTransaction(ctx, tg, set)
-		case tg := <-g.trxGossipCh:
-			if tg == nil || tg.Trx == nil {
-				continue
-			}
-			set := g.verifyGossipers([32]byte(tg.Trx.Hash), tg.Gossipers)
-			if _, ok := set[g.signer.Address()]; !ok {
-				trx, err := transformers.ProtoTrxToTrx(tg.Trx)
-				if err != nil {
-					continue
-				}
-				if err := trx.VerifyIssuer(g.verifier); err != nil {
-					g.log.Error(fmt.Sprintf("transaction gossiper trx %v verification failed, %s", trx.Hash, err))
-					continue
-				}
-				if err := g.trxCache.SaveAwaitedTransaction(&trx); err != nil {
-					g.log.Error(fmt.Sprintf("transaction gossiper trx %v saving failed, %s", trx.Hash, err))
-				}
-				digest, signature := g.signer.Sign(createGossiperMessageToSign(g.signer.Address(), [32]byte(tg.Trx.Hash)))
-				set[g.signer.Address()] = &protobufcompiled.Gossiper{
-					Address:   g.signer.Address(),
-					Digest:    digest[:],
-					Signature: signature,
-				}
-				tg.Gossipers = toSlice(set)
-				g.gossipTransaction(ctx, tg, set)
-			}
 		}
 	}
 }

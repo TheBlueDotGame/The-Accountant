@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bartossh/Computantis/src/logging"
 	"github.com/bartossh/Computantis/src/spice"
 	"github.com/bartossh/Computantis/src/transaction"
 	"github.com/bartossh/Computantis/src/wallet"
@@ -18,34 +17,11 @@ const (
 	maxEntrySize   = 32 * 10_000
 )
 
-type helperLogger struct{}
-
-func newLogger() *helperLogger {
-	return &helperLogger{}
-}
-
-func (d *helperLogger) Write(p []byte) (n int, err error) {
-	return len(p), nil
-}
-
 func createRandomTransaction(signer, receiver *wallet.Wallet, r *rand.Rand) (transaction.Transaction, error) {
 	data := make([]byte, 32)
 	r.Read(data)
 
 	return transaction.New("Test cache", spice.Melange{}, data, receiver.Address(), signer)
-}
-
-func createLogger() logging.Helper {
-	callOnLogErr := func(err error) {
-		fmt.Printf("logger failed with error: %s\n", err)
-	}
-	callOnFail := func(err error) {
-		fmt.Printf("failed with error: %s\n", err)
-	}
-
-	log := newLogger()
-
-	return logging.New(callOnLogErr, callOnFail, log)
 }
 
 func TestSaveToCacheSuccess(t *testing.T) {
@@ -56,7 +32,7 @@ func TestSaveToCacheSuccess(t *testing.T) {
 
 	r := rand.New(rand.NewSource(time.Now().Unix()))
 
-	hippo, err := New(createLogger(), maxEntrySize, maxCacheSizeMB)
+	hippo, err := New(maxEntrySize, maxCacheSizeMB)
 	assert.NilError(t, err)
 
 	trxNum := 1000
@@ -77,7 +53,7 @@ func TestReadFromCacheSuccess(t *testing.T) {
 
 	r := rand.New(rand.NewSource(time.Now().Unix()))
 
-	hippo, err := New(createLogger(), maxEntrySize, maxCacheSizeMB)
+	hippo, err := New(maxEntrySize, maxCacheSizeMB)
 	assert.NilError(t, err)
 
 	trxNum := 100
@@ -106,7 +82,7 @@ func TestReadFromCacheSucessEdgeCaseIssuerAndReceiverTheSame(t *testing.T) {
 
 	r := rand.New(rand.NewSource(time.Now().Unix()))
 
-	hippo, err := New(createLogger(), maxEntrySize, maxCacheSizeMB)
+	hippo, err := New(maxEntrySize, maxCacheSizeMB)
 	assert.NilError(t, err)
 
 	trxNum := 100
@@ -139,7 +115,7 @@ func BenchmarkReadCacheSuccess(b *testing.B) {
 
 			r := rand.New(rand.NewSource(time.Now().Unix()))
 
-			hippo, err := New(createLogger(), maxEntrySize, maxCacheSizeMB)
+			hippo, err := New(maxEntrySize, maxCacheSizeMB)
 			assert.NilError(b, err)
 			for i := 0; i < trxNum; i++ {
 				b.StopTimer()
@@ -166,7 +142,7 @@ func TestRemoveFromCacheSucessEdgeCaseIssuerAndReceiverTheSame(t *testing.T) {
 
 	r := rand.New(rand.NewSource(time.Now().Unix()))
 
-	hippo, err := New(createLogger(), maxEntrySize, maxCacheSizeMB)
+	hippo, err := New(maxEntrySize, maxCacheSizeMB)
 	assert.NilError(t, err)
 
 	trxNum := 100
@@ -202,7 +178,7 @@ func TestRemoveFromCacheFailureWrongAddress(t *testing.T) {
 
 	r := rand.New(rand.NewSource(time.Now().Unix()))
 
-	hippo, err := New(createLogger(), maxEntrySize, maxCacheSizeMB)
+	hippo, err := New(maxEntrySize, maxCacheSizeMB)
 	assert.NilError(t, err)
 
 	trxNum := 100

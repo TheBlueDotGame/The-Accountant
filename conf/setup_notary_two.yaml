@@ -1,10 +1,10 @@
 is_profiling: false
 notary_server:
-  public_url: notary-node-one:8000
+  public_url: notary-node-two:8000
   port: 8000
   data_size_bytes: 15000
 gossip_server:
-  url: "notary-node-one:8080"
+  url: "notary-node-two:8080"
   genesis_url: "notary-node-genesis:8080"
   load_dag_url: "notary-node-genesis:8080"
   genesis_spice:
@@ -24,8 +24,8 @@ nats:
 dataprovider:
   longevity: 300
 file_operator:
-  wallet_path: "test_wallet"
-  wallet_passwd: "dc6b5b1635453e0eb57344ffb6cb293e8300fc4001fad3518e721d548459c09d"
+  wallet_path: "wallet_notary_two"
+  wallet_passwd: "505ce7710ee9e8dac7b6a96a32c4b7b303614b80b949bc0ac7f621d44fbaf579"
   pem_path: "ed25519"
 webhooks_server:
   port: 8000

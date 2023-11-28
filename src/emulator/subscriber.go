@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math/rand"
 	"sync"
 	"time"
 
@@ -63,7 +62,6 @@ type subscriber struct {
 	allowdMeasurements   [2]Measurement
 	ticker               time.Duration
 	validateCh           chan hashToValidate
-	knownNodes           []string
 }
 
 // RunSubscriber runs subscriber emulator.
@@ -90,9 +88,10 @@ func RunSubscriber(ctx context.Context, cancel context.CancelFunc, config Config
 		return err
 	}
 	p := publisher{
-		conn:   conn,
-		client: client,
-		random: config.Random,
+		conn:       conn,
+		client:     client,
+		random:     config.Random,
+		knownNodes: config.NotaryNodes,
 	}
 
 	s := subscriber{
@@ -102,7 +101,6 @@ func RunSubscriber(ctx context.Context, cancel context.CancelFunc, config Config
 		allowdMeasurements:  m,
 		ticker:              time.Duration(config.TickMillisecond) * time.Millisecond * tickerSaveReadMultiplier,
 		validateCh:          make(chan hashToValidate, hashesBuffLen),
-		knownNodes:          config.NotaryNodes,
 	}
 	defer close(s.validateCh)
 	go s.runCheckSaved(ctx)
@@ -189,7 +187,7 @@ func (sub *subscriber) actOnTransactions(notaryNodeURL string) {
 	sub.mux.Lock()
 	defer sub.mux.Unlock()
 
-	protoTrxs, err := sub.pub.client.Waiting(context.Background(), &protobufcompiled.NotaryNode{Url: sub.getRandomNodeURLFromList(notaryNodeURL)})
+	protoTrxs, err := sub.pub.client.Waiting(context.Background(), &protobufcompiled.NotaryNode{Url: sub.pub.getRandomNodeURLFromList(notaryNodeURL)})
 	if err != nil || protoTrxs == nil {
 		return
 	}
@@ -203,13 +201,13 @@ func (sub *subscriber) actOnTransactions(notaryNodeURL string) {
 	}
 
 	if len(set) != len(protoTrxs.Array) {
-		pterm.Warning.Printf("Waiting trxs array contains %v trxs where %v is unique.\n", len(protoTrxs.Array), len(set))
+		pterm.Error.Printf("Waiting trxs array contains %v trxs where %v is unique.\n", len(protoTrxs.Array), len(set))
 	}
 
 	var counter int
 
 	for i := range protoTrxs.Array {
-		notaryNodeURL = sub.getRandomNodeURLFromList(notaryNodeURL)
+		notaryNodeURL = sub.pub.getRandomNodeURLFromList(notaryNodeURL)
 		if err := sub.validateData(protoTrxs.Array[i].Data); err != nil {
 			pterm.Warning.Printf("Trx [ %x ] data [ %s ] rejected, %s.\n", protoTrxs.Array[i].Hash, protoTrxs.Array[i].Data, err)
 
@@ -231,11 +229,11 @@ func (sub *subscriber) actOnTransactions(notaryNodeURL string) {
 		pterm.Info.Printf("Signed all of [ %v ] received transactions.\n", counter)
 		return
 	}
-	pterm.Warning.Printf("Signed [ %v ] of [ %v ] received transactions.\n", counter, protoTrxs.Len)
+	pterm.Info.Printf("Signed [ %v ] of [ %v ] received transactions.\n", counter, protoTrxs.Len)
 }
 
 func (sub *subscriber) sendToValidationQueue(h [32]byte, notaryNodeURL string) {
-	notaryNodeURL = sub.getRandomNodeURLFromList(notaryNodeURL)
+	notaryNodeURL = sub.pub.getRandomNodeURLFromList(notaryNodeURL)
 
 	sub.validateCh <- hashToValidate{h, notaryNodeURL}
 }
@@ -281,11 +279,11 @@ func (sub *subscriber) validateData(data []byte) error {
 func (sub *subscriber) checkIsAccepted(hash [32]byte, notaryNodeURL string) {
 	trx, err := sub.pub.client.Saved(context.Background(), &protobufcompiled.TrxHash{Hash: []byte(hash[:]), Url: notaryNodeURL})
 	if err != nil {
-		pterm.Warning.Printf("Transaction with hash: [ %x ] not saved in DAG node URL [ %s ], %s\n", hash, notaryNodeURL, err)
+		pterm.Error.Printf("Transaction with hash: [ %x ] not saved in DAG node URL [ %s ], %s\n", hash, notaryNodeURL, err)
 		return
 	}
 	if trx == nil {
-		pterm.Warning.Printf("Transaction with hash: [ %x ] not saved in node URL [ %s ], transaction is nil\n", hash, notaryNodeURL)
+		pterm.Error.Printf("Transaction with hash: [ %x ] not saved in node URL [ %s ], transaction is nil\n", hash, notaryNodeURL)
 		return
 	}
 
@@ -304,17 +302,9 @@ func (sub *subscriber) checkIsAccepted(hash [32]byte, notaryNodeURL string) {
 			trx.Hash, notaryNodeURL, trx.ReceiverAddress, string(trx.Data),
 		)
 	default:
-		pterm.Info.Printf(
+		pterm.Warning.Printf(
 			"Transaction with hash [ %x ] is secured in DAG node URL [ %s ] and <-REJECTED-> by the receiver [ %s ] for data %s .\n",
 			trx.Hash, notaryNodeURL, trx.ReceiverAddress, string(trx.Data),
 		)
 	}
-}
-
-func (sub *subscriber) getRandomNodeURLFromList(notaryNodeURL string) string {
-	if len(sub.knownNodes) > 0 {
-		idx := rand.Intn(len(sub.knownNodes))
-		notaryNodeURL = sub.knownNodes[idx]
-	}
-	return notaryNodeURL
 }
