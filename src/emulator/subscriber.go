@@ -201,7 +201,7 @@ func (sub *subscriber) actOnTransactions(notaryNodeURL string) {
 	}
 
 	if len(set) != len(protoTrxs.Array) {
-		pterm.Warning.Printf("Waiting trxs array contains %v trxs where %v is unique.\n", len(protoTrxs.Array), len(set))
+		pterm.Error.Printf("Waiting trxs array contains %v trxs where %v is unique.\n", len(protoTrxs.Array), len(set))
 	}
 
 	var counter int
@@ -229,7 +229,7 @@ func (sub *subscriber) actOnTransactions(notaryNodeURL string) {
 		pterm.Info.Printf("Signed all of [ %v ] received transactions.\n", counter)
 		return
 	}
-	pterm.Warning.Printf("Signed [ %v ] of [ %v ] received transactions.\n", counter, protoTrxs.Len)
+	pterm.Info.Printf("Signed [ %v ] of [ %v ] received transactions.\n", counter, protoTrxs.Len)
 }
 
 func (sub *subscriber) sendToValidationQueue(h [32]byte, notaryNodeURL string) {
@@ -279,11 +279,11 @@ func (sub *subscriber) validateData(data []byte) error {
 func (sub *subscriber) checkIsAccepted(hash [32]byte, notaryNodeURL string) {
 	trx, err := sub.pub.client.Saved(context.Background(), &protobufcompiled.TrxHash{Hash: []byte(hash[:]), Url: notaryNodeURL})
 	if err != nil {
-		pterm.Warning.Printf("Transaction with hash: [ %x ] not saved in DAG node URL [ %s ], %s\n", hash, notaryNodeURL, err)
+		pterm.Error.Printf("Transaction with hash: [ %x ] not saved in DAG node URL [ %s ], %s\n", hash, notaryNodeURL, err)
 		return
 	}
 	if trx == nil {
-		pterm.Warning.Printf("Transaction with hash: [ %x ] not saved in node URL [ %s ], transaction is nil\n", hash, notaryNodeURL)
+		pterm.Error.Printf("Transaction with hash: [ %x ] not saved in node URL [ %s ], transaction is nil\n", hash, notaryNodeURL)
 		return
 	}
 
@@ -302,7 +302,7 @@ func (sub *subscriber) checkIsAccepted(hash [32]byte, notaryNodeURL string) {
 			trx.Hash, notaryNodeURL, trx.ReceiverAddress, string(trx.Data),
 		)
 	default:
-		pterm.Info.Printf(
+		pterm.Warning.Printf(
 			"Transaction with hash [ %x ] is secured in DAG node URL [ %s ] and <-REJECTED-> by the receiver [ %s ] for data %s .\n",
 			trx.Hash, notaryNodeURL, trx.ReceiverAddress, string(trx.Data),
 		)
