@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math/rand"
 	"sync"
 	"time"
 
@@ -63,7 +62,6 @@ type subscriber struct {
 	allowdMeasurements   [2]Measurement
 	ticker               time.Duration
 	validateCh           chan hashToValidate
-	knownNodes           []string
 }
 
 // RunSubscriber runs subscriber emulator.
@@ -90,9 +88,10 @@ func RunSubscriber(ctx context.Context, cancel context.CancelFunc, config Config
 		return err
 	}
 	p := publisher{
-		conn:   conn,
-		client: client,
-		random: config.Random,
+		conn:       conn,
+		client:     client,
+		random:     config.Random,
+		knownNodes: config.NotaryNodes,
 	}
 
 	s := subscriber{
@@ -102,7 +101,6 @@ func RunSubscriber(ctx context.Context, cancel context.CancelFunc, config Config
 		allowdMeasurements:  m,
 		ticker:              time.Duration(config.TickMillisecond) * time.Millisecond * tickerSaveReadMultiplier,
 		validateCh:          make(chan hashToValidate, hashesBuffLen),
-		knownNodes:          config.NotaryNodes,
 	}
 	defer close(s.validateCh)
 	go s.runCheckSaved(ctx)
@@ -189,7 +187,7 @@ func (sub *subscriber) actOnTransactions(notaryNodeURL string) {
 	sub.mux.Lock()
 	defer sub.mux.Unlock()
 
-	protoTrxs, err := sub.pub.client.Waiting(context.Background(), &protobufcompiled.NotaryNode{Url: sub.getRandomNodeURLFromList(notaryNodeURL)})
+	protoTrxs, err := sub.pub.client.Waiting(context.Background(), &protobufcompiled.NotaryNode{Url: sub.pub.getRandomNodeURLFromList(notaryNodeURL)})
 	if err != nil || protoTrxs == nil {
 		return
 	}
@@ -209,7 +207,7 @@ func (sub *subscriber) actOnTransactions(notaryNodeURL string) {
 	var counter int
 
 	for i := range protoTrxs.Array {
-		notaryNodeURL = sub.getRandomNodeURLFromList(notaryNodeURL)
+		notaryNodeURL = sub.pub.getRandomNodeURLFromList(notaryNodeURL)
 		if err := sub.validateData(protoTrxs.Array[i].Data); err != nil {
 			pterm.Warning.Printf("Trx [ %x ] data [ %s ] rejected, %s.\n", protoTrxs.Array[i].Hash, protoTrxs.Array[i].Data, err)
 
@@ -235,7 +233,7 @@ func (sub *subscriber) actOnTransactions(notaryNodeURL string) {
 }
 
 func (sub *subscriber) sendToValidationQueue(h [32]byte, notaryNodeURL string) {
-	notaryNodeURL = sub.getRandomNodeURLFromList(notaryNodeURL)
+	notaryNodeURL = sub.pub.getRandomNodeURLFromList(notaryNodeURL)
 
 	sub.validateCh <- hashToValidate{h, notaryNodeURL}
 }
@@ -309,12 +307,4 @@ func (sub *subscriber) checkIsAccepted(hash [32]byte, notaryNodeURL string) {
 			trx.Hash, notaryNodeURL, trx.ReceiverAddress, string(trx.Data),
 		)
 	}
-}
-
-func (sub *subscriber) getRandomNodeURLFromList(notaryNodeURL string) string {
-	if len(sub.knownNodes) > 0 {
-		idx := rand.Intn(len(sub.knownNodes))
-		notaryNodeURL = sub.knownNodes[idx]
-	}
-	return notaryNodeURL
 }

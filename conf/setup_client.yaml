@@ -6,3 +6,7 @@ client:
   port: 8000
   notary_node_url: "notary-node-genesis:8000"
   webhooks_node_url: "webhooks-node:8000"
+zinc_logger:
+  address: http://zincsearch:4080 
+  index: notary
+  token: Basic YWRtaW46emluY3NlYXJjaA==
