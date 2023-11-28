@@ -17,9 +17,10 @@ COPY --from=builder /app/conf/${CONFIG} ./
 COPY --from=builder /app/artefacts/${DATAFILE} ./
 ENV DATAFILE=${DATAFILE}
 ENV ROLE=${ROLE}
+ENV CONFIG=${CONFIG}
 
 # ENTRYPOINT in shell form to allow ENV variable expansion.  This is needed to determine
 # what role the emulator will play (publisher, or subscriber), and as a result, which
 # data file it needs.
-ENTRYPOINT ./main -c setup_example.yaml -d ${DATAFILE} ${ROLE}
+ENTRYPOINT ./main -c ${CONFIG} -d ${DATAFILE} ${ROLE}
 
