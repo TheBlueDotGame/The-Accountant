@@ -9,10 +9,11 @@ FROM alpine AS app
 ARG APPLICATION
 ARG DATAFILE
 ARG ROLE
+ARG CONFIG
 RUN apk --no-cache add ca-certificates
 WORKDIR /app
 COPY --from=builder /app/bin/${APPLICATION}/main ./
-COPY --from=builder /app/conf/setup_example.yaml ./
+COPY --from=builder /app/conf/${CONFIG} ./
 COPY --from=builder /app/artefacts/${DATAFILE} ./
 ENV DATAFILE=${DATAFILE}
 ENV ROLE=${ROLE}

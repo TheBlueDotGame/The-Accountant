@@ -1,0 +1,35 @@
+is_profiling: false
+notary_server:
+  public_url: notary-node-one:8000
+  port: 8000
+  data_size_bytes: 15000
+gossip_server:
+  url: "notary-node-one:8080"
+  genesis_url: "notary-node-genesis:8080"
+  load_dag_url: "notary-node-genesis:8080"
+  genesis_spice:
+    currency: 0
+    supplementary_currency: 0
+  vertices_db_path:
+  port: 8080
+accountant:
+  trusted_nodes_db_path:
+  tokens_db_path:
+  trxs_to_vertices_map_db_path:
+  vertices_db_path:
+nats:
+  server_address: "nats://nats:4222"
+  client_name: "notary-one"
+  token: "D9pHfuiEQPXtqPqPdyxozi8kU2FlHqC0FlSRIzpwDI0="
+dataprovider:
+  longevity: 300
+file_operator:
+  wallet_path: "wallet_notary_one"
+  wallet_passwd: "ce6c5f7da2b791befa726cebe1df78d7d01439a8292d26e116e894cb75f49e2e"
+  pem_path: "ed25519"
+webhooks_server:
+  port: 8000
+zinc_logger:
+  address: http://zincsearch:4080 
+  index: notary
+  token: Basic YWRtaW46emluY3NlYXJjaA==

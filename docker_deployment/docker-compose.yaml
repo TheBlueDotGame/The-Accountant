@@ -48,7 +48,8 @@ services:
       dockerfile: docker_deployment/Dockerfile
       args: 
         - "APPLICATION=node"
-        - "CONFIG=setup_example.yaml"
+        - "CONFIG=setup_genesis.yaml"
+        - "WALLET=wallet_notary_genesis"
     restart: unless-stopped
     ports:
       - "8000:8000"
@@ -69,7 +70,8 @@ services:
       dockerfile: docker_deployment/Dockerfile
       args: 
         - "APPLICATION=node"
-        - "CONFIG=setup_example_notary_one.yaml"
+        - "CONFIG=setup_notary_one.yaml"
+        - "WALLET=wallet_notary_one"
     restart: unless-stopped
     expose:
      - 8000
@@ -87,7 +89,8 @@ services:
       dockerfile: docker_deployment/Dockerfile
       args: 
         - "APPLICATION=node"
-        - "CONFIG=setup_example_notary_two.yaml"
+        - "CONFIG=setup_notary_two.yaml"
+        - "WALLET=wallet_notary_two"
     restart: unless-stopped
     expose:
      - 8000
@@ -105,7 +108,7 @@ services:
       dockerfile: docker_deployment/Dockerfile
       args: 
         - "APPLICATION=webhooks"
-        - "CONFIG=setup_example.yaml"
+        - "CONFIG=setup_genesis.yaml"
     environment:
      - GOMAXPROCS=1
     restart: unless-stopped
@@ -124,7 +127,8 @@ services:
       dockerfile: docker_deployment/Dockerfile
       args: 
         - "APPLICATION=client"
-        - "CONFIG=setup_example.yaml"
+        - "CONFIG=setup_client.yaml"
+        - "WALLET=wallet_client"
     profiles: ["demo"]
     environment:
      - GOMAXPROCS=1
@@ -147,6 +151,7 @@ services:
         - "APPLICATION=emulator"
         - "ROLE=subscriber"
         - "DATAFILE=minmax.json"
+        - "CONFIG=setup_emulator.yaml"
     environment:
      - GOMAXPROCS=1
     profiles: ["demo"]
@@ -169,6 +174,7 @@ services:
         - "APPLICATION=emulator"
         - "ROLE=publisher"
         - "DATAFILE=data.json"
+        - "CONFIG=setup_emulator.yaml"
     environment:
      - GOMAXPROCS=1
     profiles: ["demo"]

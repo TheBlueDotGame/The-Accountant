@@ -8,11 +8,12 @@ RUN cd src && CGO_ENABLED=0 go build -a -installsuffix cgo -o ../bin/${APPLICATI
 FROM alpine AS app
 ARG APPLICATION
 ARG CONFIG
+ARG WALLET
 RUN apk --no-cache add ca-certificates
 WORKDIR /app
 COPY --from=builder /app/bin/${APPLICATION}/main ./
 COPY --from=builder /app/conf/${CONFIG} ./
-COPY --from=builder /app/artefacts/test_wallet ./
+COPY --from=builder /app/artefacts/${WALLET} ./
 ENV CONFIG=${CONFIG}
 
 ENTRYPOINT ./main -c ${CONFIG}
