@@ -52,6 +52,29 @@ The Computantis contains of:
  - The vertex is unique in the DAG and inner transaction is unique per DAG. Sending the same transaction to many nodes will end up in collision and only the first one, received by most of the nodes will be accepted and retransmitted, all the rest of redundant transactions will be rejected.
  - Leaf isn't proving transaction validity until it becomes a vertex by having an edge created from other leaf or vertex.
 
+### Add-ons
+
+Add-ons are the way to interact with Computantis immune system. The immune system shall return an error when data are not meeting the validity criteria.
+
+Example add-ons are located in `src_py` folder. 
+
+#### List of add-ons
+
+1. Add-on tabular classification example is located in `addon_tabular_classification` folder.
+
+- Project requires Python 3.
+
+- Before running create (venv) environment in the folder:
+```sh
+python -m venv venv
+```
+
+- Run python server via shell script:
+```sh
+./start.py
+```
+
+
 ## Development
 
 ### Only dependencies
@@ -119,7 +142,9 @@ Run
 govulncheck src/...
 ```
 
-### C - implementation
+### Wallet C implementation
+
+C implementation of the wallet is located in `src_c` folder.
 
 #### Development
 
