@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package computantis;
+
+option go_package = "github.com/bartossh/Computantis/src/protobufcompiled";
+
+message AddonsMessage {
+    string token = 1;
+    bytes data = 2;
+}
+
+message AddonsError {
+    string error = 1;
+}
+
+service AddonsAPI {
+    rpc AnalyzeTransaction(AddonsMessage) returns (AddonsError) {}
+}

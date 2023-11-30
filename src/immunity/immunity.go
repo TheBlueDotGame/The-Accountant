@@ -8,9 +8,9 @@ import (
 	"github.com/bartossh/Computantis/src/transaction"
 )
 
-// TransactionAntibodyProvider describes the transaction analyzer that validates transaction inner data.
+// TransactionAntibodyProvider provides data validation.
 type TransactionAntibodyProvider interface {
-	AnalyzeTransaction(ctx context.Context, trx *transaction.Transaction) error
+	AnalyzeTransaction(ctx context.Context, data []byte) error
 }
 
 // Lymphatic system uses the antibody cells to validate health of the transaction and blockchain.
@@ -51,14 +51,14 @@ func (ls *LymphaticSystem) TransactionsAntibodiesAnalize(ctx context.Context, tr
 	if !ok {
 		return fmt.Errorf("subject: [ %s ] has no antibodies assigned", trx.Subject)
 	}
-	return ls.analyzeTransactionWithListedAntibodies(ctx, antibodies, trx)
+	return ls.analyzeTransactionWithListedAntibodies(ctx, antibodies, trx.Data)
 }
 
-func (ls *LymphaticSystem) analyzeTransactionWithListedAntibodies(ctx context.Context, antibodies []string, trx *transaction.Transaction) error {
+func (ls *LymphaticSystem) analyzeTransactionWithListedAntibodies(ctx context.Context, antibodies []string, data []byte) error {
 	var err error
 	for _, name := range antibodies {
 		if antibody, ok := ls.transactionAntibodies[name]; ok {
-			if errInner := antibody.AnalyzeTransaction(ctx, trx); errInner != nil {
+			if errInner := antibody.AnalyzeTransaction(ctx, data); errInner != nil {
 				err = errors.Join(err, errInner)
 			}
 			continue
