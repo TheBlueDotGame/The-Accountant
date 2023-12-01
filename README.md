@@ -68,12 +68,15 @@ Example add-ons are located in `src_py` folder.
 ```sh
 python -m venv venv
 ```
+- Activate venv:
 
+```sh 
+source venv/bin/activate
+```
 - Run python server via shell script:
 ```sh
 ./start.py
 ```
-
 
 ## Development
 
