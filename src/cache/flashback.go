@@ -19,7 +19,7 @@ func NewFlash() (*Flashback, error) {
 		LifeWindow:       time.Second * 10,
 		CleanWindow:      time.Second * 5,
 		HardMaxCacheSize: 5,
-		MaxEntrySize:     1,
+		MaxEntrySize:     0,
 	})
 	if err != nil {
 		return nil, err

@@ -116,7 +116,8 @@ type gossiper struct {
 // RunGRPC runs the service application that exposes the GRPC API for gossip protocol.
 // To stop server cancel the context.
 func RunGRPC(ctx context.Context, cfg Config, l logger.Logger, t time.Duration, s accountant.Signer,
-	v signatureVerifier, a accounter, trxCache providers.AwaitedTrxCacheProvider, flash providers.FlashbackMemoryProvider, p piper,
+	v signatureVerifier, a accounter, trxCache providers.AwaitedTrxCacheProvider,
+	flash providers.FlashbackMemoryProvider, p piper,
 ) error {
 	if err := cfg.verify(); err != nil {
 		return err
