@@ -37,7 +37,7 @@ const (
 )
 
 const (
-	maxCacheSizeMB = 1024
+	maxCacheSizeMB = 128
 	maxEntrySize   = 32 * 10_000
 )
 

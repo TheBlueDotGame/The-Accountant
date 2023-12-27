@@ -3,6 +3,7 @@ package accountant
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/hex"
 	"time"
 
 	"github.com/bartossh/Computantis/src/transaction"
@@ -82,12 +83,23 @@ func (v *Vertex) verify(verifier signatureVerifier) error {
 	return verifier.Verify(data, v.Signature[:], v.Hash, v.SignerPublicAddress)
 }
 
-func (v *Vertex) encode() ([]byte, error) {
+// Encode encodes given Vertex in to the bytes buffer.
+func (v *Vertex) Encode() ([]byte, error) {
 	buf, err := msgpack.Marshal(*v)
 	if err != nil {
 		return nil, err
 	}
 	return buf, nil
+}
+
+// DecodeTo overides existring Vertex with one encoded from bytes buffer.
+func (v *Vertex) Decode(buf []byte) (Vertex, error) {
+	return decodeVertex(buf)
+}
+
+// GetKey returns unique identifier for Vertex from Hash in string format.
+func (v *Vertex) GetKey() string {
+	return hex.EncodeToString(v.Hash[:])
 }
 
 func decodeVertex(buf []byte) (Vertex, error) {

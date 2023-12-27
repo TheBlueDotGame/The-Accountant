@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"sync/atomic"
+	"time"
 
 	"github.com/dgraph-io/badger/v4"
 	"github.com/heimdalr/dag"
@@ -20,6 +21,8 @@ const (
 	throughputMultiplayer = 2
 	lastVertexHashes      = 100
 )
+
+const repiterTick = time.Second * 2
 
 var (
 	ErrGenesisRejected                       = errors.New("genesis vertex has been rejected")
@@ -56,6 +59,7 @@ type Signer interface {
 
 // AccountingBook is an entity that represents the accounting process of all received transactions.
 type AccountingBook struct {
+	repiter        *buffer
 	verifier       signatureVerifier
 	signer         Signer
 	log            logger.Logger
@@ -74,6 +78,11 @@ type AccountingBook struct {
 // New creates new AccountingBook.
 // New AccountingBook will start internally the garbage collection loop, to stop it from running cancel the context.
 func NewAccountingBook(ctx context.Context, cfg Config, verifier signatureVerifier, signer Signer, l logger.Logger) (*AccountingBook, error) {
+	repi, err := newReplierBuffer(ctx, repiterTick)
+	if err != nil {
+		return nil, err
+	}
+
 	trustedNodesDB, err := storage.CreateBadgerDB(ctx, cfg.TrustedNodesDBPath, l, true)
 	if err != nil {
 		return nil, err
@@ -86,7 +95,9 @@ func NewAccountingBook(ctx context.Context, cfg Config, verifier signatureVerifi
 	if err != nil {
 		return nil, err
 	}
+
 	ab := &AccountingBook{
+		repiter:        repi,
 		verifier:       verifier,
 		signer:         signer,
 		dag:            dag.NewDAG(),
@@ -102,7 +113,23 @@ func NewAccountingBook(ctx context.Context, cfg Config, verifier signatureVerifi
 
 	ab.unregister() // on new AccountingBook creation send to the register channel to unblock the register queue.
 
+	go ab.runLeafSubscriber(ctx)
+
 	return ab, nil
+}
+
+func (ab *AccountingBook) runLeafSubscriber(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case v := <-ab.repiter.subscribe():
+			if v == nil {
+				continue
+			}
+			ab.AddLeaf(ctx, v)
+		}
+	}
 }
 
 func (ab *AccountingBook) validateLeaf(ctx context.Context, leaf *Vertex) error {
@@ -357,7 +384,7 @@ func (ab *AccountingBook) readVertexFromStorage(vrxHash []byte) (Vertex, error) 
 }
 
 func (ab *AccountingBook) saveVertexToStorage(vrx *Vertex) error {
-	buf, err := vrx.encode()
+	buf, err := vrx.Encode()
 	if err != nil {
 		return err
 	}
@@ -752,11 +779,19 @@ func (ab *AccountingBook) AddLeaf(ctx context.Context, leaf *Vertex) error {
 	for _, hash := range [][32]byte{leaf.LeftParentHash, leaf.RightParentHash} {
 		item, err := ab.dag.GetVertex(string(hash[:]))
 		if err != nil {
-			ab.log.Error(
-				fmt.Sprintf("Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ] when reading vertex, %s.",
+			ab.log.Info(
+				fmt.Sprintf(
+					"Accounting book proceeded with memorizing leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ] when reading vertex for future validation, %s.",
 					leaf.Hash, leaf.SignerPublicAddress, leaf.LeftParentHash, leaf.RightParentHash, err),
 			)
-			return ErrLeafRejected
+			if err := ab.repiter.insert(leaf); err != nil {
+				ab.log.Error(
+					fmt.Sprintf("Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ] when reading vertex, %s.",
+						leaf.Hash, leaf.SignerPublicAddress, leaf.LeftParentHash, leaf.RightParentHash, err),
+				)
+				return ErrLeafRejected
+			}
+			return nil
 		}
 		existringLeaf, ok := item.(*Vertex)
 		if !ok {
