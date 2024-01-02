@@ -155,7 +155,7 @@ services:
      - GOMAXPROCS=1
     restart: unless-stopped
     ports:
-      - "8020:8000"
+      - "8030:8000"
     networks:
       - computantis_network
     depends_on:
@@ -176,7 +176,7 @@ services:
      - GOMAXPROCS=1
     restart: unless-stopped
     ports:
-      - "8020:8000"
+      - "8040:8000"
     networks:
       - computantis_network
     depends_on:
