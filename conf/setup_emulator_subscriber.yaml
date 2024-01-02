@@ -8,5 +8,5 @@ emulator:
    - notary-node-genesis:8000
    - notary-node-one:8000
    - notary-node-two:8000
-receiver_public_address: "1Eeiwo3bzNAMuGnADs5y7KViaRb79SZmzzEpxBBDH2JkCQF2bA"
-spice_per_transaction: 1
+  receiver_public_address: "1Eeiwo3bzNAMuGnADs5y7KViaRb79SZmzzEpxBBDH2JkCQF2bA"
+  spice_per_transaction: 1
