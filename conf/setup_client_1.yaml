@@ -1,5 +1,5 @@
 file_operator:
-  wallet_path: "wallet_client"
+  wallet_path: "wallet_client_1"
   wallet_passwd: "dc6b5b1635453e0eb57344ffb6cb293e8300fc4001fad3518e721d548459c09d"
   pem_path: "ed25519"
 client:
@@ -8,5 +8,5 @@ client:
   webhooks_node_url: "webhooks-node:8000"
 zinc_logger:
   address: http://zincsearch:4080 
-  index: notary
+  index: wallet_1
   token: Basic YWRtaW46emluY3NlYXJjaA==

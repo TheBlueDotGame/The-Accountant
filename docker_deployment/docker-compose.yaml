@@ -120,15 +120,57 @@ services:
       notary-node-two:
         condition: service_started
   
-  client-node:
-    container_name: client-node
+  client-node-1:
+    container_name: client-node-1
     build: 
       context: ./..
       dockerfile: docker_deployment/Dockerfile
       args: 
         - "APPLICATION=client"
-        - "CONFIG=setup_client.yaml"
-        - "WALLET=wallet_client"
+        - "CONFIG=setup_client_1.yaml"
+        - "WALLET=wallet_client_1"
+    profiles: ["demo"]
+    environment:
+     - GOMAXPROCS=1
+    restart: unless-stopped
+    ports:
+      - "8020:8000"
+    networks:
+      - computantis_network
+    depends_on:
+      webhooks-node:
+        condition: service_started
+
+  client-node-2:
+    container_name: client-node-2
+    build: 
+      context: ./..
+      dockerfile: docker_deployment/Dockerfile
+      args: 
+        - "APPLICATION=client"
+        - "CONFIG=setup_client_2.yaml"
+        - "WALLET=wallet_client_2"
+    profiles: ["demo"]
+    environment:
+     - GOMAXPROCS=1
+    restart: unless-stopped
+    ports:
+      - "8020:8000"
+    networks:
+      - computantis_network
+    depends_on:
+      webhooks-node:
+        condition: service_started
+
+  client-node-genesis:
+    container_name: client-node-genesis
+    build: 
+      context: ./..
+      dockerfile: docker_deployment/Dockerfile
+      args: 
+        - "APPLICATION=client"
+        - "CONFIG=setup_client_genesis.yaml"
+        - "WALLET=wallet_notary_genesis"
     profiles: ["demo"]
     environment:
      - GOMAXPROCS=1
@@ -151,7 +193,8 @@ services:
         - "APPLICATION=emulator"
         - "ROLE=subscriber"
         - "DATAFILE=minmax.json"
-        - "CONFIG=setup_emulator.yaml"
+        - "CONFIG=setup_emulator_subscriber.yaml"
+
     environment:
      - GOMAXPROCS=1
     profiles: ["demo"]
@@ -174,7 +217,7 @@ services:
         - "APPLICATION=emulator"
         - "ROLE=publisher"
         - "DATAFILE=data.json"
-        - "CONFIG=setup_emulator.yaml"
+        - "CONFIG=setup_emulator_publisher.yaml"
     environment:
      - GOMAXPROCS=1
     profiles: ["demo"]
@@ -184,7 +227,27 @@ services:
     depends_on:
       subscriber-node:
         condition: service_started
-  
+
+  genesis-emulator-node:
+    container_name: genesis-emulator-node
+    build:
+      context: ./..
+      dockerfile: docker_deployment/Dockerfile.emulators
+      args:
+        - "APPLICATION=emulator"
+        - "ROLE=genesis"
+        - "DATAFILE=data.json"
+        - "CONFIG=setup_emulator_genesis.yaml"
+    environment:
+     - GOMAXPROCS=1
+    profiles: ["demo"]
+    restart: unless-stopped
+    networks:
+      - computantis_network
+    depends_on:
+      subscriber-node:
+        condition: service_started
+
   node-exporter:
     image: prom/node-exporter:latest
     container_name: node-exporter

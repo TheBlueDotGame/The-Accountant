@@ -946,8 +946,8 @@ func (ab *AccountingBook) CalculateBalance(ctx context.Context, walletPubAddr st
 	return NewBalance(walletPubAddr, s), nil
 }
 
-// ReadTransactionsByHash reads transactions by hashes from DAG and DB.
-func (ab *AccountingBook) ReadTransactionsByHash(ctx context.Context, hash [32]byte) (transaction.Transaction, error) {
+// ReadTransactionByHash  reads transactions by hashes from DAG and DB.
+func (ab *AccountingBook) ReadTransactionByHash(ctx context.Context, hash [32]byte) (transaction.Transaction, error) {
 	var vertexHash []byte
 	if err := ab.trxsToVertxDB.View(func(txn *badger.Txn) error {
 		item, err := txn.Get(hash[:])

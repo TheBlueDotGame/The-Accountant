@@ -28,6 +28,7 @@ const (
 	WalletClientAPI_Waiting_FullMethodName             = "/computantis.WalletClientAPI/Waiting"
 	WalletClientAPI_Saved_FullMethodName               = "/computantis.WalletClientAPI/Saved"
 	WalletClientAPI_WebHook_FullMethodName             = "/computantis.WalletClientAPI/WebHook"
+	WalletClientAPI_Balance_FullMethodName             = "/computantis.WalletClientAPI/Balance"
 )
 
 // WalletClientAPIClient is the client API for WalletClientAPI service.
@@ -42,6 +43,7 @@ type WalletClientAPIClient interface {
 	Waiting(ctx context.Context, in *NotaryNode, opts ...grpc.CallOption) (*Transactions, error)
 	Saved(ctx context.Context, in *TrxHash, opts ...grpc.CallOption) (*Transaction, error)
 	WebHook(ctx context.Context, in *CreateWebHook, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	Balance(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*Spice, error)
 }
 
 type walletClientAPIClient struct {
@@ -124,6 +126,15 @@ func (c *walletClientAPIClient) WebHook(ctx context.Context, in *CreateWebHook, 
 	return out, nil
 }
 
+func (c *walletClientAPIClient) Balance(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*Spice, error) {
+	out := new(Spice)
+	err := c.cc.Invoke(ctx, WalletClientAPI_Balance_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // WalletClientAPIServer is the server API for WalletClientAPI service.
 // All implementations must embed UnimplementedWalletClientAPIServer
 // for forward compatibility
@@ -136,6 +147,7 @@ type WalletClientAPIServer interface {
 	Waiting(context.Context, *NotaryNode) (*Transactions, error)
 	Saved(context.Context, *TrxHash) (*Transaction, error)
 	WebHook(context.Context, *CreateWebHook) (*emptypb.Empty, error)
+	Balance(context.Context, *emptypb.Empty) (*Spice, error)
 	mustEmbedUnimplementedWalletClientAPIServer()
 }
 
@@ -166,6 +178,9 @@ func (UnimplementedWalletClientAPIServer) Saved(context.Context, *TrxHash) (*Tra
 }
 func (UnimplementedWalletClientAPIServer) WebHook(context.Context, *CreateWebHook) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method WebHook not implemented")
+}
+func (UnimplementedWalletClientAPIServer) Balance(context.Context, *emptypb.Empty) (*Spice, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Balance not implemented")
 }
 func (UnimplementedWalletClientAPIServer) mustEmbedUnimplementedWalletClientAPIServer() {}
 
@@ -324,6 +339,24 @@ func _WalletClientAPI_WebHook_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _WalletClientAPI_Balance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WalletClientAPIServer).Balance(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: WalletClientAPI_Balance_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WalletClientAPIServer).Balance(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // WalletClientAPI_ServiceDesc is the grpc.ServiceDesc for WalletClientAPI service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -362,6 +395,10 @@ var WalletClientAPI_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "WebHook",
 			Handler:    _WalletClientAPI_WebHook_Handler,
+		},
+		{
+			MethodName: "Balance",
+			Handler:    _WalletClientAPI_Balance_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -1,0 +1,12 @@
+emulator:
+  tick_millisecond: 10
+  random: false
+  client_url: "client-node-2:8000"
+  port: "8060"
+  public_url: "http://subscriber-node:8060" # If running emulators locally, best to set it up as your local network machine IP.
+  notary_nodes:
+   - notary-node-genesis:8000
+   - notary-node-one:8000
+   - notary-node-two:8000
+receiver_public_address: "1Eeiwo3bzNAMuGnADs5y7KViaRb79SZmzzEpxBBDH2JkCQF2bA"
+spice_per_transaction: 1

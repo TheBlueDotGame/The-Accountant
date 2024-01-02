@@ -103,7 +103,7 @@ func RunSubscriber(ctx context.Context, cancel context.CancelFunc, config Config
 		validateCh:          make(chan hashToValidate, hashesBuffLen),
 	}
 	defer close(s.validateCh)
-	go s.runCheckSaved(ctx)
+	go s.runCheckSaved(ctx, 1000, uint64(config.SpicePerTransaction), config.ReceiverPublicAddr)
 
 	router := fiber.New(fiber.Config{
 		Prefork:       false,
@@ -238,10 +238,11 @@ func (sub *subscriber) sendToValidationQueue(h [32]byte, notaryNodeURL string) {
 	sub.validateCh <- hashToValidate{h, notaryNodeURL}
 }
 
-func (sub *subscriber) runCheckSaved(ctx context.Context) {
+func (sub *subscriber) runCheckSaved(ctx context.Context, paymentThreshold int, spice uint64, receiver string) {
 	t := time.NewTicker(sub.ticker)
 	defer t.Stop()
 	buffer := make([]hashToValidate, 0, hashesBuffLen)
+	var accepted int
 	for {
 		select {
 		case <-ctx.Done():
@@ -253,9 +254,15 @@ func (sub *subscriber) runCheckSaved(ctx context.Context) {
 			buffer = append(buffer, h)
 		case <-t.C:
 			for _, h := range buffer {
-				sub.checkIsAccepted(h.hash, h.notaryNodeUrl)
+				accepted += sub.getAcceptedEnergyTrx(h.hash, h.notaryNodeUrl)
 			}
 			buffer = make([]hashToValidate, 0, hashesBuffLen)
+			if accepted > paymentThreshold {
+				accepted = 0
+				if err := sub.sendSpice(ctx, spice, receiver); err != nil {
+					pterm.Error.Printf("Failed to send %v_spice to [ %s ]. %s \n", spice, receiver, err)
+				}
+			}
 		}
 	}
 }
@@ -276,15 +283,15 @@ func (sub *subscriber) validateData(data []byte) error {
 	return nil
 }
 
-func (sub *subscriber) checkIsAccepted(hash [32]byte, notaryNodeURL string) {
+func (sub *subscriber) getAcceptedEnergyTrx(hash [32]byte, notaryNodeURL string) int {
 	trx, err := sub.pub.client.Saved(context.Background(), &protobufcompiled.TrxHash{Hash: []byte(hash[:]), Url: notaryNodeURL})
 	if err != nil {
 		pterm.Error.Printf("Transaction with hash: [ %x ] not saved in DAG node URL [ %s ], %s\n", hash, notaryNodeURL, err)
-		return
+		return 0
 	}
 	if trx == nil {
 		pterm.Error.Printf("Transaction with hash: [ %x ] not saved in node URL [ %s ], transaction is nil\n", hash, notaryNodeURL)
-		return
+		return 0
 	}
 
 	if trx.Spice.Currency != 0 || trx.Spice.SuplementaryCurrency != 0 {
@@ -292,7 +299,7 @@ func (sub *subscriber) checkIsAccepted(hash [32]byte, notaryNodeURL string) {
 			"Transaction with hash [ %x ] is secured in DAG node URL [ %s ] for SPICE TRANSFER: [ %s ].\n",
 			trx.Hash, notaryNodeURL, trx.Spice,
 		)
-		return
+		return 0
 	}
 
 	switch len(trx.ReceiverSignature) != 0 {
@@ -301,10 +308,25 @@ func (sub *subscriber) checkIsAccepted(hash [32]byte, notaryNodeURL string) {
 			"Transaction with hash [ %x ] is secured in DAG node URL [ %s ] and <-ACCEPTED-> by the receiver [ %s ] for data %s .\n",
 			trx.Hash, notaryNodeURL, trx.ReceiverAddress, string(trx.Data),
 		)
+		return 1
 	default:
 		pterm.Warning.Printf(
 			"Transaction with hash [ %x ] is secured in DAG node URL [ %s ] and <-REJECTED-> by the receiver [ %s ] for data %s .\n",
 			trx.Hash, notaryNodeURL, trx.ReceiverAddress, string(trx.Data),
 		)
+		return 0
 	}
+}
+
+func (sub *subscriber) sendSpice(ctx context.Context, spice uint64, receiver string) error {
+	_, err := sub.pub.client.Issue(ctx, &protobufcompiled.IssueTrx{
+		Subject:         fmt.Sprintf("Spice transfer %v for %s", spice, receiver),
+		ReceiverAddress: receiver,
+		Data:            []byte{},
+		Spice: &protobufcompiled.Spice{
+			Currency:             spice,
+			SuplementaryCurrency: 0,
+		},
+	})
+	return err
 }

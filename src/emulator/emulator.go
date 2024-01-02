@@ -2,12 +2,14 @@ package emulator
 
 // Config contains configuration for the emulator Publisher and Subscriber.
 type Config struct {
-	ClientURL       string   `yaml:"client_url"`
-	Port            string   `yaml:"port"`
-	PublicURL       string   `yaml:"public_url"`
-	TickMillisecond int64    `yaml:"tick_millisecond"`
-	Random          bool     `yaml:"random"`
-	NotaryNodes     []string `yaml:"notary_nodes"`
+	ClientURL           string   `yaml:"client_url"`
+	Port                string   `yaml:"port"`
+	PublicURL           string   `yaml:"public_url"`
+	TickMillisecond     int64    `yaml:"tick_millisecond"`
+	Random              bool     `yaml:"random"`
+	NotaryNodes         []string `yaml:"notary_nodes"`
+	ReceiverPublicAddr  string   `yaml:"receiver_public_address"`
+	SpicePerTransaction int      `yaml:"spice_per_transaction"`
 }
 
 // Measurement is data structure containing measurements received in a single transaction.
