@@ -54,7 +54,7 @@ func RunPublisher(ctx context.Context, cancel context.CancelFunc, config Config,
 	}
 
 	t := time.NewTicker(time.Duration(config.TickMillisecond) * time.Millisecond)
-	tb := time.NewTicker(time.Duration(config.TickMillisecond*200) * time.Millisecond)
+	tb := time.NewTicker(time.Duration(config.TickMillisecond*50) * time.Millisecond)
 	defer t.Stop()
 	defer tb.Stop()
 	for {
