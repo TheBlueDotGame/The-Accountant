@@ -47,9 +47,10 @@ func RunGenesis(ctx context.Context, cancel context.CancelFunc, config Config) e
 		case <-t.C:
 			if err := g.sendSpice(ctx, uint64(config.SpicePerTransaction), config.ReceiverPublicAddr); err != nil {
 				pterm.Error.Printf(
-					"Genesis emulator sending %v_spice to [ %s ] failed, %s.\n, err",
+					"Genesis emulator sending %v_spice to [ %s ] failed, %s.\n",
 					config.SpicePerTransaction,
 					config.ReceiverPublicAddr,
+					err,
 				)
 				continue
 			}
