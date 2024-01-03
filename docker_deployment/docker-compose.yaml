@@ -237,7 +237,7 @@ services:
         - "APPLICATION=emulator"
         - "ROLE=suplier"
         - "DATAFILE=data.json"
-        - "CONFIG=setup_emulator_spice_spice_suplier.yaml"
+        - "CONFIG=setup_emulator_spice_suplier.yaml"
     environment:
      - GOMAXPROCS=1
     profiles: ["demo"]
