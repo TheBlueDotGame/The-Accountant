@@ -731,13 +731,26 @@ func (ab *AccountingBook) CreateLeaf(ctx context.Context, trx *transaction.Trans
 		<-ab.lastVertexHash
 	}
 	for _, validVrx := range validatedLeafs {
+		if validVrx.Transaction.IsSpiceTransfer() { // TODO: Remove after fixing accounting for spice.
+			ab.log.Info(
+				fmt.Sprintf(
+					"Validated tip that becomes a vertex: %v, transfer from [ %s ] to [ %s ] of %s",
+					validVrx.Hash, validVrx.Transaction.IssuerAddress, validVrx.Transaction.ReceiverAddress,
+					validVrx.Transaction.Spice.String(),
+				),
+			)
+		}
+
 		ab.lastVertexHash <- validVrx.Hash
 	}
 
-	if trx.IsSpiceTransfer() {
-		ab.log.Info(fmt.Sprintf(
-			"Created tip: %v, transfer from [ %s ] to [ %s ] of %s",
-			tip.Hash, trx.IssuerAddress, trx.ReceiverAddress, trx.Spice.String()),
+	if tip.Transaction.IsSpiceTransfer() { // TODO: Remove after fixing accounting for spice.
+		ab.log.Info(
+			fmt.Sprintf(
+				"Created tip: %v, transfer from [ %s ] to [ %s ] of %s",
+				tip.Hash, tip.Transaction.IssuerAddress, tip.Transaction.ReceiverAddress,
+				tip.Transaction.Spice.String(),
+			),
 		)
 	}
 	return tip, nil
@@ -940,6 +953,7 @@ func (ab *AccountingBook) CalculateBalance(ctx context.Context, walletPubAddr st
 		}
 	}
 
+	ab.log.Info(fmt.Sprintf("Calculated balance in %s out %s", spiceIn.String(), spiceOut.String()))
 	s := spice.New(0, 0)
 	if err := s.Supply(spiceIn); err != nil {
 		return Balance{}, errors.Join(ErrBalanceCaclulationUnexpectedFailure, err)
@@ -949,7 +963,7 @@ func (ab *AccountingBook) CalculateBalance(ctx context.Context, walletPubAddr st
 		return Balance{}, errors.Join(ErrBalanceCaclulationUnexpectedFailure, err)
 	}
 
-	// TODO: Remove after tests.
+	// TODO: Remove after fixing accounting for spice.
 	ab.log.Info(fmt.Sprintf("Calculated balance at %v for %s id %s", time.Now().UnixMilli(), walletPubAddr, s.String()))
 
 	return NewBalance(walletPubAddr, s), nil
