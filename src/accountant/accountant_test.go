@@ -839,7 +839,7 @@ func TestVertexStorageAdd(t *testing.T) {
 	assert.NilError(t, err)
 }
 
-func TestVertexStorageAddRepret(t *testing.T) {
+func TestVertexStorageAddRepeted(t *testing.T) {
 	v := Vertex{
 		CreatedAt: time.Now(),
 		Transaction: transaction.Transaction{

@@ -238,6 +238,10 @@ func (s *server) Propose(ctx context.Context, in *protobufcompiled.Transaction) 
 	}
 
 	if trx.IsContract() {
+		if len(trx.Data) > s.dataSize {
+			s.log.Error(fmt.Sprintf("propose endpoint, invalid transaction data size: %d", len(trx.Data)))
+			return nil, ErrProcessing
+		}
 		if err := s.cache.SaveAwaitedTransaction(&trx); err != nil {
 			s.log.Error(fmt.Sprintf("propose endpoint, saving awaited trx for issuer [ %s ], %s", trx.IssuerAddress, err))
 			return nil, ErrProcessing
@@ -253,10 +257,6 @@ func (s *server) Propose(ctx context.Context, in *protobufcompiled.Transaction) 
 		return &emptypb.Empty{}, nil
 	}
 
-	if len(trx.Data) > s.dataSize {
-		s.log.Error(fmt.Sprintf("propose endpoint, invalid transaction data size: %d", len(trx.Data)))
-		return nil, ErrProcessing
-	}
 	vrx, err := s.acc.CreateLeaf(ctx, &trx)
 	if err != nil {
 		s.log.Error(fmt.Sprintf("propose endpoint, creating leaf: %s", err))
