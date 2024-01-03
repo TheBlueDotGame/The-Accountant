@@ -64,15 +64,20 @@ func RunPublisher(ctx context.Context, cancel context.CancelFunc, config Config,
 		case <-t.C:
 			p.emulate(ctx, config.ReceiverPublicAddr, measurtements)
 		case <-tb.C:
+			addr, err := p.client.WalletPublicAddress(ctx, &emptypb.Empty{})
+			if err != nil {
+				pterm.Error.Printf("Publisher cannot validate public address, %s\n", err)
+				continue
+			}
 			b, err := p.checkBalance(ctx)
 			if err != nil {
-				pterm.Error.Printf("Publisher emulator cannot check balance, %s\n", err)
+				pterm.Error.Printf("Publisher [ %s ] emulator cannot check balance, %s\n", addr.Public, err)
 				continue
 			}
 			pterm.Info.Printf(
-				"Publisher emulator balance of is [ %v,%v Melange ] \n",
-				b.Currency,
-				b.SupplementaryCurrency,
+				"Publisher emulator balance of account [ %s ] is %s \n",
+				addr.Public,
+				b.String(),
 			)
 
 		}
