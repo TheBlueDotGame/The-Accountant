@@ -48,7 +48,7 @@ services:
       dockerfile: docker_deployment/Dockerfile
       args: 
         - "APPLICATION=node"
-        - "CONFIG=setup_genesis.yaml"
+        - "CONFIG=setup_notary_genesis.yaml"
         - "WALLET=wallet_notary_genesis"
     restart: unless-stopped
     ports:
