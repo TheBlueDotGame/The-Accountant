@@ -427,6 +427,7 @@ func (s *server) Data(ctx context.Context, in *protobufcompiled.Address) (*proto
 }
 
 // Balance returns balanse for account owner.
+// TODO: Find better way of requesting balance - sign blob data!
 func (s *server) Balance(ctx context.Context, in *protobufcompiled.SignedHash) (*protobufcompiled.Spice, error) {
 	t := time.Now()
 	defer s.tele.RecordHistogramTime(balanceTelemetryHistogram, time.Since(t))
@@ -440,7 +441,7 @@ func (s *server) Balance(ctx context.Context, in *protobufcompiled.SignedHash) (
 		return nil, ErrVerification
 	}
 
-	balance, err := s.acc.CalculateBalance(ctx, string(in.Hash))
+	balance, err := s.acc.CalculateBalance(ctx, in.Address)
 	if err != nil {
 		s.log.Error(fmt.Sprintf("balance endpoint, failed to read balance for address: %s, %s", in.Address, err))
 		return nil, ErrProcessing
