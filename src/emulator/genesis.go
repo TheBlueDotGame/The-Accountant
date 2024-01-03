@@ -6,9 +6,11 @@ import (
 	"time"
 
 	"github.com/bartossh/Computantis/src/protobufcompiled"
+	"github.com/bartossh/Computantis/src/spice"
 	"github.com/pterm/pterm"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 type genesis struct {
@@ -59,6 +61,21 @@ func RunGenesis(ctx context.Context, cancel context.CancelFunc, config Config) e
 				config.SpicePerTransaction,
 				config.ReceiverPublicAddr,
 			)
+			addr, err := g.client.WalletPublicAddress(ctx, &emptypb.Empty{})
+			if err != nil {
+				pterm.Error.Printf("Genesis cannot validate public address, %s\n", err)
+				continue
+			}
+			b, err := g.checkBalance(ctx)
+			if err != nil {
+				pterm.Error.Printf("Genesis [ %s ] emulator cannot check balance, %s\n", addr.Public, err)
+				continue
+			}
+			pterm.Info.Printf(
+				"Genesis emulator balance of account [ %s ] is %s \n",
+				addr.Public,
+				b.String(),
+			)
 		}
 	}
 }
@@ -74,4 +91,12 @@ func (g genesis) sendSpice(ctx context.Context, spice uint64, receiver string) e
 		},
 	})
 	return err
+}
+
+func (g genesis) checkBalance(ctx context.Context) (spice.Melange, error) {
+	s, err := g.client.Balance(ctx, &emptypb.Empty{})
+	if err != nil {
+		return spice.Melange{}, err
+	}
+	return spice.Melange{Currency: s.Currency, SupplementaryCurrency: s.SuplementaryCurrency}, nil
 }

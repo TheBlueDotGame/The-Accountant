@@ -14,6 +14,7 @@ import (
 	"github.com/pterm/pterm"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/bartossh/Computantis/src/protobufcompiled"
 	"github.com/bartossh/Computantis/src/transaction"
@@ -269,6 +270,22 @@ func (sub *subscriber) runCheckSaved(ctx context.Context, spice uint64, receiver
 				fmt.Println("")
 				pterm.Info.Printf("Send %v_spice to [ %s ] SUCCEEDED\n", spice, receiver)
 				fmt.Println("")
+				addr, err := sub.pub.client.WalletPublicAddress(ctx, &emptypb.Empty{})
+				if err != nil {
+					pterm.Error.Printf("Subscriber cannot validate public address, %s\n", err)
+					continue
+				}
+				b, err := sub.pub.checkBalance(ctx)
+				if err != nil {
+					pterm.Error.Printf("Subscriber [ %s ] emulator cannot check balance, %s\n", addr.Public, err)
+					continue
+				}
+				pterm.Info.Printf(
+					"Subscriber emulator balance of account [ %s ] is %s \n",
+					addr.Public,
+					b.String(),
+				)
+
 			}
 		}
 	}

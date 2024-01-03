@@ -459,7 +459,11 @@ func TestMultipleIssuerMultipleReceiversSpiceTransferConcurentDoubleSpending(t *
 			wg.Add(1)
 			go func(next int, wg *sync.WaitGroup) {
 				spc := spice.New(uint64(spiceMainTransfer), 0)
-				trx, err := transaction.New(fmt.Sprintf("Spice supply from: %v, to %v, next %v\n", issuer.Address(), receiver.Address(), next), spc, []byte{}, receiver.Address(), issuer)
+				trx, err := transaction.New(fmt.Sprintf(
+					"Spice supply from: %v, to %v, next %v\n",
+					issuer.Address(), receiver.Address(), next),
+					spc, []byte{}, receiver.Address(), issuer,
+				)
 				assert.NilError(t, err)
 				_, err = ab.CreateLeaf(ctx, &trx)
 				assert.NilError(t, err)
