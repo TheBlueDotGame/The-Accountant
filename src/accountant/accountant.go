@@ -414,10 +414,10 @@ func (ab *AccountingBook) isValidWeight(weight uint64) bool {
 }
 
 // CreateGenesis creates genesis vertex that will transfer spice to current node as a receiver.
-func (ab *AccountingBook) CreateGenesis(subject string, spc spice.Melange, data []byte, receiver Signer) (Vertex, error) {
+func (ab *AccountingBook) CreateGenesis(subject string, spc spice.Melange, data []byte, publicAddress string) (Vertex, error) {
 	ab.register()
 	defer ab.unregister()
-	trx, err := transaction.New(subject, spc, data, receiver.Address(), ab.signer)
+	trx, err := transaction.New(subject, spc, data, publicAddress, ab.signer)
 	if err != nil {
 		return Vertex{}, errors.Join(ErrGenesisRejected, err)
 	}

@@ -105,7 +105,7 @@ func main() {
 				},
 			},
 			{
-				Name:    "genesis",
+				Name:    "suplier",
 				Aliases: []string{"s"},
 				Usage:   "Starts genesis emulator",
 				Action: func(_ *cli.Context) error {

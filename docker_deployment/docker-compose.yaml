@@ -162,15 +162,15 @@ services:
       webhooks-node:
         condition: service_started
 
-  client-node-genesis:
-    container_name: client-node-genesis
+  client-node-0:
+    container_name: client-node-0
     build: 
       context: ./..
       dockerfile: docker_deployment/Dockerfile
       args: 
         - "APPLICATION=client"
-        - "CONFIG=setup_client_genesis.yaml"
-        - "WALLET=wallet_notary_genesis"
+        - "CONFIG=setup_client_0.yaml"
+        - "WALLET=wallet_client_0"
     profiles: ["demo"]
     environment:
      - GOMAXPROCS=1
@@ -228,16 +228,16 @@ services:
       subscriber-node:
         condition: service_started
 
-  genesis-emulator-node:
-    container_name: genesis-emulator-node
+  spice-transfer-emulator-node:
+    container_name: spice-transfer-emulator-node
     build:
       context: ./..
       dockerfile: docker_deployment/Dockerfile.emulators
       args:
         - "APPLICATION=emulator"
-        - "ROLE=genesis"
+        - "ROLE=suplier"
         - "DATAFILE=data.json"
-        - "CONFIG=setup_emulator_genesis.yaml"
+        - "CONFIG=setup_emulator_spice_spice_suplier.yaml"
     environment:
      - GOMAXPROCS=1
     profiles: ["demo"]

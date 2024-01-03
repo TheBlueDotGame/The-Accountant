@@ -223,7 +223,7 @@ func TestCreateGensis(t *testing.T) {
 
 	receiver, err := wallet.New()
 	assert.NilError(t, err)
-	vrx, err := ab.CreateGenesis("GENESIS", genesisSpice, []byte{}, &receiver)
+	vrx, err := ab.CreateGenesis("GENESIS", genesisSpice, []byte{}, receiver.Address())
 	assert.NilError(t, err)
 	ok := vrx.Transaction.IsSpiceTransfer()
 	assert.Equal(t, ok, true)
@@ -251,7 +251,7 @@ func TestSingleIssuerSingleReceiverSpiceTransferConsecutive(t *testing.T) {
 
 	genesisReceiver, err := wallet.New()
 	assert.NilError(t, err)
-	vrx, err := ab.CreateGenesis("GENESIS", genesisSpice, []byte{}, &genesisReceiver)
+	vrx, err := ab.CreateGenesis("GENESIS", genesisSpice, []byte{}, genesisReceiver.Address())
 	assert.NilError(t, err)
 	ok := vrx.Transaction.IsSpiceTransfer()
 	assert.Equal(t, ok, true)
@@ -298,7 +298,7 @@ func TestSingleIssuerSingleReceiverSpiceTransferConcurent(t *testing.T) {
 
 	genesisReceiver, err := wallet.New()
 	assert.NilError(t, err)
-	vrx, err := ab.CreateGenesis("GENESIS", genesisSpice, []byte{}, &genesisReceiver)
+	vrx, err := ab.CreateGenesis("GENESIS", genesisSpice, []byte{}, genesisReceiver.Address())
 	assert.NilError(t, err)
 	ok := vrx.Transaction.IsSpiceTransfer()
 	assert.Equal(t, ok, true)
@@ -352,7 +352,7 @@ func TestMultipleIssuerMultipleReceiversSpiceTransferConcurentLegitimate(t *test
 
 	genesisReceiver, err := wallet.New()
 	assert.NilError(t, err)
-	vrx, err := ab.CreateGenesis("GENESIS", genesisSpice, []byte{}, &genesisReceiver)
+	vrx, err := ab.CreateGenesis("GENESIS", genesisSpice, []byte{}, genesisReceiver.Address())
 	assert.NilError(t, err)
 	ok := vrx.Transaction.IsSpiceTransfer()
 	assert.Equal(t, ok, true)
@@ -415,7 +415,7 @@ func TestMultipleIssuerMultipleReceiversSpiceTransferConcurentDoubleSpending(t *
 
 	genesisReceiver, err := wallet.New()
 	assert.NilError(t, err)
-	vrx, err := ab.CreateGenesis("GENESIS", genesisSpice, []byte{}, &genesisReceiver)
+	vrx, err := ab.CreateGenesis("GENESIS", genesisSpice, []byte{}, genesisReceiver.Address())
 	assert.NilError(t, err)
 	ok := vrx.Transaction.IsSpiceTransfer()
 	assert.Equal(t, ok, true)
@@ -517,7 +517,7 @@ func TestMultipleIssuerMultipleReceiversMultipleAccountantSpiceTransferLegitimat
 			genesisSpice := spice.New(math.MaxUint64-1, 0)
 			genesisReceiver, err := wallet.New()
 			assert.NilError(t, err)
-			vrx, err = ab.CreateGenesis("GENESIS", genesisSpice, []byte{}, &genesisReceiver)
+			vrx, err = ab.CreateGenesis("GENESIS", genesisSpice, []byte{}, genesisReceiver.Address())
 			assert.NilError(t, err)
 			ok := vrx.Transaction.IsSpiceTransfer()
 			assert.Equal(t, ok, true)
@@ -599,7 +599,7 @@ func TestMultipleIssuerMultipleReceiversMultipleAccountantSpiceLoadDAG(t *testin
 	genesisSpice := spice.New(math.MaxUint64-1, 0)
 	genesisReceiver, err := wallet.New()
 	assert.NilError(t, err)
-	vrx, err = ab.CreateGenesis("GENESIS", genesisSpice, []byte{}, &genesisReceiver)
+	vrx, err = ab.CreateGenesis("GENESIS", genesisSpice, []byte{}, genesisReceiver.Address())
 	assert.NilError(t, err)
 	ok := vrx.Transaction.IsSpiceTransfer()
 	assert.Equal(t, ok, true)
@@ -669,7 +669,7 @@ func BenchmarkSingleIssuerSingleReceiverSpiceTransferConsecutive(b *testing.B) {
 
 	genesisReceiver, err := wallet.New()
 	assert.NilError(b, err)
-	vrx, err := ab.CreateGenesis("GENESIS", genesisSpice, []byte{}, &genesisReceiver)
+	vrx, err := ab.CreateGenesis("GENESIS", genesisSpice, []byte{}, genesisReceiver.Address())
 	assert.NilError(b, err)
 	ok := vrx.Transaction.IsSpiceTransfer()
 	assert.Equal(b, ok, true)
@@ -717,7 +717,7 @@ func BenchmarkSingleIssuerSingleReceiverSpiceTransferConcurrent(b *testing.B) {
 
 	genesisReceiver, err := wallet.New()
 	assert.NilError(b, err)
-	vrx, err := ab.CreateGenesis("GENESIS", genesisSpice, []byte{}, &genesisReceiver)
+	vrx, err := ab.CreateGenesis("GENESIS", genesisSpice, []byte{}, genesisReceiver.Address())
 	assert.NilError(b, err)
 	ok := vrx.Transaction.IsSpiceTransfer()
 	assert.Equal(b, ok, true)
@@ -771,7 +771,7 @@ func BenchmarkMultipleIssuerMultipleReceiversSpiceTransferConcurentLegitimate(b 
 
 	genesisReceiver, err := wallet.New()
 	assert.NilError(b, err)
-	vrx, err := ab.CreateGenesis("GENESIS", genesisSpice, []byte{}, &genesisReceiver)
+	vrx, err := ab.CreateGenesis("GENESIS", genesisSpice, []byte{}, genesisReceiver.Address())
 	assert.NilError(b, err)
 	ok := vrx.Transaction.IsSpiceTransfer()
 	assert.Equal(b, ok, true)

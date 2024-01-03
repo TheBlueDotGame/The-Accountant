@@ -27,16 +27,15 @@ import (
 )
 
 var (
-	ErrDiscoveryAttmeptSignatureFailed                = errors.New("discovery attempt failed, signature or digest is invalid")
-	ErrDiscoveryAttmeptRqustingNodeServerNotReachable = errors.New("discovery attempt failed, requesting node server not reachable")
-	ErrUnexpectedGossipFailure                        = errors.New("unexpected gossip failure")
-	ErrVertexInCache                                  = errors.New("vertex in cache")
-	ErrFailedToProcessGossip                          = errors.New("failed to process gossip")
-	ErrNilVertex                                      = errors.New("vertex is nil")
-	ErrNilVrxMsgGossip                                = errors.New("vertex gossip is nil")
-	ErrNilTrx                                         = errors.New("transaction is nil")
-	ErrNilTrxMsgGossip                                = errors.New("transaction gossip is nil")
-	ErrNilSignedHash                                  = errors.New("signed hash is nil")
+	ErrDiscoveryAttmeptSignatureFailed = errors.New("discovery attempt failed, signature or digest is invalid")
+	ErrUnexpectedGossipFailure         = errors.New("unexpected gossip failure")
+	ErrVertexInCache                   = errors.New("vertex in cache")
+	ErrFailedToProcessGossip           = errors.New("failed to process gossip")
+	ErrNilVertex                       = errors.New("vertex is nil")
+	ErrNilVrxMsgGossip                 = errors.New("vertex gossip is nil")
+	ErrNilTrx                          = errors.New("transaction is nil")
+	ErrNilTrxMsgGossip                 = errors.New("transaction gossip is nil")
+	ErrNilSignedHash                   = errors.New("signed hash is nil")
 )
 
 const (
@@ -57,18 +56,20 @@ type nodeData struct {
 
 // Config is a configuration for the gossip node.
 type Config struct {
-	URL            string        `yaml:"url"`
-	GenesisURL     string        `yaml:"genesis_url"`
-	LoadDagURL     string        `yaml:"load_dag_url"`
-	VerticesDBPath string        `yaml:"vertices_db_path"`
-	GenesisSpice   spice.Melange `yaml:"genesis_spice"`
-	Port           int           `yaml:"port"`
+	URL              string        `yaml:"url"`
+	GenesisURL       string        `yaml:"genesis_url"`
+	LoadDagURL       string        `yaml:"load_dag_url"`
+	VerticesDBPath   string        `yaml:"vertices_db_path"`
+	GenesisSpice     spice.Melange `yaml:"genesis_spice"`
+	GenessisReceiver string        `yaml:"genesis_receiver"`
+	Port             int           `yaml:"port"`
 }
 
 func (c Config) verify() error {
 	if c.Port < 0 || c.Port > 65535 {
 		return fmt.Errorf("allowed port range is 0 to 65535, got %v", c.Port)
 	}
+	// TODO: validate cf.GenessisReceiver address
 	if _, err := url.Parse(c.GenesisURL); err != nil {
 		return fmt.Errorf("cannot parse given genesis URL: [ %s ], %w", c.GenesisURL, err)
 	}
@@ -86,7 +87,7 @@ type signatureVerifier interface {
 }
 
 type accounter interface {
-	CreateGenesis(subject string, spc spice.Melange, data []byte, receiver accountant.Signer) (accountant.Vertex, error)
+	CreateGenesis(subject string, spc spice.Melange, data []byte, publicAddress string) (accountant.Vertex, error)
 	AddLeaf(ctx context.Context, leaf *accountant.Vertex) error
 	StreamDAG(ctx context.Context) (<-chan *accountant.Vertex, <-chan error)
 	LoadDag(ctx context.Context, cancelF context.CancelCauseFunc, cVrx <-chan *accountant.Vertex)
@@ -142,7 +143,11 @@ func RunGRPC(ctx context.Context, cfg Config, l logger.Logger, t time.Duration, 
 
 	switch cfg.LoadDagURL {
 	case "":
-		g.accounter.CreateGenesis("Genesis Vertex", spice.New(cfg.GenesisSpice.Currency, cfg.GenesisSpice.SupplementaryCurrency), []byte{}, s)
+		g.accounter.CreateGenesis(
+			"Genesis Vertex",
+			spice.New(cfg.GenesisSpice.Currency, cfg.GenesisSpice.SupplementaryCurrency),
+			[]byte{}, cfg.GenessisReceiver,
+		)
 	default:
 		if err := g.updateDag(ctx, cfg.LoadDagURL); err != nil {
 			cancel()
