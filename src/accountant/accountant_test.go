@@ -372,7 +372,10 @@ func TestMultipleIssuerMultipleReceiversSpiceTransferConcurentLegitimate(t *test
 			wg.Add(1)
 			go func(next int, wg *sync.WaitGroup) {
 				spc := spice.New(uint64(spiceMainTransfer), 0)
-				trx, err := transaction.New(fmt.Sprintf("Spice supply from: %v, trx number: %v", rec, next), spc, []byte{}, receiver.Address(), &issuer)
+				trx, err := transaction.New(
+					fmt.Sprintf("Spice supply from: %v, trx number: %v", rec, next),
+					spc, []byte{}, receiver.Address(), &issuer,
+				)
 				assert.NilError(t, err)
 				_, err = ab.CreateLeaf(ctx, &trx)
 				assert.NilError(t, err)

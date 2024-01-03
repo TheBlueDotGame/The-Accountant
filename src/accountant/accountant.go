@@ -943,6 +943,9 @@ func (ab *AccountingBook) CalculateBalance(ctx context.Context, walletPubAddr st
 		return Balance{}, errors.Join(ErrBalanceCaclulationUnexpectedFailure, err)
 	}
 
+	// TODO: Remove after tests.
+	ab.log.Error(fmt.Sprintf("Calculated balance at %v for %s id %s", time.Now().UnixMilli(), walletPubAddr, s.String()))
+
 	return NewBalance(walletPubAddr, s), nil
 }
 
