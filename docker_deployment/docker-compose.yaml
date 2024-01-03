@@ -108,7 +108,7 @@ services:
       dockerfile: docker_deployment/Dockerfile
       args: 
         - "APPLICATION=webhooks"
-        - "CONFIG=setup_genesis.yaml"
+        - "CONFIG=setup_notary_genesis.yaml"
     environment:
      - GOMAXPROCS=1
     restart: unless-stopped
