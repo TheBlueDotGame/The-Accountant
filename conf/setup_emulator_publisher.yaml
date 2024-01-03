@@ -1,5 +1,5 @@
 emulator:
-  tick_millisecond: 200
+  tick_millisecond: 500
   random: false
   client_url: "client-node-1:8000"
   port: "8060"

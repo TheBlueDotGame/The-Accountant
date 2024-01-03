@@ -24,6 +24,7 @@ const (
 	maxTrxInBuffer           = 25
 	hashesBuffLen            = 10000
 	tickerSaveReadMultiplier = 100
+	paymentThreshold         = 10
 )
 
 const (
@@ -103,7 +104,7 @@ func RunSubscriber(ctx context.Context, cancel context.CancelFunc, config Config
 		validateCh:          make(chan hashToValidate, hashesBuffLen),
 	}
 	defer close(s.validateCh)
-	go s.runCheckSaved(ctx, 1000, uint64(config.SpicePerTransaction), config.ReceiverPublicAddr)
+	go s.runCheckSaved(ctx, uint64(config.SpicePerTransaction), config.ReceiverPublicAddr)
 
 	router := fiber.New(fiber.Config{
 		Prefork:       false,
@@ -238,7 +239,7 @@ func (sub *subscriber) sendToValidationQueue(h [32]byte, notaryNodeURL string) {
 	sub.validateCh <- hashToValidate{h, notaryNodeURL}
 }
 
-func (sub *subscriber) runCheckSaved(ctx context.Context, paymentThreshold int, spice uint64, receiver string) {
+func (sub *subscriber) runCheckSaved(ctx context.Context, spice uint64, receiver string) {
 	t := time.NewTicker(sub.ticker)
 	defer t.Stop()
 	buffer := make([]hashToValidate, 0, hashesBuffLen)
@@ -258,10 +259,16 @@ func (sub *subscriber) runCheckSaved(ctx context.Context, paymentThreshold int, 
 			}
 			buffer = make([]hashToValidate, 0, hashesBuffLen)
 			if accepted > paymentThreshold {
-				accepted = 0
+				accepted -= paymentThreshold
 				if err := sub.sendSpice(ctx, spice, receiver); err != nil {
+					fmt.Println("")
 					pterm.Error.Printf("Failed to send %v_spice to [ %s ]. %s \n", spice, receiver, err)
+					fmt.Println("")
+					continue
 				}
+				fmt.Println("")
+				pterm.Info.Printf("Send %v_spice to [ %s ] SUCCEEDED\n", spice, receiver)
+				fmt.Println("")
 			}
 		}
 	}
