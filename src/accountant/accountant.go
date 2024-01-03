@@ -734,6 +734,12 @@ func (ab *AccountingBook) CreateLeaf(ctx context.Context, trx *transaction.Trans
 		ab.lastVertexHash <- validVrx.Hash
 	}
 
+	if trx.IsSpiceTransfer() {
+		ab.log.Info(fmt.Sprintf(
+			"Created tip: %v, transfer from [ %s ] to [ %s ] of %s",
+			tip.Hash, trx.IssuerAddress, trx.ReceiverAddress, trx.Spice.String()),
+		)
+	}
 	return tip, nil
 }
 
@@ -944,7 +950,7 @@ func (ab *AccountingBook) CalculateBalance(ctx context.Context, walletPubAddr st
 	}
 
 	// TODO: Remove after tests.
-	ab.log.Error(fmt.Sprintf("Calculated balance at %v for %s id %s", time.Now().UnixMilli(), walletPubAddr, s.String()))
+	ab.log.Info(fmt.Sprintf("Calculated balance at %v for %s id %s", time.Now().UnixMilli(), walletPubAddr, s.String()))
 
 	return NewBalance(walletPubAddr, s), nil
 }
