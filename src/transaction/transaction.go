@@ -144,7 +144,7 @@ func (t Transaction) IsContract() bool {
 }
 
 // IsSpiceTransfer returns true if the transaction transfers spice.
-func (t *Transaction) IsSpiceTransfer() bool {
+func (t Transaction) IsSpiceTransfer() bool {
 	return !t.Spice.Empty()
 }
 

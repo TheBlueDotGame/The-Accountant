@@ -223,6 +223,13 @@ func (ab *AccountingBook) validateLeaf(ctx context.Context, leaf *Vertex) error 
 
 	err = checkHasSufficientFounds(&spiceIn, &spiceOut)
 	if err != nil {
+
+		ab.log.Info(
+			fmt.Sprintf(
+				"No sufficient founds [ in: %s ] [ out: %s ]\n",
+				spiceIn, spiceOut,
+			),
+		)
 		return errors.Join(ErrTransferringFoundsFailure, err)
 	}
 	return nil
@@ -585,7 +592,10 @@ func (ab *AccountingBook) CreateLeaf(ctx context.Context, trx *transaction.Trans
 	}
 	ok, err := ab.checkTrxInVertexExists(trx.Hash[:])
 	if err != nil {
-		ab.log.Error(fmt.Sprintf("Accounting book creating transaction failed when checking trx to vertex mapping, %s", err))
+		ab.log.Error(fmt.Sprintf(
+			"Accounting book creating transaction failed when checking trx to vertex mapping, %s", err,
+		),
+		)
 		return Vertex{}, ErrUnexpected
 	}
 	if ok {
@@ -683,14 +693,20 @@ func (ab *AccountingBook) CreateLeaf(ctx context.Context, trx *transaction.Trans
 	}
 
 	tip, err := NewVertex(
-		*trx, validatedLeafs[0].Hash, validatedLeafs[1].Hash, calcNewWeight(validatedLeafs[0].Weight, validatedLeafs[1].Weight), ab.signer,
+		*trx, validatedLeafs[0].Hash, validatedLeafs[1].Hash,
+		calcNewWeight(validatedLeafs[0].Weight, validatedLeafs[1].Weight), ab.signer,
 	)
 	if err != nil {
 		ab.log.Error(fmt.Sprintf("Accounting book rejected new leaf [ %v ], %s.", tip.Hash, err))
 		return Vertex{}, errors.Join(ErrNewLeafRejected, err)
 	}
 	if err := ab.saveTrxInVertex(trx.Hash[:], tip.Hash[:]); err != nil {
-		ab.log.Error(fmt.Sprintf("Accounting book vertex create failed saving transaction [ %v ] in tip [ %v ], %s.", trx.Hash[:], tip.Hash, err))
+		ab.log.Error(
+			fmt.Sprintf(
+				"Accounting book vertex create failed saving transaction [ %v ] in tip [ %v ], %s.",
+				trx.Hash[:], tip.Hash, err,
+			),
+		)
 		return Vertex{}, ErrUnexpected
 	}
 	if err := ab.dag.AddVertexByID(string(tip.Hash[:]), &tip); err != nil {
@@ -706,7 +722,8 @@ func (ab *AccountingBook) CreateLeaf(ctx context.Context, trx *transaction.Trans
 			ab.dag.DeleteVertex(string(tip.Hash[:]))
 			ab.removeTrxInVertex(trx.Hash[:])
 			ab.log.Error(
-				fmt.Sprintf("Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ] when checking is root, %s,",
+				fmt.Sprintf(
+					"Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ] when checking is root, %s,",
 					vrx.Hash, vrx.SignerPublicAddress, vrx.LeftParentHash, vrx.RightParentHash, err),
 			)
 			return Vertex{}, ErrNewLeafRejected
@@ -721,7 +738,8 @@ func (ab *AccountingBook) CreateLeaf(ctx context.Context, trx *transaction.Trans
 			ab.dag.DeleteVertex(string(tip.Hash[:]))
 			ab.removeTrxInVertex(trx.Hash[:])
 			ab.log.Error(
-				fmt.Sprintf("Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ] when adding an edge, %s,",
+				fmt.Sprintf(
+					"Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ] when adding an edge, %s,",
 					vrx.Hash, vrx.SignerPublicAddress, vrx.LeftParentHash, vrx.RightParentHash, err),
 			)
 			return Vertex{}, ErrNewLeafRejected
@@ -731,28 +749,9 @@ func (ab *AccountingBook) CreateLeaf(ctx context.Context, trx *transaction.Trans
 		<-ab.lastVertexHash
 	}
 	for _, validVrx := range validatedLeafs {
-		if validVrx.Transaction.IsSpiceTransfer() { // TODO: Remove after fixing accounting for spice.
-			ab.log.Info(
-				fmt.Sprintf(
-					"Validated tip that becomes a vertex: %v, transfer from [ %s ] to [ %s ] of %s",
-					validVrx.Hash, validVrx.Transaction.IssuerAddress, validVrx.Transaction.ReceiverAddress,
-					validVrx.Transaction.Spice.String(),
-				),
-			)
-		}
-
 		ab.lastVertexHash <- validVrx.Hash
 	}
 
-	if tip.Transaction.IsSpiceTransfer() { // TODO: Remove after fixing accounting for spice.
-		ab.log.Info(
-			fmt.Sprintf(
-				"Created tip: %v, transfer from [ %s ] to [ %s ] of %s",
-				tip.Hash, tip.Transaction.IssuerAddress, tip.Transaction.ReceiverAddress,
-				tip.Transaction.Spice.String(),
-			),
-		)
-	}
 	return tip, nil
 }
 
@@ -785,7 +784,8 @@ func (ab *AccountingBook) AddLeaf(ctx context.Context, leaf *Vertex) error {
 
 	if err := leaf.verify(ab.verifier); err != nil {
 		ab.log.Error(
-			fmt.Sprintf("Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ] when verifying, %s.",
+			fmt.Sprintf(
+				"Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ] when verifying, %s.",
 				leaf.Hash, leaf.SignerPublicAddress, leaf.LeftParentHash, leaf.RightParentHash, err),
 		)
 		return ErrLeafRejected
@@ -805,7 +805,8 @@ func (ab *AccountingBook) AddLeaf(ctx context.Context, leaf *Vertex) error {
 			)
 			if err := ab.repiter.insert(leaf); err != nil {
 				ab.log.Error(
-					fmt.Sprintf("Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ] when reading vertex, %s.",
+					fmt.Sprintf(
+						"Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ] when reading vertex, %s.",
 						leaf.Hash, leaf.SignerPublicAddress, leaf.LeftParentHash, leaf.RightParentHash, err),
 				)
 				return ErrLeafRejected
@@ -819,7 +820,8 @@ func (ab *AccountingBook) AddLeaf(ctx context.Context, leaf *Vertex) error {
 		isLeaf, err := ab.dag.IsLeaf(string(hash[:]))
 		if err != nil {
 			ab.log.Error(
-				fmt.Sprintf("Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ] when validate is leaf, %s.",
+				fmt.Sprintf(
+					"Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ] when validate is leaf, %s.",
 					leaf.Hash, leaf.SignerPublicAddress, leaf.LeftParentHash, leaf.RightParentHash, err),
 			)
 			return ErrLeafRejected
@@ -837,7 +839,10 @@ func (ab *AccountingBook) AddLeaf(ctx context.Context, leaf *Vertex) error {
 
 	if err := ab.saveTrxInVertex(leaf.Transaction.Hash[:], leaf.Hash[:]); err != nil {
 		ab.log.Error(
-			fmt.Sprintf("Accounting book leaf add failed saving transaction [ %v ] in leaf [ %v ], %s.", leaf.Transaction.Hash[:], leaf.Hash, err),
+			fmt.Sprintf(
+				"Accounting book leaf add failed saving transaction [ %v ] in leaf [ %v ], %s.",
+				leaf.Transaction.Hash[:], leaf.Hash, err,
+			),
 		)
 		return errors.Join(ErrUnexpected, err)
 	}
@@ -855,7 +860,8 @@ func (ab *AccountingBook) AddLeaf(ctx context.Context, leaf *Vertex) error {
 			ab.dag.DeleteVertex(string(leaf.Hash[:]))
 			ab.removeTrxInVertex(leaf.Transaction.Hash[:])
 			ab.log.Error(
-				fmt.Sprintf("Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ] when checking is root, %s,",
+				fmt.Sprintf(
+					"Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ] when checking is root, %s,",
 					leaf.Hash, leaf.SignerPublicAddress, leaf.LeftParentHash, leaf.RightParentHash, err),
 			)
 			return ErrNewLeafRejected
@@ -870,7 +876,8 @@ func (ab *AccountingBook) AddLeaf(ctx context.Context, leaf *Vertex) error {
 			ab.dag.DeleteVertex(string(leaf.Hash[:]))
 			ab.removeTrxInVertex(leaf.Transaction.Hash[:])
 			ab.log.Error(
-				fmt.Sprintf("Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ] when adding edge, %s.",
+				fmt.Sprintf(
+					"Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ] when adding edge, %s.",
 					leaf.Hash, leaf.SignerPublicAddress, leaf.LeftParentHash, leaf.RightParentHash, err),
 			)
 			return ErrLeafRejected
@@ -953,7 +960,6 @@ func (ab *AccountingBook) CalculateBalance(ctx context.Context, walletPubAddr st
 		}
 	}
 
-	ab.log.Info(fmt.Sprintf("Calculated balance in %s out %s", spiceIn.String(), spiceOut.String()))
 	s := spice.New(0, 0)
 	if err := s.Supply(spiceIn); err != nil {
 		return Balance{}, errors.Join(ErrBalanceCaclulationUnexpectedFailure, err)
@@ -962,9 +968,6 @@ func (ab *AccountingBook) CalculateBalance(ctx context.Context, walletPubAddr st
 	if err := s.Drain(spiceOut, &spice.Melange{}); err != nil {
 		return Balance{}, errors.Join(ErrBalanceCaclulationUnexpectedFailure, err)
 	}
-
-	// TODO: Remove after fixing accounting for spice.
-	ab.log.Info(fmt.Sprintf("Calculated balance at %v for %s id %s", time.Now().UnixMilli(), walletPubAddr, s.String()))
 
 	return NewBalance(walletPubAddr, s), nil
 }
