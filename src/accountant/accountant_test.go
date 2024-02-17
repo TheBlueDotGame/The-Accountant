@@ -277,7 +277,7 @@ func TestSingleIssuerSingleReceiverSpiceTransferConsecutive(t *testing.T) {
 	time.Sleep(time.Millisecond * 200)
 }
 
-func TestSingleIssuerSingleReceiverSpiceTransferConcurent(t *testing.T) {
+func TestSingleIssuerSingleReceiverSpiceTransferConcurrent(t *testing.T) {
 	callOnLogErr := func(err error) {
 		fmt.Printf("logger failed with error: %s\n", err)
 	}
@@ -331,7 +331,7 @@ func TestSingleIssuerSingleReceiverSpiceTransferConcurent(t *testing.T) {
 	time.Sleep(time.Millisecond * 200)
 }
 
-func TestMultipleIssuerMultipleReceiversSpiceTransferConcurentLegitimate(t *testing.T) {
+func TestMultipleIssuerMultipleReceiversSpiceTransferConcurrentLegitimate(t *testing.T) {
 	callOnLogErr := func(err error) {
 		fmt.Printf("logger failed with error: %s\n", err)
 	}
@@ -394,7 +394,7 @@ func TestMultipleIssuerMultipleReceiversSpiceTransferConcurentLegitimate(t *test
 	time.Sleep(time.Millisecond * 200)
 }
 
-func TestMultipleIssuerMultipleReceiversSpiceTransferConcurentDoubleSpending(t *testing.T) {
+func TestMultipleIssuerMultipleReceiversSpiceTransferConcurrentDoubleSpending(t *testing.T) {
 	callOnLogErr := func(err error) {
 		fmt.Printf("logger failed with error: %s\n", err)
 	}
@@ -422,7 +422,7 @@ func TestMultipleIssuerMultipleReceiversSpiceTransferConcurentDoubleSpending(t *
 	assert.DeepEqual(t, genesisSpice, vrx.Transaction.Spice)
 
 	numberOfParticipants := 100
-	roundsPerPArticipant := 10
+	roundsPerParticipant := 10
 	spiceMainTransfer := 10
 	issuer := genesisReceiver
 	walletsToCheck := make([]transaction.Signer, 0, numberOfParticipants)
@@ -433,7 +433,7 @@ func TestMultipleIssuerMultipleReceiversSpiceTransferConcurentDoubleSpending(t *
 		spiceMainTransfer := 10
 		var mainSpiceReduction atomic.Int64
 		var wg sync.WaitGroup
-		for i := 0; i < roundsPerPArticipant; i++ {
+		for i := 0; i < roundsPerParticipant; i++ {
 			wg.Add(1)
 			go func(next int, wg *sync.WaitGroup) {
 				spc := spice.New(uint64(spiceMainTransfer), 0)
@@ -449,16 +449,15 @@ func TestMultipleIssuerMultipleReceiversSpiceTransferConcurentDoubleSpending(t *
 		wg.Wait()
 		balance, err := ab.CalculateBalance(ctx, receiver.Address())
 		assert.NilError(t, err)
-		assert.Equal(t, int64(balance.Spice.Currency), mainSpiceReduction.Add(int64(-spiceMainTransfer)))
+		assert.Equal(t, int64(balance.Spice.Currency), mainSpiceReduction.Load())
 		issuer = receiver
 		walletsToCheck = append(walletsToCheck, &receiver)
 	}
-	for idx, issuer := range walletsToCheck {
+	for _, issuer := range walletsToCheck {
 		receiver, err := wallet.New()
 		assert.NilError(t, err)
-		var mainSpiceReduction atomic.Int64
 		var wg sync.WaitGroup
-		for i := 0; i < roundsPerPArticipant; i++ {
+		for i := 0; i < roundsPerParticipant; i++ {
 			wg.Add(1)
 			go func(next int, wg *sync.WaitGroup) {
 				spc := spice.New(uint64(spiceMainTransfer), 0)
@@ -469,8 +468,9 @@ func TestMultipleIssuerMultipleReceiversSpiceTransferConcurentDoubleSpending(t *
 				)
 				assert.NilError(t, err)
 				_, err = ab.CreateLeaf(ctx, &trx)
-				assert.NilError(t, err)
-				mainSpiceReduction.Add(int64(spiceMainTransfer))
+				if err != nil {
+					assert.ErrorContains(t, err, "double spending or insufficient founds")
+				}
 				wg.Done()
 			}(i, &wg)
 		}
@@ -478,12 +478,7 @@ func TestMultipleIssuerMultipleReceiversSpiceTransferConcurentDoubleSpending(t *
 		wg.Wait()
 		balance, err := ab.CalculateBalance(ctx, issuer.Address())
 		assert.NilError(t, err)
-		switch idx {
-		case numberOfParticipants - 1:
-			assert.Equal(t, balance.Spice.Currency, uint64(spiceMainTransfer))
-		default:
-			assert.Equal(t, balance.Spice.Currency, uint64(0))
-		}
+		assert.Equal(t, balance.Spice.Currency, uint64(0))
 	}
 
 	time.Sleep(time.Millisecond * 200)
@@ -750,7 +745,7 @@ func BenchmarkSingleIssuerSingleReceiverSpiceTransferConcurrent(b *testing.B) {
 	wg.Wait()
 }
 
-func BenchmarkMultipleIssuerMultipleReceiversSpiceTransferConcurentLegitimate(b *testing.B) {
+func BenchmarkMultipleIssuerMultipleReceiversSpiceTransferConcurrentLegitimate(b *testing.B) {
 	callOnLogErr := func(err error) {
 		fmt.Printf("logger failed with error: %s\n", err)
 	}

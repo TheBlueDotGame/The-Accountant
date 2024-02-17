@@ -409,6 +409,46 @@ func (ab *AccountingBook) isValidWeight(weight uint64) bool {
 	return weight >= current-throughput
 }
 
+func (ab *AccountingBook) getLeaves(ctx context.Context) (leftLeaf, rightLeaf *Vertex, err error) {
+	var i int
+	for _, item := range ab.dag.GetLeaves() {
+		if i == 2 {
+			break
+		}
+
+		switch vrx := item.(type) {
+		case *Vertex:
+			if vrx == nil {
+				err = errors.Join(ErrUnexpected, errors.New("vertex is nil"))
+				return
+			}
+			err = ab.validateLeaf(ctx, vrx)
+			if err != nil {
+				ab.dag.DeleteVertex(string(vrx.Hash[:]))
+				ab.removeTrxInVertex(vrx.Transaction.Hash[:])
+				ab.log.Error(
+					fmt.Sprintf("Accounting book rejected leaf hash [ %v ], from [ %v ], %s",
+						vrx.Hash, vrx.SignerPublicAddress, err),
+				)
+				ab.updateWaightAndThroughput(vrx.Weight)
+				continue
+			}
+			switch i {
+			case 0:
+				leftLeaf = vrx
+			case 1:
+				rightLeaf = vrx
+			}
+			i++
+
+		default:
+			err = errors.Join(ErrUnexpected, errors.New("cannot match vertex type"))
+			return
+		}
+	}
+	return
+}
+
 // CreateGenesis creates genesis vertex that will transfer spice to current node as a receiver.
 func (ab *AccountingBook) CreateGenesis(subject string, spc spice.Melange, data []byte, publicAddress string) (Vertex, error) {
 	trx, err := transaction.New(subject, spc, data, publicAddress, ab.signer)
@@ -570,46 +610,21 @@ func (ab *AccountingBook) CreateLeaf(ctx context.Context, trx *transaction.Trans
 	ab.mux.Lock()
 	defer ab.mux.Unlock()
 
-	var i int
-	var leftLeaf, rightLeaf *Vertex
-	for _, item := range ab.dag.GetLeaves() {
-		if i == 2 {
-			break
-		}
-
-		switch vrx := item.(type) {
-		case *Vertex:
-			if vrx == nil {
-				return Vertex{}, errors.Join(ErrUnexpected, errors.New("vertex is nil"))
-			}
-			err = ab.validateLeaf(ctx, vrx)
-			if err != nil {
-				ab.dag.DeleteVertex(string(vrx.Hash[:]))
-				ab.removeTrxInVertex(vrx.Transaction.Hash[:])
-				ab.log.Error(
-					fmt.Sprintf("Accounting book rejected leaf hash [ %v ], from [ %v ], %s",
-						vrx.Hash, vrx.SignerPublicAddress, err),
-				)
-				ab.updateWaightAndThroughput(vrx.Weight)
-				continue
-			}
-			switch i {
-			case 0:
-				leftLeaf = vrx
-			case 1:
-				rightLeaf = vrx
-			}
-			i++
-
-		default:
-			return Vertex{}, errors.Join(ErrUnexpected, errors.New("cannot match vertex type"))
-		}
+	leftLeaf, rightLeaf, err := ab.getLeaves(ctx)
+	if err != nil {
+		return Vertex{}, err
 	}
 
 	if leftLeaf == nil {
-		msgErr := errors.Join(ErrUnexpected, errors.New("expected at least one leaf but got zero"))
-		ab.log.Error(fmt.Sprintf("Accounting book create tip %s.", msgErr))
-		return Vertex{}, msgErr
+		leftLeaf, rightLeaf, err = ab.getLeaves(ctx)
+		if err != nil {
+			return Vertex{}, err
+		}
+		if leftLeaf != nil {
+			msgErr := errors.Join(ErrUnexpected, errors.New("expected at least one leaf but got zero"))
+			ab.log.Error(fmt.Sprintf("Accounting book create tip %s.", msgErr))
+			return Vertex{}, msgErr
+		}
 	}
 
 	if rightLeaf == nil {
