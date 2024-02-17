@@ -13,7 +13,7 @@ import (
 )
 
 func calcNewWeight(leftWeight, rightWeight uint64) uint64 {
-	return (leftWeight+rightWeight)/2 + 1
+	return max(leftWeight, rightWeight) + 1
 }
 
 // Vertex is a Direct Acyclic Graph vertex that creates a AccountingBook inner graph.

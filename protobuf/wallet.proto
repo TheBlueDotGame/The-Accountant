@@ -41,4 +41,5 @@ service WalletClientAPI {
   rpc Waiting(NotaryNode) returns (Transactions) {}
   rpc Saved(TrxHash) returns (Transaction) {}
   rpc WebHook(CreateWebHook) returns (google.protobuf.Empty) {}
+  rpc Balance(google.protobuf.Empty) returns (Spice) {}
 }

@@ -27,6 +27,7 @@ const (
 	NotaryAPI_Waiting_FullMethodName = "/computantis.NotaryAPI/Waiting"
 	NotaryAPI_Saved_FullMethodName   = "/computantis.NotaryAPI/Saved"
 	NotaryAPI_Data_FullMethodName    = "/computantis.NotaryAPI/Data"
+	NotaryAPI_Balance_FullMethodName = "/computantis.NotaryAPI/Balance"
 )
 
 // NotaryAPIClient is the client API for NotaryAPI service.
@@ -40,6 +41,7 @@ type NotaryAPIClient interface {
 	Waiting(ctx context.Context, in *SignedHash, opts ...grpc.CallOption) (*Transactions, error)
 	Saved(ctx context.Context, in *SignedHash, opts ...grpc.CallOption) (*Transaction, error)
 	Data(ctx context.Context, in *Address, opts ...grpc.CallOption) (*DataBlob, error)
+	Balance(ctx context.Context, in *SignedHash, opts ...grpc.CallOption) (*Spice, error)
 }
 
 type notaryAPIClient struct {
@@ -113,6 +115,15 @@ func (c *notaryAPIClient) Data(ctx context.Context, in *Address, opts ...grpc.Ca
 	return out, nil
 }
 
+func (c *notaryAPIClient) Balance(ctx context.Context, in *SignedHash, opts ...grpc.CallOption) (*Spice, error) {
+	out := new(Spice)
+	err := c.cc.Invoke(ctx, NotaryAPI_Balance_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // NotaryAPIServer is the server API for NotaryAPI service.
 // All implementations must embed UnimplementedNotaryAPIServer
 // for forward compatibility
@@ -124,6 +135,7 @@ type NotaryAPIServer interface {
 	Waiting(context.Context, *SignedHash) (*Transactions, error)
 	Saved(context.Context, *SignedHash) (*Transaction, error)
 	Data(context.Context, *Address) (*DataBlob, error)
+	Balance(context.Context, *SignedHash) (*Spice, error)
 	mustEmbedUnimplementedNotaryAPIServer()
 }
 
@@ -151,6 +163,9 @@ func (UnimplementedNotaryAPIServer) Saved(context.Context, *SignedHash) (*Transa
 }
 func (UnimplementedNotaryAPIServer) Data(context.Context, *Address) (*DataBlob, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Data not implemented")
+}
+func (UnimplementedNotaryAPIServer) Balance(context.Context, *SignedHash) (*Spice, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Balance not implemented")
 }
 func (UnimplementedNotaryAPIServer) mustEmbedUnimplementedNotaryAPIServer() {}
 
@@ -291,6 +306,24 @@ func _NotaryAPI_Data_Handler(srv interface{}, ctx context.Context, dec func(inte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _NotaryAPI_Balance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SignedHash)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NotaryAPIServer).Balance(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: NotaryAPI_Balance_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NotaryAPIServer).Balance(ctx, req.(*SignedHash))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // NotaryAPI_ServiceDesc is the grpc.ServiceDesc for NotaryAPI service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -325,6 +358,10 @@ var NotaryAPI_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Data",
 			Handler:    _NotaryAPI_Data_Handler,
+		},
+		{
+			MethodName: "Balance",
+			Handler:    _NotaryAPI_Balance_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -9,7 +9,7 @@ import (
 	"github.com/vmihailenco/msgpack"
 )
 
-// Balance holds the  wallet balance.
+// Balance holds the wallet balance.
 type Balance struct {
 	AccountedAt         time.Time     `msgpack:"accounted_at"`
 	WalletPublicAddress string        `msgpack:"wallet_public_address"`

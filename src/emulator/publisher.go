@@ -13,6 +13,7 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/bartossh/Computantis/src/protobufcompiled"
+	"github.com/bartossh/Computantis/src/spice"
 )
 
 type publisher struct {
@@ -52,19 +53,33 @@ func RunPublisher(ctx context.Context, cancel context.CancelFunc, config Config,
 		knownNodes: config.NotaryNodes,
 	}
 
-	address, err := p.client.WalletPublicAddress(ctx, &emptypb.Empty{})
-	if err != nil {
-		return err
-	}
-
 	t := time.NewTicker(time.Duration(config.TickMillisecond) * time.Millisecond)
+	tb := time.NewTicker(time.Duration(config.TickMillisecond*50) * time.Millisecond)
 	defer t.Stop()
+	defer tb.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
 		case <-t.C:
-			p.emulate(ctx, address.Public, measurtements)
+			p.emulate(ctx, config.ReceiverPublicAddr, measurtements)
+		case <-tb.C:
+			addr, err := p.client.WalletPublicAddress(ctx, &emptypb.Empty{})
+			if err != nil {
+				pterm.Error.Printf("Publisher cannot validate public address, %s\n", err)
+				continue
+			}
+			b, err := p.checkBalance(ctx)
+			if err != nil {
+				pterm.Error.Printf("Publisher [ %s ] emulator cannot check balance, %s\n", addr.Public, err)
+				continue
+			}
+			pterm.Info.Printf(
+				"Publisher emulator balance of account [ %s ] is %s \n",
+				addr.Public,
+				b.String(),
+			)
+
 		}
 	}
 }
@@ -110,4 +125,12 @@ func (pub *publisher) getRandomNodeURLFromList(notaryNodeURL string) string {
 		notaryNodeURL = pub.knownNodes[idx]
 	}
 	return notaryNodeURL
+}
+
+func (pub *publisher) checkBalance(ctx context.Context) (spice.Melange, error) {
+	s, err := pub.client.Balance(ctx, &emptypb.Empty{})
+	if err != nil {
+		return spice.Melange{}, err
+	}
+	return spice.Melange{Currency: s.Currency, SupplementaryCurrency: s.SuplementaryCurrency}, nil
 }

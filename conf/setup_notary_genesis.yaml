@@ -7,6 +7,7 @@ gossip_server:
   url: "notary-node-genesis:8080"
   genesis_url:
   load_dag_url:
+  genesis_receiver: "12YDdeS1wm1tDYLvYg8pprqanqgrALEKdFPkBtrME6UXtnHVfVW"
   genesis_spice:
     currency: 1000000000000
     supplementary_currency: 0
@@ -31,5 +32,5 @@ webhooks_server:
   port: 8000
 zinc_logger:
   address: http://zincsearch:4080 
-  index: notary
+  index: genesis
   token: Basic YWRtaW46emluY3NlYXJjaA==

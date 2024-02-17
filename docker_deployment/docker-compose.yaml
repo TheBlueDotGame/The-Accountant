@@ -48,7 +48,7 @@ services:
       dockerfile: docker_deployment/Dockerfile
       args: 
         - "APPLICATION=node"
-        - "CONFIG=setup_genesis.yaml"
+        - "CONFIG=setup_notary_genesis.yaml"
         - "WALLET=wallet_notary_genesis"
     restart: unless-stopped
     ports:
@@ -108,7 +108,7 @@ services:
       dockerfile: docker_deployment/Dockerfile
       args: 
         - "APPLICATION=webhooks"
-        - "CONFIG=setup_genesis.yaml"
+        - "CONFIG=setup_notary_genesis.yaml"
     environment:
      - GOMAXPROCS=1
     restart: unless-stopped
@@ -120,21 +120,63 @@ services:
       notary-node-two:
         condition: service_started
   
-  client-node:
-    container_name: client-node
+  client-node-1:
+    container_name: client-node-1
     build: 
       context: ./..
       dockerfile: docker_deployment/Dockerfile
       args: 
         - "APPLICATION=client"
-        - "CONFIG=setup_client.yaml"
-        - "WALLET=wallet_client"
+        - "CONFIG=setup_client_1.yaml"
+        - "WALLET=wallet_client_1"
     profiles: ["demo"]
     environment:
      - GOMAXPROCS=1
     restart: unless-stopped
     ports:
       - "8020:8000"
+    networks:
+      - computantis_network
+    depends_on:
+      webhooks-node:
+        condition: service_started
+
+  client-node-2:
+    container_name: client-node-2
+    build: 
+      context: ./..
+      dockerfile: docker_deployment/Dockerfile
+      args: 
+        - "APPLICATION=client"
+        - "CONFIG=setup_client_2.yaml"
+        - "WALLET=wallet_client_2"
+    profiles: ["demo"]
+    environment:
+     - GOMAXPROCS=1
+    restart: unless-stopped
+    ports:
+      - "8030:8000"
+    networks:
+      - computantis_network
+    depends_on:
+      webhooks-node:
+        condition: service_started
+
+  client-node-0:
+    container_name: client-node-0
+    build: 
+      context: ./..
+      dockerfile: docker_deployment/Dockerfile
+      args: 
+        - "APPLICATION=client"
+        - "CONFIG=setup_client_0.yaml"
+        - "WALLET=wallet_client_0"
+    profiles: ["demo"]
+    environment:
+     - GOMAXPROCS=1
+    restart: unless-stopped
+    ports:
+      - "8040:8000"
     networks:
       - computantis_network
     depends_on:
@@ -151,7 +193,8 @@ services:
         - "APPLICATION=emulator"
         - "ROLE=subscriber"
         - "DATAFILE=minmax.json"
-        - "CONFIG=setup_emulator.yaml"
+        - "CONFIG=setup_emulator_subscriber.yaml"
+
     environment:
      - GOMAXPROCS=1
     profiles: ["demo"]
@@ -174,7 +217,7 @@ services:
         - "APPLICATION=emulator"
         - "ROLE=publisher"
         - "DATAFILE=data.json"
-        - "CONFIG=setup_emulator.yaml"
+        - "CONFIG=setup_emulator_publisher.yaml"
     environment:
      - GOMAXPROCS=1
     profiles: ["demo"]
@@ -184,7 +227,27 @@ services:
     depends_on:
       subscriber-node:
         condition: service_started
-  
+
+  spice-transfer-emulator-node:
+    container_name: spice-transfer-emulator-node
+    build:
+      context: ./..
+      dockerfile: docker_deployment/Dockerfile.emulators
+      args:
+        - "APPLICATION=emulator"
+        - "ROLE=suplier"
+        - "DATAFILE=data.json"
+        - "CONFIG=setup_emulator_spice_suplier.yaml"
+    environment:
+     - GOMAXPROCS=1
+    profiles: ["demo"]
+    restart: unless-stopped
+    networks:
+      - computantis_network
+    depends_on:
+      subscriber-node:
+        condition: service_started
+
   node-exporter:
     image: prom/node-exporter:latest
     container_name: node-exporter

@@ -104,6 +104,22 @@ func main() {
 					return nil
 				},
 			},
+			{
+				Name:    "suplier",
+				Aliases: []string{"s"},
+				Usage:   "Starts genesis emulator",
+				Action: func(_ *cli.Context) error {
+					cfg, err := configReader(confFile)
+					if err != nil {
+						return err
+					}
+					ctx, cancel := closerContext()
+					if err := emulator.RunGenesis(ctx, cancel, cfg.Emulator); err != nil {
+						return err
+					}
+					return nil
+				},
+			},
 		},
 	}
 

@@ -1,0 +1,12 @@
+file_operator:
+  wallet_path: "wallet_notary_genesis"
+  wallet_passwd: "dc6b5b1635453e0eb57344ffb6cb293e8300fc4001fad3518e721d548459c09d"
+  pem_path: "ed25519"
+client:
+  port: 8000
+  notary_node_url: "notary-node-genesis:8000"
+  webhooks_node_url: "webhooks-node:8000"
+zinc_logger:
+  address: http://zincsearch:4080 
+  index: wallet_genesis
+  token: Basic YWRtaW46emluY3NlYXJjaA==

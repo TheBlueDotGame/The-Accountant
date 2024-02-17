@@ -86,7 +86,7 @@ func (t *testAccountant) StreamDAG(ctx context.Context) (<-chan *accountant.Vert
 func (t *testAccountant) LoadDag(ctx context.Context, cancelF context.CancelCauseFunc, cVrx <-chan *accountant.Vertex) {
 }
 
-func (t *testAccountant) CreateGenesis(subject string, spc spice.Melange, data []byte, receiver accountant.Signer) (accountant.Vertex, error) {
+func (t *testAccountant) CreateGenesis(subject string, spc spice.Melange, data []byte, publicAddress string) (accountant.Vertex, error) {
 	return accountant.Vertex{}, nil
 }
 
@@ -347,7 +347,9 @@ func TestDAGWithGossip(t *testing.T) {
 				accGenesis, err = accountant.NewAccountingBook(ctx, genessisConfigAccountant, v, &w, l)
 				assert.NilError(t, err)
 				go func() {
-					accGenesis.CreateGenesis("Genesis Test Transaction", spice.New(1000000000000000, 0), []byte{}, &genessisReceiver)
+					accGenesis.CreateGenesis(
+						"Genesis Test Transaction", spice.New(1000000000000000, 0), []byte{}, genessisReceiver.Address(),
+					)
 					close(doneGenesis)
 				}()
 				juggler := pipe.New(100, 100)

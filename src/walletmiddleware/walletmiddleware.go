@@ -285,6 +285,27 @@ func (c *Client) ReadSavedTransaction(ctx context.Context, hash [32]byte) (trans
 	return trx, nil
 }
 
+// ReadBalance reads balance of given account owner.
+func (c *Client) ReadBalance(ctx context.Context) (spice.Melange, error) {
+	if !c.ready {
+		return spice.Melange{}, httpclient.ErrWalletNotReady
+	}
+
+	data := []byte(c.w.Address())
+	digest, signature := c.w.Sign(data)
+	balance, err := c.client.Balance(ctx, &protobufcompiled.SignedHash{
+		Address:   c.w.Address(),
+		Data:      data,
+		Hash:      digest[:],
+		Signature: signature,
+	})
+	if err != nil {
+		return spice.Melange{}, err
+	}
+
+	return spice.Melange{Currency: balance.Currency, SupplementaryCurrency: balance.SuplementaryCurrency}, nil
+}
+
 // SaveWalletToFile saves the wallet to the file in the path.
 func (c *Client) SaveWalletToFile() error {
 	if !c.ready {

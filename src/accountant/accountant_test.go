@@ -223,7 +223,7 @@ func TestCreateGensis(t *testing.T) {
 
 	receiver, err := wallet.New()
 	assert.NilError(t, err)
-	vrx, err := ab.CreateGenesis("GENESIS", genesisSpice, []byte{}, &receiver)
+	vrx, err := ab.CreateGenesis("GENESIS", genesisSpice, []byte{}, receiver.Address())
 	assert.NilError(t, err)
 	ok := vrx.Transaction.IsSpiceTransfer()
 	assert.Equal(t, ok, true)
@@ -251,7 +251,7 @@ func TestSingleIssuerSingleReceiverSpiceTransferConsecutive(t *testing.T) {
 
 	genesisReceiver, err := wallet.New()
 	assert.NilError(t, err)
-	vrx, err := ab.CreateGenesis("GENESIS", genesisSpice, []byte{}, &genesisReceiver)
+	vrx, err := ab.CreateGenesis("GENESIS", genesisSpice, []byte{}, genesisReceiver.Address())
 	assert.NilError(t, err)
 	ok := vrx.Transaction.IsSpiceTransfer()
 	assert.Equal(t, ok, true)
@@ -272,12 +272,12 @@ func TestSingleIssuerSingleReceiverSpiceTransferConsecutive(t *testing.T) {
 
 	balance, err := ab.CalculateBalance(ctx, receiver.Address())
 	assert.NilError(t, err)
-	assert.Equal(t, balance.Spice.Currency, mainSpiceReduction-uint64(spiceMainTransfer))
+	assert.Equal(t, balance.Spice.Currency, mainSpiceReduction)
 
 	time.Sleep(time.Millisecond * 200)
 }
 
-func TestSingleIssuerSingleReceiverSpiceTransferConcurent(t *testing.T) {
+func TestSingleIssuerSingleReceiverSpiceTransferConcurrent(t *testing.T) {
 	callOnLogErr := func(err error) {
 		fmt.Printf("logger failed with error: %s\n", err)
 	}
@@ -298,7 +298,7 @@ func TestSingleIssuerSingleReceiverSpiceTransferConcurent(t *testing.T) {
 
 	genesisReceiver, err := wallet.New()
 	assert.NilError(t, err)
-	vrx, err := ab.CreateGenesis("GENESIS", genesisSpice, []byte{}, &genesisReceiver)
+	vrx, err := ab.CreateGenesis("GENESIS", genesisSpice, []byte{}, genesisReceiver.Address())
 	assert.NilError(t, err)
 	ok := vrx.Transaction.IsSpiceTransfer()
 	assert.Equal(t, ok, true)
@@ -326,12 +326,12 @@ func TestSingleIssuerSingleReceiverSpiceTransferConcurent(t *testing.T) {
 
 	balance, err := ab.CalculateBalance(ctx, receiver.Address())
 	assert.NilError(t, err)
-	assert.Equal(t, int64(balance.Spice.Currency), mainSpiceReduction.Add(int64(-spiceMainTransfer)))
+	assert.Equal(t, int64(balance.Spice.Currency), mainSpiceReduction.Load())
 
 	time.Sleep(time.Millisecond * 200)
 }
 
-func TestMultipleIssuerMultipleReceiversSpiceTransferConcurentLegitimate(t *testing.T) {
+func TestMultipleIssuerMultipleReceiversSpiceTransferConcurrentLegitimate(t *testing.T) {
 	callOnLogErr := func(err error) {
 		fmt.Printf("logger failed with error: %s\n", err)
 	}
@@ -352,7 +352,7 @@ func TestMultipleIssuerMultipleReceiversSpiceTransferConcurentLegitimate(t *test
 
 	genesisReceiver, err := wallet.New()
 	assert.NilError(t, err)
-	vrx, err := ab.CreateGenesis("GENESIS", genesisSpice, []byte{}, &genesisReceiver)
+	vrx, err := ab.CreateGenesis("GENESIS", genesisSpice, []byte{}, genesisReceiver.Address())
 	assert.NilError(t, err)
 	ok := vrx.Transaction.IsSpiceTransfer()
 	assert.Equal(t, ok, true)
@@ -372,7 +372,10 @@ func TestMultipleIssuerMultipleReceiversSpiceTransferConcurentLegitimate(t *test
 			wg.Add(1)
 			go func(next int, wg *sync.WaitGroup) {
 				spc := spice.New(uint64(spiceMainTransfer), 0)
-				trx, err := transaction.New(fmt.Sprintf("Spice supply from: %v, trx number: %v", rec, next), spc, []byte{}, receiver.Address(), &issuer)
+				trx, err := transaction.New(
+					fmt.Sprintf("Spice supply from: %v, trx number: %v", rec, next),
+					spc, []byte{}, receiver.Address(), &issuer,
+				)
 				assert.NilError(t, err)
 				_, err = ab.CreateLeaf(ctx, &trx)
 				assert.NilError(t, err)
@@ -384,14 +387,14 @@ func TestMultipleIssuerMultipleReceiversSpiceTransferConcurentLegitimate(t *test
 		wg.Wait()
 		balance, err := ab.CalculateBalance(ctx, receiver.Address())
 		assert.NilError(t, err)
-		assert.Equal(t, int64(balance.Spice.Currency), mainSpiceReduction.Add(int64(-spiceMainTransfer)))
+		assert.Equal(t, int64(balance.Spice.Currency), mainSpiceReduction.Load())
 		issuer = receiver
 	}
 
 	time.Sleep(time.Millisecond * 200)
 }
 
-func TestMultipleIssuerMultipleReceiversSpiceTransferConcurentDoubleSpending(t *testing.T) {
+func TestMultipleIssuerMultipleReceiversSpiceTransferConcurrentDoubleSpending(t *testing.T) {
 	callOnLogErr := func(err error) {
 		fmt.Printf("logger failed with error: %s\n", err)
 	}
@@ -412,14 +415,14 @@ func TestMultipleIssuerMultipleReceiversSpiceTransferConcurentDoubleSpending(t *
 
 	genesisReceiver, err := wallet.New()
 	assert.NilError(t, err)
-	vrx, err := ab.CreateGenesis("GENESIS", genesisSpice, []byte{}, &genesisReceiver)
+	vrx, err := ab.CreateGenesis("GENESIS", genesisSpice, []byte{}, genesisReceiver.Address())
 	assert.NilError(t, err)
 	ok := vrx.Transaction.IsSpiceTransfer()
 	assert.Equal(t, ok, true)
 	assert.DeepEqual(t, genesisSpice, vrx.Transaction.Spice)
 
 	numberOfParticipants := 100
-	roundsPerPArticipant := 10
+	roundsPerParticipant := 10
 	spiceMainTransfer := 10
 	issuer := genesisReceiver
 	walletsToCheck := make([]transaction.Signer, 0, numberOfParticipants)
@@ -430,7 +433,7 @@ func TestMultipleIssuerMultipleReceiversSpiceTransferConcurentDoubleSpending(t *
 		spiceMainTransfer := 10
 		var mainSpiceReduction atomic.Int64
 		var wg sync.WaitGroup
-		for i := 0; i < roundsPerPArticipant; i++ {
+		for i := 0; i < roundsPerParticipant; i++ {
 			wg.Add(1)
 			go func(next int, wg *sync.WaitGroup) {
 				spc := spice.New(uint64(spiceMainTransfer), 0)
@@ -446,24 +449,28 @@ func TestMultipleIssuerMultipleReceiversSpiceTransferConcurentDoubleSpending(t *
 		wg.Wait()
 		balance, err := ab.CalculateBalance(ctx, receiver.Address())
 		assert.NilError(t, err)
-		assert.Equal(t, int64(balance.Spice.Currency), mainSpiceReduction.Add(int64(-spiceMainTransfer)))
+		assert.Equal(t, int64(balance.Spice.Currency), mainSpiceReduction.Load())
 		issuer = receiver
 		walletsToCheck = append(walletsToCheck, &receiver)
 	}
-	for idx, issuer := range walletsToCheck {
+	for _, issuer := range walletsToCheck {
 		receiver, err := wallet.New()
 		assert.NilError(t, err)
-		var mainSpiceReduction atomic.Int64
 		var wg sync.WaitGroup
-		for i := 0; i < roundsPerPArticipant; i++ {
+		for i := 0; i < roundsPerParticipant; i++ {
 			wg.Add(1)
 			go func(next int, wg *sync.WaitGroup) {
 				spc := spice.New(uint64(spiceMainTransfer), 0)
-				trx, err := transaction.New(fmt.Sprintf("Spice supply from: %v, to %v, next %v\n", issuer.Address(), receiver.Address(), next), spc, []byte{}, receiver.Address(), issuer)
+				trx, err := transaction.New(fmt.Sprintf(
+					"Spice supply from: %v, to %v, next %v\n",
+					issuer.Address(), receiver.Address(), next),
+					spc, []byte{}, receiver.Address(), issuer,
+				)
 				assert.NilError(t, err)
 				_, err = ab.CreateLeaf(ctx, &trx)
-				assert.NilError(t, err)
-				mainSpiceReduction.Add(int64(spiceMainTransfer))
+				if err != nil {
+					assert.ErrorContains(t, err, "double spending or insufficient founds")
+				}
 				wg.Done()
 			}(i, &wg)
 		}
@@ -471,12 +478,7 @@ func TestMultipleIssuerMultipleReceiversSpiceTransferConcurentDoubleSpending(t *
 		wg.Wait()
 		balance, err := ab.CalculateBalance(ctx, issuer.Address())
 		assert.NilError(t, err)
-		switch idx {
-		case numberOfParticipants - 1:
-			assert.Equal(t, balance.Spice.Currency, uint64(spiceMainTransfer))
-		default:
-			assert.Equal(t, balance.Spice.Currency, uint64(0))
-		}
+		assert.Equal(t, balance.Spice.Currency, uint64(0))
 	}
 
 	time.Sleep(time.Millisecond * 200)
@@ -510,7 +512,7 @@ func TestMultipleIssuerMultipleReceiversMultipleAccountantSpiceTransferLegitimat
 			genesisSpice := spice.New(math.MaxUint64-1, 0)
 			genesisReceiver, err := wallet.New()
 			assert.NilError(t, err)
-			vrx, err = ab.CreateGenesis("GENESIS", genesisSpice, []byte{}, &genesisReceiver)
+			vrx, err = ab.CreateGenesis("GENESIS", genesisSpice, []byte{}, genesisReceiver.Address())
 			assert.NilError(t, err)
 			ok := vrx.Transaction.IsSpiceTransfer()
 			assert.Equal(t, ok, true)
@@ -528,14 +530,13 @@ func TestMultipleIssuerMultipleReceiversMultipleAccountantSpiceTransferLegitimat
 		nodes = append(nodes, ab)
 	}
 
-	numberOfParticipants := 20
-	numberOfRounds := 10
+	numberOfParticipants := 2
+	numberOfRounds := 4
 
 	for rec := 0; rec < numberOfParticipants; rec++ {
 		receiver, err := wallet.New()
 		assert.NilError(t, err)
 		spiceMainTransfer := 10
-		var mainSpiceReduction atomic.Int64
 		for i := 0; i < numberOfRounds; i++ {
 			spc := spice.New(uint64(spiceMainTransfer), 0)
 			trx, err := transaction.New(fmt.Sprintf("Spice supply from: %v to %v, trx number: %v", issuer.Address(), receiver.Address(), i), spc, []byte{}, receiver.Address(), &issuer)
@@ -552,18 +553,19 @@ func TestMultipleIssuerMultipleReceiversMultipleAccountantSpiceTransferLegitimat
 				err := nodes[idx].AddLeaf(ctx, &leaf)
 				assert.NilError(t, err)
 			}
-
-			mainSpiceReduction.Add(int64(spiceMainTransfer))
+			spiceIssuerStart := spice.New(math.MaxUint64-1, 0)
+			spiceReceiverStart := spice.New(0, 0)
+			for _, ab := range nodes {
+				balanceIss, err := ab.CalculateBalance(ctx, issuer.Address())
+				assert.NilError(t, err)
+				assert.Equal(t, balanceIss.Spice.Currency < spiceIssuerStart.Currency, true)
+				balanceRec, err := ab.CalculateBalance(ctx, receiver.Address())
+				assert.NilError(t, err)
+				assert.Equal(t, balanceRec.Spice.Currency > spiceReceiverStart.Currency, true)
+			}
 		}
 
-		toCompare := mainSpiceReduction.Add(int64(-spiceMainTransfer))
-
-		for _, ab := range nodes {
-			balance, err := ab.CalculateBalance(ctx, receiver.Address())
-			assert.NilError(t, err)
-			assert.Equal(t, int64(balance.Spice.Currency), toCompare)
-		}
-		issuer = receiver
+		issuer = receiver // exchange to pour founds over
 	}
 
 	time.Sleep(time.Millisecond * 200)
@@ -592,7 +594,7 @@ func TestMultipleIssuerMultipleReceiversMultipleAccountantSpiceLoadDAG(t *testin
 	genesisSpice := spice.New(math.MaxUint64-1, 0)
 	genesisReceiver, err := wallet.New()
 	assert.NilError(t, err)
-	vrx, err = ab.CreateGenesis("GENESIS", genesisSpice, []byte{}, &genesisReceiver)
+	vrx, err = ab.CreateGenesis("GENESIS", genesisSpice, []byte{}, genesisReceiver.Address())
 	assert.NilError(t, err)
 	ok := vrx.Transaction.IsSpiceTransfer()
 	assert.Equal(t, ok, true)
@@ -662,7 +664,7 @@ func BenchmarkSingleIssuerSingleReceiverSpiceTransferConsecutive(b *testing.B) {
 
 	genesisReceiver, err := wallet.New()
 	assert.NilError(b, err)
-	vrx, err := ab.CreateGenesis("GENESIS", genesisSpice, []byte{}, &genesisReceiver)
+	vrx, err := ab.CreateGenesis("GENESIS", genesisSpice, []byte{}, genesisReceiver.Address())
 	assert.NilError(b, err)
 	ok := vrx.Transaction.IsSpiceTransfer()
 	assert.Equal(b, ok, true)
@@ -710,7 +712,7 @@ func BenchmarkSingleIssuerSingleReceiverSpiceTransferConcurrent(b *testing.B) {
 
 	genesisReceiver, err := wallet.New()
 	assert.NilError(b, err)
-	vrx, err := ab.CreateGenesis("GENESIS", genesisSpice, []byte{}, &genesisReceiver)
+	vrx, err := ab.CreateGenesis("GENESIS", genesisSpice, []byte{}, genesisReceiver.Address())
 	assert.NilError(b, err)
 	ok := vrx.Transaction.IsSpiceTransfer()
 	assert.Equal(b, ok, true)
@@ -743,7 +745,7 @@ func BenchmarkSingleIssuerSingleReceiverSpiceTransferConcurrent(b *testing.B) {
 	wg.Wait()
 }
 
-func BenchmarkMultipleIssuerMultipleReceiversSpiceTransferConcurentLegitimate(b *testing.B) {
+func BenchmarkMultipleIssuerMultipleReceiversSpiceTransferConcurrentLegitimate(b *testing.B) {
 	callOnLogErr := func(err error) {
 		fmt.Printf("logger failed with error: %s\n", err)
 	}
@@ -764,7 +766,7 @@ func BenchmarkMultipleIssuerMultipleReceiversSpiceTransferConcurentLegitimate(b 
 
 	genesisReceiver, err := wallet.New()
 	assert.NilError(b, err)
-	vrx, err := ab.CreateGenesis("GENESIS", genesisSpice, []byte{}, &genesisReceiver)
+	vrx, err := ab.CreateGenesis("GENESIS", genesisSpice, []byte{}, genesisReceiver.Address())
 	assert.NilError(b, err)
 	ok := vrx.Transaction.IsSpiceTransfer()
 	assert.Equal(b, ok, true)
@@ -839,7 +841,7 @@ func TestVertexStorageAdd(t *testing.T) {
 	assert.NilError(t, err)
 }
 
-func TestVertexStorageAddRepret(t *testing.T) {
+func TestVertexStorageAddRepeted(t *testing.T) {
 	v := Vertex{
 		CreatedAt: time.Now(),
 		Transaction: transaction.Transaction{

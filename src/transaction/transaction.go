@@ -139,12 +139,12 @@ func (t *Transaction) Sign(receiver Signer, v Verifier) ([32]byte, error) {
 }
 
 // IsContract returns true if the transaction contains not empty data buffer that is recognised as transaction with contract.
-func (t *Transaction) IsContract() bool {
-	return t == nil || len(t.Data) != 0
+func (t Transaction) IsContract() bool {
+	return len(t.Data) != 0
 }
 
 // IsSpiceTransfer returns true if the transaction transfers spice.
-func (t *Transaction) IsSpiceTransfer() bool {
+func (t Transaction) IsSpiceTransfer() bool {
 	return !t.Spice.Empty()
 }
 

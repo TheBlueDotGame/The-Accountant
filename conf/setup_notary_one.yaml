@@ -31,5 +31,5 @@ webhooks_server:
   port: 8000
 zinc_logger:
   address: http://zincsearch:4080 
-  index: notary
+  index: notary_one
   token: Basic YWRtaW46emluY3NlYXJjaA==

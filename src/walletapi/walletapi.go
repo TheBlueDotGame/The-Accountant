@@ -167,3 +167,15 @@ func (a *app) WebHook(ctx context.Context, in *protobufcompiled.CreateWebHook) (
 	}
 	return &emptypb.Empty{}, nil
 }
+
+// Balance checks the balance of the given address.
+func (a *app) Balance(ctx context.Context, _ *emptypb.Empty) (*protobufcompiled.Spice, error) {
+	balance, err := a.centralNodeClient.ReadBalance(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &protobufcompiled.Spice{
+		Currency:             balance.Currency,
+		SuplementaryCurrency: balance.SupplementaryCurrency,
+	}, nil
+}

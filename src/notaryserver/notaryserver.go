@@ -28,6 +28,7 @@ const (
 	rejectTrxTelemetryHistogram   = "reject_trx_request_duration"
 	awaitedTrxTelemetryHistogram  = "read_awaited_trx_request_duration"
 	approvedTrxTelemetryHistogram = "read_approved_trx_request_duration"
+	balanceTelemetryHistogram     = "balance_read_duration"
 	dataToSignTelemetryHistogram  = "data_to_sign_request_duration"
 )
 
@@ -56,7 +57,8 @@ type verifier interface {
 type accounter interface {
 	Address() string
 	CreateLeaf(ctx context.Context, trx *transaction.Transaction) (accountant.Vertex, error)
-	ReadTransactionsByHash(ctx context.Context, hashe [32]byte) (transaction.Transaction, error)
+	ReadTransactionByHash(ctx context.Context, hashe [32]byte) (transaction.Transaction, error)
+	CalculateBalance(ctx context.Context, walletPubAddr string) (accountant.Balance, error)
 }
 
 // RandomDataProvideValidator provides random binary data for signing to prove identity and
@@ -129,12 +131,13 @@ func Run(
 		dataSize:          c.DataSizeBytes,
 	}
 
-	s.tele.CreateUpdateObservableHistogtram(proposeTrxTelemetryHistogram, "Propose trx endpoint request duration on [ ms ].")
-	s.tele.CreateUpdateObservableHistogtram(confirmTrxTelemetryHistogram, "Confirm trx endpoint request duration on [ ms ].")
-	s.tele.CreateUpdateObservableHistogtram(rejectTrxTelemetryHistogram, "Reject trx endpoint request duration on [ ms ].")
-	s.tele.CreateUpdateObservableHistogtram(awaitedTrxTelemetryHistogram, "Read awaited / issued trx endpoint request duration on [ ms ].")
-	s.tele.CreateUpdateObservableHistogtram(approvedTrxTelemetryHistogram, "Read approved trx endpoint request duration on [ ms ].")
-	s.tele.CreateUpdateObservableHistogtram(dataToSignTelemetryHistogram, "Generate data to sign endpoint request duration on [ ms ].")
+	s.tele.CreateUpdateObservableHistogtram(proposeTrxTelemetryHistogram, "Propose trx endpoint request duration in [ ms ].")
+	s.tele.CreateUpdateObservableHistogtram(confirmTrxTelemetryHistogram, "Confirm trx endpoint request duration in [ ms ].")
+	s.tele.CreateUpdateObservableHistogtram(rejectTrxTelemetryHistogram, "Reject trx endpoint request duration in [ ms ].")
+	s.tele.CreateUpdateObservableHistogtram(awaitedTrxTelemetryHistogram, "Read awaited / issued trx endpoint request duration in [ ms ].")
+	s.tele.CreateUpdateObservableHistogtram(approvedTrxTelemetryHistogram, "Read approved trx endpoint request duration in [ ms ].")
+	s.tele.CreateUpdateObservableHistogtram(dataToSignTelemetryHistogram, "Generate data to sign endpoint request duration in [ ms ].")
+	s.tele.CreateUpdateObservableHistogtram(balanceTelemetryHistogram, "Calcualte balance duration in [ ms ].")
 
 	lis, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%v", c.Port))
 	if err != nil {
@@ -235,6 +238,10 @@ func (s *server) Propose(ctx context.Context, in *protobufcompiled.Transaction) 
 	}
 
 	if trx.IsContract() {
+		if len(trx.Data) > s.dataSize {
+			s.log.Error(fmt.Sprintf("propose endpoint, invalid transaction data size: %d", len(trx.Data)))
+			return nil, ErrProcessing
+		}
 		if err := s.cache.SaveAwaitedTransaction(&trx); err != nil {
 			s.log.Error(fmt.Sprintf("propose endpoint, saving awaited trx for issuer [ %s ], %s", trx.IssuerAddress, err))
 			return nil, ErrProcessing
@@ -250,10 +257,6 @@ func (s *server) Propose(ctx context.Context, in *protobufcompiled.Transaction) 
 		return &emptypb.Empty{}, nil
 	}
 
-	if len(trx.Data) > s.dataSize {
-		s.log.Error(fmt.Sprintf("propose endpoint, invalid transaction data size: %d", len(trx.Data)))
-		return nil, ErrProcessing
-	}
 	vrx, err := s.acc.CreateLeaf(ctx, &trx)
 	if err != nil {
 		s.log.Error(fmt.Sprintf("propose endpoint, creating leaf: %s", err))
@@ -380,6 +383,7 @@ func (s *server) Waiting(ctx context.Context, in *protobufcompiled.SignedHash) (
 	return result, nil
 }
 
+// Saved returns saved transactions nin the graph.
 func (s *server) Saved(ctx context.Context, in *protobufcompiled.SignedHash) (*protobufcompiled.Transaction, error) {
 	t := time.Now()
 	defer s.tele.RecordHistogramTime(approvedTrxTelemetryHistogram, time.Since(t))
@@ -389,7 +393,7 @@ func (s *server) Saved(ctx context.Context, in *protobufcompiled.SignedHash) (*p
 		return nil, ErrVerification
 	}
 
-	trx, err := s.acc.ReadTransactionsByHash(ctx, [32]byte(in.Data))
+	trx, err := s.acc.ReadTransactionByHash(ctx, [32]byte(in.Data))
 	if err != nil {
 		s.log.Error(fmt.Sprintf("approved transactions endpoint, failed to read hash [ %x ] for address: %s, %s", in.Hash, in.Address, err))
 		return nil, ErrProcessing
@@ -420,4 +424,33 @@ func (s *server) Data(ctx context.Context, in *protobufcompiled.Address) (*proto
 	d := s.randDataProv.ProvideData(in.Public)
 
 	return &protobufcompiled.DataBlob{Blob: d}, nil
+}
+
+// Balance returns balanse for account owner.
+// TODO: Find better way of requesting balance - sign blob data!
+func (s *server) Balance(ctx context.Context, in *protobufcompiled.SignedHash) (*protobufcompiled.Spice, error) {
+	t := time.Now()
+	defer s.tele.RecordHistogramTime(balanceTelemetryHistogram, time.Since(t))
+
+	if string(in.Data) != in.Address {
+		return nil, ErrVerification
+	}
+
+	if err := s.verifier.Verify(in.Data, in.Signature, [32]byte(in.Hash), in.Address); err != nil {
+		s.log.Error(fmt.Sprintf("balance endpoint, failed to verify signature for address: %s, %s", in.Address, err))
+		return nil, ErrVerification
+	}
+
+	balance, err := s.acc.CalculateBalance(ctx, in.Address)
+	if err != nil {
+		s.log.Error(fmt.Sprintf("balance endpoint, failed to read balance for address: %s, %s", in.Address, err))
+		return nil, ErrProcessing
+	}
+
+	// TODO: introduce balance caching
+
+	return &protobufcompiled.Spice{
+		Currency:             balance.Spice.Currency,
+		SuplementaryCurrency: balance.Spice.SupplementaryCurrency,
+	}, nil
 }
