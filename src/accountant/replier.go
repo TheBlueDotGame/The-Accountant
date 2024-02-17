@@ -33,9 +33,9 @@ func bytesToHex(b []byte) string {
 // buffer stores Vertex' and then replay Vertex after set time tick.
 // It stores the Vertex sorted end replies them in proper order based on created at time.
 type buffer struct {
+	accounter map[string]memory
 	pub       chan *Vertex
 	members   []*Vertex
-	accounter map[string]memory
 }
 
 func (b *buffer) cleanup() {

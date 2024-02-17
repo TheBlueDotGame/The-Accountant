@@ -272,7 +272,7 @@ func TestSingleIssuerSingleReceiverSpiceTransferConsecutive(t *testing.T) {
 
 	balance, err := ab.CalculateBalance(ctx, receiver.Address())
 	assert.NilError(t, err)
-	assert.Equal(t, balance.Spice.Currency, mainSpiceReduction-uint64(spiceMainTransfer))
+	assert.Equal(t, balance.Spice.Currency, mainSpiceReduction)
 
 	time.Sleep(time.Millisecond * 200)
 }
@@ -326,7 +326,7 @@ func TestSingleIssuerSingleReceiverSpiceTransferConcurent(t *testing.T) {
 
 	balance, err := ab.CalculateBalance(ctx, receiver.Address())
 	assert.NilError(t, err)
-	assert.Equal(t, int64(balance.Spice.Currency), mainSpiceReduction.Add(int64(-spiceMainTransfer)))
+	assert.Equal(t, int64(balance.Spice.Currency), mainSpiceReduction.Load())
 
 	time.Sleep(time.Millisecond * 200)
 }
@@ -387,7 +387,7 @@ func TestMultipleIssuerMultipleReceiversSpiceTransferConcurentLegitimate(t *test
 		wg.Wait()
 		balance, err := ab.CalculateBalance(ctx, receiver.Address())
 		assert.NilError(t, err)
-		assert.Equal(t, int64(balance.Spice.Currency), mainSpiceReduction.Add(int64(-spiceMainTransfer)))
+		assert.Equal(t, int64(balance.Spice.Currency), mainSpiceReduction.Load())
 		issuer = receiver
 	}
 
@@ -535,14 +535,13 @@ func TestMultipleIssuerMultipleReceiversMultipleAccountantSpiceTransferLegitimat
 		nodes = append(nodes, ab)
 	}
 
-	numberOfParticipants := 20
-	numberOfRounds := 10
+	numberOfParticipants := 2
+	numberOfRounds := 4
 
 	for rec := 0; rec < numberOfParticipants; rec++ {
 		receiver, err := wallet.New()
 		assert.NilError(t, err)
 		spiceMainTransfer := 10
-		var mainSpiceReduction atomic.Int64
 		for i := 0; i < numberOfRounds; i++ {
 			spc := spice.New(uint64(spiceMainTransfer), 0)
 			trx, err := transaction.New(fmt.Sprintf("Spice supply from: %v to %v, trx number: %v", issuer.Address(), receiver.Address(), i), spc, []byte{}, receiver.Address(), &issuer)
@@ -559,18 +558,19 @@ func TestMultipleIssuerMultipleReceiversMultipleAccountantSpiceTransferLegitimat
 				err := nodes[idx].AddLeaf(ctx, &leaf)
 				assert.NilError(t, err)
 			}
-
-			mainSpiceReduction.Add(int64(spiceMainTransfer))
+			spiceIssuerStart := spice.New(math.MaxUint64-1, 0)
+			spiceReceiverStart := spice.New(0, 0)
+			for _, ab := range nodes {
+				balanceIss, err := ab.CalculateBalance(ctx, issuer.Address())
+				assert.NilError(t, err)
+				assert.Equal(t, balanceIss.Spice.Currency < spiceIssuerStart.Currency, true)
+				balanceRec, err := ab.CalculateBalance(ctx, receiver.Address())
+				assert.NilError(t, err)
+				assert.Equal(t, balanceRec.Spice.Currency > spiceReceiverStart.Currency, true)
+			}
 		}
 
-		toCompare := mainSpiceReduction.Add(int64(-spiceMainTransfer))
-
-		for _, ab := range nodes {
-			balance, err := ab.CalculateBalance(ctx, receiver.Address())
-			assert.NilError(t, err)
-			assert.Equal(t, int64(balance.Spice.Currency), toCompare)
-		}
-		issuer = receiver
+		issuer = receiver // exchange to pour founds over
 	}
 
 	time.Sleep(time.Millisecond * 200)

@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -17,9 +19,8 @@ import (
 )
 
 const (
-	initialThroughput     = 50
-	throughputMultiplayer = 2
-	lastVertexHashes      = 100
+	initialThroughput = 50
+	lastVertexHashes  = 100
 )
 
 const repiterTick = time.Second * 2
@@ -67,8 +68,7 @@ type AccountingBook struct {
 	trustedNodesDB *badger.DB
 	trxsToVertxDB  *badger.DB
 	verticesDB     *badger.DB
-	lastVertexHash chan [32]byte
-	registry       chan struct{}
+	mux            sync.RWMutex
 	gennessisHash  [32]byte
 	weight         atomic.Uint64
 	throughput     atomic.Uint64
@@ -104,14 +104,11 @@ func NewAccountingBook(ctx context.Context, cfg Config, verifier signatureVerifi
 		trustedNodesDB: trustedNodesDB,
 		trxsToVertxDB:  trxsToVertxDB,
 		verticesDB:     verticesDB,
-		lastVertexHash: make(chan [32]byte, lastVertexHashes),
-		registry:       make(chan struct{}, 1),
+		mux:            sync.RWMutex{},
 		log:            l,
 		weight:         atomic.Uint64{},
 		throughput:     atomic.Uint64{},
 	}
-
-	ab.unregister() // on new AccountingBook creation send to the register channel to unblock the register queue.
 
 	go ab.runLeafSubscriber(ctx)
 
@@ -249,14 +246,6 @@ func (ab *AccountingBook) checkIsTrustedNode(trustedNodePublicAddress string) (b
 		return nil
 	})
 	return ok, err
-}
-
-func (ab *AccountingBook) register() {
-	<-ab.registry
-}
-
-func (ab *AccountingBook) unregister() {
-	ab.registry <- struct{}{}
 }
 
 func (ab *AccountingBook) checkTrxInVertexExists(trxHash []byte) (bool, error) {
@@ -408,7 +397,7 @@ func (ab *AccountingBook) updateWaightAndThroughput(weight uint64) {
 		ab.weight.Store(weight)
 	}
 	leafsCount := uint64(len(ab.dag.GetLeaves()))
-	ab.throughput.Store(((ab.throughput.Load() + leafsCount) / 2 * throughputMultiplayer))
+	ab.throughput.Store(ab.throughput.Load() + leafsCount + 1)
 }
 
 func (ab *AccountingBook) isValidWeight(weight uint64) bool {
@@ -422,8 +411,6 @@ func (ab *AccountingBook) isValidWeight(weight uint64) bool {
 
 // CreateGenesis creates genesis vertex that will transfer spice to current node as a receiver.
 func (ab *AccountingBook) CreateGenesis(subject string, spc spice.Melange, data []byte, publicAddress string) (Vertex, error) {
-	ab.register()
-	defer ab.unregister()
 	trx, err := transaction.New(subject, spc, data, publicAddress, ab.signer)
 	if err != nil {
 		return Vertex{}, errors.Join(ErrGenesisRejected, err)
@@ -438,15 +425,15 @@ func (ab *AccountingBook) CreateGenesis(subject string, spc spice.Melange, data 
 		return Vertex{}, errors.Join(ErrGenesisRejected, err)
 	}
 
+	ab.mux.Lock()
+	defer ab.mux.Unlock()
+
 	if err := ab.dag.AddVertexByID(string(vrx.Hash[:]), &vrx); err != nil {
 		return Vertex{}, err
 	}
 
 	ab.throughput.Store(initialThroughput)
 	ab.updateWaightAndThroughput(initialThroughput)
-
-	ab.lastVertexHash <- vrx.Hash
-	ab.lastVertexHash <- vrx.Hash
 
 	ab.dagLoaded = true
 
@@ -459,13 +446,12 @@ func (ab *AccountingBook) LoadDag(ctx context.Context, cancelF context.CancelCau
 		cancelF(ErrDagIsLoaded)
 		return
 	}
-	ab.register()
-	defer ab.unregister()
+
 	defer ab.throughput.Store(initialThroughput)
 	defer ab.updateWaightAndThroughput(initialThroughput)
 
-	var counter int
-	var lastLeafHash [32]byte
+	ab.mux.Lock()
+	defer ab.mux.Unlock()
 
 VertxLoop:
 	for {
@@ -485,31 +471,23 @@ VertxLoop:
 				cancelF(err)
 				return
 			}
-			lastLeafHash = vrx.Hash
-			counter++
 		}
-	}
-
-	if counter == 0 {
-		cancelF(ErrUnexpected)
-		return
-	}
-
-	if counter == 1 {
-		ab.lastVertexHash <- lastLeafHash
-		ab.lastVertexHash <- lastLeafHash
-		ab.dagLoaded = true
-		return
 	}
 
 	for _, item := range ab.dag.GetVertices() {
 		switch vrx := item.(type) {
 		case *Vertex:
+			var addedHash [32]byte
+		connLoop:
 			for _, conn := range [][32]byte{vrx.LeftParentHash, vrx.RightParentHash} {
+				if conn == addedHash {
+					break connLoop
+				}
 				if err := ab.dag.AddEdge(string(conn[:]), string(vrx.Hash[:])); err != nil {
 					cancelF(err)
 					return
 				}
+				addedHash = conn
 			}
 		default:
 			cancelF(ErrUnexpected)
@@ -517,33 +495,20 @@ VertxLoop:
 		}
 	}
 
-	for _, item := range ab.dag.GetLeaves() {
-		switch vrx := item.(type) {
-		case *Vertex:
-			ab.lastVertexHash <- vrx.Hash
-			lastLeafHash = vrx.Hash
-		default:
-			cancelF(ErrUnexpected)
-			return
-		}
-	}
-
-	if len(ab.lastVertexHash) == 0 {
-		cancelF(ErrUnexpected)
-		return
-	}
-
-	if len(ab.lastVertexHash) == 1 {
-		ab.lastVertexHash <- lastLeafHash
-	}
 	ab.dagLoaded = true
 }
 
+// DagLoaded returns true if dag is loaded or false otherwise.
 func (ab *AccountingBook) DagLoaded() bool {
 	return ab.dagLoaded
 }
 
+// StreamDAG provides tow channels to subscribe to a stream of vertices.
+// First streams verticies and second one streams possible errors.
 func (ab *AccountingBook) StreamDAG(ctx context.Context) (<-chan *Vertex, <-chan error) {
+	ab.mux.RLock()
+	defer ab.mux.RUnlock()
+
 	cVrx := make(chan *Vertex, 100)
 	cDone := make(chan error, 1)
 	go func(cVrx chan<- *Vertex, cDone chan<- error) {
@@ -602,99 +567,58 @@ func (ab *AccountingBook) CreateLeaf(ctx context.Context, trx *transaction.Trans
 		return Vertex{}, ErrTrxInVertexAlreadyExists
 	}
 
-	ab.register()
-	defer ab.unregister()
+	ab.mux.Lock()
+	defer ab.mux.Unlock()
 
-	leavesToExamine := 2
-	validatedLeafs := make([]Vertex, 0, 2)
-
+	var i int
+	var leftLeaf, rightLeaf *Vertex
 	for _, item := range ab.dag.GetLeaves() {
-		if leavesToExamine == 0 {
+		if i == 2 {
 			break
 		}
 
-		var leaf Vertex
 		switch vrx := item.(type) {
 		case *Vertex:
 			if vrx == nil {
 				return Vertex{}, errors.Join(ErrUnexpected, errors.New("vertex is nil"))
 			}
-			leaf = *vrx
-			err = ab.validateLeaf(ctx, &leaf)
+			err = ab.validateLeaf(ctx, vrx)
 			if err != nil {
-				ab.dag.DeleteVertex(string(leaf.Hash[:]))
-				ab.removeTrxInVertex(leaf.Transaction.Hash[:])
+				ab.dag.DeleteVertex(string(vrx.Hash[:]))
+				ab.removeTrxInVertex(vrx.Transaction.Hash[:])
 				ab.log.Error(
 					fmt.Sprintf("Accounting book rejected leaf hash [ %v ], from [ %v ], %s",
-						leaf.Hash, leaf.SignerPublicAddress, err),
+						vrx.Hash, vrx.SignerPublicAddress, err),
 				)
-				ab.updateWaightAndThroughput(leaf.Weight)
+				ab.updateWaightAndThroughput(vrx.Weight)
 				continue
 			}
+			switch i {
+			case 0:
+				leftLeaf = vrx
+			case 1:
+				rightLeaf = vrx
+			}
+			i++
+
 		default:
 			return Vertex{}, errors.Join(ErrUnexpected, errors.New("cannot match vertex type"))
 		}
-
-		leavesToExamine--
-
-		validatedLeafs = append(validatedLeafs, leaf)
 	}
 
-	switch len(validatedLeafs) {
-	case 2:
-	case 1:
-		rightHash := <-ab.lastVertexHash
-		right, err := ab.dag.GetVertex(string(rightHash[:]))
-		if err != nil {
-			ab.log.Error(fmt.Sprintf("Accounting book create tip %s, %s", ErrUnexpected, err))
-			return Vertex{}, ErrUnexpected
-		}
-		leafRight, ok := right.(*Vertex)
-		if !ok {
-			msgErr := errors.Join(ErrUnexpected, errors.New("right vertex type assertion failure"))
-			ab.log.Error(fmt.Sprintf("Accounting book create tip %s.", msgErr))
-			return Vertex{}, msgErr
-		}
-		validatedLeafs = append(validatedLeafs, *leafRight)
-
-	case 0:
-		rightHash := <-ab.lastVertexHash
-		right, err := ab.dag.GetVertex(string(rightHash[:]))
-		if err != nil {
-			ab.log.Error(fmt.Sprintf("Accounting book create tip %s, %s", ErrUnexpected, err))
-			return Vertex{}, ErrUnexpected
-		}
-		leafRight, ok := right.(*Vertex)
-		if !ok {
-			msgErr := errors.Join(ErrUnexpected, errors.New("right vertex type assertion failure"))
-			ab.log.Error(fmt.Sprintf("Accounting book create tip %s.", msgErr))
-			return Vertex{}, msgErr
-		}
-		validatedLeafs = append(validatedLeafs, *leafRight)
-
-		leftHash := <-ab.lastVertexHash
-		left, err := ab.dag.GetVertex(string(leftHash[:]))
-		if err != nil {
-			ab.log.Error(fmt.Sprintf("Accounting book create tip %s, %s", ErrUnexpected, err))
-			return Vertex{}, ErrUnexpected
-		}
-		leafLeft, ok := left.(*Vertex)
-		if !ok {
-			msgErr := errors.Join(ErrUnexpected, errors.New("left vertex type assertion failure"))
-			ab.log.Error(fmt.Sprintf("Accounting book create tip %s.", msgErr))
-			return Vertex{}, msgErr
-		}
-		validatedLeafs = append(validatedLeafs, *leafLeft)
-
-	default:
-		msgErr := errors.Join(ErrUnexpected, fmt.Errorf("expected 2 vertexes got %v", len(validatedLeafs)))
+	if leftLeaf == nil {
+		msgErr := errors.Join(ErrUnexpected, errors.New("expected at least one leaf but got zero"))
 		ab.log.Error(fmt.Sprintf("Accounting book create tip %s.", msgErr))
 		return Vertex{}, msgErr
 	}
 
+	if rightLeaf == nil {
+		rightLeaf = leftLeaf
+	}
+
 	tip, err := NewVertex(
-		*trx, validatedLeafs[0].Hash, validatedLeafs[1].Hash,
-		calcNewWeight(validatedLeafs[0].Weight, validatedLeafs[1].Weight), ab.signer,
+		*trx, leftLeaf.Hash, rightLeaf.Hash,
+		calcNewWeight(leftLeaf.Weight, rightLeaf.Weight), ab.signer,
 	)
 	if err != nil {
 		ab.log.Error(fmt.Sprintf("Accounting book rejected new leaf [ %v ], %s.", tip.Hash, err))
@@ -715,24 +639,10 @@ func (ab *AccountingBook) CreateLeaf(ctx context.Context, trx *transaction.Trans
 		return Vertex{}, ErrNewLeafRejected
 	}
 
-	var isRoot bool
-	for _, vrx := range validatedLeafs {
-		ok, err := ab.dag.IsRoot(string(validatedLeafs[0].Hash[:]))
-		if err != nil {
-			ab.dag.DeleteVertex(string(tip.Hash[:]))
-			ab.removeTrxInVertex(trx.Hash[:])
-			ab.log.Error(
-				fmt.Sprintf(
-					"Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ] when checking is root, %s,",
-					vrx.Hash, vrx.SignerPublicAddress, vrx.LeftParentHash, vrx.RightParentHash, err),
-			)
-			return Vertex{}, ErrNewLeafRejected
-		}
-		if ok {
-			if isRoot {
-				continue
-			}
-			isRoot = true
+	var addedHash [32]byte
+	for _, vrx := range []*Vertex{leftLeaf, rightLeaf} {
+		if vrx.Hash == addedHash {
+			break
 		}
 		if err := ab.dag.AddEdge(string(vrx.Hash[:]), string(tip.Hash[:])); err != nil {
 			ab.dag.DeleteVertex(string(tip.Hash[:]))
@@ -744,14 +654,8 @@ func (ab *AccountingBook) CreateLeaf(ctx context.Context, trx *transaction.Trans
 			)
 			return Vertex{}, ErrNewLeafRejected
 		}
+		addedHash = vrx.Hash
 	}
-	for len(ab.lastVertexHash) > 0 {
-		<-ab.lastVertexHash
-	}
-	for _, validVrx := range validatedLeafs {
-		ab.lastVertexHash <- validVrx.Hash
-	}
-
 	return tip, nil
 }
 
@@ -790,10 +694,11 @@ func (ab *AccountingBook) AddLeaf(ctx context.Context, leaf *Vertex) error {
 		)
 		return ErrLeafRejected
 	}
-	ab.register()
-	defer ab.unregister()
 
-	validatedLeafs := make([]Vertex, 0, 2)
+	ab.mux.Lock()
+	defer ab.mux.Unlock()
+
+	validatedLeafs := make([]*Vertex, 0, 2)
 
 	for _, hash := range [][32]byte{leaf.LeftParentHash, leaf.RightParentHash} {
 		item, err := ab.dag.GetVertex(string(hash[:]))
@@ -834,7 +739,7 @@ func (ab *AccountingBook) AddLeaf(ctx context.Context, leaf *Vertex) error {
 			}
 			ab.updateWaightAndThroughput(existringLeaf.Weight)
 		}
-		validatedLeafs = append(validatedLeafs, *existringLeaf)
+		validatedLeafs = append(validatedLeafs, existringLeaf)
 	}
 
 	if err := ab.saveTrxInVertex(leaf.Transaction.Hash[:], leaf.Hash[:]); err != nil {
@@ -853,24 +758,10 @@ func (ab *AccountingBook) AddLeaf(ctx context.Context, leaf *Vertex) error {
 		return ErrLeafRejected
 	}
 
-	var isRoot bool
+	var addedHash [32]byte
 	for _, validVrx := range validatedLeafs {
-		ok, err := ab.dag.IsRoot(string(validatedLeafs[0].Hash[:]))
-		if err != nil {
-			ab.dag.DeleteVertex(string(leaf.Hash[:]))
-			ab.removeTrxInVertex(leaf.Transaction.Hash[:])
-			ab.log.Error(
-				fmt.Sprintf(
-					"Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ] when checking is root, %s,",
-					leaf.Hash, leaf.SignerPublicAddress, leaf.LeftParentHash, leaf.RightParentHash, err),
-			)
-			return ErrNewLeafRejected
-		}
-		if ok {
-			if isRoot {
-				continue
-			}
-			isRoot = true
+		if validVrx.Hash == addedHash {
+			break
 		}
 		if err := ab.dag.AddEdge(string(validVrx.Hash[:]), string(leaf.Hash[:])); err != nil {
 			ab.dag.DeleteVertex(string(leaf.Hash[:]))
@@ -882,12 +773,7 @@ func (ab *AccountingBook) AddLeaf(ctx context.Context, leaf *Vertex) error {
 			)
 			return ErrLeafRejected
 		}
-	}
-	for len(ab.lastVertexHash) > 0 {
-		<-ab.lastVertexHash
-	}
-	for _, validVrx := range validatedLeafs {
-		ab.lastVertexHash <- validVrx.Hash
+		addedHash = validVrx.Hash
 	}
 
 	return nil
@@ -896,18 +782,24 @@ func (ab *AccountingBook) AddLeaf(ctx context.Context, leaf *Vertex) error {
 // CalculateBalance traverses the graph starting from the recent accepted Vertex,
 // and calculates the balance for the given address.
 func (ab *AccountingBook) CalculateBalance(ctx context.Context, walletPubAddr string) (Balance, error) {
-	ab.register()
-	defer ab.unregister()
-	lastVertexHash := <-ab.lastVertexHash
-	switch len(ab.lastVertexHash) {
-	case 1:
-		ab.lastVertexHash <- lastVertexHash
-	case 0:
-		ab.lastVertexHash <- lastVertexHash
-		ab.lastVertexHash <- lastVertexHash
-	default:
+	ab.mux.RLock()
+	defer ab.mux.RUnlock()
+
+	var oldestHash [32]byte
+	var weight uint64 = math.MaxUint64
+	for _, item := range ab.dag.GetLeaves() {
+		leaf, ok := item.(*Vertex)
+		if !ok {
+			return Balance{}, errors.Join(ErrUnexpected, errors.New("wrong leaf type"))
+		}
+		if leaf.Weight > weight {
+			continue
+		}
+		weight = leaf.Weight
+		oldestHash = leaf.Hash
 	}
-	item, err := ab.dag.GetVertex(string(lastVertexHash[:]))
+
+	item, err := ab.dag.GetVertex(string(oldestHash[:]))
 	if err != nil {
 		return Balance{}, errors.Join(ErrUnexpected, err)
 	}
@@ -927,7 +819,7 @@ func (ab *AccountingBook) CalculateBalance(ctx context.Context, walletPubAddr st
 
 	}
 	visited := make(map[string]struct{})
-	vertices, signal, _ := ab.dag.AncestorsWalker(string(lastVertexHash[:]))
+	vertices, signal, _ := ab.dag.AncestorsWalker(string(oldestHash[:]))
 	for ancestorID := range vertices {
 		select {
 		case <-ctx.Done():
@@ -992,6 +884,10 @@ func (ab *AccountingBook) ReadTransactionByHash(ctx context.Context, hash [32]by
 	}); err != nil {
 		return transaction.Transaction{}, err
 	}
+
+	ab.mux.RLock()
+	defer ab.mux.RUnlock()
+
 	item, err := ab.dag.GetVertex(string(vertexHash))
 	switch err {
 	case nil:
