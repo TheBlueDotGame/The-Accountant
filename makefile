@@ -61,9 +61,9 @@ emulate-subscriber:
 	./bin/dedicated/emulator -c conf/setup_example.yaml -d artefact/minmax.json subscriber &
 
 emulate-publisher:
-	./bin/dedicated/emulator -c conf/setup_example.yaml -d artefacts/data.json publisher
+	./bin/dedicated/emulator -c conf/setup_example.yaml -d artefacts/data.json publisher &
 
-run-emulate: emulate-subscriber emulate-subscriber
+run-emulate: emulate-subscriber emulate-publisher
 
 run-all: run-node run-client run-webhooks emulate-subscriber emulate-publisher
 
