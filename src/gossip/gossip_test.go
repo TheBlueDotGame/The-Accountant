@@ -330,28 +330,22 @@ func TestDAGWithGossip(t *testing.T) {
 
 			ctx, cancel := context.WithCancel(context.Background())
 
-			genessisConfigNode := Config{
-				URL:        fmt.Sprintf("localhost:%v", c.nodes[0]),
-				GenesisURL: "",
-				Port:       c.nodes[0],
-			}
-			genessisConfigAccountant := accountant.Config{}
-
 			genessisReceiver, err := wallet.New()
 			assert.NilError(t, err)
 
+			genessisConfigNode := Config{
+				URL:              fmt.Sprintf("localhost:%v", c.nodes[0]),
+				GenesisURL:       "",
+				Port:             c.nodes[0],
+				GenessisReceiver: genessisReceiver.Address(),
+			}
+			genessisConfigAccountant := accountant.Config{}
+
 			var accGenesis *accountant.AccountingBook
-			doneGenesis := make(chan struct{})
 			go func() {
 				var err error
 				accGenesis, err = accountant.NewAccountingBook(ctx, genessisConfigAccountant, v, &w, l)
 				assert.NilError(t, err)
-				go func() {
-					accGenesis.CreateGenesis(
-						"Genesis Test Transaction", spice.New(1000000000000000, 0), []byte{}, genessisReceiver.Address(),
-					)
-					close(doneGenesis)
-				}()
 				juggler := pipe.New(100, 100)
 				hippo, err := cache.New(maxEntrySize, maxCacheSizeMB)
 				assert.NilError(t, err)
@@ -361,7 +355,7 @@ func TestDAGWithGossip(t *testing.T) {
 				assert.NilError(t, err)
 			}()
 
-			<-doneGenesis
+			time.Sleep(time.Second * 1)
 
 			discovery := newDiscoveryConnetionLogger([]int{}, "loaded DAG from URL")
 			counterLogger := logging.New(callOnLogErr, callOnFail, discovery)

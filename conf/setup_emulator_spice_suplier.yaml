@@ -10,3 +10,4 @@ emulator:
    - notary-node-two:8000
   receiver_public_address: "12DvD7RSjVdafrcfihSSEnLpdPWh5Fbh4NFzosMeemuBpKkdaun"
   spice_per_transaction: 100
+  sleep_in_seconds_before_start: 20

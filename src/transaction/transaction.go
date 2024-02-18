@@ -79,11 +79,13 @@ func New(subject string, spice spice.Melange, data []byte, receiverAddress strin
 	message = append(message, data...)
 	message = append(message, []byte(issuer.Address())...)
 	message = append(message, []byte(receiverAddress)...)
-	b := make([]byte, 24)
-	binary.LittleEndian.PutUint64(b, uint64(createdAt.UnixNano()))
-	binary.LittleEndian.PutUint64(b, spice.Currency)
-	binary.LittleEndian.PutUint64(b, spice.SupplementaryCurrency)
-	message = append(message, b...)
+	b0 := make([]byte, 8)
+	binary.LittleEndian.PutUint64(b0, uint64(createdAt.UnixNano()))
+	b1 := make([]byte, 8)
+	binary.LittleEndian.PutUint64(b1, spice.Currency)
+	b2 := make([]byte, 8)
+	binary.LittleEndian.PutUint64(b2, spice.SupplementaryCurrency)
+	message = append(message, append(b0, append(b1, b2...)...)...)
 	hash, signature := issuer.Sign(message)
 
 	return Transaction{
@@ -112,17 +114,19 @@ func (t *Transaction) Sign(receiver Signer, v Verifier) ([32]byte, error) {
 		return [32]byte{}, ErrExpiredTransaction
 	}
 
-	msgLen := len(t.Subject) + len(t.Data) + len(t.IssuerAddress) + len(receiver.Address()) + 8
+	msgLen := len(t.Subject) + len(t.Data) + len(t.IssuerAddress) + len(receiver.Address()) + 24
 	message := make([]byte, 0, msgLen)
 	message = append(message, []byte(t.Subject)...)
 	message = append(message, t.Data...)
 	message = append(message, []byte(t.IssuerAddress)...)
 	message = append(message, []byte(receiver.Address())...)
-	b := make([]byte, 24)
-	binary.LittleEndian.PutUint64(b, uint64(t.CreatedAt.UnixNano()))
-	binary.LittleEndian.PutUint64(b, t.Spice.Currency)
-	binary.LittleEndian.PutUint64(b, t.Spice.SupplementaryCurrency)
-	message = append(message, b...)
+	b0 := make([]byte, 8)
+	binary.LittleEndian.PutUint64(b0, uint64(t.CreatedAt.UnixNano()))
+	b1 := make([]byte, 8)
+	binary.LittleEndian.PutUint64(b1, t.Spice.Currency)
+	b2 := make([]byte, 8)
+	binary.LittleEndian.PutUint64(b2, t.Spice.SupplementaryCurrency)
+	message = append(message, append(b0, append(b1, b2...)...)...)
 
 	if err := v.Verify(message, t.IssuerSignature, [32]byte(t.Hash), t.IssuerAddress); err != nil {
 		return [32]byte{}, errors.Join(ErrSignatureNotValidOrDataCorrupted, err)
@@ -164,17 +168,19 @@ func (t *Transaction) VerifyIssuerReceiver(v Verifier) error {
 
 // GeMessage returns message used for signature validation.
 func (t *Transaction) GetMessage() []byte {
-	msgLen := len(t.Subject) + len(t.Data) + len(t.IssuerAddress) + len(t.ReceiverAddress) + 8
+	msgLen := len(t.Subject) + len(t.Data) + len(t.IssuerAddress) + len(t.ReceiverAddress) + 24
 	message := make([]byte, 0, msgLen)
 	message = append(message, []byte(t.Subject)...)
 	message = append(message, t.Data...)
 	message = append(message, []byte(t.IssuerAddress)...)
 	message = append(message, []byte(t.ReceiverAddress)...)
-	b := make([]byte, 24)
-	binary.LittleEndian.PutUint64(b, uint64(t.CreatedAt.UnixNano()))
-	binary.LittleEndian.PutUint64(b, t.Spice.Currency)
-	binary.LittleEndian.PutUint64(b, t.Spice.SupplementaryCurrency)
-	return append(message, b...)
+	b0 := make([]byte, 8)
+	binary.LittleEndian.PutUint64(b0, uint64(t.CreatedAt.UnixNano()))
+	b1 := make([]byte, 8)
+	binary.LittleEndian.PutUint64(b1, t.Spice.Currency)
+	b2 := make([]byte, 8)
+	binary.LittleEndian.PutUint64(b2, t.Spice.SupplementaryCurrency)
+	return append(message, append(b0, append(b1, b2...)...)...)
 }
 
 // CompareIssuerData compare transactions from Issuer perspective.

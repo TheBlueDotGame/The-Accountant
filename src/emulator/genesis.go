@@ -20,6 +20,9 @@ type genesis struct {
 }
 
 func RunGenesis(ctx context.Context, cancel context.CancelFunc, config Config) error {
+	if config.SleepInSecBeforeStart > 0 {
+		time.Sleep(time.Duration(config.SleepInSecBeforeStart))
+	}
 	defer cancel()
 
 	if config.TickMillisecond == 0 || config.TickMillisecond > 120000 {
