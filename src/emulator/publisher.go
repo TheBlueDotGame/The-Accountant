@@ -27,6 +27,9 @@ type publisher struct {
 // RunPublisher runs publisher emulator that emulates data in a buffer.
 // Running emulator is stopped by canceling context.
 func RunPublisher(ctx context.Context, cancel context.CancelFunc, config Config, data []byte) error {
+	if config.SleepInSecBeforeStart > 0 {
+		time.Sleep(time.Duration(config.SleepInSecBeforeStart))
+	}
 	defer cancel()
 
 	var measurtements []Measurement

@@ -69,7 +69,11 @@ type subscriber struct {
 // RunSubscriber runs subscriber emulator.
 // To stop the subscriber cancel the context.
 func RunSubscriber(ctx context.Context, cancel context.CancelFunc, config Config, data []byte) error {
+	if config.SleepInSecBeforeStart > 0 {
+		time.Sleep(time.Duration(config.SleepInSecBeforeStart))
+	}
 	defer cancel()
+
 	var m [2]Measurement
 	var err error
 	err = json.Unmarshal(data, &m)
