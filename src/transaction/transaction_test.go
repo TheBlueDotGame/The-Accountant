@@ -80,3 +80,30 @@ func TestTransactionCreatedAndSignedFutureSuccessIssuerReceiverVerify(t *testing
 	assert.Nil(t, err)
 	assert.NotEmpty(t, h)
 }
+
+func TestSmallTimeSeparation(t *testing.T) {
+	issuer, err := wallet.New()
+	assert.Nil(t, err)
+	receiver, err := wallet.New()
+	assert.Nil(t, err)
+	trx0, err := New("subject", spice.New(math.MaxInt64, 0), []byte("message"), receiver.Address(), &issuer)
+	assert.Nil(t, err)
+	time.Sleep(time.Second)
+	trx1, err := New("subject", spice.New(math.MaxInt64, 0), []byte("message"), receiver.Address(), &issuer)
+	assert.Nil(t, err)
+
+	msg0 := trx0.GetMessage()
+	msg1 := trx1.GetMessage()
+	if len(msg0) != len(msg1) {
+		return
+	}
+
+	var diff bool
+	for i := range msg0 {
+		if msg0[i] != msg1[i] {
+			diff = true
+		}
+	}
+
+	assert.True(t, diff)
+}
