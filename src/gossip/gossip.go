@@ -143,14 +143,16 @@ func RunGRPC(ctx context.Context, cfg Config, l logger.Logger, t time.Duration, 
 
 	switch cfg.LoadDagURL {
 	case "":
-		g.accounter.CreateGenesis(
+		if _, err := g.accounter.CreateGenesis(
 			"Genesis Vertex",
 			spice.New(cfg.GenesisSpice.Currency, cfg.GenesisSpice.SupplementaryCurrency),
 			[]byte{}, cfg.GenessisReceiver,
-		)
+		); err != nil {
+			g.log.Error(fmt.Sprintf("failed creating genesis vertex: %s", err))
+			return err
+		}
 	default:
 		if err := g.updateDag(ctx, cfg.LoadDagURL); err != nil {
-			cancel()
 			g.log.Error(fmt.Sprintf("failed loading DAG: %s", err))
 			return err
 		}
@@ -408,6 +410,8 @@ func (g *gossiper) updateDag(ctx context.Context, url string) error {
 	go g.accounter.LoadDag(ctxx, cancel, chVrx)
 
 	var errx error
+	defer close(chVrx)
+	defer cancel(errx)
 StreamRcvLoop:
 	for {
 		select {
@@ -429,7 +433,6 @@ StreamRcvLoop:
 	if errx == nil || errx == io.EOF {
 		return nil
 	}
-	cancel(errx)
 	return errx
 }
 
