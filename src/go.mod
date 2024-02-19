@@ -1,6 +1,6 @@
 module github.com/bartossh/Computantis/src
 
-go 1.21
+go 1.22
 
 require (
 	github.com/allegro/bigcache v1.2.1
