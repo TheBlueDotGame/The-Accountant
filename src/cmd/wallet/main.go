@@ -1,8 +1,12 @@
 package main
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"os"
+	"strconv"
+	"time"
 
 	"github.com/pterm/pterm"
 	"github.com/urfave/cli/v2"
@@ -10,7 +14,9 @@ import (
 	"github.com/bartossh/Computantis/src/aeswrapper"
 	"github.com/bartossh/Computantis/src/configuration"
 	"github.com/bartossh/Computantis/src/fileoperations"
+	"github.com/bartossh/Computantis/src/spice"
 	"github.com/bartossh/Computantis/src/wallet"
+	"github.com/bartossh/Computantis/src/walletmiddleware"
 )
 
 const (
@@ -26,9 +32,13 @@ Tool provides Spice and Contract transfer, reading balance, reading contracts, a
 
 func main() {
 	pterm.DefaultHeader.WithFullWidth().Println("Computantis")
-	var pemFile string
-	var walletFile string
-	var walletPasswd string
+	var (
+		pemFile      string
+		walletFile   string
+		walletPasswd string
+		receiver     string
+		nodeURL      string
+	)
 
 	configurator := func(pemFile, walletFile, walletPasswd string) (configuration.Configuration, error) {
 		var cfg configuration.Configuration
@@ -83,10 +93,9 @@ func main() {
 					if err != nil {
 						return err
 					}
-					if err := run(actionNewWallet, cfg.FileOperator); err != nil {
+					if err := runFileOp(actionNewWallet, cfg.FileOperator); err != nil {
 						return err
 					}
-					printSuccess()
 					return nil
 				},
 			},
@@ -99,10 +108,9 @@ func main() {
 					if err != nil {
 						return err
 					}
-					if err := run(actionFromGobToPem, cfg.FileOperator); err != nil {
+					if err := runFileOp(actionFromGobToPem, cfg.FileOperator); err != nil {
 						return err
 					}
-					printSuccess()
 					return nil
 				},
 			},
@@ -115,10 +123,9 @@ func main() {
 					if err != nil {
 						return err
 					}
-					if err := run(actionFromPemToGob, cfg.FileOperator); err != nil {
+					if err := runFileOp(actionFromPemToGob, cfg.FileOperator); err != nil {
 						return err
 					}
-					printSuccess()
 					return nil
 				},
 			},
@@ -131,11 +138,41 @@ func main() {
 					if err != nil {
 						return err
 					}
-					if err := run(actionReadAddress, cfg.FileOperator); err != nil {
+					if err := runFileOp(actionReadAddress, cfg.FileOperator); err != nil {
 						return err
 					}
-					printSuccess()
 					return nil
+				},
+			},
+			{
+				Name:    "send",
+				Aliases: []string{"s"},
+				Usage:   "Sends transaction.",
+				Action: func(_ *cli.Context) error {
+					cfg, err := configurator(pemFile, walletFile, walletPasswd)
+					if err != nil {
+						return err
+					}
+					if err := runTransferOp(cfg.FileOperator, receiver, nodeURL); err != nil {
+						return err
+					}
+					return nil
+				},
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:        "receiver",
+						Aliases:     []string{"r"},
+						Usage:       "Receiver wallet public address.",
+						Destination: &receiver,
+						Required:    true,
+					},
+					&cli.StringFlag{
+						Name:        "node",
+						Aliases:     []string{"n"},
+						Usage:       "Node URL address.",
+						Destination: &nodeURL,
+						Required:    true,
+					},
 				},
 			},
 		},
@@ -147,7 +184,50 @@ func main() {
 	}
 }
 
-func run(action int, cfg fileoperations.Config) error {
+func runTransferOp(cfg fileoperations.Config, receiver, nodeURL string) error {
+	ctx := context.Background()
+	spiceStr, _ := pterm.DefaultInteractiveTextInput.Show("Provide Spice amount")
+	spiceVal, err := strconv.Atoi(spiceStr)
+	if err != nil || spiceVal < 0 {
+		return errors.New("spice can only be provided as a positive integer")
+	}
+	suplStr, _ := pterm.DefaultInteractiveTextInput.Show("Provide Supl amount")
+	suplVal, err := strconv.Atoi(suplStr)
+	if err != nil || suplVal < 0 {
+		return errors.New("supl can only be provided as a positive integer")
+	}
+	result, _ := pterm.DefaultInteractiveConfirm.Show(
+		fmt.Sprintf(
+			"Are you sure you want to transfer [ %v ] of Spice [ %v ] of Supl Spice to [ %s ].\n",
+			spiceVal, suplVal, receiver,
+		),
+	)
+	pterm.Println()
+	if !result {
+		printWarning("Transaction has been rejected.")
+		return nil
+	}
+	melange := spice.New(uint64(spiceVal), uint64(suplVal))
+	h := fileoperations.New(cfg, aeswrapper.New())
+	verify := wallet.NewVerifier()
+	c, err := walletmiddleware.NewClient(nodeURL, &verify, &h, wallet.New)
+	if err != nil {
+		return err
+	}
+	if err := c.ReadWalletFromFile(); err != nil {
+		return err
+	}
+	spinnerInfo, _ := pterm.DefaultSpinner.Start("Sending transaction ...")
+	time.Sleep(time.Second * 2)
+	if err := c.ProposeTransaction(ctx, receiver, "Spice transfer", melange, []byte{}); err != nil {
+		return err
+	}
+	spinnerInfo.Info("Transaction send.")
+	printSuccess()
+	return nil
+}
+
+func runFileOp(action int, cfg fileoperations.Config) error {
 	switch action {
 	case actionNewWallet:
 		pterm.Info.Println(" CREATING A NEW WALLET ")
@@ -163,6 +243,7 @@ func run(action int, cfg fileoperations.Config) error {
 			return err
 		}
 		printWalletPublicAddress(w.Address())
+		printSuccess()
 		return nil
 	case actionFromGobToPem:
 		pterm.Info.Println(" MOVING WALLET TO PEM KEYS ")
@@ -175,6 +256,7 @@ func run(action int, cfg fileoperations.Config) error {
 			return err
 		}
 		printWalletPublicAddress(w.Address())
+		printSuccess()
 		return nil
 
 	case actionFromPemToGob:
@@ -188,6 +270,7 @@ func run(action int, cfg fileoperations.Config) error {
 			return err
 		}
 		printWalletPublicAddress(w.Address())
+		printSuccess()
 		return nil
 	case actionReadAddress:
 		pterm.Info.Println(" READING WALLET PUBLIC ADDRESS ")
@@ -197,6 +280,7 @@ func run(action int, cfg fileoperations.Config) error {
 			return err
 		}
 		printWalletPublicAddress(w.Address())
+		printSuccess()
 		return nil
 	default:
 		return errors.New("unimplemented action")
@@ -215,13 +299,13 @@ func printSuccess() {
 }
 
 func printError(err error) {
-	pterm.Error.Println("----------")
-	pterm.Error.Printf(" Error: %s\n", err.Error())
-	pterm.Error.Println("----------")
+	pterm.Error.Println("")
+	pterm.Error.Printf(" %s\n", err.Error())
+	pterm.Error.Println("")
 }
 
 func printWarning(warning string) {
-	pterm.Warning.Println("----------")
-	pterm.Warning.Printf(" Warning: %s\n", warning)
-	pterm.Warning.Println("----------")
+	pterm.Warning.Println("")
+	pterm.Warning.Printf(" %s\n", warning)
+	pterm.Warning.Println("")
 }
