@@ -24,7 +24,7 @@ const (
 )
 
 const usage = `Wallet CLI tool allows to create a new Wallet or act on the local Wallet by using keys from different formats and transforming them between formats.
-Use with the best security practices. GOBINARY is safer to move between machines as this file format is encrypted with AES key.`
+Please use with the best security practices. GOBINARY is safer to move between machines as this file format is encrypted with AES key.`
 
 const configFlagDescryption = `Load configuration from 'FILE',
 configuration file is required to be in yaml format.
