@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/bartossh/Computantis/src/spice"
@@ -70,6 +71,7 @@ func New(subject string, spice spice.Melange, data []byte, receiverAddress strin
 	if len(receiverAddress) < minAddressLength {
 		return Transaction{}, ErrAddressIsInvalid
 	}
+	// TODO: create address verifier
 
 	createdAt := time.Now()
 
@@ -219,6 +221,14 @@ func (t *Transaction) Encode() ([]byte, error) {
 		return nil, err
 	}
 	return buf, nil
+}
+
+// String stringifies the transaction
+func (t *Transaction) String() string {
+	return fmt.Sprintf(
+		"%s: [ SPICE %s ], created %s | %s => %s [ DATA SIZE %v ]",
+		t.Subject, t.Spice, t.CreatedAt.UTC(), t.IssuerAddress, t.ReceiverAddress, len(t.Data),
+	)
 }
 
 // Decode decodes slice buffer to transaction.
