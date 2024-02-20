@@ -4,11 +4,10 @@
 
 ![Computantis Logo](https://github.com/bartossh/computantis/blob/main/artefacts/logo.png)
 
-
-
 ## Project overview
 
 The Computantis is a backbone service for creating secure, reliable and performant solution for transaction exchange and Byzantine fault tolerant systems.
+
 
 ### Services and tools
 
@@ -24,7 +23,7 @@ The Computantis contains of:
 
 ![Computantis Diagram](https://github.com/bartossh/computantis/blob/main/artefacts/Computantis-diagram.png)
 
-#### The computantis system network.
+#### The Computantis system network.
 
  - Nodes pursue to discover full network and connect to all available nodes.
  - If connection is impossible it is not a problem as gossip about gossip protocol allows to transmit message between not connected nodes via other nodes.
@@ -223,8 +222,6 @@ UNDER CONSTRUCTION
  - Avoid package level state.
  - Moderation is a virtue. Use with moderation: go routines, channels, atomic types, generics, interfaces, 'any' type and pointers.
 
-
-
 💻 Useful resources:
 
 - https://go-proverbs.github.io/
@@ -233,3 +230,9 @@ UNDER CONSTRUCTION
 - https://www.ardanlabs.com/blog/2023/07/getting-friendly-with-cpu-caches.html
 - https://eli.thegreenplace.net/2023/common-pitfalls-in-go-benchmarking/
 
+
+### Addressing the complexity of today software design
+
+- Today companies have more micro-services then clients. So lets have something that can run as mono-service and make shit done.
+- Today tools have more features than clients. So lets make very few tools in this mono-repo that offers basic features.
+- To solve a simple API in complex way can be done by any fool. To solve a complex problem in simple way is a real engineering. So lets make it simple.

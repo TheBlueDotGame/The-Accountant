@@ -1,7 +1,9 @@
 package transaction
 
 import (
+	"encoding/binary"
 	"math"
+	"slices"
 	"testing"
 	"time"
 
@@ -106,4 +108,100 @@ func TestSmallTimeSeparation(t *testing.T) {
 	}
 
 	assert.True(t, diff)
+}
+
+func TestCompareAppendAndCopy(t *testing.T) {
+	data := []byte("Some short message to copy")
+	tm := time.Now()
+	s := spice.New(10000, 10000)
+	b0 := make([]byte, 8)
+	binary.LittleEndian.PutUint64(b0, uint64(tm.UnixNano()))
+	b1 := make([]byte, 8)
+	binary.LittleEndian.PutUint64(b1, s.Currency)
+	b2 := make([]byte, 8)
+	binary.LittleEndian.PutUint64(b2, s.SupplementaryCurrency)
+
+	message1 := make([]byte, 0, len(data)+24)
+	message1 = append(message1, append(data, append(b0, append(b1, b2...)...)...)...)
+
+	message2 := make([]byte, len(data)+24)
+
+	n := copy(message2[:], data)
+	n += copy(message2[n:], b0)
+	n += copy(message2[n:], b1)
+	copy(message2[n:], b2)
+
+	assert.Equal(t, slices.Compare(message1, message2), 0)
+}
+
+func BenchmarkAppend(b *testing.B) {
+	data := []byte("Some short message to copy")
+	tm := time.Now()
+	s := spice.New(10000, 10000)
+
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		b0 := make([]byte, 8)
+		binary.LittleEndian.PutUint64(b0, uint64(tm.UnixNano()))
+		b1 := make([]byte, 8)
+		binary.LittleEndian.PutUint64(b1, s.Currency)
+		b2 := make([]byte, 8)
+		binary.LittleEndian.PutUint64(b2, s.SupplementaryCurrency)
+
+		message := make([]byte, 0, len(data)+24)
+		_ = append(message, append(data, append(b0, append(b1, b2...)...)...)...)
+
+	}
+}
+
+func BenchmarkCopy(b *testing.B) {
+	data := []byte("Some short message to copy")
+	tm := time.Now()
+	s := spice.New(10000, 10000)
+
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		b0 := make([]byte, 8)
+		binary.LittleEndian.PutUint64(b0, uint64(tm.UnixNano()))
+		b1 := make([]byte, 8)
+		binary.LittleEndian.PutUint64(b1, s.Currency)
+		b2 := make([]byte, 8)
+		binary.LittleEndian.PutUint64(b2, s.SupplementaryCurrency)
+
+		message := make([]byte, len(data)+24)
+
+		n := copy(message[:], data)
+		n += copy(message[n:], b0)
+		n += copy(message[n:], b1)
+		copy(message[n:], b2)
+	}
+}
+
+func BenchmarkNewTransaction(b *testing.B) {
+	issuer, err := wallet.New()
+	assert.Nil(b, err)
+	receiver, err := wallet.New()
+	assert.Nil(b, err)
+
+	b.ResetTimer()
+
+	for n := 0; n < b.N; n++ {
+		New("subject", spice.New(math.MaxInt64, 0), []byte("message"), receiver.Address(), &issuer)
+	}
+}
+
+func BenchmarkSignTransaction(b *testing.B) {
+	issuer, err := wallet.New()
+	assert.Nil(b, err)
+	receiver, err := wallet.New()
+	assert.Nil(b, err)
+	trx, err := New("subject", spice.New(math.MaxInt64, 0), []byte("message"), receiver.Address(), &issuer)
+	assert.Nil(b, err)
+	wh := wallet.Helper{}
+
+	b.ResetTimer()
+
+	for n := 0; n < b.N; n++ {
+		trx.Sign(&receiver, wh)
+	}
 }
