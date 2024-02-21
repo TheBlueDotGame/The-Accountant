@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"runtime/pprof"
@@ -111,19 +112,22 @@ func run(cfg configuration.Configuration) {
 		panic(fmt.Sprintf("Error with logger: %s", err))
 	}
 
+	var writer io.Writer
 	zinc, err := zincaddapter.New(cfg.ZincLogger)
 	if err != nil {
-		fmt.Println(err)
-		c <- os.Interrupt
-		return
+		fmt.Printf("Failed to connect to zincsearch due to %s, logging to stdout.\n", err)
+		writer = &stdoutwriter.Logger{}
+	} else {
+		writer = &zinc
 	}
-	log := logging.New(callbackOnErr, callbackOnFatal, stdoutwriter.Logger{}, &zinc)
+	log := logging.New(callbackOnErr, callbackOnFatal, writer)
 	dataProvider := dataprovider.New(ctx, cfg.DataProvider)
 	verifier := wallet.NewVerifier()
 	h := fileoperations.New(cfg.FileOperator, aeswrapper.New())
 	wlt, err := h.ReadWallet()
 	if err != nil {
 		log.Error(err.Error())
+		time.Sleep(time.Second)
 		c <- os.Interrupt
 		return
 	}
@@ -131,6 +135,7 @@ func run(cfg configuration.Configuration) {
 	acc, err := accountant.NewAccountingBook(ctx, cfg.Accountant, &verifier, &wlt, &log)
 	if err != nil {
 		log.Error(err.Error())
+		time.Sleep(time.Second)
 		c <- os.Interrupt
 		return
 	}
@@ -138,6 +143,7 @@ func run(cfg configuration.Configuration) {
 	tele, err := telemetry.Run(ctx, cancel, 2112)
 	if err != nil {
 		log.Error(err.Error())
+		time.Sleep(time.Second)
 		c <- os.Interrupt
 		return
 	}
@@ -147,6 +153,7 @@ func run(cfg configuration.Configuration) {
 	hippo, err := cache.New(maxEntrySize, maxCacheSizeMB)
 	if err != nil {
 		log.Error(err.Error())
+		time.Sleep(time.Second)
 		c <- os.Interrupt
 		return
 	}
@@ -155,6 +162,7 @@ func run(cfg configuration.Configuration) {
 	flash, err := cache.NewFlash()
 	if err != nil {
 		log.Error(err.Error())
+		time.Sleep(time.Second)
 		c <- os.Interrupt
 		return
 	}
@@ -163,6 +171,7 @@ func run(cfg configuration.Configuration) {
 	pub, err := natsclient.PublisherConnect(cfg.Nats)
 	if err != nil {
 		log.Error(err.Error())
+		time.Sleep(time.Second)
 		c <- os.Interrupt
 		return
 	}
@@ -176,6 +185,7 @@ func run(cfg configuration.Configuration) {
 		err = gossip.RunGRPC(ctx, cfg.Gossip, &log, gossipTimeout, &wlt, &verifier, acc, hippo, flash, juggler)
 		if err != nil {
 			log.Error(err.Error())
+			time.Sleep(time.Second)
 			c <- os.Interrupt
 			return
 		}
@@ -184,6 +194,7 @@ func run(cfg configuration.Configuration) {
 	err = notaryserver.Run(ctx, cfg.NotaryServer, pub, dataProvider, tele, &log, &verifier, acc, hippo, juggler)
 	if err != nil {
 		log.Error(err.Error())
+		time.Sleep(time.Second)
 	}
 	time.Sleep(time.Second)
 }

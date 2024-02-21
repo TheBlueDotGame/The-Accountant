@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	maxAmoutnPerSupplementaryCurrency = 1000000000000000000
+	MaxAmoutnPerSupplementaryCurrency = 1000000000000000000
 )
 
 const (
@@ -29,9 +29,9 @@ type Melange struct {
 
 // New creates new spice Melange from given currency and supplementary currency values.
 func New(currency, supplementaryCurrency uint64) Melange {
-	if supplementaryCurrency >= maxAmoutnPerSupplementaryCurrency {
+	if supplementaryCurrency >= MaxAmoutnPerSupplementaryCurrency {
 		currency += 1
-		supplementaryCurrency -= maxAmoutnPerSupplementaryCurrency
+		supplementaryCurrency -= MaxAmoutnPerSupplementaryCurrency
 	}
 	return Melange{
 		Currency:              currency,
@@ -50,7 +50,7 @@ func (m *Melange) Supply(amount Melange) error {
 			}
 			m.Currency += amount.Currency
 		case SuplementaryCurrency:
-			if maxAmoutnPerSupplementaryCurrency-amount.SupplementaryCurrency < m.SupplementaryCurrency {
+			if MaxAmoutnPerSupplementaryCurrency-amount.SupplementaryCurrency < m.SupplementaryCurrency {
 				if m.Currency == math.MaxUint64 {
 					m.copyFrom(mCp)
 					return ErrValueOverflow
@@ -58,9 +58,9 @@ func (m *Melange) Supply(amount Melange) error {
 			}
 			m.SupplementaryCurrency += amount.SupplementaryCurrency
 
-			if m.SupplementaryCurrency >= maxAmoutnPerSupplementaryCurrency {
+			if m.SupplementaryCurrency >= MaxAmoutnPerSupplementaryCurrency {
 				m.Currency += 1
-				m.SupplementaryCurrency -= maxAmoutnPerSupplementaryCurrency
+				m.SupplementaryCurrency -= MaxAmoutnPerSupplementaryCurrency
 			}
 		}
 	}
@@ -93,7 +93,7 @@ func Transfer(amount Melange, from, to *Melange) error {
 			to.Currency += amount.Currency
 			from.Currency -= amount.Currency
 		case SuplementaryCurrency:
-			if maxAmoutnPerSupplementaryCurrency-amount.SupplementaryCurrency < to.SupplementaryCurrency {
+			if MaxAmoutnPerSupplementaryCurrency-amount.SupplementaryCurrency < to.SupplementaryCurrency {
 				if to.Currency == math.MaxUint64 {
 					to.copyFrom(toCp)
 					from.copyFrom(fromCp)
@@ -107,21 +107,21 @@ func Transfer(amount Melange, from, to *Melange) error {
 					return ErrNoSufficientFounds
 				}
 				from.Currency -= 1
-				from.SupplementaryCurrency = from.SupplementaryCurrency + maxAmoutnPerSupplementaryCurrency - amount.SupplementaryCurrency
+				from.SupplementaryCurrency = from.SupplementaryCurrency + MaxAmoutnPerSupplementaryCurrency - amount.SupplementaryCurrency
 				to.SupplementaryCurrency += amount.SupplementaryCurrency
 
-				if to.SupplementaryCurrency >= maxAmoutnPerSupplementaryCurrency {
+				if to.SupplementaryCurrency >= MaxAmoutnPerSupplementaryCurrency {
 					to.Currency += 1
-					to.SupplementaryCurrency -= maxAmoutnPerSupplementaryCurrency
+					to.SupplementaryCurrency -= MaxAmoutnPerSupplementaryCurrency
 				}
 				continue
 			}
 			from.SupplementaryCurrency -= amount.SupplementaryCurrency
 			to.SupplementaryCurrency += amount.SupplementaryCurrency
 
-			if to.SupplementaryCurrency >= maxAmoutnPerSupplementaryCurrency {
+			if to.SupplementaryCurrency >= MaxAmoutnPerSupplementaryCurrency {
 				to.Currency += 1
-				to.SupplementaryCurrency -= maxAmoutnPerSupplementaryCurrency
+				to.SupplementaryCurrency -= MaxAmoutnPerSupplementaryCurrency
 			}
 		}
 	}

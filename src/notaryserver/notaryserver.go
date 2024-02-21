@@ -220,7 +220,10 @@ func (s *server) Alive(ctx context.Context, _ *emptypb.Empty) (*protobufcompiled
 // Propose validates the transaction and then processes the transaction according to the data in transaction.
 func (s *server) Propose(ctx context.Context, in *protobufcompiled.Transaction) (*emptypb.Empty, error) {
 	t := time.Now()
-	defer s.tele.RecordHistogramTime(proposeTrxTelemetryHistogram, time.Since(t))
+	defer func() {
+		d := time.Since(t)
+		s.tele.RecordHistogramTime(proposeTrxTelemetryHistogram, d)
+	}()
 
 	if in == nil {
 		return nil, ErrNoDataPresent
@@ -273,7 +276,10 @@ func (s *server) Propose(ctx context.Context, in *protobufcompiled.Transaction) 
 // Confirm validates the transaction and processes the confirmation according to the data in transaction.
 func (s *server) Confirm(ctx context.Context, in *protobufcompiled.Transaction) (*emptypb.Empty, error) {
 	t := time.Now()
-	defer s.tele.RecordHistogramTime(confirmTrxTelemetryHistogram, time.Since(t))
+	defer func() {
+		d := time.Since(t)
+		s.tele.RecordHistogramTime(confirmTrxTelemetryHistogram, d)
+	}()
 
 	trx, err := transformers.ProtoTrxToTrx(in)
 	if err != nil {
@@ -316,7 +322,10 @@ func (s *server) Confirm(ctx context.Context, in *protobufcompiled.Transaction) 
 // Reject validates request and then attempts to remove transaction from awaited transactions kept by this node.
 func (s *server) Reject(ctx context.Context, in *protobufcompiled.SignedHash) (*emptypb.Empty, error) {
 	t := time.Now()
-	defer s.tele.RecordHistogramTime(rejectTrxTelemetryHistogram, time.Since(t))
+	defer func() {
+		d := time.Since(t)
+		s.tele.RecordHistogramTime(rejectTrxTelemetryHistogram, d)
+	}()
 
 	if in == nil {
 		return nil, ErrRequestIsEmpty
@@ -352,7 +361,10 @@ func (s *server) Reject(ctx context.Context, in *protobufcompiled.SignedHash) (*
 // Waiting endpoint returns all the awaited transactions for given address, those received and issued.
 func (s *server) Waiting(ctx context.Context, in *protobufcompiled.SignedHash) (*protobufcompiled.Transactions, error) {
 	t := time.Now()
-	defer s.tele.RecordHistogramTime(awaitedTrxTelemetryHistogram, time.Since(t))
+	defer func() {
+		d := time.Since(t)
+		s.tele.RecordHistogramTime(awaitedTrxTelemetryHistogram, d)
+	}()
 
 	if ok := s.randDataProv.ValidateData(in.Address, in.Data); !ok {
 		s.log.Error(fmt.Sprintf("waiting transactions endpoint, failed to validate data for address: %s", in.Address))
@@ -383,10 +395,13 @@ func (s *server) Waiting(ctx context.Context, in *protobufcompiled.SignedHash) (
 	return result, nil
 }
 
-// Saved returns saved transactions nin the graph.
+// Saved returns saved transactions in the graph.
 func (s *server) Saved(ctx context.Context, in *protobufcompiled.SignedHash) (*protobufcompiled.Transaction, error) {
 	t := time.Now()
-	defer s.tele.RecordHistogramTime(approvedTrxTelemetryHistogram, time.Since(t))
+	defer func() {
+		d := time.Since(t)
+		s.tele.RecordHistogramTime(approvedTrxTelemetryHistogram, d)
+	}()
 
 	if err := s.verifier.Verify(in.Data, in.Signature, [32]byte(in.Hash), in.Address); err != nil {
 		s.log.Error(fmt.Sprintf("waiting endpoint, failed to verify signature for address: %s, %s", in.Address, err))
@@ -414,7 +429,10 @@ func (s *server) Saved(ctx context.Context, in *protobufcompiled.SignedHash) (*p
 // Data generates temporary data blob for receiver to sign and proof the its identity.
 func (s *server) Data(ctx context.Context, in *protobufcompiled.Address) (*protobufcompiled.DataBlob, error) {
 	t := time.Now()
-	defer s.tele.RecordHistogramTime(dataToSignTelemetryHistogram, time.Since(t))
+	defer func() {
+		d := time.Since(t)
+		s.tele.RecordHistogramTime(dataToSignTelemetryHistogram, d)
+	}()
 
 	if in.Public == "" {
 		s.log.Error("empty request on data endpoint")
@@ -430,7 +448,10 @@ func (s *server) Data(ctx context.Context, in *protobufcompiled.Address) (*proto
 // TODO: Find better way of requesting balance - sign blob data!
 func (s *server) Balance(ctx context.Context, in *protobufcompiled.SignedHash) (*protobufcompiled.Spice, error) {
 	t := time.Now()
-	defer s.tele.RecordHistogramTime(balanceTelemetryHistogram, time.Since(t))
+	defer func() {
+		d := time.Since(t)
+		s.tele.RecordHistogramTime(balanceTelemetryHistogram, d)
+	}()
 
 	if string(in.Data) != in.Address {
 		return nil, ErrVerification

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -800,21 +799,24 @@ func (ab *AccountingBook) CalculateBalance(ctx context.Context, walletPubAddr st
 	ab.mux.RLock()
 	defer ab.mux.RUnlock()
 
-	var oldestHash [32]byte
-	var weight uint64 = math.MaxUint64
-	for _, item := range ab.dag.GetLeaves() {
-		leaf, ok := item.(*Vertex)
-		if !ok {
-			return Balance{}, errors.Join(ErrUnexpected, errors.New("wrong leaf type"))
-		}
-		if leaf.Weight > weight {
-			continue
-		}
-		weight = leaf.Weight
-		oldestHash = leaf.Hash
+	leaf, _, err := ab.getLeaves(ctx)
+	if err != nil {
+		return Balance{}, errors.Join(ErrUnexpected, errors.New("wrong leaf type"))
 	}
 
-	item, err := ab.dag.GetVertex(string(oldestHash[:]))
+	if leaf == nil {
+		leaf, _, err = ab.getLeaves(ctx)
+		if err != nil {
+			return Balance{}, errors.Join(ErrUnexpected, errors.New("wrong leaf type"))
+		}
+		if leaf != nil {
+			msgErr := errors.Join(ErrUnexpected, errors.New("expected at least one leaf but got zero"))
+			ab.log.Error(fmt.Sprintf("Accounting book create tip %s.", msgErr))
+			return Balance{}, msgErr
+		}
+	}
+
+	item, err := ab.dag.GetVertex(string(leaf.Hash[:]))
 	if err != nil {
 		return Balance{}, errors.Join(ErrUnexpected, err)
 	}
@@ -834,7 +836,10 @@ func (ab *AccountingBook) CalculateBalance(ctx context.Context, walletPubAddr st
 
 	}
 	visited := make(map[string]struct{})
-	vertices, signal, _ := ab.dag.AncestorsWalker(string(oldestHash[:]))
+	vertices, signal, err := ab.dag.AncestorsWalker(string(leaf.Hash[:]))
+	if err != nil {
+		return Balance{}, errors.Join(ErrUnexpected, err)
+	}
 	for ancestorID := range vertices {
 		select {
 		case <-ctx.Done():
