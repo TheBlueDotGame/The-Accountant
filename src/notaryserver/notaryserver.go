@@ -395,7 +395,7 @@ func (s *server) Waiting(ctx context.Context, in *protobufcompiled.SignedHash) (
 	return result, nil
 }
 
-// Saved returns saved transactions nin the graph.
+// Saved returns saved transactions in the graph.
 func (s *server) Saved(ctx context.Context, in *protobufcompiled.SignedHash) (*protobufcompiled.Transaction, error) {
 	t := time.Now()
 	defer func() {

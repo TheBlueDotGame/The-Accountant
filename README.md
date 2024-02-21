@@ -25,31 +25,31 @@ The Computantis contains of:
 
 #### The Computantis system network.
 
- - Nodes pursue to discover full network and connect to all available nodes.
- - If connection is impossible it is not a problem as gossip about gossip protocol allows to transmit message between not connected nodes via other nodes.
- - Blue node named A is an message issuer. This node is commanding all other receiver nodes to perform action based on the message. 
- - All the green nodes are good actors in the network, while red nodes are bad actors.
- - When transferring the message bad actor receiving the message cannot corrupt the message as the message is cryptographically secured via ED25519 asymmetric signature.
- - Bad actor is required to send the message intact, if he refuses to all the network nodes that knows the node will constantly try to send the message to the bad actor due to the gossip about gossip protocol not seeing the node on the message list of acknowledged nodes.
- - The message will rich all the nodes until there is more connections between nodes than bad actors.
- - Message cannot be replied later as each message is in secured by the unique transaction.
- - Message will be resent to other nodes only if receiving nodes acknowledges the message as cryptographically valid.
+Nodes pursue to discover the full network and connect to all available nodes.
+If connection is impossible it is not a problem as gossip about gossip protocol allows to transmission of messages between non-connected nodes via other nodes.
+A blue node named A is a message issuer. This node commands all other receiver nodes to act based on the message.
+All the green nodes are good actors in the network, while red nodes are bad actors.
+When transferring the message bad actor receiving the message cannot corrupt the message as the message is cryptographically secured via ED25519 asymmetric signature.
+The bad actor is required to send the message intact, if he refuses to all the network nodes that know the node will constantly try to send the message to the bad actor due to the gossip about gossip protocol not seeing the node on the message list of acknowledged nodes.
+The message will reach all the nodes until there are more connections between nodes than bad actors.
+Message cannot be replied to later as each message is in secured by the unique transaction.
+The message will be resent to other nodes only if receiving nodes acknowledge the message as cryptographically valid.
 
-### The transaction
+#### The transaction
 
- - Transaction is secured by the asymmetric key cryptography signature, it can use different protocols but for now uses ED25519 asymmetric key signature.
- - The data are the core entity and all the other fields in the message are just for the data security.
- - The data are of no significant value for the Computantis system, can be encrypted or decrypted, it is not the case of the Computantis system to validate or use them. 
-- The Computantis is responsible for securing data from corruption, saving them in immutable distributed storage and ensuring data to reach the receiver. 
+The transaction is secured by the asymmetric key cryptography signature, it can use different protocols but for now, uses ED25519 asymmetric key signature.
+The data are the core entity and all the other fields in the message are just for the data security.
+The data are of no significant value to the Computantis system and can be encrypted or decrypted, it is not the case for the Computantis system to validate or use them.
+The Computantis is responsible for securing data from corruption, saving them in immutable distributed storage and ensuring data reaches the receiver.
 
-### The secure storage - DAG
+#### The secure storage - DAG
 
- - DAG stands for Direct Acyclic Graph and is post blockchain technology allowing for faster operations on transactions, near zero transaction confirmation time and more democratic data distribution. Very important factor is that securing the DAG is much less computational expensive then the blockchain forging process and may use cheaper and less complicated hardware.
- - On the diagram all the green boxes are the vertices that contains and cryptographically secure the transactions.
- - The red box is a leaf. Leaf when added to the graph needs to validate two of the existing leafs or a leaf and vertex with the highest weight.
- - The leaf when added to the graph is retransmitted to all the nodes in the network, so each of them is able to validate that leaf and transaction against their own DAGs. Because edges which specifies one direction connection between the vertices are based on hashes of vertices all the good players will keep the same vertices and edges in the DAG.
- - The vertex is unique in the DAG and inner transaction is unique per DAG. Sending the same transaction to many nodes will end up in collision and only the first one, received by most of the nodes will be accepted and retransmitted, all the rest of redundant transactions will be rejected.
- - Leaf isn't proving transaction validity until it becomes a vertex by having an edge created from other leaf or vertex.
+DAG stands for Direct Acyclic Graph and is post-blockchain technology allowing for faster operations on transactions, near zero transaction confirmation time and more democratic data distribution. A very important factor is that securing the DAG is much less computationally expensive than the blockchain forging process and may use cheaper and less complicated hardware.
+On the diagram, all the green boxes are the vertices that contain and cryptographically secure the transactions.
+The red box is a leaf. Leaf when added to the graph needs to validate two of the existing leaves or a leaf and vertex with the highest weight.
+The leaf when added to the graph is retransmitted to all the nodes in the network, so each of them is able to validate that leaf and transaction against their own DAGs. Because edges which specify one direction connection between the vertices are based on hashes of vertices all the good players will keep the same vertices and edges in the DAG.
+The vertex is unique in the DAG and the inner transaction is unique per DAG. Sending the same transaction to many nodes will end up in a collision and only the first one, received by most of the nodes will be accepted and retransmitted, all the rest of the redundant transactions will be rejected.
+Leaf isn't proving transaction validity until it becomes a vertex by having an edge created from another leaf or vertex.
 
 ### Add-ons
 

@@ -8,15 +8,14 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/pterm/pterm"
-	"github.com/urfave/cli/v2"
-
 	"github.com/bartossh/Computantis/src/aeswrapper"
 	"github.com/bartossh/Computantis/src/configuration"
 	"github.com/bartossh/Computantis/src/fileoperations"
 	"github.com/bartossh/Computantis/src/spice"
 	"github.com/bartossh/Computantis/src/wallet"
 	"github.com/bartossh/Computantis/src/walletmiddleware"
+	"github.com/pterm/pterm"
+	"github.com/urfave/cli/v2"
 )
 
 const (
@@ -24,7 +23,16 @@ const (
 	actionFromGobToPem
 	actionNewWallet
 	actionReadAddress
+	actionTransferFounds
+	actionReadBalance
 )
+
+const (
+	currency             = "kREDek"
+	suplementaryCurrency = "kREDeczek"
+)
+
+const pauseDuration = time.Second * 2
 
 const usage = `Wallet CLI tool allows to create a new Wallet or act on the local Wallet by using keys from different formats and transforming them between formats.
 Please use with the best security practices. GOBINARY is safer to move between machines as this file format is encrypted with AES key.
@@ -153,7 +161,7 @@ func main() {
 					if err != nil {
 						return err
 					}
-					if err := runTransferOp(cfg.FileOperator, receiver, nodeURL); err != nil {
+					if err := runTransactionOps(actionTransferFounds, cfg.FileOperator, receiver, nodeURL); err != nil {
 						return err
 					}
 					return nil
@@ -175,6 +183,30 @@ func main() {
 					},
 				},
 			},
+			{
+				Name:    "balance",
+				Aliases: []string{"b"},
+				Usage:   "Read balance.",
+				Action: func(_ *cli.Context) error {
+					cfg, err := configurator(pemFile, walletFile, walletPasswd)
+					if err != nil {
+						return err
+					}
+					if err := runTransactionOps(actionReadBalance, cfg.FileOperator, receiver, nodeURL); err != nil {
+						return err
+					}
+					return nil
+				},
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:        "node",
+						Aliases:     []string{"n"},
+						Usage:       "Node URL address.",
+						Destination: &nodeURL,
+						Required:    true,
+					},
+				},
+			},
 		},
 	}
 
@@ -184,30 +216,8 @@ func main() {
 	}
 }
 
-func runTransferOp(cfg fileoperations.Config, receiver, nodeURL string) error {
+func runTransactionOps(action int, cfg fileoperations.Config, receiver, nodeURL string) error {
 	ctx := context.Background()
-	spiceStr, _ := pterm.DefaultInteractiveTextInput.Show("Provide Spice amount")
-	spiceVal, err := strconv.Atoi(spiceStr)
-	if err != nil || spiceVal < 0 {
-		return errors.New("spice can only be provided as a positive integer")
-	}
-	suplStr, _ := pterm.DefaultInteractiveTextInput.Show("Provide Supl amount")
-	suplVal, err := strconv.Atoi(suplStr)
-	if err != nil || suplVal < 0 {
-		return errors.New("supl can only be provided as a positive integer")
-	}
-	result, _ := pterm.DefaultInteractiveConfirm.Show(
-		fmt.Sprintf(
-			"Are you sure you want to transfer [ %v ] of Spice [ %v ] of Supl Spice to [ %s ].\n",
-			spiceVal, suplVal, receiver,
-		),
-	)
-	pterm.Println()
-	if !result {
-		printWarning("Transaction has been rejected.")
-		return nil
-	}
-	melange := spice.New(uint64(spiceVal), uint64(suplVal))
 	h := fileoperations.New(cfg, aeswrapper.New())
 	verify := wallet.NewVerifier()
 	c, err := walletmiddleware.NewClient(nodeURL, &verify, &h, wallet.New)
@@ -217,14 +227,59 @@ func runTransferOp(cfg fileoperations.Config, receiver, nodeURL string) error {
 	if err := c.ReadWalletFromFile(); err != nil {
 		return err
 	}
-	spinnerInfo, _ := pterm.DefaultSpinner.Start("Sending transaction ...")
-	time.Sleep(time.Second * 2)
-	if err := c.ProposeTransaction(ctx, receiver, "Spice transfer", melange, []byte{}); err != nil {
-		return err
+
+	pterm.Info.Printf("Please note that [ %v %s = 1 %s ]\n", spice.MaxAmoutnPerSupplementaryCurrency, suplementaryCurrency, currency)
+
+	switch action {
+	case actionTransferFounds:
+		spiceStr, _ := pterm.DefaultInteractiveTextInput.Show(fmt.Sprintf("Provide [ %s ] amount", currency))
+		spiceVal, err := strconv.Atoi(spiceStr)
+		if err != nil || spiceVal < 0 {
+			return fmt.Errorf("token [ %s ] can only be provided as a positive integer", currency)
+		}
+		suplStr, _ := pterm.DefaultInteractiveTextInput.Show(fmt.Sprintf("Provide [ %s ] amount", suplementaryCurrency))
+		suplVal, err := strconv.Atoi(suplStr)
+		if err != nil || suplVal < 0 {
+			return fmt.Errorf("token [ %s ] can only be provided as a positive integer", suplementaryCurrency)
+		}
+		result, _ := pterm.DefaultInteractiveConfirm.Show(
+			fmt.Sprintf(
+				"Are you sure you want to transfer [ %v %s ][ %v %s ] to [ %s ].\n",
+				spiceVal, currency, suplVal, suplementaryCurrency, receiver,
+			),
+		)
+		pterm.Println()
+		if !result {
+			printWarning("Transaction has been rejected.")
+			return nil
+		}
+		melange := spice.New(uint64(spiceVal), uint64(suplVal))
+		spinnerInfo, _ := pterm.DefaultSpinner.Start("Sending transaction ...")
+		time.Sleep(pauseDuration)
+		subject := fmt.Sprintf("%s transfer", currency)
+		if err := c.ProposeTransaction(ctx, receiver, subject, melange, []byte{}); err != nil {
+			return err
+		}
+		spinnerInfo.Info("Transaction send.")
+		printSuccess()
+		return nil
+	case actionReadBalance:
+		spinnerInfo, _ := pterm.DefaultSpinner.Start("Checking balance ...")
+		time.Sleep(pauseDuration)
+		melange, err := c.ReadBalance(ctx)
+		if err != nil {
+			return fmt.Errorf("cannot read balance due to, %w", err)
+		}
+		addr, err := c.Address()
+		if err != nil {
+			return fmt.Errorf("cannot read wallet address due to, %w", err)
+		}
+		spinnerInfo.Info(fmt.Sprintf("Account [ %s ], [ %s balance: %v]", addr, currency, melange.String()))
+		printSuccess()
+		return nil
+	default:
+		return errors.New("unimplemented action")
 	}
-	spinnerInfo.Info("Transaction send.")
-	printSuccess()
-	return nil
 }
 
 func runFileOp(action int, cfg fileoperations.Config) error {
@@ -284,7 +339,6 @@ func runFileOp(action int, cfg fileoperations.Config) error {
 		return nil
 	default:
 		return errors.New("unimplemented action")
-
 	}
 }
 
