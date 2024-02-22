@@ -5,7 +5,7 @@ go 1.21
 require (
 	github.com/allegro/bigcache v1.2.1
 	github.com/dgraph-io/badger/v4 v4.2.0
-	github.com/gofiber/fiber/v2 v2.50.0
+	github.com/gofiber/fiber/v2 v2.52.1
 	github.com/heimdalr/dag v1.3.1
 	github.com/mr-tron/base58 v1.2.0
 	github.com/nats-io/nats.go v1.30.2
@@ -14,7 +14,7 @@ require (
 	github.com/shamaton/msgpack/v2 v2.1.1
 	github.com/stretchr/testify v1.8.4
 	github.com/urfave/cli/v2 v2.25.4
-	github.com/valyala/fasthttp v1.50.0
+	github.com/valyala/fasthttp v1.51.0
 	github.com/vmihailenco/msgpack v4.0.4+incompatible
 	go.mongodb.org/mongo-driver v1.12.1
 	golang.org/x/crypto v0.17.0
@@ -45,13 +45,13 @@ require (
 	github.com/golang/snappy v0.0.3 // indirect
 	github.com/google/flatbuffers v1.12.1 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
-	github.com/google/uuid v1.3.1 // indirect
+	github.com/google/uuid v1.5.0 // indirect
 	github.com/gookit/color v1.5.4 // indirect
 	github.com/klauspost/compress v1.17.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/lithammer/fuzzysearch v1.1.8 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
-	github.com/mattn/go-isatty v0.0.19 // indirect
+	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/nats-io/nats-server/v2 v2.9.23 // indirect
