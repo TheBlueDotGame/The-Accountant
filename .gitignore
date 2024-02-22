@@ -51,3 +51,7 @@ kubeconfig.yaml
 # python 
 venv
 __pycache__
+
+# test wallets 
+ed*
+wallet*

@@ -521,7 +521,7 @@ func TestMultipleIssuerMultipleReceiversMultipleAccountantSpiceTransferLegitimat
 		default:
 			ctxx, cancelF := context.WithCancelCause(ctx)
 			cVrx := make(chan *Vertex, 2)
-			go ab.LoadDag(ctxx, cancelF, cVrx) // NOTE: crucial for tests, on all node genesis nodes dag shall be loaded from genessis
+			go ab.LoadDag(ctxx, cancelF, cVrx) // NOTE: crucial for tests, on all node genesis nodes dag shall be loaded from genesis
 			cVrx <- &vrx
 			time.Sleep(time.Millisecond * 100)
 			cancelF(nil)
@@ -530,7 +530,7 @@ func TestMultipleIssuerMultipleReceiversMultipleAccountantSpiceTransferLegitimat
 		nodes = append(nodes, ab)
 	}
 
-	numberOfParticipants := 2
+	numberOfParticipants := 50
 	numberOfRounds := 4
 
 	for rec := 0; rec < numberOfParticipants; rec++ {

@@ -38,6 +38,7 @@ var (
 	ErrIssuerAddressBalanceNotFound          = errors.New("issuer address balance not found")
 	ErrReceiverAddressBalanceNotFound        = errors.New("receiver address balance not found")
 	ErrDoubleSpendingOrInsufficinetFounds    = errors.New("double spending or insufficient founds")
+	ErrCannotTransferFoundsViaOwnedNode      = errors.New("issuer cannot transfer founds via owned node")
 	ErrVertexHashNotFound                    = errors.New("vertex hash not found")
 	ErrVertexAlreadyExists                   = errors.New("vertex already exists")
 	ErrTrxInVertexAlreadyExists              = errors.New("transaction in vertex already exists")
@@ -408,7 +409,7 @@ func (ab *AccountingBook) isValidWeight(weight uint64) bool {
 	return weight >= current-throughput
 }
 
-func (ab *AccountingBook) getLeaves(ctx context.Context) (leftLeaf, rightLeaf *Vertex, err error) {
+func (ab *AccountingBook) getValidLeaves(ctx context.Context) (leftLeaf, rightLeaf *Vertex, err error) {
 	var i int
 	for _, item := range ab.dag.GetLeaves() {
 		if i == 2 {
@@ -449,8 +450,12 @@ func (ab *AccountingBook) getLeaves(ctx context.Context) (leftLeaf, rightLeaf *V
 }
 
 // CreateGenesis creates genesis vertex that will transfer spice to current node as a receiver.
-func (ab *AccountingBook) CreateGenesis(subject string, spc spice.Melange, data []byte, publicAddress string) (Vertex, error) {
-	trx, err := transaction.New(subject, spc, data, publicAddress, ab.signer)
+func (ab *AccountingBook) CreateGenesis(subject string, spc spice.Melange, data []byte, reciverPublicAddress string) (Vertex, error) {
+	if reciverPublicAddress == ab.signer.Address() {
+		return Vertex{}, errors.Join(ErrGenesisRejected, errors.New("receiver and issuer cannot be the same wallet"))
+	}
+
+	trx, err := transaction.New(subject, spc, data, reciverPublicAddress, ab.signer)
 	if err != nil {
 		return Vertex{}, errors.Join(ErrGenesisRejected, err)
 	}
@@ -594,6 +599,9 @@ func (ab *AccountingBook) CreateLeaf(ctx context.Context, trx *transaction.Trans
 	if !ab.DagLoaded() {
 		return Vertex{}, ErrDagIsNotLoaded
 	}
+	if trx.IssuerAddress == ab.signer.Address() {
+		return Vertex{}, ErrCannotTransferFoundsViaOwnedNode
+	}
 	ok, err := ab.checkTrxInVertexExists(trx.Hash[:])
 	if err != nil {
 		ab.log.Error(fmt.Sprintf(
@@ -609,13 +617,13 @@ func (ab *AccountingBook) CreateLeaf(ctx context.Context, trx *transaction.Trans
 	ab.mux.Lock()
 	defer ab.mux.Unlock()
 
-	leftLeaf, rightLeaf, err := ab.getLeaves(ctx)
+	leftLeaf, rightLeaf, err := ab.getValidLeaves(ctx)
 	if err != nil {
 		return Vertex{}, err
 	}
 
 	if leftLeaf == nil {
-		leftLeaf, rightLeaf, err = ab.getLeaves(ctx)
+		leftLeaf, rightLeaf, err = ab.getValidLeaves(ctx)
 		if err != nil {
 			return Vertex{}, err
 		}
@@ -799,21 +807,16 @@ func (ab *AccountingBook) CalculateBalance(ctx context.Context, walletPubAddr st
 	ab.mux.RLock()
 	defer ab.mux.RUnlock()
 
-	leaf, _, err := ab.getLeaves(ctx)
-	if err != nil {
-		return Balance{}, errors.Join(ErrUnexpected, errors.New("wrong leaf type"))
+	var leaf *Vertex
+	var ok bool
+	for _, item := range ab.dag.GetLeaves() {
+		leaf, ok = item.(*Vertex)
+		if !ok {
+			return Balance{}, errors.Join(ErrUnexpected, errors.New("calculate balance, cannot cast item to leaf"))
+		}
 	}
-
 	if leaf == nil {
-		leaf, _, err = ab.getLeaves(ctx)
-		if err != nil {
-			return Balance{}, errors.Join(ErrUnexpected, errors.New("wrong leaf type"))
-		}
-		if leaf != nil {
-			msgErr := errors.Join(ErrUnexpected, errors.New("expected at least one leaf but got zero"))
-			ab.log.Error(fmt.Sprintf("Accounting book create tip %s.", msgErr))
-			return Balance{}, msgErr
-		}
+		return Balance{}, errors.Join(ErrUnexpected, errors.New("calculate balance, cannot read leaf"))
 	}
 
 	item, err := ab.dag.GetVertex(string(leaf.Hash[:]))
@@ -865,7 +868,6 @@ func (ab *AccountingBook) CalculateBalance(ctx context.Context, walletPubAddr st
 			if err := pourFounds(walletPubAddr, *vrx, &spiceIn, &spiceOut); err != nil {
 				return Balance{}, err
 			}
-
 		default:
 			signal <- true
 			return Balance{}, ErrUnexpected

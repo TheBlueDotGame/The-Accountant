@@ -42,7 +42,7 @@ type ZincClient struct {
 
 // New creates a new ZincClient.
 func New(cfg Config) (ZincClient, error) {
-	if err := httpclient.MakeGetAuth(timeout, "", fmt.Sprintf("%s%s", cfg.Address, healthz), nil); err != nil {
+	if err := httpclient.MakeGet(timeout, fmt.Sprintf("%s%s", cfg.Address, healthz), nil); err != nil {
 		return ZincClient{}, errors.Join(ErrZincServerNotResponding, err)
 	}
 	return ZincClient{cfg.Address, cfg.Index, cfg.Token}, nil
