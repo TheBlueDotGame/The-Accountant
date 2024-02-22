@@ -83,9 +83,9 @@ source venv/bin/activate
 
 #### Golden rule - creating genesis
 
-When creating genesis node, the one that creates a genesis vertex, it is necessary that the genesis node will use wallet for creating genesis transaction once. This wallet cannot be used again. 
-The genesis transaction receiver is should be a separate wallet that will have all the created tokens and will be responsible for distributing tokens to other wallet.
-Transferring founds from genesis wallet to self will fail. Transferring founds to genesis wallet by any other wallet will fail.
+When creating genesis node that creates a genesis vertex, it is necessary that this node will use wallet for creating genesis transaction only once. This wallet cannot be used again. 
+The genesis transaction receiver should be a separate wallet having all created tokens in genesis transaction. This receiver will is then responsible for distributing tokens to other wallets.
+Transferring founds from genesis wallet to self will fail. Transferring founds to genesis wallet by any other wallet will fail too.
 
 #### Silver rule - transferring founds
 

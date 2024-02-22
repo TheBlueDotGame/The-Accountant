@@ -39,6 +39,7 @@ var (
 	ErrReceiverAddressBalanceNotFound        = errors.New("receiver address balance not found")
 	ErrDoubleSpendingOrInsufficinetFounds    = errors.New("double spending or insufficient founds")
 	ErrCannotTransferFoundsViaOwnedNode      = errors.New("issuer cannot transfer founds via owned node")
+	ErrCannotTransferFoundsFromGenesisWallet = errors.New("issuer cannot be the genesis node")
 	ErrVertexHashNotFound                    = errors.New("vertex hash not found")
 	ErrVertexAlreadyExists                   = errors.New("vertex already exists")
 	ErrTrxInVertexAlreadyExists              = errors.New("transaction in vertex already exists")
@@ -60,19 +61,20 @@ type Signer interface {
 
 // AccountingBook is an entity that represents the accounting process of all received transactions.
 type AccountingBook struct {
-	repiter        *buffer
-	verifier       signatureVerifier
-	signer         Signer
-	log            logger.Logger
-	dag            *dag.DAG
-	trustedNodesDB *badger.DB
-	trxsToVertxDB  *badger.DB
-	verticesDB     *badger.DB
-	mux            sync.RWMutex
-	gennessisHash  [32]byte
-	weight         atomic.Uint64
-	throughput     atomic.Uint64
-	dagLoaded      bool
+	repiter              *buffer
+	verifier             signatureVerifier
+	signer               Signer
+	log                  logger.Logger
+	dag                  *dag.DAG
+	trustedNodesDB       *badger.DB
+	trxsToVertxDB        *badger.DB
+	verticesDB           *badger.DB
+	genesisPublicAddress string
+	mux                  sync.RWMutex
+	gennessisHash        [32]byte
+	weight               atomic.Uint64
+	throughput           atomic.Uint64
+	dagLoaded            bool
 }
 
 // New creates new AccountingBook.
@@ -480,6 +482,7 @@ func (ab *AccountingBook) CreateGenesis(subject string, spc spice.Melange, data 
 	ab.updateWaightAndThroughput(initialThroughput)
 
 	ab.dagLoaded = true
+	ab.genesisPublicAddress = ab.signer.Address()
 
 	return vrx, nil
 }
@@ -518,10 +521,16 @@ VertxLoop:
 		}
 	}
 
+	var lastVrx *Vertex
 	for _, item := range ab.dag.GetVertices() {
 		switch vrx := item.(type) {
 		case *Vertex:
+			if vrx == nil {
+				cancelF(ErrUnexpected)
+				return
+			}
 			var addedHash [32]byte
+			lastVrx = vrx
 		connLoop:
 			for _, conn := range [][32]byte{vrx.LeftParentHash, vrx.RightParentHash} {
 				if conn == addedHash {
@@ -540,6 +549,7 @@ VertxLoop:
 	}
 
 	ab.dagLoaded = true
+	ab.genesisPublicAddress = lastVrx.Transaction.IssuerAddress
 }
 
 // DagLoaded returns true if dag is loaded or false otherwise.
@@ -602,6 +612,10 @@ func (ab *AccountingBook) CreateLeaf(ctx context.Context, trx *transaction.Trans
 	if trx.IssuerAddress == ab.signer.Address() {
 		return Vertex{}, ErrCannotTransferFoundsViaOwnedNode
 	}
+	if trx.IssuerAddress == ab.genesisPublicAddress {
+		return Vertex{}, ErrCannotTransferFoundsFromGenesisWallet
+	}
+
 	ok, err := ab.checkTrxInVertexExists(trx.Hash[:])
 	if err != nil {
 		ab.log.Error(fmt.Sprintf(
@@ -689,6 +703,9 @@ func (ab *AccountingBook) AddLeaf(ctx context.Context, leaf *Vertex) error {
 	}
 	if leaf == nil {
 		return errors.Join(ErrUnexpected, errors.New("leaf is nil"))
+	}
+	if leaf.Transaction.IssuerAddress == ab.genesisPublicAddress {
+		return ErrCannotTransferFoundsFromGenesisWallet
 	}
 
 	ok, err := ab.checkVertexExists(leaf.Hash[:])
