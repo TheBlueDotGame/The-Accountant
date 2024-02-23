@@ -20,7 +20,7 @@ func TestAppendSuccess(t *testing.T) {
 	for i := 0; i < maxArraySize; i++ {
 		token := make([]byte, 32)
 		rand.Read(token)
-		err = repl.insert(&Vertex{Hash: [32]byte(token)})
+		err = repl.insert(newMemory(&Vertex{Hash: [32]byte(token)}))
 		assert.NilError(t, err)
 	}
 }
@@ -35,11 +35,11 @@ func TestAppendOverflowMaxArrSize(t *testing.T) {
 	for i := 0; i < maxArraySize; i++ {
 		token := make([]byte, 32)
 		rand.Read(token)
-		err = repl.insert(&Vertex{Hash: [32]byte(token)})
+		err = repl.insert(newMemory(&Vertex{Hash: [32]byte(token)}))
 		assert.NilError(t, err)
 	}
 
-	err = repl.insert(&Vertex{})
+	err = repl.insert(newMemory(&Vertex{}))
 	assert.Error(t, err, ErrNotEnoughSpace.Error())
 }
 
@@ -56,26 +56,26 @@ func TestAppendsubscribeCorrectOrder(t *testing.T) {
 
 	go func() {
 		var counter int
-		var vrx *Vertex
+		var m memory
 		for v := range repl.subscribe() {
-			if v == nil {
+			if v.vrx == nil {
 				break
 			}
 			counter++
-			if vrx == nil {
-				vrx = v
+			if v.vrx == nil {
+				m = v
 				continue
 			}
 
-			if vrx.CreatedAt.Before(v.CreatedAt) {
+			if m.vrx.CreatedAt.Before(v.vrx.CreatedAt) {
 				err = fmt.Errorf(
 					"new vertex crated at [ %v ] is before last vertex created at [ %v ]",
-					v.CreatedAt, vrx.CreatedAt,
+					v.vrx.CreatedAt, m.vrx.CreatedAt,
 				)
 				assert.NilError(t, err)
 			}
 
-			vrx = v
+			m = v
 		}
 
 		assert.Equal(t, counter, vrxNum)
@@ -96,7 +96,7 @@ func TestAppendsubscribeCorrectOrder(t *testing.T) {
 	}
 
 	for i := range vertexes {
-		err = repl.insert(vertexes[i])
+		err = repl.insert(newMemory(vertexes[i]))
 		assert.NilError(t, err)
 	}
 	<-ctx.Done()

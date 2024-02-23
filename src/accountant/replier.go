@@ -4,14 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"maps"
 	"slices"
 	"time"
 )
 
 const (
-	maxArraySize = 200
-	maxRepeats   = 4
+	maxArraySize = 250
+	maxRepeats   = 5
 )
 
 const longevity = time.Minute
@@ -22,8 +21,12 @@ var (
 )
 
 type memory struct {
-	repeted   int
-	createdAt time.Time
+	vrx      *Vertex
+	repeated int
+}
+
+func newMemory(v *Vertex) memory {
+	return memory{vrx: v, repeated: 0}
 }
 
 func bytesToHex(b []byte) string {
@@ -33,40 +36,32 @@ func bytesToHex(b []byte) string {
 // buffer stores Vertex' and then replay Vertex after set time tick.
 // It stores the Vertex sorted end replies them in proper order based on created at time.
 type buffer struct {
-	accounter map[string]memory
-	pub       chan *Vertex
-	members   []*Vertex
+	pub     chan memory
+	members []memory
 }
 
-func (b *buffer) cleanup() {
-	t := time.Now()
-	maps.DeleteFunc(b.accounter, func(k string, m memory) bool {
-		return m.createdAt.Add(longevity).Before(t)
-	})
-}
-
-func (b *buffer) getNext() *Vertex {
+func (b *buffer) getNext() memory {
 	if len(b.members) == 0 {
-		return nil
+		return memory{}
 	}
 
-	slices.SortStableFunc(b.members, func(a, b *Vertex) int {
-		if a == nil || b == nil {
+	slices.SortStableFunc(b.members, func(a, b memory) int {
+		if a.vrx == nil || b.vrx == nil {
 			return 0
 		}
-		if a.CreatedAt.Before(a.CreatedAt) {
+		if a.vrx.CreatedAt.Before(a.vrx.CreatedAt) {
 			return -1
 		}
-		if a.CreatedAt.After(a.CreatedAt) {
+		if a.vrx.CreatedAt.After(a.vrx.CreatedAt) {
 			return 1
 		}
 		return 0
 	})
 
-	vrx := b.members[0]
+	m := b.members[0]
 	b.members = b.members[1:]
 
-	return vrx
+	return m
 }
 
 func (b *buffer) run(ctx context.Context, ts time.Duration) {
@@ -78,9 +73,8 @@ ticker:
 	for {
 		select {
 		case <-tc.C:
-			b.cleanup()
 			v := b.getNext()
-			if v == nil {
+			if v.vrx == nil {
 				continue ticker
 			}
 			b.pub <- v
@@ -92,9 +86,8 @@ ticker:
 
 func newReplierBuffer(ctx context.Context, tick time.Duration) (*buffer, error) {
 	buf := &buffer{
-		pub:       make(chan *Vertex, maxArraySize),
-		members:   make([]*Vertex, 0, maxArraySize),
-		accounter: make(map[string]memory),
+		pub:     make(chan memory, maxArraySize),
+		members: make([]memory, 0, maxArraySize),
 	}
 
 	go buf.run(ctx, tick)
@@ -102,26 +95,21 @@ func newReplierBuffer(ctx context.Context, tick time.Duration) (*buffer, error) 
 	return buf, nil
 }
 
-func (b buffer) subscribe() <-chan *Vertex {
+func (b buffer) subscribe() <-chan memory {
 	return b.pub
 }
 
-func (b *buffer) insert(v *Vertex) error {
+func (b *buffer) insert(m memory) error {
 	if len(b.members) == maxArraySize {
 		return ErrNotEnoughSpace
 	}
 
-	h := bytesToHex(v.Hash[:])
-	m, ok := b.accounter[h]
-	if ok && m.repeted > 5 {
+	if m.repeated > maxRepeats {
 		return ErrVertexRepetitionExceeded
 	}
-	if !ok {
-		m.createdAt = time.Now()
-	}
-	m.repeted++
-	b.accounter[h] = m
 
-	b.members = append(b.members, v)
+	m.repeated++
+
+	b.members = append(b.members, m)
 	return nil
 }

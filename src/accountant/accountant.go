@@ -123,10 +123,10 @@ func (ab *AccountingBook) runLeafSubscriber(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case v := <-ab.repiter.subscribe():
-			if v == nil {
+			if v.vrx == nil {
 				continue
 			}
-			ab.AddLeaf(ctx, v)
+			ab.addLeafMemorized(ctx, v)
 		}
 	}
 }
@@ -138,7 +138,9 @@ func (ab *AccountingBook) validateLeaf(ctx context.Context, leaf *Vertex) error 
 	if !ab.isValidWeight(leaf.Weight) {
 		return errors.Join(
 			ErrLeafRejected,
-			fmt.Errorf("leaf doesn't meet condition of minimal weight, throughput: %v current: %v, received: %v", ab.throughput.Load(), ab.weight.Load(), leaf.Weight),
+			fmt.Errorf("leaf doesn't meet condition of minimal weight, throughput: %v current: %v, received: %v",
+				ab.throughput.Load(), ab.weight.Load(), leaf.Weight,
+			),
 		)
 	}
 
@@ -451,6 +453,125 @@ func (ab *AccountingBook) getValidLeaves(ctx context.Context) (leftLeaf, rightLe
 	return
 }
 
+func (ab *AccountingBook) addLeafMemorized(ctx context.Context, m memory) error {
+	leaf := m.vrx
+	if leaf == nil {
+		return errors.Join(ErrUnexpected, errors.New("leaf is nil"))
+	}
+	if leaf.Transaction.IssuerAddress == ab.genesisPublicAddress {
+		return ErrCannotTransferFoundsFromGenesisWallet
+	}
+
+	ok, err := ab.checkVertexExists(leaf.Hash[:])
+	if err != nil {
+		ab.log.Error(fmt.Sprintf("Accounting book adding leaf failed when checking vertex exists, %s", err))
+		return errors.Join(ErrUnexpected, err)
+	}
+	if ok {
+		return ErrLeafAlreadyExists
+	}
+	ok, err = ab.checkTrxInVertexExists(leaf.Transaction.Hash[:])
+	if err != nil {
+		ab.log.Error(fmt.Sprintf("Accounting book adding leaf failed when checking if trx to vertex mapping exists, %s", err))
+		return errors.Join(ErrUnexpected, err)
+	}
+	if ok {
+		return ErrTrxInVertexAlreadyExists
+	}
+
+	if err := leaf.verify(ab.verifier); err != nil {
+		ab.log.Error(
+			fmt.Sprintf(
+				"Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ] when verifying, %s.",
+				leaf.Hash, leaf.SignerPublicAddress, leaf.LeftParentHash, leaf.RightParentHash, err),
+		)
+		return ErrLeafRejected
+	}
+
+	ab.mux.Lock()
+	defer ab.mux.Unlock()
+
+	validatedLeafs := make([]*Vertex, 0, 2)
+
+	for _, hash := range [][32]byte{leaf.LeftParentHash, leaf.RightParentHash} {
+		item, err := ab.dag.GetVertex(string(hash[:]))
+		if err != nil {
+			ab.log.Info(
+				fmt.Sprintf(
+					"Accounting book proceeded with memorizing leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ] when reading vertex for future validation, %s.",
+					leaf.Hash, leaf.SignerPublicAddress, leaf.LeftParentHash, leaf.RightParentHash, err),
+			)
+			if err := ab.repiter.insert(m); err != nil {
+				ab.log.Error(
+					fmt.Sprintf(
+						"Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ] when reading vertex, %s.",
+						leaf.Hash, leaf.SignerPublicAddress, leaf.LeftParentHash, leaf.RightParentHash, err),
+				)
+				return ErrLeafRejected
+			}
+			return nil
+		}
+		existringLeaf, ok := item.(*Vertex)
+		if !ok {
+			return errors.Join(ErrUnexpected, errors.New("wrong leaf type"))
+		}
+		isLeaf, err := ab.dag.IsLeaf(string(hash[:]))
+		if err != nil {
+			ab.log.Error(
+				fmt.Sprintf(
+					"Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ] when validate is leaf, %s.",
+					leaf.Hash, leaf.SignerPublicAddress, leaf.LeftParentHash, leaf.RightParentHash, err),
+			)
+			return ErrLeafRejected
+		}
+		if isLeaf {
+			if err := ab.validateLeaf(ctx, existringLeaf); err != nil {
+				ab.dag.DeleteVertex(string(existringLeaf.Hash[:]))
+				ab.removeTrxInVertex(existringLeaf.Transaction.Hash[:])
+				return errors.Join(ErrLeafRejected, err)
+			}
+			ab.updateWaightAndThroughput(existringLeaf.Weight)
+		}
+		validatedLeafs = append(validatedLeafs, existringLeaf)
+	}
+
+	if err := ab.saveTrxInVertex(leaf.Transaction.Hash[:], leaf.Hash[:]); err != nil {
+		ab.log.Error(
+			fmt.Sprintf(
+				"Accounting book leaf add failed saving transaction [ %v ] in leaf [ %v ], %s.",
+				leaf.Transaction.Hash[:], leaf.Hash, err,
+			),
+		)
+		return errors.Join(ErrUnexpected, err)
+	}
+
+	if err := ab.dag.AddVertexByID(string(leaf.Hash[:]), leaf); err != nil {
+		ab.log.Error(fmt.Sprintf("Accounting book rejected new leaf [ %v ], %s.", leaf.Hash, err))
+		ab.removeTrxInVertex(leaf.Transaction.Hash[:])
+		return ErrLeafRejected
+	}
+
+	var addedHash [32]byte
+	for _, validVrx := range validatedLeafs {
+		if validVrx.Hash == addedHash {
+			break
+		}
+		if err := ab.dag.AddEdge(string(validVrx.Hash[:]), string(leaf.Hash[:])); err != nil {
+			ab.dag.DeleteVertex(string(leaf.Hash[:]))
+			ab.removeTrxInVertex(leaf.Transaction.Hash[:])
+			ab.log.Error(
+				fmt.Sprintf(
+					"Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ] when adding edge, %s.",
+					leaf.Hash, leaf.SignerPublicAddress, leaf.LeftParentHash, leaf.RightParentHash, err),
+			)
+			return ErrLeafRejected
+		}
+		addedHash = validVrx.Hash
+	}
+
+	return nil
+}
+
 // CreateGenesis creates genesis vertex that will transfer spice to current node as a receiver.
 func (ab *AccountingBook) CreateGenesis(subject string, spc spice.Melange, data []byte, reciverPublicAddress string) (Vertex, error) {
 	if reciverPublicAddress == ab.signer.Address() {
@@ -701,121 +822,7 @@ func (ab *AccountingBook) AddLeaf(ctx context.Context, leaf *Vertex) error {
 	if !ab.DagLoaded() {
 		return ErrDagIsNotLoaded
 	}
-	if leaf == nil {
-		return errors.Join(ErrUnexpected, errors.New("leaf is nil"))
-	}
-	if leaf.Transaction.IssuerAddress == ab.genesisPublicAddress {
-		return ErrCannotTransferFoundsFromGenesisWallet
-	}
-
-	ok, err := ab.checkVertexExists(leaf.Hash[:])
-	if err != nil {
-		ab.log.Error(fmt.Sprintf("Accounting book adding leaf failed when checking vertex exists, %s", err))
-		return errors.Join(ErrUnexpected, err)
-	}
-	if ok {
-		return ErrLeafAlreadyExists
-	}
-	ok, err = ab.checkTrxInVertexExists(leaf.Transaction.Hash[:])
-	if err != nil {
-		ab.log.Error(fmt.Sprintf("Accounting book adding leaf failed when checking if trx to vertex mapping exists, %s", err))
-		return errors.Join(ErrUnexpected, err)
-	}
-	if ok {
-		return ErrTrxInVertexAlreadyExists
-	}
-
-	if err := leaf.verify(ab.verifier); err != nil {
-		ab.log.Error(
-			fmt.Sprintf(
-				"Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ] when verifying, %s.",
-				leaf.Hash, leaf.SignerPublicAddress, leaf.LeftParentHash, leaf.RightParentHash, err),
-		)
-		return ErrLeafRejected
-	}
-
-	ab.mux.Lock()
-	defer ab.mux.Unlock()
-
-	validatedLeafs := make([]*Vertex, 0, 2)
-
-	for _, hash := range [][32]byte{leaf.LeftParentHash, leaf.RightParentHash} {
-		item, err := ab.dag.GetVertex(string(hash[:]))
-		if err != nil {
-			ab.log.Info(
-				fmt.Sprintf(
-					"Accounting book proceeded with memorizing leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ] when reading vertex for future validation, %s.",
-					leaf.Hash, leaf.SignerPublicAddress, leaf.LeftParentHash, leaf.RightParentHash, err),
-			)
-			if err := ab.repiter.insert(leaf); err != nil {
-				ab.log.Error(
-					fmt.Sprintf(
-						"Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ] when reading vertex, %s.",
-						leaf.Hash, leaf.SignerPublicAddress, leaf.LeftParentHash, leaf.RightParentHash, err),
-				)
-				return ErrLeafRejected
-			}
-			return nil
-		}
-		existringLeaf, ok := item.(*Vertex)
-		if !ok {
-			return errors.Join(ErrUnexpected, errors.New("wrong leaf type"))
-		}
-		isLeaf, err := ab.dag.IsLeaf(string(hash[:]))
-		if err != nil {
-			ab.log.Error(
-				fmt.Sprintf(
-					"Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ] when validate is leaf, %s.",
-					leaf.Hash, leaf.SignerPublicAddress, leaf.LeftParentHash, leaf.RightParentHash, err),
-			)
-			return ErrLeafRejected
-		}
-		if isLeaf {
-			if err := ab.validateLeaf(ctx, existringLeaf); err != nil {
-				ab.dag.DeleteVertex(string(existringLeaf.Hash[:]))
-				ab.removeTrxInVertex(existringLeaf.Transaction.Hash[:])
-				return errors.Join(ErrLeafRejected, err)
-			}
-			ab.updateWaightAndThroughput(existringLeaf.Weight)
-		}
-		validatedLeafs = append(validatedLeafs, existringLeaf)
-	}
-
-	if err := ab.saveTrxInVertex(leaf.Transaction.Hash[:], leaf.Hash[:]); err != nil {
-		ab.log.Error(
-			fmt.Sprintf(
-				"Accounting book leaf add failed saving transaction [ %v ] in leaf [ %v ], %s.",
-				leaf.Transaction.Hash[:], leaf.Hash, err,
-			),
-		)
-		return errors.Join(ErrUnexpected, err)
-	}
-
-	if err := ab.dag.AddVertexByID(string(leaf.Hash[:]), leaf); err != nil {
-		ab.log.Error(fmt.Sprintf("Accounting book rejected new leaf [ %v ], %s.", leaf.Hash, err))
-		ab.removeTrxInVertex(leaf.Transaction.Hash[:])
-		return ErrLeafRejected
-	}
-
-	var addedHash [32]byte
-	for _, validVrx := range validatedLeafs {
-		if validVrx.Hash == addedHash {
-			break
-		}
-		if err := ab.dag.AddEdge(string(validVrx.Hash[:]), string(leaf.Hash[:])); err != nil {
-			ab.dag.DeleteVertex(string(leaf.Hash[:]))
-			ab.removeTrxInVertex(leaf.Transaction.Hash[:])
-			ab.log.Error(
-				fmt.Sprintf(
-					"Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ] when adding edge, %s.",
-					leaf.Hash, leaf.SignerPublicAddress, leaf.LeftParentHash, leaf.RightParentHash, err),
-			)
-			return ErrLeafRejected
-		}
-		addedHash = validVrx.Hash
-	}
-
-	return nil
+	return ab.addLeafMemorized(ctx, newMemory(leaf))
 }
 
 // CalculateBalance traverses the graph starting from the recent accepted Vertex,
