@@ -13,7 +13,6 @@ import (
 
 	"github.com/bartossh/Computantis/src/logger"
 	"github.com/bartossh/Computantis/src/spice"
-	"github.com/bartossh/Computantis/src/storage"
 	"github.com/bartossh/Computantis/src/transaction"
 )
 
@@ -85,15 +84,15 @@ func NewAccountingBook(ctx context.Context, cfg Config, verifier signatureVerifi
 		return nil, err
 	}
 
-	trustedNodesDB, err := storage.CreateBadgerDB(ctx, cfg.TrustedNodesDBPath, l, true)
+	trustedNodesDB, err := createBadgerDB(ctx, cfg.TrustedNodesDBPath, l, true)
 	if err != nil {
 		return nil, err
 	}
-	trxsToVertxDB, err := storage.CreateBadgerDB(ctx, cfg.TraxsToVerticesMapDBPath, l, true)
+	trxsToVertxDB, err := createBadgerDB(ctx, cfg.TraxsToVerticesMapDBPath, l, true)
 	if err != nil {
 		return nil, err
 	}
-	verticesDB, err := storage.CreateBadgerDB(ctx, cfg.VerticesDBPath, l, true)
+	verticesDB, err := createBadgerDB(ctx, cfg.VerticesDBPath, l, true)
 	if err != nil {
 		return nil, err
 	}
@@ -224,7 +223,6 @@ func (ab *AccountingBook) validateLeaf(ctx context.Context, leaf *Vertex) error 
 
 	err = checkHasSufficientFounds(&spiceIn, &spiceOut)
 	if err != nil {
-
 		ab.log.Info(
 			fmt.Sprintf(
 				"No sufficient founds [ in: %s ] [ out: %s ]\n",
@@ -234,82 +232,6 @@ func (ab *AccountingBook) validateLeaf(ctx context.Context, leaf *Vertex) error 
 		return errors.Join(ErrTransferringFoundsFailure, err)
 	}
 	return nil
-}
-
-func (ab *AccountingBook) checkIsTrustedNode(trustedNodePublicAddress string) (bool, error) {
-	var ok bool
-	err := ab.trustedNodesDB.View(func(txn *badger.Txn) error {
-		_, err := txn.Get([]byte(trustedNodePublicAddress))
-		if err != nil {
-			if errors.Is(err, badger.ErrKeyNotFound) {
-				return nil
-			}
-			return err
-		}
-		ok = true
-		return nil
-	})
-	return ok, err
-}
-
-func (ab *AccountingBook) checkTrxInVertexExists(trxHash []byte) (bool, error) {
-	err := ab.trxsToVertxDB.View(func(txn *badger.Txn) error {
-		_, err := txn.Get(trxHash)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-	if err == nil {
-		return true, nil
-	}
-	switch err {
-	case badger.ErrKeyNotFound:
-		return false, nil
-	default:
-		ab.log.Error(fmt.Sprintf("transaction to vertex mapping for existing trx lookup failed, %s", err))
-		return false, ErrUnexpected
-	}
-}
-
-func (ab *AccountingBook) saveTrxInVertex(trxHash, vrxHash []byte) error {
-	return ab.trxsToVertxDB.Update(func(txn *badger.Txn) error {
-		if _, err := txn.Get(trxHash); err == nil {
-			return ErrTrxInVertexAlreadyExists
-		}
-		return txn.SetEntry(badger.NewEntry(trxHash, vrxHash))
-	})
-}
-
-func (ab *AccountingBook) removeTrxInVertex(trxHash []byte) error {
-	return ab.trxsToVertxDB.Update(func(txn *badger.Txn) error {
-		return txn.Delete(trxHash)
-	})
-}
-
-func (ab *AccountingBook) readTrxVertex(trxHash []byte) (Vertex, error) {
-	var vrxHash []byte
-	err := ab.trxsToVertxDB.View(func(txn *badger.Txn) error {
-		item, err := txn.Get(trxHash)
-		if err != nil {
-			return err
-		}
-		item.Value(func(v []byte) error {
-			vrxHash = v
-			return nil
-		})
-		return nil
-	})
-	if err != nil {
-		switch err {
-		case badger.ErrKeyNotFound:
-			return Vertex{}, ErrTrxToVertexNotFound
-		default:
-			ab.log.Error(fmt.Sprintf("transaction to vertex mapping failed when looking for transaction hash, %s", err))
-			return Vertex{}, ErrUnexpected
-		}
-	}
-	return ab.readVertex(vrxHash)
 }
 
 func (ab *AccountingBook) readVertex(vrxHash []byte) (Vertex, error) {
@@ -328,20 +250,7 @@ func (ab *AccountingBook) checkVertexExists(vrxHash []byte) (bool, error) {
 	if err == nil {
 		return true, nil
 	}
-	err = ab.verticesDB.View(func(txn *badger.Txn) error {
-		_, err := txn.Get(vrxHash)
-		return err
-	})
-	if err != nil {
-		switch err {
-		case badger.ErrKeyNotFound:
-			return false, nil
-		default:
-			ab.log.Error(fmt.Sprintf("transaction to vertex mapping failed when looking for transaction hash, %s", err))
-			return false, ErrUnexpected
-		}
-	}
-	return true, nil
+	return ab.checkVertexExistInStorage(vrxHash)
 }
 
 func (ab *AccountingBook) readVertexFromDAG(vrxHash []byte) (Vertex, error) {
@@ -355,45 +264,6 @@ func (ab *AccountingBook) readVertexFromDAG(vrxHash []byte) (Vertex, error) {
 		}
 	}
 	return Vertex{}, ErrVertexHashNotFound
-}
-
-func (ab *AccountingBook) readVertexFromStorage(vrxHash []byte) (Vertex, error) {
-	var vrx Vertex
-	err := ab.verticesDB.View(func(txn *badger.Txn) error {
-		item, err := txn.Get(vrxHash)
-		if err != nil {
-			return err
-		}
-		item.Value(func(v []byte) error {
-			vrx, err = decodeVertex(v)
-			return err
-		})
-		return nil
-	})
-	if err != nil {
-		switch err {
-		case badger.ErrKeyNotFound:
-			return vrx, ErrVertexHashNotFound
-		default:
-			ab.log.Error(fmt.Sprintf("transaction to vertex mapping failed when looking for vertex hash, %s", err))
-			return vrx, ErrUnexpected
-		}
-	}
-
-	return vrx, nil
-}
-
-func (ab *AccountingBook) saveVertexToStorage(vrx *Vertex) error {
-	buf, err := vrx.Encode()
-	if err != nil {
-		return err
-	}
-	return ab.verticesDB.Update(func(txn *badger.Txn) error {
-		if _, err := txn.Get(vrx.Hash[:]); err == nil {
-			return ErrVertexAlreadyExists
-		}
-		return txn.SetEntry(badger.NewEntry(vrx.Hash[:], buf))
-	})
 }
 
 func (ab *AccountingBook) updateWaightAndThroughput(weight uint64) {
@@ -912,22 +782,8 @@ func (ab *AccountingBook) CalculateBalance(ctx context.Context, walletPubAddr st
 
 // ReadTransactionByHash  reads transactions by hashes from DAG and DB.
 func (ab *AccountingBook) ReadTransactionByHash(ctx context.Context, hash [32]byte) (transaction.Transaction, error) {
-	var vertexHash []byte
-	if err := ab.trxsToVertxDB.View(func(txn *badger.Txn) error {
-		item, err := txn.Get(hash[:])
-		if err != nil {
-			if !errors.Is(err, badger.ErrKeyNotFound) {
-				ab.log.Error(fmt.Sprintf("accountant error with reading transaction to vertex mapping, %s", err))
-			}
-			return err
-		}
-
-		item.Value(func(val []byte) error {
-			vertexHash = val
-			return nil
-		})
-		return nil
-	}); err != nil {
+	vertexHash, err := ab.readVertexHashContainingTrxHashFromStorage(hash)
+	if err != nil {
 		return transaction.Transaction{}, err
 	}
 
@@ -952,31 +808,7 @@ func (ab *AccountingBook) ReadTransactionByHash(ctx context.Context, hash [32]by
 		}
 	}
 
-	var trx transaction.Transaction
-	if err := ab.verticesDB.View(func(txn *badger.Txn) error {
-		item, err := txn.Get(vertexHash)
-		if err != nil {
-			if !errors.Is(err, badger.ErrKeyNotFound) {
-				ab.log.Error(fmt.Sprintf("accountant error with reading vertex from DB, %s", err))
-				return err
-			}
-			return ErrEntityNotFound
-		}
-
-		item.Value(func(val []byte) error {
-			vrx, err := decodeVertex(val)
-			if err != nil {
-				return errors.Join(ErrUnexpected, err)
-			}
-			trx = vrx.Transaction
-			return nil
-		})
-		return nil
-	}); err != nil {
-		return trx, err
-	}
-
-	return trx, nil // success
+	return ab.readTransactionFromStorage(vertexHash) // success
 }
 
 // Address returns signer public address that is a core cryptographic padlock for the DAG Vertices.

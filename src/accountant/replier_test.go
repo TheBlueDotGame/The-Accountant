@@ -43,7 +43,7 @@ func TestAppendOverflowMaxArrSize(t *testing.T) {
 	assert.Error(t, err, ErrNotEnoughSpace.Error())
 }
 
-func TestAppendsubscribeCorrectOrder(t *testing.T) {
+func TestAppendSubscribeCorrectOrder(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		time.Sleep(time.Millisecond * 102)
@@ -62,7 +62,7 @@ func TestAppendsubscribeCorrectOrder(t *testing.T) {
 				break
 			}
 			counter++
-			if v.vrx == nil {
+			if m.vrx == nil {
 				m = v
 				continue
 			}
