@@ -469,7 +469,7 @@ func TestMultipleIssuerMultipleReceiversSpiceTransferConcurrentDoubleSpending(t 
 				assert.NilError(t, err)
 				_, err = ab.CreateLeaf(ctx, &trx)
 				if err != nil {
-					assert.ErrorContains(t, err, "double spending or insufficient founds")
+					assert.ErrorContains(t, err, "double spending or insufficient funds")
 				}
 				wg.Done()
 			}(i, &wg)
@@ -565,7 +565,7 @@ func TestMultipleIssuerMultipleReceiversMultipleAccountantSpiceTransferLegitimat
 			}
 		}
 
-		issuer = receiver // exchange to pour founds over
+		issuer = receiver // exchange to pour funds over
 	}
 
 	time.Sleep(time.Millisecond * 200)

@@ -6,4 +6,5 @@ type Config struct {
 	TokensDBPath             string `yaml:"tokens_db_path"`
 	TraxsToVerticesMapDBPath string `yaml:"trxs_to_vertices_map_db_path"`
 	VerticesDBPath           string `yaml:"vertices_db_path"`
+	Truncate                 uint64 `yaml:"truncate_at_weight"`
 }

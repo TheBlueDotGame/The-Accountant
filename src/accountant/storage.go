@@ -8,12 +8,15 @@ import (
 	"time"
 
 	"github.com/bartossh/Computantis/src/logger"
+	"github.com/bartossh/Computantis/src/spice"
 	"github.com/bartossh/Computantis/src/transaction"
 	"github.com/dgraph-io/badger/v4"
 )
 
 const (
 	gcRuntimeTick = time.Minute * 5
+	prefetch      = 1000
+	lastVertexKey = "last_vertex"
 )
 
 func createBadgerDB(ctx context.Context, path string, l logger.Logger, detectConflicts bool) (*badger.DB, error) {
@@ -120,13 +123,121 @@ func (ab *AccountingBook) readTrxVertex(trxHash []byte) (Vertex, error) {
 	if err != nil {
 		switch err {
 		case badger.ErrKeyNotFound:
-			return Vertex{}, ErrTrxToVertexNotFound
+			return Vertex{}, ErrTrxToVertexNotfund
 		default:
 			ab.log.Error(fmt.Sprintf("transaction to vertex mapping failed when looking for transaction hash, %s", err))
 			return Vertex{}, ErrUnexpected
 		}
 	}
 	return ab.readVertex(vrxHash)
+}
+
+func (ab *AccountingBook) savefundsToStorage(address string, f Precalculatedfunds) error {
+	buf, err := f.encode()
+	if err != nil {
+		return err
+	}
+	return ab.verticesDB.Update(func(txn *badger.Txn) error {
+		txn.Delete([]byte(address)) // to avoid conflicts
+		return txn.SetEntry(badger.NewEntry([]byte(address), buf))
+	})
+}
+
+func (ab *AccountingBook) readAddressfundsFromStorage(address string) (Precalculatedfunds, error) {
+	var p Precalculatedfunds
+	if err := ab.verticesDB.View(func(txn *badger.Txn) error {
+		item, err := txn.Get([]byte(address))
+		if err != nil {
+			return err
+		}
+		item.Value(func(v []byte) error {
+			var err error
+			p, err = decodePrecalulatedfunds(v)
+			if err != nil {
+				return err
+			}
+			return nil
+		})
+		return nil
+	}); err != nil {
+		switch err {
+		case badger.ErrKeyNotFound:
+			return p, ErrBalanceUnavailable
+		default:
+			ab.log.Error(err.Error())
+			return p, ErrUnexpected
+		}
+	}
+
+	return p, nil
+}
+
+func (ab *AccountingBook) forEachfundFromStorage(set func(address string, s *spice.Melange)) error {
+	if err := ab.verticesDB.View(func(txn *badger.Txn) error {
+		iter := txn.NewIterator(badger.IteratorOptions{
+			PrefetchSize:   prefetch,
+			PrefetchValues: prefetch > 0,
+		})
+		if iter == nil {
+			return errors.New("cannot create iterator")
+		}
+		defer iter.Close()
+		for ; ; iter.Next() {
+			item := iter.Item()
+			if err := item.Value(func(v []byte) error {
+				pf, err := decodePrecalulatedfunds(v)
+				if err != nil {
+					return nil
+				}
+				key := iter.Item().KeyCopy(nil)
+				if len(key) == 32 {
+					return nil
+				}
+				set(string(key), &pf.Spice)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+	}); err != nil {
+		ab.log.Error(err.Error())
+		return ErrUnexpected
+	}
+	return nil
+}
+
+func (ab *AccountingBook) saveLastVertexHashToStorage(h []byte) error {
+	return ab.verticesDB.Update(func(txn *badger.Txn) error {
+		txn.Delete([]byte(lastVertexKey)) // to avoid conflicts
+		return txn.SetEntry(badger.NewEntry([]byte(lastVertexKey), h))
+	})
+}
+
+func (ab *AccountingBook) readLastVertexHashFromStorage() ([32]byte, error) {
+	var h [32]byte
+	if err := ab.verticesDB.View(func(txn *badger.Txn) error {
+		item, err := txn.Get([]byte(lastVertexKey))
+		if err != nil {
+			return err
+		}
+		item.Value(func(v []byte) error {
+			if len(v) != 32 {
+				return fmt.Errorf("last hash has wrong length, expected [ 32 ] got [ %v ]", len(v))
+			}
+			h = [32]byte(v)
+			return nil
+		})
+		return nil
+	}); err != nil {
+		switch err {
+		case badger.ErrKeyNotFound:
+			return h, ErrVertexHashNotfund
+		default:
+			ab.log.Error(err.Error())
+			return h, ErrUnexpected
+		}
+	}
+	return h, nil
 }
 
 func (ab *AccountingBook) readVertexFromStorage(vrxHash []byte) (Vertex, error) {
@@ -145,7 +256,7 @@ func (ab *AccountingBook) readVertexFromStorage(vrxHash []byte) (Vertex, error) 
 	if err != nil {
 		switch err {
 		case badger.ErrKeyNotFound:
-			return vrx, ErrVertexHashNotFound
+			return vrx, ErrVertexHashNotfund
 		default:
 			ab.log.Error(fmt.Sprintf("transaction to vertex mapping failed when looking for vertex hash, %s", err))
 			return vrx, ErrUnexpected
@@ -156,7 +267,7 @@ func (ab *AccountingBook) readVertexFromStorage(vrxHash []byte) (Vertex, error) 
 }
 
 func (ab *AccountingBook) saveVertexToStorage(vrx *Vertex) error {
-	buf, err := vrx.Encode()
+	buf, err := vrx.encode()
 	if err != nil {
 		return err
 	}
@@ -199,7 +310,7 @@ func (ab *AccountingBook) readTransactionFromStorage(vertexHash []byte) (transac
 				ab.log.Error(fmt.Sprintf("accountant error with reading vertex from DB, %s", err))
 				return err
 			}
-			return ErrEntityNotFound
+			return ErrEntityNotfund
 		}
 
 		item.Value(func(val []byte) error {
