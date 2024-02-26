@@ -116,13 +116,17 @@ func Run(
 	if _, err = url.Parse(c.NodePublicURL); err != nil {
 		return err
 	}
+	var rxNewTrxRecAddrCh chan string
+	if pub != nil {
+		rxNewTrxRecAddrCh = make(chan string, rxNewTrxIssuerAddrBufferSize)
+	}
 
 	s := &server{
 		pub:               pub,
 		randDataProv:      pv,
 		tele:              tele,
 		log:               log,
-		rxNewTrxRecAddrCh: make(chan string, rxNewTrxIssuerAddrBufferSize),
+		rxNewTrxRecAddrCh: rxNewTrxRecAddrCh,
 		verifier:          v,
 		acc:               acc,
 		cache:             cache,
@@ -180,6 +184,9 @@ func validateConfig(c *Config) error {
 }
 
 func (s *server) runSubscriber(ctx context.Context) {
+	if s.pub == nil {
+		return
+	}
 	ticker := time.NewTicker(transactionsUpdateTick)
 	defer ticker.Stop()
 
@@ -254,7 +261,9 @@ func (s *server) Propose(ctx context.Context, in *protobufcompiled.Transaction) 
 			if ok := s.piper.SendTrx(tx); !ok {
 				s.log.Error(fmt.Sprintf("sending trx %v to gossiper failed, channel is closed", trx.Hash))
 			}
-			s.rxNewTrxRecAddrCh <- tx.ReceiverAddress
+			if s.pub != nil {
+				s.rxNewTrxRecAddrCh <- tx.ReceiverAddress
+			}
 		}(in)
 
 		return &emptypb.Empty{}, nil

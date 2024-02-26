@@ -169,17 +169,17 @@ func run(cfg configuration.Configuration) {
 	defer flash.Close()
 
 	pub, err := natsclient.PublisherConnect(cfg.Nats)
-	if err != nil {
+	switch err {
+	case nil:
+		defer func() {
+			if err := pub.Disconnect(); err != nil {
+				log.Error(err.Error())
+			}
+		}()
+	default:
 		log.Error(err.Error())
 		time.Sleep(time.Second)
-		c <- os.Interrupt
-		return
 	}
-	defer func() {
-		if err := pub.Disconnect(); err != nil {
-			log.Error(err.Error())
-		}
-	}()
 
 	go func() {
 		err = gossip.RunGRPC(ctx, cfg.Gossip, &log, gossipTimeout, &wlt, &verifier, acc, hippo, flash, juggler)
