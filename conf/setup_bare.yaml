@@ -19,7 +19,7 @@ accountant:
   trxs_to_vertices_map_db_path:
   vertices_db_path:
 nats:
-  server_address: "nats://localhost:4222"
+  server_address: 
   client_name: "notary-genesis"
   token: "D9pHfuiEQPXtqPqPdyxozi8kU2FlHqC0FlSRIzpwDI0="
 dataprovider:
@@ -31,6 +31,6 @@ file_operator:
 webhooks_server:
   port: 8000
 zinc_logger:
-  address: http://localhost:4080
+  address:
   index: genesis
   token: Basic YWRtaW46emluY3NlYXJjaA==

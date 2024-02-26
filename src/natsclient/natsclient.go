@@ -1,6 +1,7 @@
 package natsclient
 
 import (
+	"errors"
 	"net/url"
 
 	"github.com/nats-io/nats.go"
@@ -9,6 +10,8 @@ import (
 const (
 	PubSubAwaitingTrxs string = "awaiting_trxs_for_addresses"
 )
+
+var ErrEmptyAddressProvided = errors.New("nats server address is empty")
 
 // Config contains all arguments required to connect to the nats setvice
 type Config struct {
@@ -22,8 +25,10 @@ type socket struct {
 }
 
 func connect(cfg Config) (*socket, error) {
-	var err error
-	_, err = url.Parse(cfg.Address)
+	if cfg.Address == "" {
+		return nil, ErrEmptyAddressProvided
+	}
+	_, err := url.Parse(cfg.Address)
 	if err != nil {
 		return nil, err
 	}

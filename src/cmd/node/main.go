@@ -117,6 +117,10 @@ func run(cfg configuration.Configuration) {
 	if err != nil {
 		fmt.Printf("Failed to connect to zincsearch due to %s, logging to stdout.\n", err)
 		writer = &stdoutwriter.Logger{}
+		if !errors.Is(err, zincaddapter.ErrEmptyAddressProvided) {
+			c <- os.Interrupt
+			return
+		}
 	} else {
 		writer = &zinc
 	}
@@ -176,9 +180,14 @@ func run(cfg configuration.Configuration) {
 				log.Error(err.Error())
 			}
 		}()
+	case natsclient.ErrEmptyAddressProvided:
+		log.Error(err.Error())
+		time.Sleep(time.Second)
 	default:
 		log.Error(err.Error())
 		time.Sleep(time.Second)
+		c <- os.Interrupt
+		return
 	}
 
 	go func() {
