@@ -228,7 +228,11 @@ func runTransactionOps(action int, cfg fileoperations.Config, receiver, nodeURL 
 		return err
 	}
 
-	pterm.Info.Printf("Please note that [ %v %s = 1 %s ]\n", spice.MaxAmoutnPerSupplementaryCurrency, suplementaryCurrency, currency)
+	pterm.Info.Printf(
+		"Please note that [ %s %s = 1 %s ]\n",
+		spice.GetSientific(spice.MaxAmoutnPerSupplementaryCurrency),
+		suplementaryCurrency, currency,
+	)
 
 	switch action {
 	case actionTransferFounds:
