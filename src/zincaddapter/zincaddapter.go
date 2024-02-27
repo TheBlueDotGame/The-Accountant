@@ -16,6 +16,7 @@ const (
 const timeout = time.Second * 5
 
 var (
+	ErrEmptyAddressProvided    = errors.New("empty zinc server address provided")
 	ErrZincServerNotResponding = errors.New("zinc server not responding on given address")
 	ErrZincServerWriteFailed   = errors.New("zinc server write failed")
 )
@@ -42,6 +43,9 @@ type ZincClient struct {
 
 // New creates a new ZincClient.
 func New(cfg Config) (ZincClient, error) {
+	if cfg.Address == "" {
+		return ZincClient{}, ErrEmptyAddressProvided
+	}
 	if err := httpclient.MakeGet(timeout, fmt.Sprintf("%s%s", cfg.Address, healthz), nil); err != nil {
 		return ZincClient{}, errors.Join(ErrZincServerNotResponding, err)
 	}

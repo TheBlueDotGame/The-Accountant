@@ -134,8 +134,8 @@ func TestMelangeTransferAccounting(t *testing.T) {
 	}
 	transfersNum := 1000000
 
-	toCp := testcase.to.clone()
-	fromCp := testcase.from.clone()
+	toCp := testcase.to.Clone()
+	fromCp := testcase.from.Clone()
 
 	for i := 0; i < transfersNum; i++ {
 		err := Transfer(testcase.ammount, &testcase.from, &testcase.to)

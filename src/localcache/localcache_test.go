@@ -296,7 +296,7 @@ func BenchmarkInsertIncreasingTrxs100WalletsEach(b *testing.B) {
 	}
 }
 
-func BenchmarkReadIssure(b *testing.B) {
+func BenchmarkReadIssuer(b *testing.B) {
 	trxsCount := []int{100, 1000}
 	cache := NewTransactionCache(Config{
 		MaxLen: 1100000,

@@ -23,8 +23,11 @@ func SubscriberConnect(cfg Config) (*Subscriber, error) {
 	var s Subscriber
 	var err error
 	s.socket, err = connect(cfg)
+	if err != nil {
+		return nil, err
+	}
 	s.subs = make(map[string]*nats.Subscription)
-	return &s, err
+	return &s, nil
 }
 
 // SubscribeNewTransactionsForAddresses subscribes to pub/sub queue for a addresses awaitng transactions.

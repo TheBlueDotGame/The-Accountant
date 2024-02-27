@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"math"
 	"strings"
+
+	msgpackv2 "github.com/shamaton/msgpack/v2"
+	"github.com/vmihailenco/msgpack"
 )
 
 const (
@@ -23,8 +26,8 @@ var (
 
 // Melange is an asset that is digitally transferable between two wallets.
 type Melange struct {
-	Currency              uint64 `yaml:"currency"`
-	SupplementaryCurrency uint64 `yaml:"supplementary_currency"`
+	Currency              uint64 `yaml:"currency"               msgpack:"currency"`
+	SupplementaryCurrency uint64 `yaml:"supplementary_currency" msgpack:"supplementary_currency"`
 }
 
 // New creates new spice Melange from given currency and supplementary currency values.
@@ -41,7 +44,7 @@ func New(currency, supplementaryCurrency uint64) Melange {
 
 // Supply supplies spice of the given amount from the source to the entity.
 func (m *Melange) Supply(amount Melange) error {
-	mCp := m.clone()
+	mCp := m.Clone()
 	for _, unit := range []byte{Currency, SuplementaryCurrency} {
 		switch unit {
 		case Currency:
@@ -79,8 +82,8 @@ func (m *Melange) Empty() bool {
 
 // Transfer transfers given amount from one Melange asset to the other if possible or returns error otherwise.
 func Transfer(amount Melange, from, to *Melange) error {
-	toCp := to.clone()
-	fromCp := from.clone()
+	toCp := to.Clone()
+	fromCp := from.Clone()
 	for _, unit := range []byte{Currency, SuplementaryCurrency} {
 		switch unit {
 		case Currency:
@@ -152,7 +155,7 @@ func (m Melange) String() string {
 	return fmt.Sprintf("%s.%s", curr, supp)
 }
 
-func (m Melange) clone() Melange {
+func (m Melange) Clone() Melange {
 	return Melange{
 		Currency:              m.Currency,
 		SupplementaryCurrency: m.SupplementaryCurrency,
@@ -162,4 +165,18 @@ func (m Melange) clone() Melange {
 func (m *Melange) copyFrom(c Melange) {
 	m.Currency = c.Currency
 	m.SupplementaryCurrency = c.SupplementaryCurrency
+}
+
+func (s *Melange) Encode() ([]byte, error) {
+	buf, err := msgpack.Marshal(s)
+	if err != nil {
+		return nil, err
+	}
+	return buf, nil
+}
+
+func Decode(buf []byte) (Melange, error) {
+	var s Melange
+	err := msgpackv2.Unmarshal(buf, &s)
+	return s, err
 }

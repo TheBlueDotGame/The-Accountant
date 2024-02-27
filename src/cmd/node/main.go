@@ -117,6 +117,10 @@ func run(cfg configuration.Configuration) {
 	if err != nil {
 		fmt.Printf("Failed to connect to zincsearch due to %s, logging to stdout.\n", err)
 		writer = &stdoutwriter.Logger{}
+		if !errors.Is(err, zincaddapter.ErrEmptyAddressProvided) {
+			c <- os.Interrupt
+			return
+		}
 	} else {
 		writer = &zinc
 	}
@@ -169,17 +173,22 @@ func run(cfg configuration.Configuration) {
 	defer flash.Close()
 
 	pub, err := natsclient.PublisherConnect(cfg.Nats)
-	if err != nil {
+	switch err {
+	case nil:
+		defer func() {
+			if err := pub.Disconnect(); err != nil {
+				log.Error(err.Error())
+			}
+		}()
+	case natsclient.ErrEmptyAddressProvided:
+		log.Error(err.Error())
+		time.Sleep(time.Second)
+	default:
 		log.Error(err.Error())
 		time.Sleep(time.Second)
 		c <- os.Interrupt
 		return
 	}
-	defer func() {
-		if err := pub.Disconnect(); err != nil {
-			log.Error(err.Error())
-		}
-	}()
 
 	go func() {
 		err = gossip.RunGRPC(ctx, cfg.Gossip, &log, gossipTimeout, &wlt, &verifier, acc, hippo, flash, juggler)
