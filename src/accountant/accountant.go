@@ -18,11 +18,9 @@ import (
 )
 
 const (
-	initialThroughput uint64 = 50
-	// truncateVrxTopMark uint64 = 100_000
-	// trucateDiff        uint64 = 500
-	truncateVrxTopMark uint64 = 4
-	trucateDiff        uint64 = 2
+	initialThroughput  uint64 = 50
+	truncateVrxTopMark uint64 = 100_000
+	trucateDiff        uint64 = 1_000
 )
 
 const repiterTick = time.Second * 2
@@ -159,7 +157,6 @@ func (ab *AccountingBook) runTruncate(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case w := <-ab.truncateSignal:
-			ab.log.Info(fmt.Sprintf("Next weight [ %v ] desired [ %v ]", w, ab.nextWeightTruncate))
 			if !checkCanTruncate(w, ab.nextWeightTruncate) {
 				continue
 			}
@@ -169,6 +166,7 @@ func (ab *AccountingBook) runTruncate(ctx context.Context) {
 				return
 			}
 			ab.nextWeightTruncate += w
+			ab.log.Info(fmt.Sprintf("Finnished truncate at weight [ %v ]", w))
 		}
 	}
 }
