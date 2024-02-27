@@ -24,6 +24,16 @@ var (
 	ErrNoSufficientFounds = errors.New("no sufficient founds to process transaction")
 )
 
+func GetSientific(v uint64) string {
+	var zeros int
+	for v%10 == 0 {
+		zeros++
+		v /= 10
+	}
+
+	return fmt.Sprintf("%v*10^%v", v, zeros)
+}
+
 // Melange is an asset that is digitally transferable between two wallets.
 type Melange struct {
 	Currency              uint64 `yaml:"currency"               msgpack:"currency"`
