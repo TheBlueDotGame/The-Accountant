@@ -55,3 +55,6 @@ __pycache__
 # test wallets 
 ed*
 wallet*
+
+# DataBase backup
+.bak

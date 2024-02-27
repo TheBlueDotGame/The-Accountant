@@ -1,9 +1,19 @@
-build-local:
+build-node:	
 	cd src && CGO_ENABLED=0 go build -a -installsuffix cgo -o ../bin/dedicated/node -ldflags="-s -w" cmd/node/main.go
+
+build-webhooks:
 	cd src && CGO_ENABLED=0 go build -a -installsuffix cgo -o ../bin/dedicated/webhooks -ldflags="-s -w" cmd/webhooks/main.go
+
+build-client:
 	cd src && CGO_ENABLED=0 go build -a -installsuffix cgo -o ../bin/dedicated/client -ldflags="-s -w" cmd/client/main.go
+
+build-emulator:
 	cd src && CGO_ENABLED=0 go build -a -installsuffix cgo -o ../bin/dedicated/emulator -ldflags="-s -w" cmd/emulator/main.go
+
+build-wallet:
 	cd src && CGO_ENABLED=0 go build -a -installsuffix cgo -o ../bin/dedicated/wallet -ldflags="-s -w" cmd/wallet/main.go
+
+build-local: build-node build-webhooks build-client build-emulator build-wallet
 
 build-all: build-local
 	cd src && GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -o ../bin/linux_x86/node -ldflags="-s -w" cmd/node/main.go

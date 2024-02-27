@@ -4,46 +4,28 @@ import (
 	"errors"
 
 	"github.com/bartossh/Computantis/src/spice"
-	msgpackv2 "github.com/shamaton/msgpack/v2"
-	"github.com/vmihailenco/msgpack"
 )
 
 // Precalculatedfunds are funds of given wallet precalculated up to given hash to be saved in the storage.
-type Precalculatedfunds struct {
-	Spice spice.Melange `msgpack:"spice"`
-}
-
-func (p *Precalculatedfunds) encode() ([]byte, error) {
-	buf, err := msgpack.Marshal(*p)
-	if err != nil {
-		return nil, err
-	}
-	return buf, nil
-}
-
-func decodePrecalulatedfunds(buf []byte) (Precalculatedfunds, error) {
-	var p Precalculatedfunds
-	err := msgpackv2.Unmarshal(buf, &p)
-	return p, err
+type precalculatedfunds struct {
+	in  spice.Melange
+	out spice.Melange
 }
 
 type fundsMemMap struct {
-	m map[string]Precalculatedfunds
+	m map[string]precalculatedfunds
 }
 
 func newfundsMemMap() fundsMemMap {
-	return fundsMemMap{m: make(map[string]Precalculatedfunds)}
+	return fundsMemMap{m: make(map[string]precalculatedfunds)}
 }
 
 func (f *fundsMemMap) set(address string, s *spice.Melange) {
 	if s == nil {
 		return
 	}
-	p := Precalculatedfunds{
-		Spice: spice.Melange{
-			Currency:              s.Currency,
-			SupplementaryCurrency: s.SupplementaryCurrency,
-		},
+	p := precalculatedfunds{
+		in: s.Clone(),
 	}
 	f.m[address] = p
 }
@@ -63,24 +45,18 @@ func (f *fundsMemMap) nextVertex(vrx *Vertex) error {
 }
 
 func (f *fundsMemMap) updatefunds(issuer, receiver string, s *spice.Melange) {
-	ip, ok := f.m[issuer]
-	if !ok {
-		ip.Spice = spice.New(0, 0)
-	}
-	rp, ok := f.m[receiver]
-	if !ok {
-		rp.Spice = spice.New(0, 0)
-	}
-
-	ip.Spice.Drain(*s, &rp.Spice)
-
+	ip := f.m[issuer]
+	rp := f.m[receiver]
+	ip.out.Supply(*s)
+	rp.in.Supply(*s)
 	f.m[issuer] = ip
 	f.m[receiver] = rp
 }
 
-func (f *fundsMemMap) saveToStorage(savefundsToStorage func(address string, f Precalculatedfunds) error) error {
+func (f *fundsMemMap) saveToStorage(savefundsToStorage func(address string, s spice.Melange) error) error {
 	for address, pf := range f.m {
-		if err := savefundsToStorage(address, pf); err != nil {
+		pf.in.Drain(pf.out, &spice.Melange{})
+		if err := savefundsToStorage(address, pf.in); err != nil {
 			return err
 		}
 	}

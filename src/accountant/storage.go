@@ -132,8 +132,8 @@ func (ab *AccountingBook) readTrxVertex(trxHash []byte) (Vertex, error) {
 	return ab.readVertex(vrxHash)
 }
 
-func (ab *AccountingBook) savefundsToStorage(address string, f Precalculatedfunds) error {
-	buf, err := f.encode()
+func (ab *AccountingBook) saveFundsToStorage(address string, s spice.Melange) error {
+	buf, err := s.Encode()
 	if err != nil {
 		return err
 	}
@@ -143,8 +143,8 @@ func (ab *AccountingBook) savefundsToStorage(address string, f Precalculatedfund
 	})
 }
 
-func (ab *AccountingBook) readAddressfundsFromStorage(address string) (Precalculatedfunds, error) {
-	var p Precalculatedfunds
+func (ab *AccountingBook) readAddressFundsFromStorage(address string) (spice.Melange, error) {
+	var s spice.Melange
 	if err := ab.verticesDB.View(func(txn *badger.Txn) error {
 		item, err := txn.Get([]byte(address))
 		if err != nil {
@@ -152,7 +152,7 @@ func (ab *AccountingBook) readAddressfundsFromStorage(address string) (Precalcul
 		}
 		item.Value(func(v []byte) error {
 			var err error
-			p, err = decodePrecalulatedfunds(v)
+			s, err = spice.Decode(v)
 			if err != nil {
 				return err
 			}
@@ -162,14 +162,14 @@ func (ab *AccountingBook) readAddressfundsFromStorage(address string) (Precalcul
 	}); err != nil {
 		switch err {
 		case badger.ErrKeyNotFound:
-			return p, ErrBalanceUnavailable
+			return s, ErrBalanceUnavailable
 		default:
 			ab.log.Error(err.Error())
-			return p, ErrUnexpected
+			return s, ErrUnexpected
 		}
 	}
 
-	return p, nil
+	return s, nil
 }
 
 func (ab *AccountingBook) forEachfundFromStorage(set func(address string, s *spice.Melange)) error {
@@ -182,23 +182,27 @@ func (ab *AccountingBook) forEachfundFromStorage(set func(address string, s *spi
 			return errors.New("cannot create iterator")
 		}
 		defer iter.Close()
-		for ; ; iter.Next() {
+		for iter.Seek(nil); iter.ValidForPrefix(nil); iter.Next() {
+			if !iter.Valid() {
+				return nil
+			}
 			item := iter.Item()
+			k := item.Key()
+			if len(k) == 32 {
+				continue
+			}
 			if err := item.Value(func(v []byte) error {
-				pf, err := decodePrecalulatedfunds(v)
+				s, err := spice.Decode(v)
 				if err != nil {
 					return nil
 				}
-				key := iter.Item().KeyCopy(nil)
-				if len(key) == 32 {
-					return nil
-				}
-				set(string(key), &pf.Spice)
+				set(string(k), &s)
 				return nil
 			}); err != nil {
 				return err
 			}
 		}
+		return nil
 	}); err != nil {
 		ab.log.Error(err.Error())
 		return ErrUnexpected

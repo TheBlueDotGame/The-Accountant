@@ -258,7 +258,7 @@ func runTransactionOps(action int, cfg fileoperations.Config, receiver, nodeURL 
 		time.Sleep(pauseDuration)
 		subject := fmt.Sprintf("%s transfer", currency)
 		if err := c.ProposeTransaction(ctx, receiver, subject, melange, []byte{}); err != nil {
-			return err
+			return fmt.Errorf("cannot propose transaction due to, %w", err)
 		}
 		spinnerInfo.Info("Transaction send.")
 		printSuccess()

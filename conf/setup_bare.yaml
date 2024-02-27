@@ -18,6 +18,7 @@ accountant:
   tokens_db_path:
   trxs_to_vertices_map_db_path:
   vertices_db_path:
+  truncate_at_weight: 0
 nats:
   server_address: 
   client_name: "notary-genesis"

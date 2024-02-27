@@ -18,9 +18,11 @@ import (
 )
 
 const (
-	initialThroughput  uint64 = 50
-	truncateVrxTopMark uint64 = 100_000
-	trucateDiff        uint64 = 500
+	initialThroughput uint64 = 50
+	// truncateVrxTopMark uint64 = 100_000
+	// trucateDiff        uint64 = 500
+	truncateVrxTopMark uint64 = 4
+	trucateDiff        uint64 = 2
 )
 
 const repiterTick = time.Second * 2
@@ -28,7 +30,7 @@ const repiterTick = time.Second * 2
 const backupName = "vertex_db_backup_"
 
 func checkCanTruncate(current, desired uint64) bool {
-	return current-desired > trucateDiff
+	return current > desired && current > trucateDiff && current-trucateDiff > desired
 }
 
 var (
@@ -80,7 +82,6 @@ type AccountingBook struct {
 	verticesDB           *badger.DB
 	genesisPublicAddress string
 	mux                  sync.RWMutex
-	gennessisHash        [32]byte
 	weight               atomic.Uint64
 	throughput           atomic.Uint64
 	lastBackup           uint64
@@ -116,7 +117,7 @@ func NewAccountingBook(
 	}
 
 	ab := &AccountingBook{
-		truncateSignal:     make(chan uint64, 1),
+		truncateSignal:     make(chan uint64, initialThroughput),
 		repiter:            repi,
 		verifier:           verifier,
 		signer:             signer,
@@ -158,12 +159,16 @@ func (ab *AccountingBook) runTruncate(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case w := <-ab.truncateSignal:
+			ab.log.Info(fmt.Sprintf("Next weight [ %v ] desired [ %v ]", w, ab.nextWeightTruncate))
 			if !checkCanTruncate(w, ab.nextWeightTruncate) {
 				continue
 			}
+			ab.log.Info(fmt.Sprintf("Starting truncate at weight [ %v ]", w))
 			if err := ab.truncate(ctx); err != nil {
 				ab.log.Fatal(err.Error())
+				return
 			}
+			ab.nextWeightTruncate += w
 		}
 	}
 }
@@ -191,7 +196,7 @@ func (ab *AccountingBook) truncate(ctx context.Context) error {
 
 	topVrxHash := h.getHash()
 
-	f, err := os.Create(fmt.Sprintf("%v", ab.lastBackup))
+	f, err := os.Create(fmt.Sprintf("%s%v.bak", backupName, ab.lastBackup))
 	if err != nil {
 		return err
 	}
@@ -223,7 +228,7 @@ func (ab *AccountingBook) truncate(ctx context.Context) error {
 		return err
 	}
 
-	if err := fm.saveToStorage(ab.savefundsToStorage); err != nil {
+	if err := fm.saveToStorage(ab.saveFundsToStorage); err != nil {
 		return err
 	}
 
@@ -250,7 +255,10 @@ func (ab *AccountingBook) truncate(ctx context.Context) error {
 
 func (ab *AccountingBook) performOnAncestorWalker(ctx context.Context, topVrxHash string, perform func(vrx *Vertex) error) error {
 	visited := make(map[string]struct{})
-	vertices, signal, _ := ab.dag.AncestorsWalker(topVrxHash)
+	vertices, signal, err := ab.dag.AncestorsWalker(topVrxHash)
+	if err != nil {
+		return err
+	}
 	for ancestorID := range vertices {
 		select {
 		case <-ctx.Done():
@@ -334,9 +342,19 @@ func (ab *AccountingBook) validateLeaf(ctx context.Context, leaf *Vertex) error 
 	visited := make(map[string]struct{})
 	spiceOut := spice.New(0, 0)
 	spiceIn := spice.New(0, 0)
+
+	s, err := ab.readAddressFundsFromStorage(leaf.Transaction.IssuerAddress)
+	if err != nil && err != ErrBalanceUnavailable {
+		return err
+	}
+	if err := spiceIn.Supply(s); err != nil {
+		return err
+	}
+
 	if err := pourfunds(leaf.Transaction.IssuerAddress, *leaf, &spiceIn, &spiceOut); err != nil {
 		return err
 	}
+
 	vertices, signal, _ := ab.dag.AncestorsWalker(string(leaf.Hash[:]))
 	for ancestorID := range vertices {
 		select {
@@ -380,14 +398,6 @@ func (ab *AccountingBook) validateLeaf(ctx context.Context, leaf *Vertex) error 
 			signal <- true
 			return ErrUnexpected
 		}
-	}
-
-	p, err := ab.readAddressfundsFromStorage(leaf.Transaction.IssuerAddress)
-	if err != nil && err != ErrBalanceUnavailable {
-		return err
-	}
-	if err := spiceIn.Supply(p.Spice); err != nil {
-		return err
 	}
 
 	err = checkHasSufficientfunds(&spiceIn, &spiceOut)
@@ -607,6 +617,8 @@ func (ab *AccountingBook) addLeafMemorized(ctx context.Context, m memory) error 
 		}
 		addedHash = validVrx.Hash
 	}
+
+	ab.truncateSignal <- leaf.Weight
 
 	return nil
 }
@@ -857,6 +869,7 @@ func (ab *AccountingBook) CreateLeaf(ctx context.Context, trx *transaction.Trans
 		}
 		addedHash = vrx.Hash
 	}
+	ab.truncateSignal <- tip.Weight
 	return tip, nil
 }
 
@@ -942,19 +955,19 @@ func (ab *AccountingBook) CalculateBalance(ctx context.Context, walletPubAddr st
 		}
 	}
 
-	p, err := ab.readAddressfundsFromStorage(walletPubAddr)
+	s, err := ab.readAddressFundsFromStorage(walletPubAddr)
 	if err != nil && err != ErrBalanceUnavailable {
 		return Balance{}, err
 	}
-	if err := p.Spice.Supply(spiceIn); err != nil {
+	if err := s.Supply(spiceIn); err != nil {
 		return Balance{}, errors.Join(ErrBalanceCaclulationUnexpectedFailure, err)
 	}
 
-	if err := p.Spice.Drain(spiceOut, &spice.Melange{}); err != nil {
+	if err := s.Drain(spiceOut, &spice.Melange{}); err != nil {
 		return Balance{}, errors.Join(ErrBalanceCaclulationUnexpectedFailure, err)
 	}
 
-	return NewBalance(walletPubAddr, p.Spice), nil
+	return NewBalance(walletPubAddr, s), nil
 }
 
 // ReadTransactionByHash  reads transactions by hashes from DAG and DB.
