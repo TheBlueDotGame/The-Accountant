@@ -36,7 +36,6 @@ build-all: build-local
 
 	cd src && GOOS=linux GOARCH=arm GOARM=5 CGO_ENABLED=0 go build -a -installsuffix cgo -o ../bin/raspberry_pi_zero/node -ldflags="-s -w" cmd/node/main.go
 	cd src && GOOS=linux GOARCH=arm GOARM=5 CGO_ENABLED=0 go build -a -installsuffix cgo -o ../bin/raspberry_pi_zero/webhooks -ldflags="-s -w" cmd/webhooks/main.go
-	cd src && GOOS=linux GOARCH=arm GOARM=5 CGO_ENABLED=0 go build -a -installsuffix cgo -o ../bin/raspberry_pi_zero/wallet -ldflags="-s -w" cmd/wallet/main.go
 
 build-tools:
 	cd src && CGO_ENABLED=0 go build -a -installsuffix cgo -o ../bin/dedicated/generator -ldflags="-s -w" -gcflags -m cmd/generator/main.go
