@@ -23,13 +23,11 @@ const (
 	actionFromGobToPem
 	actionNewWallet
 	actionReadAddress
-	actionTransferFounds
-	actionReadBalance
 )
 
 const (
-	currency             = "kREDek"
-	suplementaryCurrency = "kREDeczek"
+	currency             = "PRIMUS"
+	suplementaryCurrency = "SECUNDUS"
 )
 
 const pauseDuration = time.Second * 2
@@ -39,12 +37,14 @@ Please use with the best security practices. GOBINARY is safer to move between m
 Tool provides Spice and Contract transfer, reading balance, reading contracts, approving and rejecting contracts.`
 
 func main() {
-	pterm.DefaultHeader.WithFullWidth().Println("Computantis")
+	primary := pterm.NewStyle(pterm.FgLightCyan, pterm.BgGray, pterm.Bold)
+	primary.Println("")
+	primary.Println("  Hello Computantis  ")
+	primary.Println("")
 	var (
 		pemFile      string
 		walletFile   string
 		walletPasswd string
-		receiver     string
 		nodeURL      string
 	)
 
@@ -69,28 +69,6 @@ func main() {
 	app := &cli.App{
 		Name:  "wallet",
 		Usage: usage,
-		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name:        "pem",
-				Aliases:     []string{"e"},
-				Usage:       "Path to PEM file of ED25519 asymmetric key. Required for creating a new wallet.",
-				Destination: &pemFile,
-			},
-			&cli.StringFlag{
-				Name:        "wallet",
-				Aliases:     []string{"w"},
-				Usage:       "Path to encrypted with AES password wallet file of ED25519 asymmetric key.",
-				Destination: &walletFile,
-				Required:    true,
-			},
-			&cli.StringFlag{
-				Name:        "passwd",
-				Aliases:     []string{"p"},
-				Usage:       "32 long password key in hex format to open the wallet file.",
-				Destination: &walletPasswd,
-				Required:    true,
-			},
-		},
 		Commands: []*cli.Command{
 			{
 				Name:    "new",
@@ -105,6 +83,29 @@ func main() {
 						return err
 					}
 					return nil
+				},
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:        "pem",
+						Aliases:     []string{"e"},
+						Usage:       "Path to PEM file of ED25519 asymmetric key. Required for creating a new wallet.",
+						Destination: &pemFile,
+						Required:    true,
+					},
+					&cli.StringFlag{
+						Name:        "wallet",
+						Aliases:     []string{"w"},
+						Usage:       "Path to encrypted with AES password wallet file of ED25519 asymmetric key.",
+						Destination: &walletFile,
+						Required:    true,
+					},
+					&cli.StringFlag{
+						Name:        "passwd",
+						Aliases:     []string{"p"},
+						Usage:       "32 long password key in hex format to open the wallet file.",
+						Destination: &walletPasswd,
+						Required:    true,
+					},
 				},
 			},
 			{
@@ -121,6 +122,29 @@ func main() {
 					}
 					return nil
 				},
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:        "pem",
+						Aliases:     []string{"e"},
+						Usage:       "Path to PEM file of ED25519 asymmetric key. Required for creating a new wallet.",
+						Destination: &pemFile,
+						Required:    true,
+					},
+					&cli.StringFlag{
+						Name:        "wallet",
+						Aliases:     []string{"w"},
+						Usage:       "Path to encrypted with AES password wallet file of ED25519 asymmetric key.",
+						Destination: &walletFile,
+						Required:    true,
+					},
+					&cli.StringFlag{
+						Name:        "passwd",
+						Aliases:     []string{"p"},
+						Usage:       "32 long password key in hex format to open the wallet file.",
+						Destination: &walletPasswd,
+						Required:    true,
+					},
+				},
 			},
 			{
 				Name:    "togob",
@@ -135,6 +159,29 @@ func main() {
 						return err
 					}
 					return nil
+				},
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:        "pem",
+						Aliases:     []string{"e"},
+						Usage:       "Path to PEM file of ED25519 asymmetric key. Required for creating a new wallet.",
+						Destination: &pemFile,
+						Required:    true,
+					},
+					&cli.StringFlag{
+						Name:        "wallet",
+						Aliases:     []string{"w"},
+						Usage:       "Path to encrypted with AES password wallet file of ED25519 asymmetric key.",
+						Destination: &walletFile,
+						Required:    true,
+					},
+					&cli.StringFlag{
+						Name:        "passwd",
+						Aliases:     []string{"p"},
+						Usage:       "32 long password key in hex format to open the wallet file.",
+						Destination: &walletPasswd,
+						Required:    true,
+					},
 				},
 			},
 			{
@@ -151,48 +198,33 @@ func main() {
 					}
 					return nil
 				},
-			},
-			{
-				Name:    "send",
-				Aliases: []string{"s"},
-				Usage:   "Sends transaction.",
-				Action: func(_ *cli.Context) error {
-					cfg, err := configurator(pemFile, walletFile, walletPasswd)
-					if err != nil {
-						return err
-					}
-					if err := runTransactionOps(actionTransferFounds, cfg.FileOperator, receiver, nodeURL); err != nil {
-						return err
-					}
-					return nil
-				},
 				Flags: []cli.Flag{
 					&cli.StringFlag{
-						Name:        "receiver",
-						Aliases:     []string{"r"},
-						Usage:       "Receiver wallet public address.",
-						Destination: &receiver,
+						Name:        "wallet",
+						Aliases:     []string{"w"},
+						Usage:       "Path to encrypted with AES password wallet file of ED25519 asymmetric key.",
+						Destination: &walletFile,
 						Required:    true,
 					},
 					&cli.StringFlag{
-						Name:        "node",
-						Aliases:     []string{"n"},
-						Usage:       "Node URL address.",
-						Destination: &nodeURL,
+						Name:        "passwd",
+						Aliases:     []string{"p"},
+						Usage:       "32 long password key in hex format to open the wallet file.",
+						Destination: &walletPasswd,
 						Required:    true,
 					},
 				},
 			},
 			{
-				Name:    "balance",
-				Aliases: []string{"b"},
-				Usage:   "Read balance.",
+				Name:    "connect",
+				Aliases: []string{"c"},
+				Usage:   "Establish connection with node.",
 				Action: func(_ *cli.Context) error {
 					cfg, err := configurator(pemFile, walletFile, walletPasswd)
 					if err != nil {
 						return err
 					}
-					if err := runTransactionOps(actionReadBalance, cfg.FileOperator, receiver, nodeURL); err != nil {
+					if err := runTransactionOps(cfg.FileOperator, nodeURL); err != nil {
 						return err
 					}
 					return nil
@@ -203,6 +235,20 @@ func main() {
 						Aliases:     []string{"n"},
 						Usage:       "Node URL address.",
 						Destination: &nodeURL,
+						Required:    true,
+					},
+					&cli.StringFlag{
+						Name:        "wallet",
+						Aliases:     []string{"w"},
+						Usage:       "Path to encrypted with AES password wallet file of ED25519 asymmetric key.",
+						Destination: &walletFile,
+						Required:    true,
+					},
+					&cli.StringFlag{
+						Name:        "passwd",
+						Aliases:     []string{"p"},
+						Usage:       "32 long password key in hex format to open the wallet file.",
+						Destination: &walletPasswd,
 						Required:    true,
 					},
 				},
@@ -216,7 +262,7 @@ func main() {
 	}
 }
 
-func runTransactionOps(action int, cfg fileoperations.Config, receiver, nodeURL string) error {
+func runTransactionOps(cfg fileoperations.Config, nodeURL string) error {
 	ctx := context.Background()
 	h := fileoperations.New(cfg, aeswrapper.New())
 	verify := wallet.NewVerifier()
@@ -229,60 +275,68 @@ func runTransactionOps(action int, cfg fileoperations.Config, receiver, nodeURL 
 	}
 
 	pterm.Info.Printf(
-		"Please note that [ %s %s = 1 %s ]\n",
+		"Please note that  %s [ %s ]  = 1 [ %s ]\n",
 		spice.GetSientific(spice.MaxAmoutnPerSupplementaryCurrency),
 		suplementaryCurrency, currency,
 	)
+	fmt.Println("")
 
-	switch action {
-	case actionTransferFounds:
-		spiceStr, _ := pterm.DefaultInteractiveTextInput.Show(fmt.Sprintf("Provide [ %s ] amount", currency))
-		spiceVal, err := strconv.Atoi(spiceStr)
-		if err != nil || spiceVal < 0 {
-			return fmt.Errorf("token [ %s ] can only be provided as a positive integer", currency)
-		}
-		suplStr, _ := pterm.DefaultInteractiveTextInput.Show(fmt.Sprintf("Provide [ %s ] amount", suplementaryCurrency))
-		suplVal, err := strconv.Atoi(suplStr)
-		if err != nil || suplVal < 0 {
-			return fmt.Errorf("token [ %s ] can only be provided as a positive integer", suplementaryCurrency)
-		}
-		result, _ := pterm.DefaultInteractiveConfirm.Show(
-			fmt.Sprintf(
-				"Are you sure you want to transfer [ %v %s ][ %v %s ] to [ %s ].\n",
-				spiceVal, currency, suplVal, suplementaryCurrency, receiver,
-			),
-		)
-		pterm.Println()
-		if !result {
-			printWarning("Transaction has been rejected.")
+	options := []string{"Check balance", "Send tokens", "Quit"}
+
+	for {
+		selectedOption, _ := pterm.DefaultInteractiveSelect.WithOptions(options).Show()
+
+		switch selectedOption {
+		case "Send tokens":
+			receiver, _ := pterm.DefaultInteractiveTextInput.Show("Provide receiver public wallet address")
+			spiceStr, _ := pterm.DefaultInteractiveTextInput.Show(fmt.Sprintf("Provide [ %s ] amount", currency))
+			spiceVal, err := strconv.Atoi(spiceStr)
+			if err != nil || spiceVal < 0 {
+				return fmt.Errorf("token [ %s ] can only be provided as a positive integer", currency)
+			}
+			suplStr, _ := pterm.DefaultInteractiveTextInput.Show(fmt.Sprintf("Provide [ %s ] amount", suplementaryCurrency))
+			suplVal, err := strconv.Atoi(suplStr)
+			if err != nil || suplVal < 0 {
+				return fmt.Errorf("token [ %s ] can only be provided as a positive integer", suplementaryCurrency)
+			}
+			result, _ := pterm.DefaultInteractiveConfirm.Show(
+				fmt.Sprintf(
+					"Are you sure you want to transfer [ %v %s ][ %v %s ] to [ %s ].\n",
+					spiceVal, currency, suplVal, suplementaryCurrency, receiver,
+				),
+			)
+			pterm.Println()
+			if !result {
+				printWarning("Transaction has been rejected.")
+				return nil
+			}
+			melange := spice.New(uint64(spiceVal), uint64(suplVal))
+			spinnerInfo, _ := pterm.DefaultSpinner.Start("Sending transaction ...")
+			time.Sleep(pauseDuration)
+			subject := fmt.Sprintf("%s transfer", currency)
+			if err := c.ProposeTransaction(ctx, receiver, subject, melange, []byte{}); err != nil {
+				return fmt.Errorf("cannot propose transaction due to, %w", err)
+			}
+			spinnerInfo.Info("Transaction send.")
+			printSuccess()
+		case "Check balance":
+			spinnerInfo, _ := pterm.DefaultSpinner.Start("Checking balance ...")
+			time.Sleep(pauseDuration)
+			melange, err := c.ReadBalance(ctx)
+			if err != nil {
+				return fmt.Errorf("cannot read balance due to, %w", err)
+			}
+			addr, err := c.Address()
+			if err != nil {
+				return fmt.Errorf("cannot read wallet address due to, %w", err)
+			}
+			spinnerInfo.Info(fmt.Sprintf("Account [ %s ] balance is [ %v ]", addr, melange.String()))
+			printSuccess()
+		case "Quit":
 			return nil
+		default:
+			return errors.New("unimplemented action")
 		}
-		melange := spice.New(uint64(spiceVal), uint64(suplVal))
-		spinnerInfo, _ := pterm.DefaultSpinner.Start("Sending transaction ...")
-		time.Sleep(pauseDuration)
-		subject := fmt.Sprintf("%s transfer", currency)
-		if err := c.ProposeTransaction(ctx, receiver, subject, melange, []byte{}); err != nil {
-			return fmt.Errorf("cannot propose transaction due to, %w", err)
-		}
-		spinnerInfo.Info("Transaction send.")
-		printSuccess()
-		return nil
-	case actionReadBalance:
-		spinnerInfo, _ := pterm.DefaultSpinner.Start("Checking balance ...")
-		time.Sleep(pauseDuration)
-		melange, err := c.ReadBalance(ctx)
-		if err != nil {
-			return fmt.Errorf("cannot read balance due to, %w", err)
-		}
-		addr, err := c.Address()
-		if err != nil {
-			return fmt.Errorf("cannot read wallet address due to, %w", err)
-		}
-		spinnerInfo.Info(fmt.Sprintf("Account [ %s ], [ %s balance: %v]", addr, currency, melange.String()))
-		printSuccess()
-		return nil
-	default:
-		return errors.New("unimplemented action")
 	}
 }
 

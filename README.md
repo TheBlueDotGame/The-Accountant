@@ -221,6 +221,12 @@ UNDER CONSTRUCTION
 
 UNDER CONSTRUCTION
 
+## Releasing new version
+
+The version is using [Semantic Versioning 2.0.0](https://semver.org/)
+
+Update version in `src/versioning/versioning.go`
+
 ## Coding Philosophy
 
 👀 The Zen of Computantis:
