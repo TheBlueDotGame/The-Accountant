@@ -268,10 +268,10 @@ func runTransactionOps(cfg fileoperations.Config, nodeURL string) error {
 	verify := wallet.NewVerifier()
 	c, err := walletmiddleware.NewClient(nodeURL, &verify, &h, wallet.New)
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot establish connection to the node %s", nodeURL)
 	}
 	if err := c.ReadWalletFromFile(); err != nil {
-		return err
+		return fmt.Errorf("cannot read wallet %s", cfg.WalletPath)
 	}
 
 	pterm.Info.Printf(

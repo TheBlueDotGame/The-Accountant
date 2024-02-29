@@ -200,7 +200,7 @@ func run(cfg configuration.Configuration) {
 		}
 	}()
 
-	err = notaryserver.Run(ctx, cfg.NotaryServer, pub, dataProvider, tele, &log, &verifier, acc, hippo, juggler)
+	err = notaryserver.Run(ctx, cfg.NotaryServer, pub, dataProvider, tele, &log, &verifier, acc, hippo, flash, juggler)
 	if err != nil {
 		log.Error(err.Error())
 		time.Sleep(time.Second)

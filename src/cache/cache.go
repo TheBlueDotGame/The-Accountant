@@ -9,16 +9,17 @@ import (
 	"time"
 
 	"github.com/allegro/bigcache"
+	"github.com/bartossh/Computantis/src/spice"
 	"github.com/bartossh/Computantis/src/transaction"
 )
 
 const (
-	longevity       = time.Minute * 2 // TODO: read from config
-	cleanupInterval = time.Minute     // TODO: read from config
+	longevity       = time.Minute * 5 // TODO: read from config
+	cleanupInterval = time.Minute * 3 // TODO: read from config
 )
 
 const (
-	shards = 1024
+	shards = 1 << 10
 )
 
 const (
@@ -219,6 +220,29 @@ func (h *Hippocampus) ReadTransactions(address string) ([]transaction.Transactio
 	}
 
 	return trxs, errs
+}
+
+// SaveBalance saves balance in to the mem cache.
+func (h *Hippocampus) SaveBalance(a string, s spice.Melange) error {
+	buf, err := s.Encode()
+	if err != nil {
+		return err
+	}
+	return h.mem.Set(a, buf)
+}
+
+// ReadBalance reads balance from the mem cache.
+func (h *Hippocampus) ReadBalance(a string) (spice.Melange, error) {
+	b, err := h.mem.Get(a)
+	if err != nil {
+		return spice.Melange{}, err
+	}
+	return spice.Decode(b)
+}
+
+// RemoveBalance removes balance from the cache.
+func (h *Hippocampus) RemoveBalance(a string) error {
+	return h.mem.Delete(a)
 }
 
 // Close closes the cache in a safe way allowing all the goroutines to finish their jobs and cleaning the heap.

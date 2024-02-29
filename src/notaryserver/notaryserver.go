@@ -45,6 +45,7 @@ var (
 	ErrTrxAlreadyExists   = errors.New("transaction already exists")
 	ErrRequestIsEmpty     = errors.New("request is empty")
 	ErrVerification       = errors.New("verification failed, forbidden")
+	ErrThrottle           = errors.New("throttled balance request, to often reads are forbidden")
 	ErrDataEmpty          = errors.New("empty data, invalid contract")
 	ErrProcessing         = errors.New("processing request failed")
 	ErrNoDataPresent      = errors.New("no entity found")
@@ -93,7 +94,8 @@ type server struct {
 	rxNewTrxRecAddrCh chan string
 	verifier          verifier
 	acc               accounter
-	cache             providers.AwaitedTrxCacheProvider
+	cache             providers.AwaitedTrxCacheProviderBalanceCacher
+	flash             providers.FlashbackMemoryAddressProvideRemover
 	piper             piper
 	nodePublicURL     string
 	dataSize          int
@@ -103,7 +105,8 @@ type server struct {
 // It blocks until the context is canceled.
 func Run(
 	ctx context.Context, c Config, pub nodeNetworkingPublisher, pv RandomDataProvideValidator, tele providers.HistogramProvider,
-	log logger.Logger, v verifier, acc accounter, cache providers.AwaitedTrxCacheProvider, p piper,
+	log logger.Logger, v verifier, acc accounter, cache providers.AwaitedTrxCacheProviderBalanceCacher, flash providers.FlashbackMemoryAddressProvideRemover,
+	p piper,
 ) error {
 	var err error
 	ctxx, cancel := context.WithCancel(ctx)
@@ -130,6 +133,7 @@ func Run(
 		verifier:          v,
 		acc:               acc,
 		cache:             cache,
+		flash:             flash,
 		piper:             p,
 		nodePublicURL:     c.NodePublicURL,
 		dataSize:          c.DataSizeBytes,
@@ -279,6 +283,21 @@ func (s *server) Propose(ctx context.Context, in *protobufcompiled.Transaction) 
 		return nil, ErrProcessing
 	}
 
+	go func() {
+		if err := s.flash.RemoveAddress(trx.IssuerAddress); err != nil {
+			s.log.Error(fmt.Sprintf("confirm endpoint, removing issuer address [ %s ] from flash failed: %s", in.IssuerAddress, err))
+		}
+		if err := s.flash.RemoveAddress(trx.ReceiverAddress); err != nil {
+			s.log.Error(fmt.Sprintf("confirm endpoint, removing receiver address [ %s ] from flash failed: %s", in.ReceiverAddress, err))
+		}
+		if err := s.cache.RemoveBalance(trx.IssuerAddress); err != nil {
+			s.log.Error(fmt.Sprintf("confirm endpoint, removing cached balance for address [ %s ] from flash failed: %s", in.IssuerAddress, err))
+		}
+		if err := s.cache.RemoveBalance(trx.ReceiverAddress); err != nil {
+			s.log.Error(fmt.Sprintf("confirm endpoint, removing cached balance for address [ %s ] from flash failed: %s", in.ReceiverAddress, err))
+		}
+	}()
+
 	return &emptypb.Empty{}, nil
 }
 
@@ -325,6 +344,21 @@ func (s *server) Confirm(ctx context.Context, in *protobufcompiled.Transaction) 
 		return nil, ErrProcessing
 	}
 
+	go func() {
+		if err := s.flash.RemoveAddress(trx.IssuerAddress); err != nil {
+			s.log.Error(fmt.Sprintf("confirm endpoint, removing issuer address [ %s ] from flash failed: %s", in.IssuerAddress, err))
+		}
+		if err := s.flash.RemoveAddress(trx.ReceiverAddress); err != nil {
+			s.log.Error(fmt.Sprintf("confirm endpoint, removing receiver address [ %s ] from flash failed: %s", in.ReceiverAddress, err))
+		}
+		if err := s.cache.RemoveBalance(trx.IssuerAddress); err != nil {
+			s.log.Error(fmt.Sprintf("confirm endpoint, removing cached balance for address [ %s ] from flash failed: %s", in.IssuerAddress, err))
+		}
+		if err := s.cache.RemoveBalance(trx.ReceiverAddress); err != nil {
+			s.log.Error(fmt.Sprintf("confirm endpoint, removing cached balance for address [ %s ] from flash failed: %s", in.ReceiverAddress, err))
+		}
+	}()
+
 	return &emptypb.Empty{}, nil
 }
 
@@ -363,6 +397,15 @@ func (s *server) Reject(ctx context.Context, in *protobufcompiled.SignedHash) (*
 	if ok := s.piper.SendVrx(&vrx); !ok {
 		return nil, ErrProcessing
 	}
+
+	go func() {
+		if err := s.flash.RemoveAddress(trx.IssuerAddress); err != nil {
+			s.log.Error(fmt.Sprintf("confirm endpoint, removing receiver address [ %s ] from flash failed: %s", in.Address, err))
+		}
+		if err := s.cache.RemoveBalance(trx.IssuerAddress); err != nil {
+			s.log.Error(fmt.Sprintf("confirm endpoint, removing cached balance for address [ %s ] from flash failed: %s", in.Address, err))
+		}
+	}()
 
 	return &emptypb.Empty{}, nil
 }
@@ -456,6 +499,15 @@ func (s *server) Data(ctx context.Context, in *protobufcompiled.Address) (*proto
 // Balance returns balanse for account owner.
 // TODO: Find better way of requesting balance - sign blob data!
 func (s *server) Balance(ctx context.Context, in *protobufcompiled.SignedHash) (*protobufcompiled.Spice, error) {
+	ok, err := s.flash.HasAddress(in.Address)
+	if err != nil {
+		s.log.Error(fmt.Sprintf("balance endpoint, failed to read from flash the address: %s, %s", in.Address, err))
+		return nil, ErrProcessing
+	}
+	if ok {
+		return nil, ErrThrottle
+	}
+
 	t := time.Now()
 	defer func() {
 		d := time.Since(t)
@@ -471,13 +523,24 @@ func (s *server) Balance(ctx context.Context, in *protobufcompiled.SignedHash) (
 		return nil, ErrVerification
 	}
 
+	if s, err := s.cache.ReadBalance(in.Address); err == nil {
+		return &protobufcompiled.Spice{
+			Currency:             s.Currency,
+			SuplementaryCurrency: s.SupplementaryCurrency,
+		}, nil
+	}
+
 	balance, err := s.acc.CalculateBalance(ctx, in.Address)
 	if err != nil {
 		s.log.Error(fmt.Sprintf("balance endpoint, failed to read balance for address: %s, %s", in.Address, err))
 		return nil, ErrProcessing
 	}
 
-	// TODO: introduce balance caching
+	go func() {
+		if err := s.cache.SaveBalance(in.Address, balance.Spice); err != nil {
+			s.log.Error(fmt.Sprintf("balance endpoint, failed to cache balance: %s, %s", in.Address, err))
+		}
+	}()
 
 	return &protobufcompiled.Spice{
 		Currency:             balance.Spice.Currency,
