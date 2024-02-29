@@ -8,6 +8,22 @@
 
 The Computantis is a backbone service for creating secure, reliable and performant solutions for transaction exchange and Byzantine fault-tolerant systems.
 
+### Problems it solves
+
+- The main problem Computantis solves is offering cheaper to run and less cumbersome solutions for cryptocurrency and distributed state machines.
+
+- Today distributed state machines and cryptocurrency systems are complicated. Computantis offers the core functionality that can be easily extended.
+
+- Proof of work hashing is computationally expensive and slow, proof of stake restricts participants and requires additional protocols that decide who will forge the block. Computantis is performant and can run without expensive GPUs and super servers, and doesn't require the decision-making protocol which saves on computation and improves security and clarity.
+
+- Gossip about gossip protocol offers better robustness against connection failures and doesn't require a direct connection between nodes to transfer transactions.
+
+- DAG vertex creation and validation is much faster than the blockchain forging process and gives an almost instant response in balance checking.
+
+- DAG can be truncated, it saves response time, graph traversal time and double spending validation process.
+
+- The Computantis is a fun project that can be improved. Now transfers more than 200 transactions per second compared to ETC with less than 20 transactions per second and BTC with less than 10 transactions per second.
+
 
 ### Services and tools
 
@@ -250,8 +266,3 @@ Update version in `src/versioning/versioning.go`
 - https://www.ardanlabs.com/blog/2023/07/getting-friendly-with-cpu-caches.html
 - https://eli.thegreenplace.net/2023/common-pitfalls-in-go-benchmarking/
 
-
-### Addressing the complexity of today software design
-
-- Today companies have more micro-services than clients. So let's have something that can run as mono-service and make shit done.
-- Today tools have more features than clients. So let's make very few tools in this mono-repo that offer basic features.
