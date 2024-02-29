@@ -105,8 +105,8 @@ type gossiper struct {
 	verifier  signatureVerifier
 	signer    accountant.Signer
 	log       logger.Logger
-	trxCache  providers.AwaitedTrxCacheProvider
-	flash     providers.FlashbackMemoryProvider
+	trxCache  providers.AwaitedTrxCacheProviderBalanceCacher
+	flash     providers.FlashbackMemoryHashProviderAddressRemover
 	piper     piper
 	nodes     map[string]nodeData
 	url       string
@@ -117,8 +117,8 @@ type gossiper struct {
 // RunGRPC runs the service application that exposes the GRPC API for gossip protocol.
 // To stop server cancel the context.
 func RunGRPC(ctx context.Context, cfg Config, l logger.Logger, t time.Duration, s accountant.Signer,
-	v signatureVerifier, a accounter, trxCache providers.AwaitedTrxCacheProvider,
-	flash providers.FlashbackMemoryProvider, p piper,
+	v signatureVerifier, a accounter, trxCache providers.AwaitedTrxCacheProviderBalanceCacher,
+	flash providers.FlashbackMemoryHashProviderAddressRemover, p piper,
 ) error {
 	if err := cfg.verify(); err != nil {
 		return err
@@ -347,6 +347,21 @@ func (g *gossiper) GossipVrx(ctx context.Context, vg *protobufcompiled.VrxMsgGos
 		vg.Gossipers = toSlice(set)
 		g.gossipVertex(ctx, vg, set)
 	}
+
+	go func() {
+		if err := g.flash.RemoveAddress(vg.Vertex.Transaction.IssuerAddress); err != nil {
+			g.log.Error(fmt.Sprintf("confirm endpoint, removing issuer address [ %s ] from flash failed: %s", vg.Vertex.Transaction.IssuerAddress, err))
+		}
+		if err := g.flash.RemoveAddress(vg.Vertex.Transaction.ReceiverAddress); err != nil {
+			g.log.Error(fmt.Sprintf("confirm endpoint, removing receiver address [ %s ] from flash failed: %s", vg.Vertex.Transaction.ReceiverAddress, err))
+		}
+		if err := g.trxCache.RemoveBalance(vg.Vertex.Transaction.IssuerAddress); err != nil {
+			g.log.Error(fmt.Sprintf("confirm endpoint, removing cached balance for address [ %s ] from flash failed: %s", vg.Vertex.Transaction.IssuerAddress, err))
+		}
+		if err := g.trxCache.RemoveBalance(vg.Vertex.Transaction.ReceiverAddress); err != nil {
+			g.log.Error(fmt.Sprintf("confirm endpoint, removing cached balance for address [ %s ] from flash failed: %s", vg.Vertex.Transaction.ReceiverAddress, err))
+		}
+	}()
 
 	return &emptypb.Empty{}, nil
 }
