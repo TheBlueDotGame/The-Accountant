@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"net/url"
 	"sync"
 	"time"
 
@@ -46,6 +45,7 @@ const (
 	vertexGossipChCapacity = 100
 	trxGossipChCappacity   = 100
 	rejectHashChCapacity   = 80
+	totalRetries           = 10
 )
 
 type nodeData struct {
@@ -69,16 +69,6 @@ func (c Config) verify() error {
 	if c.Port < 0 || c.Port > 65535 {
 		return fmt.Errorf("allowed port range is 0 to 65535, got %v", c.Port)
 	}
-	// TODO: validate cf.GenessisReceiver address
-	if _, err := url.Parse(c.GenesisURL); err != nil {
-		return fmt.Errorf("cannot parse given genesis URL: [ %s ], %w", c.GenesisURL, err)
-	}
-	if _, err := url.Parse(c.URL); err != nil {
-		return fmt.Errorf("cannot parse given node URL: [ %s ], %w", c.URL, err)
-	}
-	if _, err := url.Parse(c.LoadDagURL); err != nil {
-		return fmt.Errorf("cannot parse given node URL: [ %s ], %w", c.URL, err)
-	}
 	return nil
 }
 
@@ -89,8 +79,8 @@ type signatureVerifier interface {
 type accounter interface {
 	CreateGenesis(subject string, spc spice.Melange, data []byte, publicAddress string) (accountant.Vertex, error)
 	AddLeaf(ctx context.Context, leaf *accountant.Vertex) error
-	StreamDAG(ctx context.Context) (<-chan *accountant.Vertex, <-chan error)
-	LoadDag(ctx context.Context, cancelF context.CancelCauseFunc, cVrx <-chan *accountant.Vertex)
+	StreamDAG(ctx context.Context) <-chan *accountant.Vertex
+	LoadDag(cancelF context.CancelCauseFunc, cVrx <-chan *accountant.Vertex)
 	DagLoaded() bool
 }
 
@@ -289,22 +279,27 @@ func (g *gossiper) Discover(_ context.Context, cd *protobufcompiled.ConnectionDa
 func (g *gossiper) LoadDag(_ *emptypb.Empty, stream protobufcompiled.GossipAPI_LoadDagServer) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	chVrx, chErr := g.accounter.StreamDAG(ctx)
+	chVrx := g.accounter.StreamDAG(ctx)
 	var err error
-StreamLoop:
-	for {
-		select {
-		case vrx := <-chVrx:
-			if vrx == nil {
-				break StreamLoop
-			}
-			vr := mapAccountantVertexToProtoVertex(vrx)
+streamLoop:
+	for vrx := range chVrx {
+		if vrx == nil {
+			break streamLoop
+		}
+		vr := mapAccountantVertexToProtoVertex(vrx)
+		var retriesCount int
+		var isSend bool
+	sendLoop:
+		for !isSend && retriesCount < totalRetries {
 			err = stream.Send(vr)
 			if err != nil {
-				break StreamLoop
+				retriesCount++
+				continue sendLoop
 			}
-		case err = <-chErr:
-			break StreamLoop
+			isSend = true
+		}
+		if !isSend {
+			break streamLoop
 		}
 	}
 	if err != nil {
@@ -422,7 +417,7 @@ func (g *gossiper) updateDag(ctx context.Context, url string) error {
 
 	chVrx := make(chan *accountant.Vertex, 1000)
 	ctxx, cancel := context.WithCancelCause(ctx)
-	go g.accounter.LoadDag(ctxx, cancel, chVrx)
+	go g.accounter.LoadDag(cancel, chVrx)
 
 	var errx error
 	defer close(chVrx)
