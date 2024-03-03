@@ -658,7 +658,7 @@ func (ab *AccountingBook) CreateGenesis(subject string, spc spice.Melange, data 
 }
 
 // LoadDag loads stream of Vertices in to the DAG.
-func (ab *AccountingBook) LoadDag(ctx context.Context, cancelF context.CancelCauseFunc, cVrx <-chan *Vertex) {
+func (ab *AccountingBook) LoadDag(cancelF context.CancelCauseFunc, cVrx <-chan *Vertex) {
 	if ab.DagLoaded() {
 		cancelF(ErrDagIsLoaded)
 		return
@@ -671,23 +671,18 @@ func (ab *AccountingBook) LoadDag(ctx context.Context, cancelF context.CancelCau
 	defer ab.mux.Unlock()
 
 VertxLoop:
-	for {
-		select {
-		case <-ctx.Done():
+	for vrx := range cVrx {
+		if vrx == nil {
 			break VertxLoop
-		case vrx := <-cVrx:
-			if vrx == nil {
-				break VertxLoop
-			}
-			if err := ab.saveTrxInVertex(vrx.Transaction.Hash[:], vrx.Hash[:]); err != nil {
-				cancelF(ErrLeafRejected)
-				return
-			}
+		}
+		if err := ab.saveTrxInVertex(vrx.Transaction.Hash[:], vrx.Hash[:]); err != nil {
+			cancelF(ErrLeafRejected)
+			return
+		}
 
-			if err := ab.dag.AddVertexByID(string(vrx.Hash[:]), vrx); err != nil {
-				cancelF(err)
-				return
-			}
+		if err := ab.dag.AddVertexByID(string(vrx.Hash[:]), vrx); err != nil {
+			cancelF(err)
+			return
 		}
 	}
 
@@ -725,6 +720,8 @@ VertxLoop:
 	ab.dagLoaded = true
 	ab.genesisPublicAddress = lastVrx.Transaction.IssuerAddress
 	ab.nextWeightTruncate = ab.nextWeightTruncate + maxWeight
+
+	ab.log.Info(fmt.Sprintf("Loaded dag with success to weight [ %v ], total DAG size [ %v ]", maxWeight, ab.dag.GetSize()))
 }
 
 // DagLoaded returns true if dag is loaded or false otherwise.
@@ -734,33 +731,71 @@ func (ab *AccountingBook) DagLoaded() bool {
 
 // StreamDAG provides tow channels to subscribe to a stream of vertices.
 // First streams verticies and second one streams possible errors.
-func (ab *AccountingBook) StreamDAG(ctx context.Context) (<-chan *Vertex, <-chan error) {
+func (ab *AccountingBook) StreamDAG(ctx context.Context) <-chan *Vertex {
 	ab.mux.RLock()
 	defer ab.mux.RUnlock()
 
 	cVrx := make(chan *Vertex, 100)
-	cDone := make(chan error, 1)
-	go func(cVrx chan<- *Vertex, cDone chan<- error) {
-	VerticesLoop:
-		for _, item := range ab.dag.GetVertices() {
+	go func(cVrx chan<- *Vertex) {
+		visited := make(map[string]struct{})
+	leavesLoop:
+		for l := range ab.dag.GetLeaves() {
 			select {
 			case <-ctx.Done():
-				break VerticesLoop
+				break leavesLoop
 			default:
+			}
+			item, err := ab.dag.GetVertex(l)
+			if err != nil {
+				break leavesLoop
 			}
 			switch vrx := item.(type) {
 			case *Vertex:
 				cVrx <- vrx
 			default:
-				cDone <- ErrUnexpected
-				break VerticesLoop
+				break leavesLoop
 			}
-		}
-		close(cDone)
-		close(cVrx)
-	}(cVrx, cDone)
+			vertices, signal, err := ab.dag.AncestorsWalker(l)
+			if err != nil {
+				signal <- true
+				break leavesLoop
+			}
 
-	return cVrx, cDone
+		verticesLoop:
+			for ancestorID := range vertices {
+				select {
+				case <-ctx.Done():
+					signal <- true
+					break leavesLoop
+				default:
+				}
+				if _, ok := visited[ancestorID]; ok {
+					continue verticesLoop
+				}
+				visited[ancestorID] = struct{}{}
+
+				item, err := ab.dag.GetVertex(ancestorID)
+				if err != nil {
+					signal <- true
+					break leavesLoop
+				}
+				switch vrx := item.(type) {
+				case *Vertex:
+					if vrx == nil {
+						break leavesLoop
+					}
+					cVrx <- vrx
+				default:
+					signal <- true
+					break leavesLoop
+				}
+			}
+
+		}
+		close(cVrx)
+	}(cVrx)
+
+	return cVrx
 }
 
 // AddTrustedNode adds trusted node public address to the trusted nodes public address repository.

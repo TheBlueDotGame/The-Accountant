@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"net/url"
 	"time"
 
 	"golang.org/x/exp/maps"
@@ -116,9 +115,6 @@ func Run(
 		return err
 	}
 
-	if _, err = url.Parse(c.NodePublicURL); err != nil {
-		return err
-	}
 	var rxNewTrxRecAddrCh chan string
 	if pub != nil {
 		rxNewTrxRecAddrCh = make(chan string, rxNewTrxIssuerAddrBufferSize)

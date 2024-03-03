@@ -292,12 +292,19 @@ func runTransactionOps(cfg fileoperations.Config, nodeURL string) error {
 			spiceStr, _ := pterm.DefaultInteractiveTextInput.Show(fmt.Sprintf("Provide [ %s ] amount", currency))
 			spiceVal, err := strconv.Atoi(spiceStr)
 			if err != nil || spiceVal < 0 {
-				return fmt.Errorf("token [ %s ] can only be provided as a positive integer", currency)
+				printError(fmt.Errorf("token [ %s ] can only be provided as a positive integer", currency))
+				continue
 			}
 			suplStr, _ := pterm.DefaultInteractiveTextInput.Show(fmt.Sprintf("Provide [ %s ] amount", suplementaryCurrency))
 			suplVal, err := strconv.Atoi(suplStr)
 			if err != nil || suplVal < 0 {
-				return fmt.Errorf("token [ %s ] can only be provided as a positive integer", suplementaryCurrency)
+				printError(fmt.Errorf("token [ %s ] can only be provided as a positive integer", suplementaryCurrency))
+				continue
+			}
+			subject, _ := pterm.DefaultInteractiveTextInput.Show("Transfer subject")
+			if subject == "" {
+				printError(errors.New("subject cannot be empty"))
+				continue
 			}
 			result, _ := pterm.DefaultInteractiveConfirm.Show(
 				fmt.Sprintf(
@@ -308,14 +315,15 @@ func runTransactionOps(cfg fileoperations.Config, nodeURL string) error {
 			pterm.Println()
 			if !result {
 				printWarning("Transaction has been rejected.")
-				return nil
+				continue
 			}
 			melange := spice.New(uint64(spiceVal), uint64(suplVal))
 			spinnerInfo, _ := pterm.DefaultSpinner.Start("Sending transaction ...")
 			time.Sleep(pauseDuration)
-			subject := fmt.Sprintf("%s transfer", currency)
 			if err := c.ProposeTransaction(ctx, receiver, subject, melange, []byte{}); err != nil {
-				return fmt.Errorf("cannot propose transaction due to, %w", err)
+				spinnerInfo.Stop()
+				printError(fmt.Errorf("cannot propose transaction due to, %e", err))
+				continue
 			}
 			spinnerInfo.Info("Transaction send.")
 			printSuccess()
@@ -324,11 +332,15 @@ func runTransactionOps(cfg fileoperations.Config, nodeURL string) error {
 			time.Sleep(pauseDuration)
 			melange, err := c.ReadBalance(ctx)
 			if err != nil {
-				return fmt.Errorf("cannot read balance due to, %w", err)
+				spinnerInfo.Stop()
+				printError(fmt.Errorf("cannot read balance due to, %w", err))
+				continue
 			}
 			addr, err := c.Address()
 			if err != nil {
-				return fmt.Errorf("cannot read wallet address due to, %w", err)
+				spinnerInfo.Stop()
+				printError(fmt.Errorf("cannot read wallet address due to, %w", err))
+				continue
 			}
 			spinnerInfo.Info(fmt.Sprintf("Account [ %s ] balance is [ %v ]", addr, melange.String()))
 			printSuccess()

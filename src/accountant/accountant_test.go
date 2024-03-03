@@ -519,11 +519,12 @@ func TestMultipleIssuerMultipleReceiversMultipleAccountantSpiceTransferLegitimat
 			assert.DeepEqual(t, genesisSpice, vrx.Transaction.Spice)
 			issuer = genesisReceiver
 		default:
-			ctxx, cancelF := context.WithCancelCause(ctx)
+			_, cancelF := context.WithCancelCause(ctx)
 			cVrx := make(chan *Vertex, 2)
-			go ab.LoadDag(ctxx, cancelF, cVrx) // NOTE: crucial for tests, on all node genesis nodes dag shall be loaded from genesis
+			go ab.LoadDag(cancelF, cVrx) // NOTE: crucial for tests, on all node genesis nodes dag shall be loaded from genesis
 			cVrx <- &vrx
-			time.Sleep(time.Millisecond * 100)
+			cVrx <- nil
+			time.Sleep(time.Millisecond * 500)
 			cancelF(nil)
 		}
 
@@ -573,7 +574,7 @@ func TestMultipleIssuerMultipleReceiversMultipleAccountantSpiceTransferLegitimat
 
 func TestMultipleIssuerMultipleReceiversMultipleAccountantSpiceLoadDAG(t *testing.T) {
 	callOnLogErr := func(err error) {
-		fmt.Printf("logger failed with error: %s\n", err)
+		fmt.Printf("Logger failed with error: %s\n", err)
 	}
 	callOnFail := func(err error) {
 		fmt.Printf("Failed with error: %s\n", err)
@@ -629,12 +630,8 @@ func TestMultipleIssuerMultipleReceiversMultipleAccountantSpiceLoadDAG(t *testin
 	assert.NilError(t, err)
 
 	ctxx, cancelF := context.WithCancelCause(ctx)
-	cVrx, cErr := ab.StreamDAG(ctxx)
-	go abLoad.LoadDag(ctxx, cancelF, cVrx)
-
-	err = <-cErr
-	assert.NilError(t, err)
-	cancelF(nil)
+	cVrx := ab.StreamDAG(ctxx)
+	go abLoad.LoadDag(cancelF, cVrx)
 
 	balanceLoadedDag, err := ab.CalculateBalance(ctx, receiver.Address())
 	assert.NilError(t, err)
