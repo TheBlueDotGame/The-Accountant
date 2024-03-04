@@ -228,17 +228,21 @@ All below commands shall be run from `c/` folder in the terminal.
 
 #### Build and run
 
-##### Build all.
+##### Build all (node, wallet, webhooks, emulator).
 
 Make sure you have [Go](https://go.dev/) programming language installed.
 Run `make build-all` to build all binaries.
 
-##### Building only noide
+##### Building node only
 
 Make sure you have [Go](https://go.dev/) programming language installed.
 Run `make build-node` to build only dedicated node binary.
 
-###### The Node:
+###### The emulator
+
+Internal tool used for test and benchmarks only. Do not use for production.
+
+###### The node
 
 Use dedicated binary from bin/dedicated directory.
 
@@ -282,16 +286,8 @@ zinc_logger: # Zinc search section allows to connect the node to the zinc search
   token: Basic YWRtaW46emluY3NlYXJjaA== # The zinc search token for given index.
 ```
 
-###### The Webhooks:
 
-Run `./bin/dedicated/webhooks -c <path to your setup.yaml>` to start node.
-```yaml
-webhooks_server: # This section specifies the web hook server setup.
-  port: 8000 # Port at which to start the server.
-```
-
-
-###### The Wallet:
+###### The wallet:
 
 
 Run `./bin/dedicated/webhooks -h` to get help or follow below description.
@@ -319,6 +315,16 @@ GLOBAL OPTIONS:
 
 *If you are running node with the same wallet you would like to use for transactions, please do not connect to this node.*
 The wallet cannot use the node that uses the same key pairs. This is for security reason, so the transaction cannot be altered on the node. Only vertex can be signed.
+
+###### The webhooks:
+
+Do not required to run the network. Use only if you want to follow transactions or created another service for statistics, reports, ect, that runs as subscribers.
+
+Run `./bin/dedicated/webhooks -c <path to your setup.yaml>` to start node.
+```yaml
+webhooks_server: # This section specifies the web hook server setup.
+  port: 8000 # Port at which to start the server.
+```
 
 
 ## Releasing new version
