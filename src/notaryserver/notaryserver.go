@@ -26,6 +26,7 @@ const (
 	confirmTrxTelemetryHistogram  = "confirm_trx_request_duration"
 	rejectTrxTelemetryHistogram   = "reject_trx_request_duration"
 	awaitedTrxTelemetryHistogram  = "read_awaited_trx_request_duration"
+	readDagtransactionsbyaddress  = "read_dag_trx_only"
 	approvedTrxTelemetryHistogram = "read_approved_trx_request_duration"
 	balanceTelemetryHistogram     = "balance_read_duration"
 	dataToSignTelemetryHistogram  = "data_to_sign_request_duration"
@@ -44,7 +45,7 @@ var (
 	ErrTrxAlreadyExists   = errors.New("transaction already exists")
 	ErrRequestIsEmpty     = errors.New("request is empty")
 	ErrVerification       = errors.New("verification failed, forbidden")
-	ErrThrottle           = errors.New("throttled balance request, to often reads are forbidden")
+	ErrThrottle           = errors.New("throttled request, to often reads are forbidden")
 	ErrDataEmpty          = errors.New("empty data, invalid contract")
 	ErrProcessing         = errors.New("processing request failed")
 	ErrNoDataPresent      = errors.New("no entity found")
@@ -58,6 +59,7 @@ type accounter interface {
 	Address() string
 	CreateLeaf(ctx context.Context, trx *transaction.Transaction) (accountant.Vertex, error)
 	ReadTransactionByHash(ctx context.Context, hashe [32]byte) (transaction.Transaction, error)
+	ReadDAGTransactionsByAddress(ctx context.Context, address string) ([]transaction.Transaction, error)
 	CalculateBalance(ctx context.Context, walletPubAddr string) (accountant.Balance, error)
 }
 
@@ -238,22 +240,22 @@ func (s *server) Propose(ctx context.Context, in *protobufcompiled.Transaction) 
 
 	trx, err := transformers.ProtoTrxToTrx(in)
 	if err != nil {
-		s.log.Error(fmt.Sprintf("propose endpoint, message is empty or invalid: %s", err))
+		s.log.Error(fmt.Sprintf("propose endpoint message is empty or invalid: %s", err))
 		return nil, err
 	}
 
 	if err := trx.VerifyIssuer(s.verifier); err != nil {
-		s.log.Error(fmt.Sprintf("propose endpoint, verification failed: %s", err))
+		s.log.Error(fmt.Sprintf("propose endpoint verification failed: %s", err))
 		return nil, ErrVerification
 	}
 
 	if trx.IsContract() {
 		if len(trx.Data) > s.dataSize {
-			s.log.Error(fmt.Sprintf("propose endpoint, invalid transaction data size: %d", len(trx.Data)))
+			s.log.Error(fmt.Sprintf("propose endpoint invalid transaction data size: %d", len(trx.Data)))
 			return nil, ErrProcessing
 		}
 		if err := s.cache.SaveAwaitedTransaction(&trx); err != nil {
-			s.log.Error(fmt.Sprintf("propose endpoint, saving awaited trx for issuer [ %s ], %s", trx.IssuerAddress, err))
+			s.log.Error(fmt.Sprintf("propose endpoint saving awaited trx for issuer [ %s ], %s", trx.IssuerAddress, err))
 			return nil, ErrProcessing
 		}
 
@@ -271,7 +273,7 @@ func (s *server) Propose(ctx context.Context, in *protobufcompiled.Transaction) 
 
 	vrx, err := s.acc.CreateLeaf(ctx, &trx)
 	if err != nil {
-		s.log.Error(fmt.Sprintf("propose endpoint, creating leaf: %s", err))
+		s.log.Error(fmt.Sprintf("propose endpoint creating leaf: %s", err))
 		return nil, ErrProcessing
 	}
 
@@ -281,16 +283,16 @@ func (s *server) Propose(ctx context.Context, in *protobufcompiled.Transaction) 
 
 	go func() {
 		if err := s.flash.RemoveAddress(trx.IssuerAddress); err != nil {
-			s.log.Error(fmt.Sprintf("confirm endpoint, removing issuer address [ %s ] from flash failed: %s", in.IssuerAddress, err))
+			s.log.Error(fmt.Sprintf("confirm endpoint removing issuer address [ %s ] from flash failed: %s", in.IssuerAddress, err))
 		}
 		if err := s.flash.RemoveAddress(trx.ReceiverAddress); err != nil {
-			s.log.Error(fmt.Sprintf("confirm endpoint, removing receiver address [ %s ] from flash failed: %s", in.ReceiverAddress, err))
+			s.log.Error(fmt.Sprintf("confirm endpoint removing receiver address [ %s ] from flash failed: %s", in.ReceiverAddress, err))
 		}
 		if err := s.cache.RemoveBalance(trx.IssuerAddress); err != nil {
-			s.log.Error(fmt.Sprintf("confirm endpoint, removing cached balance for address [ %s ] from flash failed: %s", in.IssuerAddress, err))
+			s.log.Error(fmt.Sprintf("confirm endpoint removing cached balance for address [ %s ] from flash failed: %s", in.IssuerAddress, err))
 		}
 		if err := s.cache.RemoveBalance(trx.ReceiverAddress); err != nil {
-			s.log.Error(fmt.Sprintf("confirm endpoint, removing cached balance for address [ %s ] from flash failed: %s", in.ReceiverAddress, err))
+			s.log.Error(fmt.Sprintf("confirm endpoint removing cached balance for address [ %s ] from flash failed: %s", in.ReceiverAddress, err))
 		}
 	}()
 
@@ -307,13 +309,13 @@ func (s *server) Confirm(ctx context.Context, in *protobufcompiled.Transaction) 
 
 	trx, err := transformers.ProtoTrxToTrx(in)
 	if err != nil {
-		s.log.Error(fmt.Sprintf("confirm endpoint, message is empty or invalid: %s", err))
+		s.log.Error(fmt.Sprintf("confirm endpoint message is empty or invalid: %s", err))
 		return nil, err
 	}
 
 	if err := trx.VerifyIssuerReceiver(s.verifier); err != nil {
 		s.log.Error(fmt.Sprintf(
-			"confirm endpoint, failed to verify trx hash [ %x ] from receiver [ %s ], %s", trx.Hash, trx.ReceiverAddress, err.Error(),
+			"confirm endpoint failed to verify trx hash [ %x ] from receiver [ %s ], %s", trx.Hash, trx.ReceiverAddress, err.Error(),
 		))
 		return nil, ErrVerification
 	}
@@ -322,7 +324,7 @@ func (s *server) Confirm(ctx context.Context, in *protobufcompiled.Transaction) 
 	if err != nil {
 		s.log.Error(
 			fmt.Sprintf(
-				"confirm endpoint, failed to remove awaited trx hash [ %x ] from receiver [ %s ] , %s", trx.Hash, trx.ReceiverAddress, err,
+				"confirm endpoint failed to remove awaited trx hash [ %x ] from receiver [ %s ] , %s", trx.Hash, trx.ReceiverAddress, err,
 			))
 		if errors.Is(err, cache.ErrTransactionNotFound) {
 			return nil, ErrNoDataPresent
@@ -332,7 +334,7 @@ func (s *server) Confirm(ctx context.Context, in *protobufcompiled.Transaction) 
 
 	vrx, err := s.acc.CreateLeaf(ctx, &trx)
 	if err != nil {
-		s.log.Error(fmt.Sprintf("confirm endpoint, creating leaf for transaction [ %x ] : %s", in.Hash, err))
+		s.log.Error(fmt.Sprintf("confirm endpoint creating leaf for transaction [ %x ] : %s", in.Hash, err))
 		return nil, ErrProcessing
 	}
 
@@ -342,16 +344,16 @@ func (s *server) Confirm(ctx context.Context, in *protobufcompiled.Transaction) 
 
 	go func() {
 		if err := s.flash.RemoveAddress(trx.IssuerAddress); err != nil {
-			s.log.Error(fmt.Sprintf("confirm endpoint, removing issuer address [ %s ] from flash failed: %s", in.IssuerAddress, err))
+			s.log.Error(fmt.Sprintf("confirm endpoint removing issuer address [ %s ] from flash failed: %s", in.IssuerAddress, err))
 		}
 		if err := s.flash.RemoveAddress(trx.ReceiverAddress); err != nil {
-			s.log.Error(fmt.Sprintf("confirm endpoint, removing receiver address [ %s ] from flash failed: %s", in.ReceiverAddress, err))
+			s.log.Error(fmt.Sprintf("confirm endpoint removing receiver address [ %s ] from flash failed: %s", in.ReceiverAddress, err))
 		}
 		if err := s.cache.RemoveBalance(trx.IssuerAddress); err != nil {
-			s.log.Error(fmt.Sprintf("confirm endpoint, removing cached balance for address [ %s ] from flash failed: %s", in.IssuerAddress, err))
+			s.log.Error(fmt.Sprintf("confirm endpoint removing cached balance for address [ %s ] from flash failed: %s", in.IssuerAddress, err))
 		}
 		if err := s.cache.RemoveBalance(trx.ReceiverAddress); err != nil {
-			s.log.Error(fmt.Sprintf("confirm endpoint, removing cached balance for address [ %s ] from flash failed: %s", in.ReceiverAddress, err))
+			s.log.Error(fmt.Sprintf("confirm endpoint removing cached balance for address [ %s ] from flash failed: %s", in.ReceiverAddress, err))
 		}
 	}()
 
@@ -371,13 +373,13 @@ func (s *server) Reject(ctx context.Context, in *protobufcompiled.SignedHash) (*
 	}
 
 	if err := s.verifier.Verify(in.Data, in.Signature, [32]byte(in.Hash), in.Address); err != nil {
-		s.log.Error(fmt.Sprintf("reject endpoint, failed to verify signature of transaction [ %x ] for address: %s, %s", in.Hash, in.Address, err))
+		s.log.Error(fmt.Sprintf("reject endpoint failed to verify signature of transaction [ %x ] for address: %s, %s", in.Hash, in.Address, err))
 		return nil, ErrProcessing
 	}
 
 	trx, err := s.cache.RemoveAwaitedTransaction([32]byte(in.Data), in.Address) // in.Data holds the transaction hash where in.Hash is a message digest
 	if err != nil {
-		s.log.Error(fmt.Sprintf("reject endpoint, failed removing transaction [ %x ] for address [ %s ], %s", in.Hash, in.Address, err))
+		s.log.Error(fmt.Sprintf("reject endpoint failed removing transaction [ %x ] for address [ %s ], %s", in.Hash, in.Address, err))
 		if errors.Is(err, cache.ErrTransactionNotFound) {
 			return nil, ErrNoDataPresent
 		}
@@ -386,7 +388,7 @@ func (s *server) Reject(ctx context.Context, in *protobufcompiled.SignedHash) (*
 
 	vrx, err := s.acc.CreateLeaf(ctx, &trx)
 	if err != nil {
-		s.log.Error(fmt.Sprintf("reject endpoint, creating leaf for transaction [ %x ] : %s", in.Hash, err))
+		s.log.Error(fmt.Sprintf("reject endpoint creating leaf for transaction [ %x ] : %s", in.Hash, err))
 		return nil, ErrProcessing
 	}
 
@@ -396,10 +398,10 @@ func (s *server) Reject(ctx context.Context, in *protobufcompiled.SignedHash) (*
 
 	go func() {
 		if err := s.flash.RemoveAddress(trx.IssuerAddress); err != nil {
-			s.log.Error(fmt.Sprintf("confirm endpoint, removing receiver address [ %s ] from flash failed: %s", in.Address, err))
+			s.log.Error(fmt.Sprintf("confirm endpoint removing receiver address [ %s ] from flash failed: %s", in.Address, err))
 		}
 		if err := s.cache.RemoveBalance(trx.IssuerAddress); err != nil {
-			s.log.Error(fmt.Sprintf("confirm endpoint, removing cached balance for address [ %s ] from flash failed: %s", in.Address, err))
+			s.log.Error(fmt.Sprintf("confirm endpoint removing cached balance for address [ %s ] from flash failed: %s", in.Address, err))
 		}
 	}()
 
@@ -420,13 +422,13 @@ func (s *server) Waiting(ctx context.Context, in *protobufcompiled.SignedHash) (
 	}
 
 	if err := s.verifier.Verify(in.Data, in.Signature, [32]byte(in.Hash), in.Address); err != nil {
-		s.log.Error(fmt.Sprintf("waiting endpoint, failed to verify signature for address: %s, %s", in.Address, err))
+		s.log.Error(fmt.Sprintf("waiting endpoint failed to verify signature for address: %s, %s", in.Address, err))
 		return nil, ErrVerification
 	}
 
 	trxs, err := s.cache.ReadTransactions(in.Address)
 	if err != nil {
-		s.log.Error(fmt.Sprintf("waiting endpoint, failed to read awaited transactions for address: %s, %s", in.Address, err))
+		s.log.Error(fmt.Sprintf("waiting endpoint failed to read awaited transactions for address: %s, %s", in.Address, err))
 		return nil, ErrProcessing
 	}
 
@@ -434,7 +436,7 @@ func (s *server) Waiting(ctx context.Context, in *protobufcompiled.SignedHash) (
 	for _, trx := range trxs {
 		protoTrx, err := transformers.TrxToProtoTrx(trx)
 		if err != nil {
-			s.log.Warn(fmt.Sprintf("waiting endpoint, failed to map trx to protobuf trx for address: %s, %s", in.Address, err))
+			s.log.Warn(fmt.Sprintf("waiting endpoint failed to map trx to protobuf trx for address: %s, %s", in.Address, err))
 			continue
 		}
 		result.Array = append(result.Array, protoTrx)
@@ -452,18 +454,18 @@ func (s *server) Saved(ctx context.Context, in *protobufcompiled.SignedHash) (*p
 	}()
 
 	if err := s.verifier.Verify(in.Data, in.Signature, [32]byte(in.Hash), in.Address); err != nil {
-		s.log.Error(fmt.Sprintf("waiting endpoint, failed to verify signature for address: %s, %s", in.Address, err))
+		s.log.Error(fmt.Sprintf("waiting endpoint failed to verify signature for address: %s, %s", in.Address, err))
 		return nil, ErrVerification
 	}
 
 	trx, err := s.acc.ReadTransactionByHash(ctx, [32]byte(in.Data))
 	if err != nil {
-		s.log.Error(fmt.Sprintf("approved transactions endpoint, failed to read hash [ %x ] for address: %s, %s", in.Hash, in.Address, err))
+		s.log.Error(fmt.Sprintf("approved transactions endpoint failed to read hash [ %x ] for address: %s, %s", in.Hash, in.Address, err))
 		return nil, ErrProcessing
 	}
 
 	if trx.Hash == [32]byte{} {
-		s.log.Error(fmt.Sprintf("approved transactions endpoint, failed to read hash [ %x ] for address: %s, %s", in.Hash, in.Address, ErrNoDataPresent))
+		s.log.Error(fmt.Sprintf("approved transactions endpoint failed to read hash [ %x ] for address: %s, %s", in.Hash, in.Address, ErrNoDataPresent))
 		return nil, ErrNoDataPresent
 	}
 
@@ -497,7 +499,7 @@ func (s *server) Data(ctx context.Context, in *protobufcompiled.Address) (*proto
 func (s *server) Balance(ctx context.Context, in *protobufcompiled.SignedHash) (*protobufcompiled.Spice, error) {
 	ok, err := s.flash.HasAddress(in.Address)
 	if err != nil {
-		s.log.Error(fmt.Sprintf("balance endpoint, failed to read from flash the address: %s, %s", in.Address, err))
+		s.log.Error(fmt.Sprintf("balance endpoint failed to read from flash the address: %s, %s", in.Address, err))
 		return nil, ErrProcessing
 	}
 	if ok {
@@ -515,7 +517,7 @@ func (s *server) Balance(ctx context.Context, in *protobufcompiled.SignedHash) (
 	}
 
 	if err := s.verifier.Verify(in.Data, in.Signature, [32]byte(in.Hash), in.Address); err != nil {
-		s.log.Error(fmt.Sprintf("balance endpoint, failed to verify signature for address: %s, %s", in.Address, err))
+		s.log.Error(fmt.Sprintf("balance endpoint failed to verify signature for address: %s, %s", in.Address, err))
 		return nil, ErrVerification
 	}
 
@@ -528,13 +530,13 @@ func (s *server) Balance(ctx context.Context, in *protobufcompiled.SignedHash) (
 
 	balance, err := s.acc.CalculateBalance(ctx, in.Address)
 	if err != nil {
-		s.log.Error(fmt.Sprintf("balance endpoint, failed to read balance for address: %s, %s", in.Address, err))
+		s.log.Error(fmt.Sprintf("balance endpoint failed to read balance for address: %s, %s", in.Address, err))
 		return nil, ErrProcessing
 	}
 
 	go func() {
 		if err := s.cache.SaveBalance(in.Address, balance.Spice); err != nil {
-			s.log.Error(fmt.Sprintf("balance endpoint, failed to cache balance: %s, %s", in.Address, err))
+			s.log.Error(fmt.Sprintf("balance endpoint failed to cache balance: %s, %s", in.Address, err))
 		}
 	}()
 
@@ -542,4 +544,50 @@ func (s *server) Balance(ctx context.Context, in *protobufcompiled.SignedHash) (
 		Currency:             balance.Spice.Currency,
 		SuplementaryCurrency: balance.Spice.SupplementaryCurrency,
 	}, nil
+}
+
+// TransactionsInDAG returns all the transactions in a DAG that given address appears in as receiver or issuer.
+// Do not reads transactions from vertices storage that contains transactions after the DAG is truncated.
+func (s *server) TransactionsInDAG(ctx context.Context, in *protobufcompiled.SignedHash) (*protobufcompiled.Transactions, error) {
+	ok, err := s.flash.HasAddress(in.Address)
+	if err != nil {
+		s.log.Error(fmt.Sprintf("transactions in DAG endpoint failed to read from flash the address: %s, %s", in.Address, err))
+		return nil, ErrProcessing
+	}
+	if ok {
+		return nil, ErrThrottle
+	}
+
+	t := time.Now()
+	defer func() {
+		d := time.Since(t)
+		s.tele.RecordHistogramTime(readDagtransactionsbyaddress, d)
+	}()
+
+	if ok := s.randDataProv.ValidateData(in.Address, in.Data); !ok {
+		s.log.Error(fmt.Sprintf("waiting transactions endpoint failed to validate data for address: %s", in.Address))
+		return nil, ErrVerification
+	}
+
+	if err := s.verifier.Verify(in.Data, in.Signature, [32]byte(in.Hash), in.Address); err != nil {
+		s.log.Error(fmt.Sprintf("waiting endpoint failed to verify signature for address: %s, %s", in.Address, err))
+		return nil, ErrVerification
+	}
+
+	trxs, err := s.acc.ReadDAGTransactionsByAddress(ctx, in.Address)
+	if err != nil {
+		return nil, err
+	}
+
+	result := &protobufcompiled.Transactions{Array: make([]*protobufcompiled.Transaction, 0, len(trxs)), Len: uint64(len(trxs))}
+	for _, trx := range trxs {
+		protoTrx, err := transformers.TrxToProtoTrx(trx)
+		if err != nil {
+			s.log.Warn(fmt.Sprintf("transaction in dag endpoint failed to map trx to protobuf trx for address: %s, %s", in.Address, err))
+			continue
+		}
+		result.Array = append(result.Array, protoTrx)
+	}
+
+	return result, nil
 }

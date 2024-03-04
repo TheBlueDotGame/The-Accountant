@@ -281,7 +281,7 @@ func runTransactionOps(cfg fileoperations.Config, nodeURL string) error {
 	)
 	fmt.Println("")
 
-	options := []string{"Check balance", "Send tokens", "Quit"}
+	options := []string{"Check balance", "Send tokens", "Read Transactions", "Quit"}
 
 	for {
 		selectedOption, _ := pterm.DefaultInteractiveSelect.WithOptions(options).Show()
@@ -344,6 +344,36 @@ func runTransactionOps(cfg fileoperations.Config, nodeURL string) error {
 			}
 			spinnerInfo.Info(fmt.Sprintf("Account [ %s ] balance is [ %v ]", addr, melange.String()))
 			printSuccess()
+		case "Read Transactions":
+			spinnerInfo, _ := pterm.DefaultSpinner.Start("Reading transactions ...")
+			time.Sleep(pauseDuration)
+			transactions, err := c.ReadDAGTransactions(ctx)
+			if err != nil {
+				spinnerInfo.Stop()
+				printError(fmt.Errorf("cannot read transactions due to, %w", err))
+				continue
+			}
+			addr, err := c.Address()
+			if err != nil {
+				spinnerInfo.Stop()
+				printError(fmt.Errorf("cannot read wallet address due to, %w", err))
+				continue
+			}
+			spinnerInfo.Info(fmt.Sprintf("Account [ %s ] received [ %v ] transactions", addr, len(transactions)))
+
+			tableData := pterm.TableData{
+				{"Subject", "From", "To", "Transfer", "Data Length", "Time"},
+			}
+			for _, trx := range transactions {
+				tableData = append(tableData, []string{
+					trx.Subject, trx.IssuerAddress, trx.ReceiverAddress,
+					trx.Spice.String(), fmt.Sprintf("%v", len(trx.Data)), trx.CreatedAt.UTC().Format("2006-01-02T15:04:05"),
+				})
+			}
+
+			pterm.DefaultTable.WithHasHeader().WithRightAlignment().WithData(tableData).Render()
+			printSuccess()
+
 		case "Quit":
 			return nil
 		default:

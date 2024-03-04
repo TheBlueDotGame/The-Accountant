@@ -251,6 +251,43 @@ func (c *Client) ReadWaitingTransactions(ctx context.Context, notaryNodeURL stri
 	return trxs, nil
 }
 
+// ReadDAGTransactions reads DAG transactions belonging to current wallet.
+func (c *Client) ReadDAGTransactions(ctx context.Context) ([]transaction.Transaction, error) {
+	if !c.ready {
+		return nil, httpclient.ErrWalletNotReady
+	}
+
+	data, err := c.client.Data(ctx, &protobufcompiled.Address{Public: c.w.Address()})
+	if err != nil {
+		return nil, err
+	}
+
+	digest, signature := c.w.Sign(data.Blob)
+	proto, err := c.client.TransactionsInDAG(ctx, &protobufcompiled.SignedHash{
+		Address:   c.w.Address(),
+		Data:      data.Blob,
+		Signature: signature,
+		Hash:      digest[:],
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	trxs := make([]transaction.Transaction, 0, len(proto.Array))
+	for i := range proto.Array {
+		trx, err := transformers.ProtoTrxToTrx(proto.Array[i])
+		if err != nil {
+			return nil, err
+		}
+		if err := trx.VerifyIssuer(c.verifier); err != nil {
+			return nil, err
+		}
+		trxs = append(trxs, trx)
+	}
+
+	return trxs, nil
+}
+
 // ReadSavedTransaction reads saved transaction from connected node.
 func (c *Client) ReadSavedTransaction(ctx context.Context, hash [32]byte) (transaction.Transaction, error) {
 	if !c.ready {

@@ -1034,6 +1034,83 @@ func (ab *AccountingBook) ReadTransactionByHash(ctx context.Context, hash [32]by
 	return ab.readTransactionFromStorage(vertexHash) // success
 }
 
+// ReadDAGTransactionsByAddress reads all the transactions from DAG only, that given address appears in as issuer or receiver.
+// This will not read transactions after DAG has been truncated.
+func (ab *AccountingBook) ReadDAGTransactionsByAddress(ctx context.Context, address string) ([]transaction.Transaction, error) {
+	ab.mux.RLock()
+	defer ab.mux.RUnlock()
+
+	var leaf *Vertex
+	var ok bool
+	for _, item := range ab.dag.GetLeaves() {
+		leaf, ok = item.(*Vertex)
+		if !ok {
+			return nil, errors.Join(ErrUnexpected, errors.New("reading transactions failed due to wrong leaf type"))
+		}
+	}
+	if leaf == nil {
+		return nil, errors.Join(ErrUnexpected, errors.New("reading transactions received nil leaf"))
+	}
+
+	var trasnsactions []transaction.Transaction
+
+	item, err := ab.dag.GetVertex(string(leaf.Hash[:]))
+	if err != nil {
+		return nil, errors.Join(ErrUnexpected, err)
+	}
+	switch vrx := item.(type) {
+	case *Vertex:
+		if vrx == nil {
+			return nil, ErrUnexpected
+		}
+		if vrx.Transaction.ReceiverAddress == address || vrx.Transaction.IssuerAddress == address {
+			trasnsactions = append(trasnsactions, vrx.Transaction)
+		}
+
+	default:
+		return nil, ErrUnexpected
+
+	}
+	visited := make(map[string]struct{})
+	vertices, signal, err := ab.dag.AncestorsWalker(string(leaf.Hash[:]))
+	if err != nil {
+		return nil, errors.Join(ErrUnexpected, err)
+	}
+	for ancestorID := range vertices {
+		select {
+		case <-ctx.Done():
+			signal <- true
+			return nil, ErrLeafBallanceCalculationProcessStopped
+		default:
+		}
+		if _, ok := visited[ancestorID]; ok {
+			continue
+		}
+		visited[ancestorID] = struct{}{}
+
+		item, err := ab.dag.GetVertex(ancestorID)
+		if err != nil {
+			signal <- true
+			return nil, errors.Join(ErrUnexpected, err)
+		}
+		switch vrx := item.(type) {
+		case *Vertex:
+			if vrx == nil {
+				return nil, ErrUnexpected
+			}
+			if vrx.Transaction.ReceiverAddress == address || vrx.Transaction.IssuerAddress == address {
+				trasnsactions = append(trasnsactions, vrx.Transaction)
+			}
+
+		default:
+			signal <- true
+			return nil, ErrUnexpected
+		}
+	}
+
+	return trasnsactions, nil
+}
+
 // Address returns signer public address that is a core cryptographic padlock for the DAG Vertices.
 func (ab *AccountingBook) Address() string {
 	return ab.signer.Address()
