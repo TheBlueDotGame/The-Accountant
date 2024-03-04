@@ -281,7 +281,7 @@ func runTransactionOps(cfg fileoperations.Config, nodeURL string) error {
 	)
 	fmt.Println("")
 
-	options := []string{"Check balance", "Send tokens", "Read Transactions", "Quit"}
+	options := []string{"Send tokens", "Check balance", "Read Transactions", "Quit"}
 
 	for {
 		selectedOption, _ := pterm.DefaultInteractiveSelect.WithOptions(options).Show()
@@ -361,6 +361,10 @@ func runTransactionOps(cfg fileoperations.Config, nodeURL string) error {
 			}
 			spinnerInfo.Info(fmt.Sprintf("Account [ %s ] received [ %v ] transactions", addr, len(transactions)))
 
+			if len(transactions) == 0 {
+				printSuccess()
+				continue
+			}
 			tableData := pterm.TableData{
 				{"Subject", "From", "To", "Transfer", "Data Length", "Time"},
 			}
