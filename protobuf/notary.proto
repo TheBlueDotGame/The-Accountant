@@ -15,5 +15,6 @@ service NotaryAPI {
     rpc Waiting(SignedHash) returns(Transactions) {}
     rpc Saved(SignedHash) returns(Transaction) {}
     rpc Data(Address) returns (DataBlob) {}
+    rpc TransactionsInDAG(SignedHash) returns(Transactions) {}
     rpc Balance(SignedHash) returns (Spice) {}
 }
