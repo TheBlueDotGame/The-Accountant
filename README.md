@@ -228,7 +228,7 @@ All below commands shall be run from `c/` folder in the terminal.
 
 #### Build and run
 
-##### Build all (node, wallet, webhooks, emulator).
+##### Build all (node, wallet, webhooks, emulator)
 
 Make sure you have [Go](https://go.dev/) programming language installed.
 Run `make build-all` to build all binaries.
