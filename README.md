@@ -314,7 +314,7 @@ GLOBAL OPTIONS:
 ```
 
 *If you are running node with the same wallet you would like to use for transactions, please do not connect to this node.*
-The wallet cannot use the node that uses the same key pairs. This is for security reason, so the transaction cannot be altered on the node. Only vertex can be signed.
+The wallet and node cannot share the same cryptographic key pairs for security reasons. 
 
 ###### The webhooks:
 
