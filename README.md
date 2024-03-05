@@ -226,17 +226,106 @@ All below commands shall be run from `c/` folder in the terminal.
 - To make memory leak checks and tests run `make memcheck`
 - Remember to cleanup the test with `make clean`.
 
-#### Build
+#### Build and run
 
-UNDER CONSTRUCTION
+##### Build all (node, wallet, webhooks, emulator)
 
-## Production
+Make sure you have [Go](https://go.dev/) programming language installed.
+Run `make build-all` to build all binaries.
 
-### K8s
+##### Building node only
 
-### Bare metal
+Make sure you have [Go](https://go.dev/) programming language installed.
+Run `make build-node` to build only dedicated node binary.
 
-UNDER CONSTRUCTION
+###### The emulator
+
+Internal tool used for test and benchmarks only. Do not use for production.
+
+###### The node
+
+Use dedicated binary from bin/dedicated directory.
+
+Run `./bin/dedicated/node -c <path to your setup.yaml>` to start node.
+
+The `setup.taml` file example:
+```yaml
+is_profiling: false # Set to true if you want to run PGO profile. To use PGO for binary compilation copy default.pgo to your src root directory.
+notary_server: # This section allows you to set up notary server parameters. The notary server is the one to be accessed via wallets. GRPC.
+  public_url: localhost:8000 # The notary server public IP that server will use to introduce itself.
+  port: 8000 # The port at which server will run.
+  data_size_bytes: 15000 # Max data size per transaction in bytes.
+gossip_server: # This section allows to set up gossip protocol server. The gossip protocol endpoints are run by this server. GRPC.
+  url: "localhost:8080" # The notary server URL that server will use to introduce itself in the gossip network.
+  genesis_url: # The genesis node URL from which the server will read all URLs of other nodes interconnected in that gossip network and introduce itself via gossip discovery protocol. When empty it starts the node as the first one in the network waiting for connections.
+  load_dag_url: # The URL of the node that will serve the DAG update. Any node from the gossip network, usually the same as genesis_url. If empty then genesis transaction and vertex are created. Requires the wallet for genesis that is used only once and will not receive tokens.
+  genesis_receiver: "1HspmQ7wjnKh9qhNdZ94Ta9c3ugsT9XoWJ9CdS32B1kSTBckpZ" # Genesis receiver is used only from the genesis node. It is the wallet that will have all the tokens created during genesis vertex creation. This happens once when creating the genesis transaction and vertex.
+  genesis_spice:
+    currency: 1000000 # Amount of primus tokens created during genesis.
+    supplementary_currency: 0 # Amount of secundus tokens created during genesis.
+  port: 8080 # Port on which GRPC server of gossip protocol to run.
+accountant: # Accountant section allows to set up DAG accounting details.
+  trusted_nodes_db_path: # Path to storage on disc for trusted nodes. When empty stored in RAM. Vertices created by trusted nodes have permission to be added to the DAG without balance accounting.  
+  tokens_db_path: # Path to storage of access tokens. When empty stored in RAM.
+  trxs_to_vertices_map_db_path: # Path to storage of transaction - vertex relation. When empty stored in RAM. 
+  vertices_db_path: # Path to database that vertex will be saved after truncation. When empty stored in RAM.
+  truncate_at_weight: 0 # Vertices weight at which truncate the DAG. When zero then default is used. It is recommended to use default. 
+nats:
+  server_address: # Nats server address. Nats collects information about transactions and vertices and pipes them to webhook nodes. When empty nats will not be used.
+  client_name: "notary-genesis" # Name of the Nats client.
+  token: "D9pHfuiEQPXtqPqPdyxozi8kU2FlHqC0FlSRIzpwDI0=" # Token to create connection whit nats set in nats.conf.
+dataprovider: # Dataprovider is the section to set up how long the unmatching vertices will live to be reused in the future.
+  longevity: 300 # Unmatching vertices longevity in seconds.
+file_operator: # File operator section allows to provide the path and decoding key (AES HEX) for the wallet.
+  wallet_path: "artefacts/wallet_notary_genesis" # Path to wallet.
+  wallet_passwd: "dc6b5b1635453e0eb57344ffb6cb293e8300fc4001fad3518e721d548459c09d" # HEX string to encode wallet. 
+  pem_path: "" # if PEM is used provide pem file.
+zinc_logger: # Zinc search section allows to connect the node to the zinc search so all logs are send to the zinc search server. 
+  address: # Address of zinc search server. When empty logs goes to stdout.  
+  index: genesis # Specify the index for logs from currant node. Should be unique between all nodes.
+  token: Basic YWRtaW46emluY3NlYXJjaA== # The zinc search token for given index.
+```
+
+
+###### The wallet:
+
+
+Run `./bin/dedicated/webhooks -h` to get help or follow below description.
+
+```sh
+NAME:
+   wallet - Wallet CLI tool allows to create a new Wallet or act on the local Wallet by using keys from different formats and transforming them between formats.
+            Please use with the best security practices. GOBINARY is safer to move between machines as this file format is encrypted with AES key.
+            Tool provides Spice and Contract transfer, reading balance, reading contracts, approving and rejecting contracts.
+
+USAGE:
+   wallet [global options] command [command options] [arguments...]
+
+COMMANDS:
+   new, n      Creates new wallet and saves it to encrypted GOBINARY file and PEM format.
+   topem, tp   Reads GOBINARY and saves it to PEM file format.
+   togob, tg   Reads PEM file format and saves it to GOBINARY encrypted file format.
+   address, a  Reads wallet public address.
+   connect, c  Establish connection with node.
+   help, h     Shows a list of commands or help for one command
+
+GLOBAL OPTIONS:
+   --help, -h  show help
+```
+
+*If you are running node with the same wallet you would like to use for transactions, please do not connect to this node.*
+The wallet and node cannot share the same cryptographic key pairs for security reasons. 
+
+###### The webhooks:
+
+Do not required to run the network. Use only if you want to follow transactions or created another service for statistics, reports, ect, that runs as subscribers.
+
+Run `./bin/dedicated/webhooks -c <path to your setup.yaml>` to start node.
+```yaml
+webhooks_server: # This section specifies the web hook server setup.
+  port: 8000 # Port at which to start the server.
+```
+
 
 ## Releasing new version
 

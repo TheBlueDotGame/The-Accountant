@@ -59,7 +59,6 @@ type Config struct {
 	URL              string        `yaml:"url"`
 	GenesisURL       string        `yaml:"genesis_url"`
 	LoadDagURL       string        `yaml:"load_dag_url"`
-	VerticesDBPath   string        `yaml:"vertices_db_path"`
 	GenessisReceiver string        `yaml:"genesis_receiver"`
 	GenesisSpice     spice.Melange `yaml:"genesis_spice"`
 	Port             int           `yaml:"port"`
