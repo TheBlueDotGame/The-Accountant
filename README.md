@@ -248,12 +248,12 @@ Use dedicated binary from bin/dedicated directory.
 
 Run `./bin/dedicated/node -c <path to your setup.yaml>` to start node.
 
-The `setup.taml` file example:
+The `setup.yaml` file example:
 ```yaml
-is_profiling: false # Set to true if you want to run PGO profile. To use PGO for binary compilation copy default.pgo to your src root directory.
+is_profiling: false # Set to true if you want to save PGO profiling. To use PGO for binary compilation copy default.pgo to your src root directory.
 notary_server: # This section allows you to set up notary server parameters. The notary server is the one to be accessed via wallets. GRPC.
   public_url: localhost:8000 # The notary server public IP that server will use to introduce itself.
-  port: 8000 # The port at which server will run.
+  port: 8000 # The port at which the notary server will run.
   data_size_bytes: 15000 # Max data size per transaction in bytes.
 gossip_server: # This section allows to set up gossip protocol server. The gossip protocol endpoints are run by this server. GRPC.
   url: "localhost:8080" # The notary server URL that server will use to introduce itself in the gossip network.
@@ -263,7 +263,7 @@ gossip_server: # This section allows to set up gossip protocol server. The gossi
   genesis_spice:
     currency: 1000000 # Amount of primus tokens created during genesis.
     supplementary_currency: 0 # Amount of secundus tokens created during genesis.
-  port: 8080 # Port on which GRPC server of gossip protocol to run.
+  port: 8080 # Port on which GRPC server of gossip protocol will run.
 accountant: # Accountant section allows to set up DAG accounting details.
   trusted_nodes_db_path: # Path to storage on disc for trusted nodes. When empty stored in RAM. Vertices created by trusted nodes have permission to be added to the DAG without balance accounting.  
   tokens_db_path: # Path to storage of access tokens. When empty stored in RAM.
@@ -271,17 +271,17 @@ accountant: # Accountant section allows to set up DAG accounting details.
   vertices_db_path: # Path to database that vertex will be saved after truncation. When empty stored in RAM.
   truncate_at_weight: 0 # Vertices weight at which truncate the DAG. When zero then default is used. It is recommended to use default. 
 nats:
-  server_address: # Nats server address. Nats collects information about transactions and vertices and pipes them to webhook nodes. When empty nats will not be used.
-  client_name: "notary-genesis" # Name of the Nats client.
-  token: "D9pHfuiEQPXtqPqPdyxozi8kU2FlHqC0FlSRIzpwDI0=" # Token to create connection whit nats set in nats.conf.
+  server_address: # Nats server address. Nats collects information about transactions and vertices and pipes them to webhooks nodes. When empty nats will not be used.
+  client_name: "notary-genesis" # Name of the Nats client. It is recommended to have a unique name.
+  token: "D9pHfuiEQPXtqPqPdyxozi8kU2FlHqC0FlSRIzpwDI0=" # Token to create connection whit nats set in nats.conf. Keep it secret.
 dataprovider: # Dataprovider is the section to set up how long the unmatching vertices will live to be reused in the future.
   longevity: 300 # Unmatching vertices longevity in seconds.
 file_operator: # File operator section allows to provide the path and decoding key (AES HEX) for the wallet.
   wallet_path: "artefacts/wallet_notary_genesis" # Path to wallet.
   wallet_passwd: "dc6b5b1635453e0eb57344ffb6cb293e8300fc4001fad3518e721d548459c09d" # HEX string to encode wallet. 
-  pem_path: "" # if PEM is used provide pem file.
+  pem_path: "" # If PEM is used provide pem file.
 zinc_logger: # Zinc search section allows to connect the node to the zinc search so all logs are send to the zinc search server. 
-  address: # Address of zinc search server. When empty logs goes to stdout.  
+  address: # Address of zinc search server. When empty logs goes to stdout.
   index: genesis # Specify the index for logs from currant node. Should be unique between all nodes.
   token: Basic YWRtaW46emluY3NlYXJjaA== # The zinc search token for given index.
 ```
