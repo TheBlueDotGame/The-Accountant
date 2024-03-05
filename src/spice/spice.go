@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"strconv"
 	"strings"
 
 	msgpackv2 "github.com/shamaton/msgpack/v2"
@@ -24,6 +25,32 @@ var (
 	ErrNoSufficientFounds = errors.New("no sufficient founds to process transaction")
 )
 
+func convertFloatToInt(d float64) (int, int) {
+	intPart := int(d)
+
+	parts := strings.SplitN(fmt.Sprintf("%v", d), ".", 2)
+	if len(parts) < 2 {
+		return intPart, 0
+	}
+	p := parts[1]
+
+	var isPassedLeading bool
+	var buf strings.Builder
+	for i := 0; i < 18; i++ {
+		if i >= len(p) {
+			buf.WriteRune('0')
+			continue
+		}
+		if p[i] != '0' || isPassedLeading {
+			buf.WriteByte(p[i])
+			isPassedLeading = true
+		}
+	}
+
+	fractionalPart, _ := strconv.Atoi(buf.String())
+	return intPart, fractionalPart
+}
+
 func GetSientific(v uint64) string {
 	var zeros int
 	for v%10 == 0 {
@@ -40,7 +67,7 @@ type Melange struct {
 	SupplementaryCurrency uint64 `yaml:"supplementary_currency" msgpack:"supplementary_currency"`
 }
 
-// New creates new spice Melange from given currency and supplementary currency values.
+// New creates a new spice Melange from given currency and supplementary currency values.
 func New(currency, supplementaryCurrency uint64) Melange {
 	if supplementaryCurrency >= MaxAmoutnPerSupplementaryCurrency {
 		currency += 1
@@ -50,6 +77,15 @@ func New(currency, supplementaryCurrency uint64) Melange {
 		Currency:              currency,
 		SupplementaryCurrency: supplementaryCurrency,
 	}
+}
+
+// From float crates a new spice Melange from floating point number.
+func FromFloat(n float64) Melange {
+	if n <= 0.0 {
+		return Melange{}
+	}
+	cur, supl := convertFloatToInt(n)
+	return New(uint64(cur), uint64(supl))
 }
 
 // Supply supplies spice of the given amount from the source to the entity.

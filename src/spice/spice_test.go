@@ -180,3 +180,37 @@ func TestPrintGetScientific(t *testing.T) {
 		})
 	}
 }
+
+func TestFromFloat(t *testing.T) {
+	cases := []struct {
+		expected string
+		given    float64
+	}{
+		{"1.0", 1.0},
+		{"1.1", 1.1},
+		{"10.1", 10.10},
+		{"100.1", 100.1},
+		{"1234.1", 1234.1},
+		{"0.111", 0.111},
+		{"1.123", 1.123},
+		{"1.999", 1.999},
+		{"1.9", 1.9000000},
+		{"1.9", 1.900000000000000000000},
+		{"1.009", 1.009},
+		{"1.0123", 1.0123},
+		{"1.000001001001", 1.000001001001},
+		{"1.000001001001", 1.00000100100100000},
+		{"1.009012301", 1.009012301},
+		{"10101.009012301", 10101.009012301},
+		{"11101.009012301", 11101.009012301},
+		{"22202.00901", 22202.00901},
+	}
+
+	for _, c := range cases {
+		t.Run(fmt.Sprintf("from float test case %v", c), func(t *testing.T) {
+			s := FromFloat(c.given)
+			fmt.Printf("%v %s, %s\n", c.given, c.expected, s.String())
+			assert.Equal(t, s.String(), c.expected)
+		})
+	}
+}

@@ -25,11 +25,6 @@ const (
 	actionReadAddress
 )
 
-const (
-	currency             = "PRIMUS"
-	suplementaryCurrency = "SECUNDUS"
-)
-
 const pauseDuration = time.Second * 2
 
 const usage = `Wallet CLI tool allows to create a new Wallet or act on the local Wallet by using keys from different formats and transforming them between formats.
@@ -274,13 +269,6 @@ func runTransactionOps(cfg fileoperations.Config, nodeURL string) error {
 		return fmt.Errorf("cannot read wallet %s", cfg.WalletPath)
 	}
 
-	pterm.Info.Printf(
-		"Please note that  %s [ %s ]  = 1 [ %s ]\n",
-		spice.GetSientific(spice.MaxAmoutnPerSupplementaryCurrency),
-		suplementaryCurrency, currency,
-	)
-	fmt.Println("")
-
 	options := []string{"Send tokens", "Check balance", "Read Transactions", "Quit"}
 
 	for {
@@ -289,27 +277,26 @@ func runTransactionOps(cfg fileoperations.Config, nodeURL string) error {
 		switch selectedOption {
 		case "Send tokens":
 			receiver, _ := pterm.DefaultInteractiveTextInput.Show("Provide receiver public wallet address")
-			spiceStr, _ := pterm.DefaultInteractiveTextInput.Show(fmt.Sprintf("Provide [ %s ] amount", currency))
-			spiceVal, err := strconv.Atoi(spiceStr)
-			if err != nil || spiceVal < 0 {
-				printError(fmt.Errorf("token [ %s ] can only be provided as a positive integer", currency))
-				continue
-			}
-			suplStr, _ := pterm.DefaultInteractiveTextInput.Show(fmt.Sprintf("Provide [ %s ] amount", suplementaryCurrency))
-			suplVal, err := strconv.Atoi(suplStr)
-			if err != nil || suplVal < 0 {
-				printError(fmt.Errorf("token [ %s ] can only be provided as a positive integer", suplementaryCurrency))
-				continue
-			}
-			subject, _ := pterm.DefaultInteractiveTextInput.Show("Transfer subject")
+			subject, _ := pterm.DefaultInteractiveTextInput.Show("Provide the subject")
 			if subject == "" {
 				printError(errors.New("subject cannot be empty"))
 				continue
 			}
+			value, _ := pterm.DefaultInteractiveTextInput.Show("Provide amount of tokans")
+			v, err := strconv.ParseFloat(value, 64)
+			if err != nil {
+				printError(err)
+				continue
+			}
+			if v == 0.0 {
+				printError(errors.New("transfer value canot be 0"))
+				continue
+			}
+			melange := spice.FromFloat(v)
 			result, _ := pterm.DefaultInteractiveConfirm.Show(
 				fmt.Sprintf(
-					"Are you sure you want to transfer [ %v %s ][ %v %s ] to [ %s ].\n",
-					spiceVal, currency, suplVal, suplementaryCurrency, receiver,
+					"Are you sure you want to transfer [ %s ] tokans to [ %s ].\n",
+					melange.String(), receiver,
 				),
 			)
 			pterm.Println()
@@ -317,7 +304,6 @@ func runTransactionOps(cfg fileoperations.Config, nodeURL string) error {
 				printWarning("Transaction has been rejected.")
 				continue
 			}
-			melange := spice.New(uint64(spiceVal), uint64(suplVal))
 			spinnerInfo, _ := pterm.DefaultSpinner.Start("Sending transaction ...")
 			time.Sleep(pauseDuration)
 			if err := c.ProposeTransaction(ctx, receiver, subject, melange, []byte{}); err != nil {
@@ -366,12 +352,12 @@ func runTransactionOps(cfg fileoperations.Config, nodeURL string) error {
 				continue
 			}
 			tableData := pterm.TableData{
-				{"Subject", "From", "To", "Transfer", "Data Length", "Time"},
+				{"Subject", "From", "To", "Transfer", "Time"},
 			}
 			for _, trx := range transactions {
 				tableData = append(tableData, []string{
 					trx.Subject, trx.IssuerAddress, trx.ReceiverAddress,
-					trx.Spice.String(), fmt.Sprintf("%v", len(trx.Data)), trx.CreatedAt.UTC().Format("2006-01-02T15:04:05"),
+					trx.Spice.String(), trx.CreatedAt.UTC().Format("2006-01-02T15:04:05"),
 				})
 			}
 
