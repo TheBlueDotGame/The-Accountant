@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	maxArraySize = 250
-	maxRepeats   = 5
+	maxArraySize = 500
+	maxRepeats   = 25
 )
 
 const longevity = time.Minute
