@@ -9,6 +9,7 @@ import (
 	"io"
 	"net"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/bartossh/Computantis/src/accountant"
@@ -35,6 +36,7 @@ var (
 	ErrNilTrx                          = errors.New("transaction is nil")
 	ErrNilTrxMsgGossip                 = errors.New("transaction gossip is nil")
 	ErrNilSignedHash                   = errors.New("signed hash is nil")
+	ErrInvalidSignature                = errors.New("invalid signature")
 )
 
 const (
@@ -42,10 +44,11 @@ const (
 )
 
 const (
-	vertexGossipChCapacity = 100
-	trxGossipChCappacity   = 100
-	rejectHashChCapacity   = 80
-	totalRetries           = 10
+	vertexGossipChCapacity         = 100
+	trxGossipChCappacity           = 100
+	rejectHashChCapacity           = 80
+	totalRetries                   = 10
+	maxVertexParentProcessingCount = 250
 )
 
 type nodeData struct {
@@ -81,6 +84,7 @@ type accounter interface {
 	StreamDAG(ctx context.Context) <-chan *accountant.Vertex
 	LoadDag(cancelF context.CancelCauseFunc, cVrx <-chan *accountant.Vertex)
 	DagLoaded() bool
+	ReadVertex(ctx context.Context, h [32]byte) (accountant.Vertex, error)
 }
 
 type piper interface {
@@ -90,17 +94,18 @@ type piper interface {
 
 type gossiper struct {
 	protobufcompiled.UnimplementedGossipAPIServer
-	accounter accounter
-	verifier  signatureVerifier
-	signer    accountant.Signer
-	log       logger.Logger
-	trxCache  providers.AwaitedTrxCacheProviderBalanceCacher
-	flash     providers.FlashbackMemoryHashProviderAddressRemover
-	piper     piper
-	nodes     map[string]nodeData
-	url       string
-	mux       sync.RWMutex
-	timeout   time.Duration
+	accounter             accounter
+	verifier              signatureVerifier
+	signer                accountant.Signer
+	log                   logger.Logger
+	trxCache              providers.AwaitedTrxCacheProviderBalanceCacher
+	flash                 providers.FlashbackMemoryHashProviderAddressRemover
+	piper                 piper
+	nodes                 map[string]nodeData
+	url                   string
+	mux                   sync.RWMutex
+	timeout               time.Duration
+	processingParentCount atomic.Int32
 }
 
 // RunGRPC runs the service application that exposes the GRPC API for gossip protocol.
@@ -117,17 +122,18 @@ func RunGRPC(ctx context.Context, cfg Config, l logger.Logger, t time.Duration, 
 	defer cancel()
 
 	g := gossiper{
-		accounter: a,
-		verifier:  v,
-		signer:    s,
-		log:       l,
-		trxCache:  trxCache,
-		flash:     flash,
-		piper:     p,
-		nodes:     make(map[string]nodeData),
-		url:       cfg.URL,
-		mux:       sync.RWMutex{},
-		timeout:   t,
+		accounter:             a,
+		verifier:              v,
+		signer:                s,
+		log:                   l,
+		trxCache:              trxCache,
+		flash:                 flash,
+		piper:                 p,
+		nodes:                 make(map[string]nodeData),
+		url:                   cfg.URL,
+		mux:                   sync.RWMutex{},
+		timeout:               t,
+		processingParentCount: atomic.Int32{},
 	}
 
 	switch cfg.LoadDagURL {
@@ -402,6 +408,19 @@ func (g *gossiper) GossipTrx(ctx context.Context, tg *protobufcompiled.TrxMsgGos
 	return &emptypb.Empty{}, nil
 }
 
+// GetVertex reads vertex from the accountant internal DAG by its hash if exists or returns error otherwise.
+func (g *gossiper) GetVertex(ctx context.Context, in *protobufcompiled.SignedHash) (*protobufcompiled.Vertex, error) {
+	if err := g.verifier.Verify(in.Data, in.Signature, [32]byte(in.Hash), in.Address); err != nil {
+		g.log.Error(fmt.Sprintf("get vertex endpoint failed to verify signature of transaction [ %x ] for address: %s, %s", in.Hash, in.Address, err))
+		return nil, ErrInvalidSignature
+	}
+	vrx, err := g.accounter.ReadVertex(ctx, [32]byte(in.Data))
+	if err != nil {
+		return nil, err
+	}
+	return mapAccountantVertexToProtoVertex(&vrx), nil
+}
+
 func (g *gossiper) updateDag(ctx context.Context, url string) error {
 	nd, err := connectToNode(url)
 	if err != nil {
@@ -611,12 +630,56 @@ func (g *gossiper) updateNodesConnectionsFromGensisNode(ctx context.Context, gen
 	return nil
 }
 
+func (g *gossiper) processLackingParent(ctx context.Context, h [32]byte) {
+	if g.processingParentCount.Load() == maxVertexParentProcessingCount {
+		return
+	}
+	g.processingParentCount.Add(1)
+
+	digest, signature := g.signer.Sign(h[:])
+	for _, nd := range g.nodes {
+
+		vrx, err := nd.client.GetVertex(ctx, &protobufcompiled.SignedHash{
+			Address:   g.signer.Address(),
+			Data:      h[:],
+			Hash:      digest[:],
+			Signature: signature,
+		})
+		if err != nil || vrx == nil {
+			continue
+		}
+		v := mapProtoVertexToAccountantVertex(vrx)
+		if err := g.accounter.AddLeaf(ctx, &v); err != nil {
+			if errors.Is(err, accountant.ErrParentDoesNotExists) {
+				parentHases := [][32]byte{v.LeftParentHash}
+				if v.LeftParentHash != v.RightParentHash {
+					parentHases = append(parentHases, v.RightParentHash)
+				}
+				for _, parentHash := range parentHases {
+					go g.processLackingParent(ctx, parentHash)
+				}
+			}
+		}
+		break
+	}
+	g.processingParentCount.Add(-1)
+}
+
 func (g *gossiper) sendToAccountant(ctx context.Context, vg *protobufcompiled.Vertex) error {
 	if vg.Transaction == nil {
 		return ErrNilTrx
 	}
 	v := mapProtoVertexToAccountantVertex(vg)
 	if err := g.accounter.AddLeaf(ctx, &v); err != nil {
+		if errors.Is(err, accountant.ErrParentDoesNotExists) {
+			parentHases := [][32]byte{v.LeftParentHash}
+			if v.LeftParentHash != v.RightParentHash {
+				parentHases = append(parentHases, v.RightParentHash)
+			}
+			for _, parentHash := range parentHases {
+				go g.processLackingParent(ctx, parentHash)
+			}
+		}
 		return err
 	}
 	return nil

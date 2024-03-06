@@ -159,28 +159,6 @@ func BenchmarkMelangeTransfer(b *testing.B) {
 	}
 }
 
-func TestPrintGetScientific(t *testing.T) {
-	cases := []uint64{
-		10,
-		100,
-		1000,
-		10000,
-		100000,
-		1000000,
-		1100000,
-		1110000,
-		1111000,
-		1111100,
-		1111110,
-	}
-	for _, c := range cases {
-		t.Run(fmt.Sprintf("get scientific test case %v", c), func(t *testing.T) {
-			s := GetSientific(c)
-			fmt.Printf("%s\n", s)
-		})
-	}
-}
-
 func TestFromFloat(t *testing.T) {
 	cases := []struct {
 		expected string

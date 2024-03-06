@@ -54,4 +54,5 @@ service GossipAPI {
     rpc Discover(ConnectionData) returns (ConnectedNodes) {}
     rpc GossipVrx(VrxMsgGossip) returns (google.protobuf.Empty) {}
     rpc GossipTrx(TrxMsgGossip) returns (google.protobuf.Empty) {}
+    rpc GetVertex(SignedHash) returns (Vertex) {}
 }

@@ -29,6 +29,7 @@ type GossipAPIClient interface {
 	Discover(ctx context.Context, in *ConnectionData, opts ...grpc.CallOption) (*ConnectedNodes, error)
 	GossipVrx(ctx context.Context, in *VrxMsgGossip, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GossipTrx(ctx context.Context, in *TrxMsgGossip, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	GetVertex(ctx context.Context, in *SignedHash, opts ...grpc.CallOption) (*Vertex, error)
 }
 
 type gossipAPIClient struct {
@@ -116,6 +117,15 @@ func (c *gossipAPIClient) GossipTrx(ctx context.Context, in *TrxMsgGossip, opts 
 	return out, nil
 }
 
+func (c *gossipAPIClient) GetVertex(ctx context.Context, in *SignedHash, opts ...grpc.CallOption) (*Vertex, error) {
+	out := new(Vertex)
+	err := c.cc.Invoke(ctx, "/computantis.GossipAPI/GetVertex", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // GossipAPIServer is the server API for GossipAPI service.
 // All implementations must embed UnimplementedGossipAPIServer
 // for forward compatibility
@@ -126,6 +136,7 @@ type GossipAPIServer interface {
 	Discover(context.Context, *ConnectionData) (*ConnectedNodes, error)
 	GossipVrx(context.Context, *VrxMsgGossip) (*emptypb.Empty, error)
 	GossipTrx(context.Context, *TrxMsgGossip) (*emptypb.Empty, error)
+	GetVertex(context.Context, *SignedHash) (*Vertex, error)
 	mustEmbedUnimplementedGossipAPIServer()
 }
 
@@ -150,6 +161,9 @@ func (UnimplementedGossipAPIServer) GossipVrx(context.Context, *VrxMsgGossip) (*
 }
 func (UnimplementedGossipAPIServer) GossipTrx(context.Context, *TrxMsgGossip) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GossipTrx not implemented")
+}
+func (UnimplementedGossipAPIServer) GetVertex(context.Context, *SignedHash) (*Vertex, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetVertex not implemented")
 }
 func (UnimplementedGossipAPIServer) mustEmbedUnimplementedGossipAPIServer() {}
 
@@ -275,6 +289,24 @@ func _GossipAPI_GossipTrx_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _GossipAPI_GetVertex_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SignedHash)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GossipAPIServer).GetVertex(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/computantis.GossipAPI/GetVertex",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GossipAPIServer).GetVertex(ctx, req.(*SignedHash))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // GossipAPI_ServiceDesc is the grpc.ServiceDesc for GossipAPI service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -301,6 +333,10 @@ var GossipAPI_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GossipTrx",
 			Handler:    _GossipAPI_GossipTrx_Handler,
+		},
+		{
+			MethodName: "GetVertex",
+			Handler:    _GossipAPI_GetVertex_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

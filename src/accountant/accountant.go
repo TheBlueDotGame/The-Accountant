@@ -55,6 +55,7 @@ var (
 	ErrTransferringfundsFailure              = errors.New("transferring spice failure")
 	ErrEntityNotfund                         = errors.New("entity not fund")
 	ErrBreak                                 = errors.New("just break")
+	ErrParentDoesNotExists                   = errors.New("parent doesn't exists")
 )
 
 type signatureVerifier interface {
@@ -556,7 +557,7 @@ func (ab *AccountingBook) addLeafMemorized(ctx context.Context, m memory) error 
 				)
 				return ErrLeafRejected
 			}
-			return nil
+			return ErrParentDoesNotExists
 		}
 		existringLeaf, ok := item.(*Vertex)
 		if !ok {
@@ -1114,4 +1115,14 @@ func (ab *AccountingBook) ReadDAGTransactionsByAddress(ctx context.Context, addr
 // Address returns signer public address that is a core cryptographic padlock for the DAG Vertices.
 func (ab *AccountingBook) Address() string {
 	return ab.signer.Address()
+}
+
+// ReadVertex reads vertex by its hash from the vertex if exists or returns error otherwise.
+func (ab *AccountingBook) ReadVertex(ctx context.Context, h [32]byte) (Vertex, error) {
+	v, err := ab.readVertex(h[:])
+	if err != nil {
+		ab.log.Info(fmt.Sprintf("reading vertex hash %v failed, %s", h, err.Error()))
+		return Vertex{}, ErrVertexHashNotfund
+	}
+	return v, nil
 }

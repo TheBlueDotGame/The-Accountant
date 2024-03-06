@@ -16,6 +16,7 @@ import (
 	"github.com/bartossh/Computantis/src/walletmiddleware"
 	"github.com/pterm/pterm"
 	"github.com/urfave/cli/v2"
+	"golang.org/x/exp/rand"
 )
 
 const (
@@ -24,8 +25,6 @@ const (
 	actionNewWallet
 	actionReadAddress
 )
-
-const pauseDuration = time.Second * 2
 
 const usage = `Wallet CLI tool allows to create a new Wallet or act on the local Wallet by using keys from different formats and transforming them between formats.
 Please use with the best security practices. GOBINARY is safer to move between machines as this file format is encrypted with AES key.
@@ -305,7 +304,7 @@ func runTransactionOps(cfg fileoperations.Config, nodeURL string) error {
 				continue
 			}
 			spinnerInfo, _ := pterm.DefaultSpinner.Start("Sending transaction ...")
-			time.Sleep(pauseDuration)
+			time.Sleep(getPause())
 			if err := c.ProposeTransaction(ctx, receiver, subject, melange, []byte{}); err != nil {
 				spinnerInfo.Stop()
 				printError(fmt.Errorf("cannot propose transaction due to, %e", err))
@@ -315,7 +314,7 @@ func runTransactionOps(cfg fileoperations.Config, nodeURL string) error {
 			printSuccess()
 		case "Check balance":
 			spinnerInfo, _ := pterm.DefaultSpinner.Start("Checking balance ...")
-			time.Sleep(pauseDuration)
+			time.Sleep(getPause())
 			melange, err := c.ReadBalance(ctx)
 			if err != nil {
 				spinnerInfo.Stop()
@@ -332,7 +331,7 @@ func runTransactionOps(cfg fileoperations.Config, nodeURL string) error {
 			printSuccess()
 		case "Read Transactions":
 			spinnerInfo, _ := pterm.DefaultSpinner.Start("Reading transactions ...")
-			time.Sleep(pauseDuration)
+			time.Sleep(getPause())
 			transactions, err := c.ReadDAGTransactions(ctx)
 			if err != nil {
 				spinnerInfo.Stop()
@@ -452,4 +451,9 @@ func printWarning(warning string) {
 	pterm.Warning.Println("")
 	pterm.Warning.Printf(" %s\n", warning)
 	pterm.Warning.Println("")
+}
+
+func getPause() time.Duration {
+	p := rand.Intn(5)
+	return time.Duration(p) * time.Second
 }
