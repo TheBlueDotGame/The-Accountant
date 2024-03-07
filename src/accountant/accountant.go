@@ -167,7 +167,7 @@ func (ab *AccountingBook) runTruncate(ctx context.Context) {
 				return
 			}
 			ab.nextWeightTruncate += w
-			ab.log.Info(fmt.Sprintf("Finnished truncate at weight [ %v ]", w))
+			ab.log.Info(fmt.Sprintf("Finished truncate at weight [ %v ]", w))
 		}
 	}
 }
@@ -688,7 +688,6 @@ VertxLoop:
 	}
 
 	var maxWeight uint64
-	var lastVrx *Vertex
 	for _, item := range ab.dag.GetVertices() {
 		switch vrx := item.(type) {
 		case *Vertex:
@@ -700,7 +699,6 @@ VertxLoop:
 				maxWeight = vrx.Weight
 			}
 			var addedHash [32]byte
-			lastVrx = vrx
 		connLoop:
 			for _, conn := range [][32]byte{vrx.LeftParentHash, vrx.RightParentHash} {
 				if conn == addedHash {
@@ -718,8 +716,31 @@ VertxLoop:
 		}
 	}
 
+	roots := ab.dag.GetRoots()
+	switch len(roots) {
+	case 0:
+		ab.log.Error("loading dag cannot set genesis issuer")
+		cancelF(ErrUnexpected)
+		return
+	default:
+	genesisAddressSet:
+		for _, item := range roots {
+			switch vrx := item.(type) {
+			case *Vertex:
+				if vrx == nil {
+					cancelF(ErrUnexpected)
+					return
+				}
+				ab.genesisPublicAddress = vrx.Transaction.IssuerAddress
+				break genesisAddressSet
+			default:
+				cancelF(ErrUnexpected)
+				return
+			}
+		}
+	}
+
 	ab.dagLoaded = true
-	ab.genesisPublicAddress = lastVrx.Transaction.IssuerAddress
 	ab.nextWeightTruncate = ab.nextWeightTruncate + maxWeight
 
 	ab.log.Info(fmt.Sprintf("Loaded dag with success to weight [ %v ], total DAG size [ %v ]", maxWeight, ab.dag.GetSize()))
