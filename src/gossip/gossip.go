@@ -157,7 +157,7 @@ func RunGRPC(ctx context.Context, cfg Config, l logger.Logger, t time.Duration, 
 			return err
 		}
 	default:
-		if err := g.updateDag(ctx, cfg.LoadDagURL); err != nil {
+		if err := g.updateDag(ctxx, cfg.LoadDagURL); err != nil {
 			g.log.Error(fmt.Sprintf("failed loading DAG: %s", err))
 			return err
 		}

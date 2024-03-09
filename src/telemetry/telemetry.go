@@ -120,7 +120,7 @@ func (m *Measurements) SetToCurrentTimeGauge(name string) bool {
 // Default port of 2112 is used if port value is set to 0.
 func Run(ctx context.Context, cancel context.CancelFunc, port int) (*Measurements, error) {
 	if port > 65535 || port < 0 {
-		return nil, fmt.Errorf("port range allowd is from 1 to 65535, received %d", port)
+		return nil, fmt.Errorf("port range allowed is from 1 to 65535, received %d", port)
 	}
 	go func() {
 		if port == 0 {

@@ -1,20 +1,20 @@
 is_profiling: false
 notary_server:
-  public_url: localhost:8000
-  port: 8000
+  public_url: localhost:8001
+  port: 8001
   data_size_bytes: 15000
   certificate: "./certificates/server_cert.pem"
   key: "./certificates/server_key.pem" 
 gossip_server:
-  url: localhost:8080
-  genesis_url:
-  load_dag_url:
-  genesis_receiver: "1HspmQ7wjnKh9qhNdZ94Ta9c3ugsT9XoWJ9CdS32B1kSTBckpZ"
+  url: localhost:8081
+  genesis_url: localhost:8080
+  load_dag_url: localhost:8080
+  genesis_receiver:
   genesis_spice:
-    currency: 1000000
-    supplementary_currency: 0
+    currency:
+    supplementary_currency:
   vertices_db_path:
-  port: 8080
+  port: 8081
   certificate: "./certificates/server_cert.pem"
   key: "./certificates/server_key.pem" 
   ca_cert: "./certificates/ca_cert.pem" 
@@ -26,13 +26,13 @@ accountant:
   truncate_at_weight: 0
 nats:
   server_address:
-  client_name: "notary-genesis"
+  client_name: "notary-dependant"
   token: "D9pHfuiEQPXtqPqPdyxozi8kU2FlHqC0FlSRIzpwDI0="
 dataprovider:
   longevity: 300
 file_operator:
-  wallet_path: "artefacts/wallet_notary_genesis"
-  wallet_passwd: "dc6b5b1635453e0eb57344ffb6cb293e8300fc4001fad3518e721d548459c09d"
+  wallet_path: "artefacts/wallet_notary_one"
+  wallet_passwd: "ce6c5f7da2b791befa726cebe1df78d7d01439a8292d26e116e894cb75f49e2e"
   pem_path: ""
   ca_cert: "./certificates/ca_cert.pem" 
 webhooks_server:
