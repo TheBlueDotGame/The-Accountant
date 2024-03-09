@@ -40,9 +40,10 @@ func main() {
 		walletFile   string
 		walletPasswd string
 		nodeURL      string
+		cert         string
 	)
 
-	configurator := func(pemFile, walletFile, walletPasswd string) (configuration.Configuration, error) {
+	configurator := func(pemFile, walletFile, walletPasswd, cert string) (configuration.Configuration, error) {
 		var cfg configuration.Configuration
 
 		if pemFile == "" {
@@ -56,7 +57,7 @@ func main() {
 		cfg.FileOperator.WalletPemPath = pemFile
 		cfg.FileOperator.WalletPath = walletFile
 		cfg.FileOperator.WalletPasswd = walletPasswd
-
+		cfg.FileOperator.CAPath = cert
 		return cfg, nil
 	}
 
@@ -69,7 +70,7 @@ func main() {
 				Aliases: []string{"n"},
 				Usage:   "Creates new wallet and saves it to encrypted GOBINARY file and PEM format.",
 				Action: func(_ *cli.Context) error {
-					cfg, err := configurator(pemFile, walletFile, walletPasswd)
+					cfg, err := configurator(pemFile, walletFile, walletPasswd, cert)
 					if err != nil {
 						return err
 					}
@@ -107,7 +108,7 @@ func main() {
 				Aliases: []string{"tp"},
 				Usage:   "Reads GOBINARY and saves it to PEM file format.",
 				Action: func(_ *cli.Context) error {
-					cfg, err := configurator(pemFile, walletFile, walletPasswd)
+					cfg, err := configurator(pemFile, walletFile, walletPasswd, cert)
 					if err != nil {
 						return err
 					}
@@ -145,7 +146,7 @@ func main() {
 				Aliases: []string{"tg"},
 				Usage:   "Reads PEM file format and saves it to GOBINARY encrypted file format.",
 				Action: func(_ *cli.Context) error {
-					cfg, err := configurator(pemFile, walletFile, walletPasswd)
+					cfg, err := configurator(pemFile, walletFile, walletPasswd, cert)
 					if err != nil {
 						return err
 					}
@@ -183,7 +184,7 @@ func main() {
 				Aliases: []string{"a"},
 				Usage:   "Reads wallet public address.",
 				Action: func(_ *cli.Context) error {
-					cfg, err := configurator(pemFile, walletFile, walletPasswd)
+					cfg, err := configurator(pemFile, walletFile, walletPasswd, cert)
 					if err != nil {
 						return err
 					}
@@ -214,7 +215,7 @@ func main() {
 				Aliases: []string{"c"},
 				Usage:   "Establish connection with node.",
 				Action: func(_ *cli.Context) error {
-					cfg, err := configurator(pemFile, walletFile, walletPasswd)
+					cfg, err := configurator(pemFile, walletFile, walletPasswd, cert)
 					if err != nil {
 						return err
 					}
@@ -245,6 +246,13 @@ func main() {
 						Destination: &walletPasswd,
 						Required:    true,
 					},
+					&cli.StringFlag{
+						Name:        "cert",
+						Aliases:     []string{"c"},
+						Usage:       "Path to certificate authority file.",
+						Destination: &cert,
+						Required:    true,
+					},
 				},
 			},
 		},
@@ -260,7 +268,7 @@ func runTransactionOps(cfg fileoperations.Config, nodeURL string) error {
 	ctx := context.Background()
 	h := fileoperations.New(cfg, aeswrapper.New())
 	verify := wallet.NewVerifier()
-	c, err := walletmiddleware.NewClient(nodeURL, &verify, &h, wallet.New)
+	c, err := walletmiddleware.NewClient(nodeURL, cfg.CAPath, &verify, &h, wallet.New)
 	if err != nil {
 		return fmt.Errorf("cannot establish connection to the node %s", nodeURL)
 	}
@@ -288,13 +296,13 @@ func runTransactionOps(cfg fileoperations.Config, nodeURL string) error {
 				continue
 			}
 			if v == 0.0 {
-				printError(errors.New("transfer value canot be 0"))
+				printError(errors.New("transfer value cannot be 0"))
 				continue
 			}
 			melange := spice.FromFloat(v)
 			result, _ := pterm.DefaultInteractiveConfirm.Show(
 				fmt.Sprintf(
-					"Are you sure you want to transfer [ %s ] tokans to [ %s ].\n",
+					"Are you sure you want to transfer [ %s ] tokens to [ %s ].\n",
 					melange.String(), receiver,
 				),
 			)

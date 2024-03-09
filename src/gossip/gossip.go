@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/bartossh/Computantis/src/accountant"
+	"github.com/bartossh/Computantis/src/grpcsecured"
 	"github.com/bartossh/Computantis/src/logger"
 	"github.com/bartossh/Computantis/src/protobufcompiled"
 	"github.com/bartossh/Computantis/src/providers"
@@ -22,7 +23,6 @@ import (
 	"github.com/bartossh/Computantis/src/versioning"
 	"golang.org/x/exp/maps"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -63,6 +63,9 @@ type Config struct {
 	GenesisURL       string        `yaml:"genesis_url"`
 	LoadDagURL       string        `yaml:"load_dag_url"`
 	GenessisReceiver string        `yaml:"genesis_receiver"`
+	Cert             string        `yaml:"certificate"`
+	Key              string        `yaml:"key"`
+	CA               string        `yaml:"ca_cert"`
 	GenesisSpice     spice.Melange `yaml:"genesis_spice"`
 	Port             int           `yaml:"port"`
 }
@@ -103,6 +106,7 @@ type gossiper struct {
 	piper                 piper
 	nodes                 map[string]nodeData
 	url                   string
+	clientOptions         []grpc.DialOption
 	mux                   sync.RWMutex
 	timeout               time.Duration
 	processingParentCount atomic.Int32
@@ -121,6 +125,11 @@ func RunGRPC(ctx context.Context, cfg Config, l logger.Logger, t time.Duration, 
 	ctxx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
+	opts, err := grpcsecured.NewTLSClientOptions(cfg.CA, "*")
+	if err != nil {
+		return err
+	}
+
 	g := gossiper{
 		accounter:             a,
 		verifier:              v,
@@ -131,6 +140,7 @@ func RunGRPC(ctx context.Context, cfg Config, l logger.Logger, t time.Duration, 
 		piper:                 p,
 		nodes:                 make(map[string]nodeData),
 		url:                   cfg.URL,
+		clientOptions:         opts,
 		mux:                   sync.RWMutex{},
 		timeout:               t,
 		processingParentCount: atomic.Int32{},
@@ -162,7 +172,12 @@ func RunGRPC(ctx context.Context, cfg Config, l logger.Logger, t time.Duration, 
 		return err
 	}
 
-	grpcServer := grpc.NewServer()
+	grpcServer, err := grpcsecured.NewTLSServer(cfg.Cert, cfg.Key)
+	if err != nil {
+		cancel()
+		return err
+	}
+
 	protobufcompiled.RegisterGossipAPIServer(grpcServer, &g)
 
 	go g.runTransactionGossipProcess(ctx)
@@ -218,7 +233,7 @@ func (g *gossiper) Announce(_ context.Context, cd *protobufcompiled.ConnectionDa
 		n.conn.Close()
 		delete(g.nodes, cd.PublicAddress)
 	}
-	nd, err := connectToNode(cd.Url)
+	nd, err := g.connectToNode(cd.Url)
 	if err != nil {
 		return nil, err
 	}
@@ -236,7 +251,7 @@ func (g *gossiper) Discover(_ context.Context, cd *protobufcompiled.ConnectionDa
 		return nil, ErrDiscoveryAttmeptSignatureFailed
 	}
 
-	nd, err := connectToNode(cd.Url)
+	nd, err := g.connectToNode(cd.Url)
 	if err != nil {
 		return nil, err
 	}
@@ -422,7 +437,7 @@ func (g *gossiper) GetVertex(ctx context.Context, in *protobufcompiled.SignedHas
 }
 
 func (g *gossiper) updateDag(ctx context.Context, url string) error {
-	nd, err := connectToNode(url)
+	nd, err := g.connectToNode(url)
 	if err != nil {
 		return err
 	}
@@ -567,8 +582,7 @@ func (g *gossiper) updateNodesConnectionsFromGensisNode(ctx context.Context, gen
 		g.log.Info(fmt.Sprintf("genesis Node URL is not specified. Node [ %s ] runs as Genesis Node.", g.signer.Address()))
 		return nil
 	}
-	opts := grpc.WithTransportCredentials(insecure.NewCredentials()) // TODO: remove when credentials are set
-	conn, err := grpc.Dial(genesisURL, opts)
+	conn, err := grpc.Dial(genesisURL, g.clientOptions...)
 	if err != nil {
 		return fmt.Errorf("connection refused: %s", err)
 	}
@@ -611,7 +625,7 @@ func (g *gossiper) updateNodesConnectionsFromGensisNode(ctx context.Context, gen
 			)
 			continue
 		}
-		nd, err := connectToNode(n.Url)
+		nd, err := g.connectToNode(n.Url)
 		if err != nil {
 			g.log.Error(fmt.Sprintf("connection to  [ %s ] for URL [ %s ] failed, %s.", n.PublicAddress, n.Url, err))
 			continue
@@ -703,9 +717,8 @@ func (g *gossiper) verifyGossipers(hash [32]byte, s []*protobufcompiled.Gossiper
 	return m
 }
 
-func connectToNode(url string) (nodeData, error) {
-	opts := grpc.WithTransportCredentials(insecure.NewCredentials()) // TODO: remove when credentials are set
-	conn, err := grpc.Dial(url, opts)
+func (g *gossiper) connectToNode(url string) (nodeData, error) {
+	conn, err := grpc.Dial(url, g.clientOptions...)
 	if err != nil {
 		return nodeData{}, fmt.Errorf("dial failed, %s", err)
 	}

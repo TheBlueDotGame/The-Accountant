@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/url"
 
+	"github.com/bartossh/Computantis/src/grpcsecured"
 	"github.com/bartossh/Computantis/src/httpclient"
 	"github.com/bartossh/Computantis/src/protobufcompiled"
 	"github.com/bartossh/Computantis/src/spice"
@@ -14,7 +15,6 @@ import (
 	"github.com/bartossh/Computantis/src/versioning"
 	"github.com/bartossh/Computantis/src/wallet"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -43,6 +43,7 @@ type NewSignValidatorCreator func() (wallet.Wallet, error)
 // that uses the REST API of the central node.
 type Client struct {
 	verifier      transaction.Verifier
+	options       []grpc.DialOption
 	wrs           WalletReadSaver
 	walletCreator NewSignValidatorCreator
 	conn          *grpc.ClientConn
@@ -54,18 +55,22 @@ type Client struct {
 
 // NewClient creates a new rest client.
 func NewClient(
-	apiRoot string, fw transaction.Verifier,
+	apiRoot, caCert string, fw transaction.Verifier,
 	wrs WalletReadSaver, walletCreator NewSignValidatorCreator,
 ) (*Client, error) {
-	opts := grpc.WithTransportCredentials(insecure.NewCredentials()) // TODO: remove when credentials are set
-	conn, err := grpc.Dial(apiRoot, opts)
+	opts, err := grpcsecured.NewTLSClientOptions(caCert, "*")
+	if err != nil {
+		return nil, fmt.Errorf("creating TLS options failed, %s", err)
+	}
+
+	conn, err := grpc.Dial(apiRoot, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("dial failed, %s", err)
 	}
 
 	client := protobufcompiled.NewNotaryAPIClient(conn)
 
-	return &Client{apiRoot: apiRoot, verifier: fw, wrs: wrs, walletCreator: walletCreator, conn: conn, client: client}, nil
+	return &Client{apiRoot: apiRoot, options: opts, verifier: fw, wrs: wrs, walletCreator: walletCreator, conn: conn, client: client}, nil
 }
 
 // Close closes connection with the notary node.
@@ -156,8 +161,7 @@ func (c *Client) ConfirmTransaction(ctx context.Context, notaryNodeURL string, t
 
 	client := c.client
 	if notaryNodeURL != c.apiRoot {
-		opts := grpc.WithTransportCredentials(insecure.NewCredentials()) // TODO: remove when credentials are set
-		conn, err := grpc.Dial(notaryNodeURL, opts)
+		conn, err := grpc.Dial(notaryNodeURL, c.options...)
 		if err != nil {
 			return fmt.Errorf("dial failed, %s", err)
 		}
@@ -182,8 +186,7 @@ func (c *Client) RejectTransactions(ctx context.Context, notaryNodeURL string, h
 
 	client := c.client
 	if notaryNodeURL != c.apiRoot {
-		opts := grpc.WithTransportCredentials(insecure.NewCredentials()) // TODO: remove when credentials are set
-		conn, err := grpc.Dial(notaryNodeURL, opts)
+		conn, err := grpc.Dial(notaryNodeURL, c.options...)
 		if err != nil {
 			return fmt.Errorf("dial failed, %s", err)
 		}
@@ -211,8 +214,7 @@ func (c *Client) ReadWaitingTransactions(ctx context.Context, notaryNodeURL stri
 
 	client := c.client
 	if notaryNodeURL != c.apiRoot {
-		opts := grpc.WithTransportCredentials(insecure.NewCredentials()) // TODO: remove when credentials are set
-		conn, err := grpc.Dial(notaryNodeURL, opts)
+		conn, err := grpc.Dial(notaryNodeURL, c.options...)
 		if err != nil {
 			return nil, fmt.Errorf("dial failed, %s", err)
 		}
@@ -371,8 +373,7 @@ func (c *Client) CreateWebhook(ctx context.Context, webHookURL, clientURL string
 	if _, err := url.Parse(clientURL); err != nil {
 		return err
 	}
-	opts := grpc.WithTransportCredentials(insecure.NewCredentials()) // TODO: remove when credentials are set
-	conn, err := grpc.Dial(webHookURL, opts)
+	conn, err := grpc.Dial(webHookURL, c.options...)
 	if err != nil {
 		return fmt.Errorf("dial failed, %s", err)
 	}

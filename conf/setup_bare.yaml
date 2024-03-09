@@ -3,6 +3,8 @@ notary_server:
   public_url: localhost:8000
   port: 8000
   data_size_bytes: 15000
+  certificate: "./certificates/server_cert.pem"
+  key: "./certificates/server_key.pem" 
 gossip_server:
   url: "localhost:8080"
   genesis_url:
@@ -13,6 +15,9 @@ gossip_server:
     supplementary_currency: 0
   vertices_db_path:
   port: 8080
+  certificate: "./certificates/server_cert.pem"
+  key: "./certificates/server_key.pem" 
+  ca_cert: "./certificates/ca_cert.pem" 
 accountant:
   trusted_nodes_db_path:
   tokens_db_path:
@@ -29,6 +34,7 @@ file_operator:
   wallet_path: "artefacts/wallet_notary_genesis"
   wallet_passwd: "dc6b5b1635453e0eb57344ffb6cb293e8300fc4001fad3518e721d548459c09d"
   pem_path: ""
+  ca_cert: "./certificates/ca_cert.pem" 
 webhooks_server:
   port: 8000
 zinc_logger:

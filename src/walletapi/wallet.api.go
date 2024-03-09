@@ -21,6 +21,7 @@ type Config struct {
 	Port            string `yaml:"port"`
 	NotaryNodeURL   string `yaml:"notary_node_url"`
 	WebhooksNodeURL string `yaml:"webhooks_node_url"`
+	CAPath          string `yaml:"ca_cert"` // path to ed25519 pem file
 }
 
 type app struct {
@@ -38,7 +39,7 @@ func Run(ctx context.Context, cfg Config, log logger.Logger, fw transaction.Veri
 	ctxx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	c, err := walletmiddleware.NewClient(cfg.NotaryNodeURL, fw, wrs, walletCreator)
+	c, err := walletmiddleware.NewClient(cfg.NotaryNodeURL, cfg.CAPath, fw, wrs, walletCreator)
 	if err != nil {
 		return err
 	}

@@ -255,6 +255,8 @@ notary_server: # This section allows you to set up notary server parameters. The
   public_url: localhost:8000 # The notary server public IP that server will use to introduce itself.
   port: 8000 # The port at which the notary server will run.
   data_size_bytes: 15000 # Max data size per transaction in bytes.
+  certificate: "./certificates/server_cert.pem" # Path to server certificate.
+  key: "./certificates/server_key.pem" # Path to server key.
 gossip_server: # This section allows to set up gossip protocol server. The gossip protocol endpoints are run by this server. GRPC.
   url: "localhost:8080" # The notary server URL that server will use to introduce itself in the gossip network.
   genesis_url: # The genesis node URL from which the server will read all URLs of other nodes interconnected in that gossip network and introduce itself via gossip discovery protocol. When empty it starts the node as the first one in the network waiting for connections.
@@ -264,6 +266,9 @@ gossip_server: # This section allows to set up gossip protocol server. The gossi
     currency: 1000000 # Amount of primus tokens created during genesis.
     supplementary_currency: 0 # Amount of secundus tokens created during genesis.
   port: 8080 # Port on which GRPC server of gossip protocol will run.
+  certificate: "./certificates/server_cert.pem" # Path to server certificate.
+  key: "./certificates/server_key.pem" # Path to server key.
+  ca_cert: "./certificates/ca_cert.pem" # Path to certificate authority.
 accountant: # Accountant section allows to set up DAG accounting details.
   trusted_nodes_db_path: # Path to storage on disc for trusted nodes. When empty stored in RAM. Vertices created by trusted nodes have permission to be added to the DAG without balance accounting.  
   tokens_db_path: # Path to storage of access tokens. When empty stored in RAM.
@@ -280,6 +285,7 @@ file_operator: # File operator section allows to provide the path and decoding k
   wallet_path: "artefacts/wallet_notary_genesis" # Path to wallet.
   wallet_passwd: "dc6b5b1635453e0eb57344ffb6cb293e8300fc4001fad3518e721d548459c09d" # HEX string to encode wallet. 
   pem_path: "" # If PEM is used provide pem file.
+  ca_cert: "./certificates/ca_cert.pem" # Path to certificate authority.
 zinc_logger: # Zinc search section allows to connect the node to the zinc search so all logs are send to the zinc search server. 
   address: # Address of zinc search server. When empty logs goes to stdout.
   index: genesis # Specify the index for logs from currant node. Should be unique between all nodes.
