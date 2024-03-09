@@ -41,9 +41,10 @@ c/client-node/packages/
 # test_wallet
 ./artefacts/test_wallet
 
-# pem files
+# pem files and certificates
 ed25519
-ed25519.pub
+*.pub
+*.pem
 
 # k8s config
 kubeconfig.yaml
@@ -54,7 +55,7 @@ __pycache__
 
 # test wallets 
 ed*
-wallet*
+wallet_*
 
 # DataBase backup
 .bak

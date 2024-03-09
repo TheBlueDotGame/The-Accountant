@@ -8,11 +8,11 @@ import (
 	"time"
 
 	"golang.org/x/exp/maps"
-	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/bartossh/Computantis/src/accountant"
 	"github.com/bartossh/Computantis/src/cache"
+	"github.com/bartossh/Computantis/src/grpcsecured"
 	"github.com/bartossh/Computantis/src/logger"
 	"github.com/bartossh/Computantis/src/protobufcompiled"
 	"github.com/bartossh/Computantis/src/providers"
@@ -26,7 +26,7 @@ const (
 	confirmTrxTelemetryHistogram  = "confirm_trx_request_duration"
 	rejectTrxTelemetryHistogram   = "reject_trx_request_duration"
 	awaitedTrxTelemetryHistogram  = "read_awaited_trx_request_duration"
-	readDagtransactionsbyaddress  = "read_dag_trx_only"
+	readDagTransactionsByAddress  = "read_dag_trx_only"
 	approvedTrxTelemetryHistogram = "read_approved_trx_request_duration"
 	balanceTelemetryHistogram     = "balance_read_duration"
 	dataToSignTelemetryHistogram  = "data_to_sign_request_duration"
@@ -82,6 +82,8 @@ type piper interface {
 // Config contains configuration of the server.
 type Config struct {
 	NodePublicURL string `yaml:"public_url"`      // Public URL at which node can be reached.
+	Cert          string `yaml:"certificate"`     // PEM certificate.
+	Key           string `yaml:"key"`             // PEM key.
 	Port          int    `yaml:"port"`            // Port to listen on.
 	DataSizeBytes int    `yaml:"data_size_bytes"` // Size of the data to be stored in the transaction.
 }
@@ -143,7 +145,8 @@ func Run(
 	s.tele.CreateUpdateObservableHistogtram(awaitedTrxTelemetryHistogram, "Read awaited / issued trx endpoint request duration in [ ms ].")
 	s.tele.CreateUpdateObservableHistogtram(approvedTrxTelemetryHistogram, "Read approved trx endpoint request duration in [ ms ].")
 	s.tele.CreateUpdateObservableHistogtram(dataToSignTelemetryHistogram, "Generate data to sign endpoint request duration in [ ms ].")
-	s.tele.CreateUpdateObservableHistogtram(balanceTelemetryHistogram, "Calcualte balance duration in [ ms ].")
+	s.tele.CreateUpdateObservableHistogtram(balanceTelemetryHistogram, "Calculate balance duration in [ ms ].")
+	s.tele.CreateUpdateObservableHistogtram(readDagTransactionsByAddress, "Read wallet transactions from DAG in [ ms ].")
 
 	lis, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%v", c.Port))
 	if err != nil {
@@ -151,7 +154,12 @@ func Run(
 		return err
 	}
 
-	grpcServer := grpc.NewServer()
+	grpcServer, err := grpcsecured.NewTLSServer(c.Cert, c.Key)
+	if err != nil {
+		cancel()
+		return err
+	}
+
 	protobufcompiled.RegisterNotaryAPIServer(grpcServer, s)
 
 	go func() {
@@ -561,7 +569,7 @@ func (s *server) TransactionsInDAG(ctx context.Context, in *protobufcompiled.Sig
 	t := time.Now()
 	defer func() {
 		d := time.Since(t)
-		s.tele.RecordHistogramTime(readDagtransactionsbyaddress, d)
+		s.tele.RecordHistogramTime(readDagTransactionsByAddress, d)
 	}()
 
 	if ok := s.randDataProv.ValidateData(in.Address, in.Data); !ok {
