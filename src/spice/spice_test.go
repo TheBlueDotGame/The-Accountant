@@ -160,6 +160,7 @@ func BenchmarkMelangeTransfer(b *testing.B) {
 }
 
 func TestFromFloat(t *testing.T) {
+	// Note: it will give precision up to nine decimal places.
 	cases := []struct {
 		expected string
 		given    float64
@@ -176,18 +177,22 @@ func TestFromFloat(t *testing.T) {
 		{"1.9", 1.900000000000000000000},
 		{"1.009", 1.009},
 		{"1.0123", 1.0123},
-		{"1.000001001001", 1.000001001001},
-		{"1.000001001001", 1.00000100100100000},
+		{"1.000001001", 1.000001001001},
+		{"1.000001001", 1.00000100100100000},
+		{"1.000001001", 1.00000100100110000},
 		{"1.009012301", 1.009012301},
 		{"10101.009012301", 10101.009012301},
 		{"11101.009012301", 11101.009012301},
 		{"22202.00901", 22202.00901},
+		{"0.0001", 0.0001},
 	}
 
 	for _, c := range cases {
 		t.Run(fmt.Sprintf("from float test case %v", c), func(t *testing.T) {
 			s := FromFloat(c.given)
-			fmt.Printf("%v %s, %s\n", c.given, c.expected, s.String())
+			if s.String() != c.expected {
+				fmt.Printf("given: [ %v ], expected: [ %s ], received: [ %s ]\n", c.given, c.expected, s.String())
+			}
 			assert.Equal(t, s.String(), c.expected)
 		})
 	}

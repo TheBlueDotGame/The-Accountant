@@ -289,7 +289,7 @@ func runTransactionOps(cfg fileoperations.Config, nodeURL string) error {
 				printError(errors.New("subject cannot be empty"))
 				continue
 			}
-			value, _ := pterm.DefaultInteractiveTextInput.Show("Provide amount of tokans")
+			value, _ := pterm.DefaultInteractiveTextInput.Show("Provide amount of tokans as a float [ with precision up to nine decimal places ]")
 			v, err := strconv.ParseFloat(value, 64)
 			if err != nil {
 				printError(err)
