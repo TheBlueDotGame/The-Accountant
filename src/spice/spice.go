@@ -28,7 +28,7 @@ var (
 func convertFloatToInt(d float64) (int, int) {
 	intPart := int(d)
 
-	parts := strings.SplitN(fmt.Sprintf("%v", d), ".", 2)
+	parts := strings.SplitN(fmt.Sprintf("%.10f", d), ".", 2)
 	if len(parts) < 2 {
 		return intPart, 0
 	}
@@ -70,6 +70,7 @@ func New(currency, supplementaryCurrency uint64) Melange {
 }
 
 // From float crates a new spice Melange from floating point number.
+// Note this will give a precision up to nine decimal places.
 func FromFloat(n float64) Melange {
 	if n <= 0.0 {
 		return Melange{}
