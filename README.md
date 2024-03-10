@@ -24,7 +24,7 @@ The Computantis is a backbone service for creating secure, reliable and performa
 
 - The Computantis is a fun project that can be improved. Now transfers more than 200 transactions per second compared to ETC with less than 20 transactions per second and BTC with less than 10 transactions per second.
 
-- The sufficient requirements to run a node are 2vCPU and 512MB RAM. Disc space depends on how often DAG is truncated and backed up.
+- The sufficient requirements to run a node are 1vCPU and 256MB RAM. Disc space depends on how often DAG is truncated and backed up.
 
 ### Services and tools
 
