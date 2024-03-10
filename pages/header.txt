@@ -1,5 +1,5 @@
 ---
 layout: page
 title: Documentation.
-subtitle: Package: Blockchain, cryptography, wallet, REST API server, client and validator.
+subtitle: Package: Blockchain, cryptography, wallet, REST API server, client and validator, DAG, Post-blockchain, Golang, Byzantine fault-tolerant.
 ---

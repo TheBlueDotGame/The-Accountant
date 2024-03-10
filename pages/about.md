@@ -1,46 +1,45 @@
 ---
 layout: page
-title: About The Project
-subtitle: ...and a bit about the technology.
+title: About The Computantis Project
+subtitle: Brief description.
 ---
 
-The Computantis is a set of cloud/edge services that keeps track of transactions between wallets.
-Transactions are not transferring any tokens between wallets but it might be the case if someone wants to use it this way. Just this set of services isn’t designed to track token exchange. Instead, transactions are entities holding data that the transaction issuer and transaction receiver agreed upon. Each wallet has its own independent history of transactions. There is a set of strict rules allowing for transactions to happen:
+# Description 
 
-The central server is private to the corporation, government or agency. It is trusted by the above entity and participants. This solution isn’t proposing the distributed system of transactions as this is not the case. It is ensuring that the transaction is issued and signed and received and signed to confirm its validity. Blockchain keeps transactions history immutable so the validators can be sure that no one will corrupt the transactions. 
-Transaction to be valid needs to:
-- Have a valid issuer signature.
-- Have a valid receiver signature.
-- Have a valid data digest.
-- Have a valid issuer public address.
-- Have a valid receiver public address.
-- Be part of a blockchain.
+Computantis is a cloud/edge service designed to track, validate, and facilitate secure token transfers between wallets within a closed ecosystem. It offers a scalable and efficient alternative to traditional blockchains for specific use cases, particularly for organizations that require a more controlled environment.
 
-The full cycle of the transaction and block forging happens as follows:
-1. The Issuer creates the transaction and signs it with the issuer's private key, attaching the issuer's public key to the transaction.
-2. The Issuer sends the transaction to the central server.
-3. The central server validates The Issuer address, signature, data digest and expiration date. If the transaction is valid then it is kept in awaiting transactions repository for the receiver to sign.
-4. Receiver asks for awaiting transactions for the receiver's signature in the process of proving his public address and signing data received from the server by the receiver's private key.
-5. If the signature is valid then all awaiting transactions are transferred to the receiver.
-6. The receiver can sign transactions that the receiver agrees on, and sends them back to the central server. 
-7. The central server validates the address, signature, data digest and expiration date then appends the transaction to be added to the next forged block. The transaction is moved from the awaiting transactions repository to the temporary repository (just in case of any unexpected crashes or attacks on the central server).
-8. The central servers follow sets of rules from the configuration `yaml` file, which describes how often the block is forged, how many transactions it can hold and what is the difficulty for hashing the block.
-9. When the block is forged and added to the blockchain then transactions that are part of the block are moved from the temporary transactions repository to the permanent transactions repository.
-10. Information about the new blocks is sent to all validators. Validators cannot reject blocks or rewrite the blockchain. The validator serves the purpose of tracking the central node blockchain to ensure data are not corrupted, the central node isn’t hacked, stores the blocks in its own repository, and serves as an information node for the external clients. If the blockchain is corrupted then the validator raises an alert when noticing corrupted data.
-It is good practice to have many validator nodes held by independent entities.
+# Key Features
 
-### Technology
+- Low hardware expectations, run on 1vCPU with 256MB RAM.
+- High throughput of 200+ TPS.
+- Single node can run with no external dependencies.
+- Centralized Trust: Operates on a private, trusted central server ideal for corporations, governments, or agencies.
+- Secure Token Transfers: Enables secure and efficient transfer of tokens between authorized participants.
+- Data-Centric Transactions (Optional): Tracks data agreed upon by sender and receiver in addition to tokens (optional feature).
+- Independent Wallets: Each wallet maintains its own independent transaction history.
+- Byzantine Fault Tolerance (BFT) is satisfied. There is no central authority to decide on block forging and instead of hashing signature encapsulations are used.
 
-1. The programming language Computantis software is written in is the [Go](https://go.dev/). 
-First it was considered to use [RUST](https://www.rust-lang.org/) programming language, but Go features for servers development,
-and very good cryptographic library (part of standard library), as well as great concurrency model and performance that
-in real life case benchmarks matches the RUST or is not far apart from RUST, convinced me to use the Go language.
-2. The repository part of the software is abstracted away, so any database may be used. Computantis first was using the [MongoDB](https://www.mongodb.com/) database but overtime I moved all the logic to use [PostgreSQL](https://www.postgresql.org/).
-The reason behind this choice is to keep all the transaction ACID even sacrificing the performance a little. 
-Probably the change will be beneficial for blockchain and transaction lookups but I wasn't benchmarking for that so it is a guess.
-3. Networking is a very important part of backend solutions. To maintain a speed of execution and development the [Fiber](https://docs.gofiber.io/) framework is used to build the REST API and WebSocket networking.
+# Transaction Process (with Token Transfer)
 
-### Motto
+- Transaction Creation: The issuer creates a transaction specifying the recipient's address, token amount, and (optionally) additional data. The issuer signs the transaction with their private key and attaches their public key.
+- Central Server Validation: The server verifies issuer address, signature, data digest, expiration date, and sufficient token balance.
+- Awaiting Transactions: If valid, the transaction goes to a repository awaiting receiver's signature.
+- Receiver Signs: The receiver retrieves awaiting transactions, proving their address, and signs with their private key.
+- Receiver Approval: If the signature is valid, all awaiting transactions are transferred to the receiver.
+- Receiver Signs Approved: The receiver signs approved transactions (including token transfers) and sends them back to the server.
+- Server Validates and Blocks: The server validates the receiver's signature and adds the transaction to a block.
+- Block Forging: The server follows configuration rules (e.g., frequency, size, difficulty) to forge new blocks.
+- Permanent Storage: Validated transactions (including token transfers) are moved to permanent storage, and token balances are updated accordingly.
+- Validator Notification: Information about new blocks is sent to validators for monitoring.
+- Validation, Not Consensus: Similar to the previous explanation, validators cannot reject blocks or rewrite history. Their role is to: 
+        Track the central server's blockchain for data integrity.
+        Detect potential corruption or server compromise.
+        Store blocks independently and serve as information nodes.
+        Technology Stack:
 
-The project motto is the one from a quote by Steve Wozniak: "Wherever smart people work, doors are unlocked."
+# Technology
+
+- Programming Languages: Go (chosen for rich server development features, strong cryptography library, and performance), C to offer library to create embedded wallets. 
+- Database: BadgerDB that runs in RAM and can be dropped (backed up) on disk. This allows to run node on a machine we don't want to save data on.
+- Docker or K8S support to scale or/and isolate node environment. 
 

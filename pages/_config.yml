@@ -21,6 +21,7 @@ author: Bartosz Leanrt
 
 navbar-links:
   About: "about"
+  Project: "https://github.com/bartossh/Computantis"
 
 ################
 # --- Logo --- #
@@ -28,7 +29,7 @@ navbar-links:
 
 # Image to show in the navigation bar - works best with a square image
 # Remove this parameter if you don't want an image in the navbar
-avatar: "/assets/img/geek.png"
+avatar: "/assets/img/avatar.jpeg"
 
 # By default, the image is cut into a circle. You can disable this behaviour by setting 'round-avatar: false'
 round-avatar: true
@@ -45,28 +46,28 @@ round-avatar: true
 # Select the social network links that you want to show in the footer.
 # Uncomment the links you want to show and add your information to each one.
 social-network-links:
-  email: info@consult.red
+  email: lenart.consulting@gmail.com
   rss: true  # remove this line if you don't want to show an RSS link at the bottom
 #  medium: yourname
 #  reddit: yourname
   linkedin: https://www.linkedin.com/in/bartoszadamlenart/
 #  xing: yourname
-#  stackoverflow: "3943160/daattali"
-#  snapchat: deanat78
-#  instagram: deanat78
-#  spotify: yourname
-#  telephone: +14159998888
-#  steam: deanat78
-#  twitch: yourname
-#  yelp: yourname
-#  telegram: yourname
-#  calendly: yourname
+#  stackoverflow: "
+#  snapchat: 
+#  instagram: 
+#  spotify: 
+#  telephone: 
+#  steam: 
+#  twitch: 
+#  yelp: 
+#  telegram: 
+#  calendly: 
 #  mastodon: instance.url/@username
 #  ORCID: your ORCID ID
 #  google-scholar: your google scholar
 #  discord: invite/invite_code or users/userid 
-#  kaggle: yourname
-#  hackerrank: yourname
+#  kaggle: 
+#  hackerrank: 
 
 # If you want your website to generate an RSS feed, provide a description
 # The URL for the feed will be https://<your_website>/feed.xml
