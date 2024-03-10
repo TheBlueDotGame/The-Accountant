@@ -33,7 +33,7 @@ Computantis is a cloud/edge service designed to track, validate, and facilitate 
 - Gossip Vertex to other nodes.
 - Gossip receivers may or may not accept the vertex.
 
-# Transaction Process (data transfer)
+# Transaction Process (token transfer)
 - Transaction Creation: The issuer creates a transaction specifying the recipient's address, token amount, and (optionally) additional data. The issuer signs the transaction with their private key and attaches their public key.
 - Validate Transaction against DAG and if correct save in the DAG.
 - Gossip Vertex to other nodes.
