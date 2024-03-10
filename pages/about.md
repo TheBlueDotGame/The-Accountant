@@ -18,8 +18,10 @@ Computantis is a cloud/edge service designed to track, validate, and facilitate 
 - Data-Centric Transactions (Optional): Tracks data agreed upon by sender and receiver in addition to tokens (optional feature).
 - Independent Wallets: Each wallet maintains its own independent transaction history.
 - Byzantine Fault Tolerance (BFT) is satisfied. There is no central authority to decide on block forging and instead of hashing signature encapsulations are used.
-
-# Transaction Process (with Token Transfer)
+- Data secured via cryptographic signature of encapsulated data in Direct Acyclic Graph (DAG). Vertex encapsulates transactions, pointing to two parents. The Vertex hash is signed. The transaction is signed by the issuer for token-only transfer and additionally, by the receiver it contains data.
+- No GPU, no expensive hashing, nodes are not competing but cooperating.
+ 
+# Transaction Process (data transfer)
 
 - Transaction Creation: The issuer creates a transaction specifying the recipient's address, token amount, and (optionally) additional data. The issuer signs the transaction with their private key and attaches their public key.
 - Central Server Validation: The server verifies issuer address, signature, data digest, expiration date, and sufficient token balance.
@@ -27,15 +29,15 @@ Computantis is a cloud/edge service designed to track, validate, and facilitate 
 - Receiver Signs: The receiver retrieves awaiting transactions, proving their address, and signs with their private key.
 - Receiver Approval: If the signature is valid, all awaiting transactions are transferred to the receiver.
 - Receiver Signs Approved: The receiver signs approved transactions (including token transfers) and sends them back to the server.
-- Server Validates and Blocks: The server validates the receiver's signature and adds the transaction to a block.
-- Block Forging: The server follows configuration rules (e.g., frequency, size, difficulty) to forge new blocks.
-- Permanent Storage: Validated transactions (including token transfers) are moved to permanent storage, and token balances are updated accordingly.
-- Validator Notification: Information about new blocks is sent to validators for monitoring.
-- Validation, Not Consensus: Similar to the previous explanation, validators cannot reject blocks or rewrite history. Their role is to: 
-        Track the central server's blockchain for data integrity.
-        Detect potential corruption or server compromise.
-        Store blocks independently and serve as information nodes.
-        Technology Stack:
+- Validate Transaction against DAG and if correct save in the DAG.
+- Gossip Vertex to other nodes.
+- Gossip receivers may or may not accept the vertex.
+
+# Transaction Process (data transfer)
+- Transaction Creation: The issuer creates a transaction specifying the recipient's address, token amount, and (optionally) additional data. The issuer signs the transaction with their private key and attaches their public key.
+- Validate Transaction against DAG and if correct save in the DAG.
+- Gossip Vertex to other nodes.
+- Gossip receivers may or may not accept the vertex.
 
 # Technology
 
