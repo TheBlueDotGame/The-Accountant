@@ -50,7 +50,8 @@ var (
 	ErrVertexHashNotfund                     = errors.New("vertex hash not fund")
 	ErrVertexAlreadyExists                   = errors.New("vertex already exists")
 	ErrTrxInVertexAlreadyExists              = errors.New("transaction in vertex already exists")
-	ErrTrxToVertexNotfund                    = errors.New("trx mapping to vertex do not fund, transaction doesn't exist")
+	ErrTrxIsEmpty                            = errors.New("transaction is empty")
+	ErrTrxToVertexNotfund                    = errors.New("transaction mapping to vertex do not fund, transaction doesn't exist")
 	ErrUnexpected                            = errors.New("unexpected failure")
 	ErrTransferringfundsFailure              = errors.New("transferring spice failure")
 	ErrEntityNotfund                         = errors.New("entity not fund")
@@ -688,12 +689,25 @@ VertxLoop:
 	}
 
 	var maxWeight uint64
+	var genesisCandidateReceived bool
 	for _, item := range ab.dag.GetVertices() {
 		switch vrx := item.(type) {
 		case *Vertex:
 			if vrx == nil {
-				cancelF(ErrUnexpected)
+				cancelF(fmt.Errorf("loading DAG process stopped due to nil vertex received, %w", ErrUnexpected))
 				return
+			}
+			if vrx.Transaction.IssuerAddress == vrx.SignerPublicAddress {
+				if genesisCandidateReceived {
+					cancelF(fmt.Errorf("loading DAG process stopped due to transaction being produced by the node wallet, %w", ErrUnexpected))
+					return
+				}
+				genesisCandidateReceived = true
+			}
+			if vrx.Transaction.IsEmpty() {
+				cancelF(fmt.Errorf("loading DAG process stopped due to transaction being empty, %w", ErrUnexpected))
+				return
+
 			}
 			if vrx.Weight > maxWeight {
 				maxWeight = vrx.Weight
@@ -711,7 +725,7 @@ VertxLoop:
 				addedHash = conn
 			}
 		default:
-			cancelF(ErrUnexpected)
+			cancelF(fmt.Errorf("loading DAG process stopped due to wrong type received, %w", ErrUnexpected))
 			return
 		}
 	}
@@ -841,6 +855,9 @@ func (ab *AccountingBook) CreateLeaf(ctx context.Context, trx *transaction.Trans
 	if !ab.DagLoaded() {
 		return Vertex{}, ErrDagIsNotLoaded
 	}
+	if trx.IsEmpty() {
+		return Vertex{}, ErrTrxIsEmpty
+	}
 	if trx.IssuerAddress == ab.signer.Address() {
 		return Vertex{}, ErrCannotTransferfundsViaOwnedNode
 	}
@@ -933,6 +950,15 @@ func (ab *AccountingBook) CreateLeaf(ctx context.Context, trx *transaction.Trans
 func (ab *AccountingBook) AddLeaf(ctx context.Context, leaf *Vertex) error {
 	if !ab.DagLoaded() {
 		return ErrDagIsNotLoaded
+	}
+	if leaf == nil {
+		return fmt.Errorf("add leaf rejected nil vertex, %w", ErrUnexpected)
+	}
+	if leaf.Transaction.IssuerAddress == leaf.SignerPublicAddress {
+		return ErrCannotTransferfundsViaOwnedNode
+	}
+	if leaf.Transaction.IsEmpty() {
+		return ErrTrxIsEmpty
 	}
 	return ab.addLeafMemorized(ctx, newMemory(leaf))
 }

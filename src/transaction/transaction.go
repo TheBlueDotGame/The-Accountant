@@ -163,6 +163,11 @@ func (t Transaction) IsSpiceTransfer() bool {
 	return !t.Spice.Empty()
 }
 
+// IsEmpty returns true if transaction doesn't transfers tokens or has no data.
+func (t Transaction) IsEmpty() bool {
+	return !t.IsContract() && !t.IsSpiceTransfer()
+}
+
 func (t *Transaction) VerifyIssuer(v Verifier) error {
 	message := t.GetMessage()
 	return v.Verify(message, t.IssuerSignature, t.Hash, t.IssuerAddress)
