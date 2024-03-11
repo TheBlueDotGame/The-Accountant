@@ -524,7 +524,7 @@ func TestMultipleIssuerMultipleReceiversMultipleAccountantSpiceTransferLegitimat
 			go ab.LoadDag(cancelF, cVrx) // NOTE: crucial for tests, on all node genesis nodes dag shall be loaded from genesis
 			cVrx <- &vrx
 			cVrx <- nil
-			time.Sleep(time.Millisecond * 500)
+			time.Sleep(time.Millisecond * 100)
 			cancelF(nil)
 		}
 

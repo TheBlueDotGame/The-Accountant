@@ -361,22 +361,22 @@ func (g *gossiper) GossipVrx(ctx context.Context, vg *protobufcompiled.VrxMsgGos
 		}
 		vg.Gossipers = toSlice(set)
 		g.gossipVertex(ctx, vg, set)
-	}
 
-	go func() {
-		if err := g.flash.RemoveAddress(vg.Vertex.Transaction.IssuerAddress); err != nil {
-			g.log.Error(fmt.Sprintf("confirm endpoint, removing issuer address [ %s ] from flash failed: %s", vg.Vertex.Transaction.IssuerAddress, err))
-		}
-		if err := g.flash.RemoveAddress(vg.Vertex.Transaction.ReceiverAddress); err != nil {
-			g.log.Error(fmt.Sprintf("confirm endpoint, removing receiver address [ %s ] from flash failed: %s", vg.Vertex.Transaction.ReceiverAddress, err))
-		}
-		if err := g.trxCache.RemoveBalance(vg.Vertex.Transaction.IssuerAddress); err != nil {
-			g.log.Error(fmt.Sprintf("confirm endpoint, removing cached balance for address [ %s ] from flash failed: %s", vg.Vertex.Transaction.IssuerAddress, err))
-		}
-		if err := g.trxCache.RemoveBalance(vg.Vertex.Transaction.ReceiverAddress); err != nil {
-			g.log.Error(fmt.Sprintf("confirm endpoint, removing cached balance for address [ %s ] from flash failed: %s", vg.Vertex.Transaction.ReceiverAddress, err))
-		}
-	}()
+		go func() {
+			if err := g.flash.RemoveAddress(vg.Vertex.Transaction.IssuerAddress); err != nil {
+				g.log.Error(fmt.Sprintf("confirm endpoint, removing issuer address [ %s ] from flash failed: %s", vg.Vertex.Transaction.IssuerAddress, err))
+			}
+			if err := g.flash.RemoveAddress(vg.Vertex.Transaction.ReceiverAddress); err != nil {
+				g.log.Error(fmt.Sprintf("confirm endpoint, removing receiver address [ %s ] from flash failed: %s", vg.Vertex.Transaction.ReceiverAddress, err))
+			}
+			if err := g.trxCache.RemoveBalance(vg.Vertex.Transaction.IssuerAddress); err != nil {
+				g.log.Error(fmt.Sprintf("confirm endpoint, removing cached balance for address [ %s ] from flash failed: %s", vg.Vertex.Transaction.IssuerAddress, err))
+			}
+			if err := g.trxCache.RemoveBalance(vg.Vertex.Transaction.ReceiverAddress); err != nil {
+				g.log.Error(fmt.Sprintf("confirm endpoint, removing cached balance for address [ %s ] from flash failed: %s", vg.Vertex.Transaction.ReceiverAddress, err))
+			}
+		}()
+	}
 
 	return &emptypb.Empty{}, nil
 }
