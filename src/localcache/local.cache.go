@@ -11,8 +11,8 @@ import (
 )
 
 var (
-	ErrUnexpected               = errors.New("unexpected error")
-	ErrNotAlloweReoccurringHash = errors.New("not allowed reoccurring hash")
+	ErrUnexpected              = errors.New("unexpected error")
+	ErrNotAllowReoccurringHash = errors.New("not allowed reoccurring hash")
 )
 
 type Config struct {
@@ -46,7 +46,7 @@ func (c *TransactionCache) WriteIssuerSignedTransactionForReceiver(trx *transact
 	c.mux.Lock()
 	defer c.mux.Unlock()
 	if _, ok := c.trxs[trx.Hash]; ok {
-		return errors.Join(ErrNotAlloweReoccurringHash, fmt.Errorf("transaction of given hash exists [ %v ]", trx.Hash))
+		return errors.Join(ErrNotAllowReoccurringHash, fmt.Errorf("transaction of given hash exists [ %v ]", trx.Hash))
 	}
 	if len(c.trxs) == c.maxLen {
 		return fmt.Errorf("cannot add to cache, max size of cache of [ %v ] has been reached", c.maxLen)
@@ -88,7 +88,7 @@ func (c *TransactionCache) ReadAwaitingTransactionsByReceiver(address string) ([
 	return trxs, nil
 }
 
-// ReadAwaitingTransactionsByIssuer reads transaction belongint to the issuer if exists in the cache.
+// ReadAwaitingTransactionsByIssuer reads transaction belonging to the issuer if exists in the cache.
 func (c *TransactionCache) ReadAwaitingTransactionsByIssuer(address string) ([]transaction.Transaction, error) {
 	c.mux.RLock()
 	defer c.mux.RUnlock()

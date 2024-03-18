@@ -18,7 +18,7 @@ var ErrorHookNotImplemented = errors.New("hook not implemented")
 
 const (
 	StateIssued      byte = 0 // StateIssued is state of the transaction meaning it is only signed by the issuer.
-	StateAcknowleged          // StateAcknowledged is a state ot the transaction meaning it is acknowledged and signed by the receiver.
+	StateAcknowledge          // StateAcknowledged is a state ot the transaction meaning it is acknowledged and signed by the receiver.
 )
 
 // AwaitingTransactionsMessage is the message send to the webhook url about new transaction for given wallet address.

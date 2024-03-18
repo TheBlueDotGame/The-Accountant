@@ -105,7 +105,7 @@ func (a *app) WalletPublicAddress(ctx context.Context, _ *emptypb.Empty) (*proto
 // Issue issues the transaction to the notary node.
 func (a *app) Issue(ctx context.Context, in *protobufcompiled.IssueTrx) (*emptypb.Empty, error) {
 	err := a.centralNodeClient.ProposeTransaction(
-		ctx, in.ReceiverAddress, in.Subject, spice.New(in.Spice.Currency, in.Spice.SuplementaryCurrency), in.Data,
+		ctx, in.ReceiverAddress, in.Subject, spice.New(in.Spice.Currency, in.Spice.SupplementaryCurrency), in.Data,
 	)
 	if err != nil {
 		return nil, err
@@ -176,7 +176,7 @@ func (a *app) Balance(ctx context.Context, _ *emptypb.Empty) (*protobufcompiled.
 		return nil, err
 	}
 	return &protobufcompiled.Spice{
-		Currency:             balance.Currency,
-		SuplementaryCurrency: balance.SupplementaryCurrency,
+		Currency:              balance.Currency,
+		SupplementaryCurrency: balance.SupplementaryCurrency,
 	}, nil
 }

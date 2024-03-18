@@ -7,7 +7,7 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
-// NewTLSServer creats a new grpc server secured with TLS.
+// NewTLSServer creates a new grpc server secured with TLS.
 func NewTLSServer(cert, key string) (*grpc.Server, error) {
 	certificate, err := tls.LoadX509KeyPair(cert, key)
 	if err != nil {

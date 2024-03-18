@@ -20,20 +20,20 @@ import (
 const (
 	initialThroughput  uint64 = 50
 	truncateVrxTopMark uint64 = 100_000
-	trucateDiff        uint64 = 1_000
+	truncateDiff       uint64 = 1_000
 )
 
-const repiterTick = time.Second * 2
+const repeaterTick = time.Second * 2
 
 const backupName = "vertex_db_backup_"
 
 func checkCanTruncate(current, desired uint64) bool {
-	return current > desired && current > trucateDiff && current-trucateDiff > desired
+	return current > desired && current > truncateDiff && current-truncateDiff > desired
 }
 
 var (
 	ErrGenesisRejected                       = errors.New("genesis vertex has been rejected")
-	ErrBalanceCaclulationUnexpectedFailure   = errors.New("balance calculation unexpected failure")
+	ErrBalanceCalculationUnexpectedFailure   = errors.New("balance calculation unexpected failure")
 	ErrBalanceUnavailable                    = errors.New("balance unavailable")
 	ErrLeafBallanceCalculationProcessStopped = errors.New("wallet balance calculation process stopped")
 	ErrLeafValidationProcessStopped          = errors.New("leaf validation process stopped")
@@ -42,19 +42,19 @@ var (
 	ErrDagIsLoaded                           = errors.New("dag is already loaded")
 	ErrDagIsNotLoaded                        = errors.New("dag is not loaded")
 	ErrLeafAlreadyExists                     = errors.New("leaf already exists")
-	ErrIssuerAddressBalanceNotfund           = errors.New("issuer address balance not fund")
-	ErrReceiverAddressBalanceNotfund         = errors.New("receiver address balance not fund")
-	ErrDoubleSpendingOrInsufficinetfunds     = errors.New("double spending or insufficient funds")
-	ErrCannotTransferfundsViaOwnedNode       = errors.New("issuer cannot transfer funds via owned node")
-	ErrCannotTransferfundsFromGenesisWallet  = errors.New("issuer cannot be the genesis node")
-	ErrVertexHashNotfund                     = errors.New("vertex hash not fund")
+	ErrIssuerAddressBalanceNotfound          = errors.New("issuer address balance not fund")
+	ErrReceiverAddressBalanceNotfound        = errors.New("receiver address balance not fund")
+	ErrDoubleSpending                        = errors.New("double spending or insufficient funds")
+	ErrCannotTransferFoundsViaOwnedNode      = errors.New("issuer cannot transfer funds via owned node")
+	ErrCannotTransferFoundsFromGenesisWallet = errors.New("issuer cannot be the genesis node")
+	ErrVertexHashNotfound                    = errors.New("vertex hash not fund")
 	ErrVertexAlreadyExists                   = errors.New("vertex already exists")
 	ErrTrxInVertexAlreadyExists              = errors.New("transaction in vertex already exists")
 	ErrTrxIsEmpty                            = errors.New("transaction is empty")
-	ErrTrxToVertexNotfund                    = errors.New("transaction mapping to vertex do not fund, transaction doesn't exist")
+	ErrTrxToVertexNotfound                   = errors.New("transaction mapping to vertex do not fund, transaction doesn't exist")
 	ErrUnexpected                            = errors.New("unexpected failure")
-	ErrTransferringfundsFailure              = errors.New("transferring spice failure")
-	ErrEntityNotfund                         = errors.New("entity not fund")
+	ErrTransferringFoundsFailure             = errors.New("transferring spice failure")
+	ErrEntityNotFound                        = errors.New("entity not fund")
 	ErrBreak                                 = errors.New("just break")
 	ErrParentDoesNotExists                   = errors.New("parent doesn't exists")
 )
@@ -72,7 +72,7 @@ type Signer interface {
 // AccountingBook is an entity that represents the accounting process of all received transactions.
 type AccountingBook struct {
 	truncateSignal       chan uint64
-	repiter              *buffer
+	repeater             *buffer
 	verifier             signatureVerifier
 	signer               Signer
 	log                  logger.Logger
@@ -94,7 +94,7 @@ type AccountingBook struct {
 func NewAccountingBook(
 	ctx context.Context, cfg Config, verifier signatureVerifier, signer Signer, l logger.Logger,
 ) (*AccountingBook, error) {
-	repi, err := newReplierBuffer(ctx, repiterTick)
+	repeater, err := newReplierBuffer(ctx, repeaterTick)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +103,7 @@ func NewAccountingBook(
 	if err != nil {
 		return nil, err
 	}
-	trxsToVertxDB, err := createBadgerDB(ctx, cfg.TraxsToVerticesMapDBPath, l, true)
+	trxsToVertxDB, err := createBadgerDB(ctx, cfg.TrxsToVerticesMapDBPath, l, true)
 	if err != nil {
 		return nil, err
 	}
@@ -112,13 +112,13 @@ func NewAccountingBook(
 		return nil, err
 	}
 
-	if cfg.Truncate < trucateDiff*2 {
+	if cfg.Truncate < truncateDiff*2 {
 		cfg.Truncate = truncateVrxTopMark
 	}
 
 	ab := &AccountingBook{
 		truncateSignal:     make(chan uint64, initialThroughput),
-		repiter:            repi,
+		repeater:           repeater,
 		verifier:           verifier,
 		signer:             signer,
 		dag:                dag.NewDAG(),
@@ -144,7 +144,7 @@ func (ab *AccountingBook) runLeafSubscriber(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
-		case v := <-ab.repiter.subscribe():
+		case v := <-ab.repeater.subscribe():
 			if v.vrx == nil {
 				continue
 			}
@@ -188,7 +188,7 @@ func (ab *AccountingBook) truncate(ctx context.Context) error {
 		break
 	}
 
-	h := newHashAtDepth(trucateDiff)
+	h := newHashAtDepth(truncateDiff)
 
 	if err := ab.performOnAncestorWalker(ctx, tempTopVrxHash, h.next); err != nil && errors.Is(err, ErrBreak) {
 		return err
@@ -208,7 +208,7 @@ func (ab *AccountingBook) truncate(ctx context.Context) error {
 	}
 	ab.lastBackup = lastBackup + 1
 
-	fm := newfundsMemMap()
+	fm := newFoundsMemMap()
 
 	if err := ab.forEachfundFromStorage(fm.set); err != nil {
 		return err
@@ -232,7 +232,7 @@ func (ab *AccountingBook) truncate(ctx context.Context) error {
 		return err
 	}
 
-	b := newStrBufer(ab.dag.GetSize())
+	b := newStrBuffer(ab.dag.GetSize())
 	add := func(v *Vertex) error {
 		b.add(string(v.Hash[:]))
 		return nil
@@ -351,7 +351,7 @@ func (ab *AccountingBook) validateLeaf(ctx context.Context, leaf *Vertex) error 
 		return err
 	}
 
-	if err := pourfunds(leaf.Transaction.IssuerAddress, *leaf, &spiceIn, &spiceOut); err != nil {
+	if err := pourFunds(leaf.Transaction.IssuerAddress, *leaf, &spiceIn, &spiceOut); err != nil {
 		return err
 	}
 
@@ -390,8 +390,8 @@ func (ab *AccountingBook) validateLeaf(ctx context.Context, leaf *Vertex) error 
 					return errors.Join(ErrLeafRejected, err)
 				}
 			}
-			if err := pourfunds(leaf.Transaction.IssuerAddress, *vrx, &spiceIn, &spiceOut); err != nil {
-				return errors.Join(ErrTransferringfundsFailure, err)
+			if err := pourFunds(leaf.Transaction.IssuerAddress, *vrx, &spiceIn, &spiceOut); err != nil {
+				return errors.Join(ErrTransferringFoundsFailure, err)
 			}
 
 		default:
@@ -408,7 +408,7 @@ func (ab *AccountingBook) validateLeaf(ctx context.Context, leaf *Vertex) error 
 				spiceIn, spiceOut,
 			),
 		)
-		return errors.Join(ErrTransferringfundsFailure, err)
+		return errors.Join(ErrTransferringFoundsFailure, err)
 	}
 	return nil
 }
@@ -418,7 +418,7 @@ func (ab *AccountingBook) readVertex(vrxHash []byte) (Vertex, error) {
 	if err == nil {
 		return vrx, nil
 	}
-	if !errors.Is(err, ErrVertexHashNotfund) {
+	if !errors.Is(err, ErrVertexHashNotfound) {
 		return Vertex{}, err
 	}
 	return ab.readVertexFromStorage(vrxHash)
@@ -442,10 +442,10 @@ func (ab *AccountingBook) readVertexFromDAG(vrxHash []byte) (Vertex, error) {
 			return Vertex{}, ErrUnexpected
 		}
 	}
-	return Vertex{}, ErrVertexHashNotfund
+	return Vertex{}, ErrVertexHashNotfound
 }
 
-func (ab *AccountingBook) updateWaightAndThroughput(weight uint64) {
+func (ab *AccountingBook) updateWeightAndThroughput(weight uint64) {
 	if ab.weight.Load() < weight {
 		ab.weight.Store(weight)
 	}
@@ -483,7 +483,7 @@ func (ab *AccountingBook) getValidLeaves(ctx context.Context) (leftLeaf, rightLe
 					fmt.Sprintf("Accounting book rejected leaf hash [ %v ], from [ %v ], %s",
 						vrx.Hash, vrx.SignerPublicAddress, err),
 				)
-				ab.updateWaightAndThroughput(vrx.Weight)
+				ab.updateWeightAndThroughput(vrx.Weight)
 				continue
 			}
 			switch i {
@@ -508,7 +508,7 @@ func (ab *AccountingBook) addLeafMemorized(ctx context.Context, m memory) error 
 		return errors.Join(ErrUnexpected, errors.New("leaf is nil"))
 	}
 	if leaf.Transaction.IssuerAddress == ab.genesisPublicAddress {
-		return ErrCannotTransferfundsFromGenesisWallet
+		return ErrCannotTransferFoundsFromGenesisWallet
 	}
 
 	ok, err := ab.checkVertexExists(leaf.Hash[:])
@@ -550,7 +550,7 @@ func (ab *AccountingBook) addLeafMemorized(ctx context.Context, m memory) error 
 					"Accounting book proceeded with memorizing leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ] when reading vertex for future validation, %s.",
 					leaf.Hash, leaf.SignerPublicAddress, leaf.LeftParentHash, leaf.RightParentHash, err),
 			)
-			if err := ab.repiter.insert(m); err != nil {
+			if err := ab.repeater.insert(m); err != nil {
 				ab.log.Error(
 					fmt.Sprintf(
 						"Accounting book rejected leaf [ %v ] from [ %v ] referring to [ %v ] and [ %v ] when reading vertex, %s.",
@@ -560,7 +560,7 @@ func (ab *AccountingBook) addLeafMemorized(ctx context.Context, m memory) error 
 			}
 			return ErrParentDoesNotExists
 		}
-		existringLeaf, ok := item.(*Vertex)
+		existingLeaf, ok := item.(*Vertex)
 		if !ok {
 			return errors.Join(ErrUnexpected, errors.New("wrong leaf type"))
 		}
@@ -574,14 +574,14 @@ func (ab *AccountingBook) addLeafMemorized(ctx context.Context, m memory) error 
 			return ErrLeafRejected
 		}
 		if isLeaf {
-			if err := ab.validateLeaf(ctx, existringLeaf); err != nil {
-				ab.dag.DeleteVertex(string(existringLeaf.Hash[:]))
-				ab.removeTrxInVertex(existringLeaf.Transaction.Hash[:])
+			if err := ab.validateLeaf(ctx, existingLeaf); err != nil {
+				ab.dag.DeleteVertex(string(existingLeaf.Hash[:]))
+				ab.removeTrxInVertex(existingLeaf.Transaction.Hash[:])
 				return errors.Join(ErrLeafRejected, err)
 			}
-			ab.updateWaightAndThroughput(existringLeaf.Weight)
+			ab.updateWeightAndThroughput(existingLeaf.Weight)
 		}
-		validatedLeafs = append(validatedLeafs, existringLeaf)
+		validatedLeafs = append(validatedLeafs, existingLeaf)
 	}
 
 	if err := ab.saveTrxInVertex(leaf.Transaction.Hash[:], leaf.Hash[:]); err != nil {
@@ -624,12 +624,12 @@ func (ab *AccountingBook) addLeafMemorized(ctx context.Context, m memory) error 
 }
 
 // CreateGenesis creates genesis vertex that will transfer spice to current node as a receiver.
-func (ab *AccountingBook) CreateGenesis(subject string, spc spice.Melange, data []byte, reciverPublicAddress string) (Vertex, error) {
-	if reciverPublicAddress == ab.signer.Address() {
+func (ab *AccountingBook) CreateGenesis(subject string, spc spice.Melange, data []byte, receiverPublicAddress string) (Vertex, error) {
+	if receiverPublicAddress == ab.signer.Address() {
 		return Vertex{}, errors.Join(ErrGenesisRejected, errors.New("receiver and issuer cannot be the same wallet"))
 	}
 
-	trx, err := transaction.New(subject, spc, data, reciverPublicAddress, ab.signer)
+	trx, err := transaction.New(subject, spc, data, receiverPublicAddress, ab.signer)
 	if err != nil {
 		return Vertex{}, errors.Join(ErrGenesisRejected, err)
 	}
@@ -651,7 +651,7 @@ func (ab *AccountingBook) CreateGenesis(subject string, spc spice.Melange, data 
 	}
 
 	ab.throughput.Store(initialThroughput)
-	ab.updateWaightAndThroughput(initialThroughput)
+	ab.updateWeightAndThroughput(initialThroughput)
 
 	ab.dagLoaded = true
 	ab.genesisPublicAddress = ab.signer.Address()
@@ -667,15 +667,15 @@ func (ab *AccountingBook) LoadDag(cancelF context.CancelCauseFunc, cVrx <-chan *
 	}
 
 	defer ab.throughput.Store(initialThroughput)
-	defer ab.updateWaightAndThroughput(initialThroughput)
+	defer ab.updateWeightAndThroughput(initialThroughput)
 
 	ab.mux.Lock()
 	defer ab.mux.Unlock()
 
-VertxLoop:
+VertexLoop:
 	for vrx := range cVrx {
 		if vrx == nil {
-			break VertxLoop
+			break VertexLoop
 		}
 		if err := ab.saveTrxInVertex(vrx.Transaction.Hash[:], vrx.Hash[:]); err != nil {
 			cancelF(ErrLeafRejected)
@@ -859,10 +859,10 @@ func (ab *AccountingBook) CreateLeaf(ctx context.Context, trx *transaction.Trans
 		return Vertex{}, ErrTrxIsEmpty
 	}
 	if trx.IssuerAddress == ab.signer.Address() {
-		return Vertex{}, ErrCannotTransferfundsViaOwnedNode
+		return Vertex{}, ErrCannotTransferFoundsViaOwnedNode
 	}
 	if trx.IssuerAddress == ab.genesisPublicAddress {
-		return Vertex{}, ErrCannotTransferfundsFromGenesisWallet
+		return Vertex{}, ErrCannotTransferFoundsFromGenesisWallet
 	}
 
 	ok, err := ab.checkTrxInVertexExists(trx.Hash[:])
@@ -955,7 +955,7 @@ func (ab *AccountingBook) AddLeaf(ctx context.Context, leaf *Vertex) error {
 		return fmt.Errorf("add leaf rejected nil vertex, %w", ErrUnexpected)
 	}
 	if leaf.Transaction.IssuerAddress == leaf.SignerPublicAddress {
-		return ErrCannotTransferfundsViaOwnedNode
+		return ErrCannotTransferFoundsViaOwnedNode
 	}
 	if leaf.Transaction.IsEmpty() {
 		return ErrTrxIsEmpty
@@ -993,7 +993,7 @@ func (ab *AccountingBook) CalculateBalance(ctx context.Context, walletPubAddr st
 		if vrx == nil {
 			return Balance{}, ErrUnexpected
 		}
-		if err := pourfunds(walletPubAddr, *vrx, &spiceIn, &spiceOut); err != nil {
+		if err := pourFunds(walletPubAddr, *vrx, &spiceIn, &spiceOut); err != nil {
 			return Balance{}, err
 		}
 	default:
@@ -1027,7 +1027,7 @@ func (ab *AccountingBook) CalculateBalance(ctx context.Context, walletPubAddr st
 			if vrx == nil {
 				return Balance{}, ErrUnexpected
 			}
-			if err := pourfunds(walletPubAddr, *vrx, &spiceIn, &spiceOut); err != nil {
+			if err := pourFunds(walletPubAddr, *vrx, &spiceIn, &spiceOut); err != nil {
 				return Balance{}, err
 			}
 		default:
@@ -1041,11 +1041,11 @@ func (ab *AccountingBook) CalculateBalance(ctx context.Context, walletPubAddr st
 		return Balance{}, err
 	}
 	if err := s.Supply(spiceIn); err != nil {
-		return Balance{}, errors.Join(ErrBalanceCaclulationUnexpectedFailure, err)
+		return Balance{}, errors.Join(ErrBalanceCalculationUnexpectedFailure, err)
 	}
 
 	if err := s.Drain(spiceOut, &spice.Melange{}); err != nil {
-		return Balance{}, errors.Join(ErrBalanceCaclulationUnexpectedFailure, err)
+		return Balance{}, errors.Join(ErrBalanceCalculationUnexpectedFailure, err)
 	}
 
 	return NewBalance(walletPubAddr, s), nil
@@ -1100,7 +1100,7 @@ func (ab *AccountingBook) ReadDAGTransactionsByAddress(ctx context.Context, addr
 		return nil, errors.Join(ErrUnexpected, errors.New("reading transactions received nil leaf"))
 	}
 
-	var trasnsactions []transaction.Transaction
+	var transactions []transaction.Transaction
 
 	item, err := ab.dag.GetVertex(string(leaf.Hash[:]))
 	if err != nil {
@@ -1112,7 +1112,7 @@ func (ab *AccountingBook) ReadDAGTransactionsByAddress(ctx context.Context, addr
 			return nil, ErrUnexpected
 		}
 		if vrx.Transaction.ReceiverAddress == address || vrx.Transaction.IssuerAddress == address {
-			trasnsactions = append(trasnsactions, vrx.Transaction)
+			transactions = append(transactions, vrx.Transaction)
 		}
 
 	default:
@@ -1147,7 +1147,7 @@ func (ab *AccountingBook) ReadDAGTransactionsByAddress(ctx context.Context, addr
 				return nil, ErrUnexpected
 			}
 			if vrx.Transaction.ReceiverAddress == address || vrx.Transaction.IssuerAddress == address {
-				trasnsactions = append(trasnsactions, vrx.Transaction)
+				transactions = append(transactions, vrx.Transaction)
 			}
 
 		default:
@@ -1156,7 +1156,7 @@ func (ab *AccountingBook) ReadDAGTransactionsByAddress(ctx context.Context, addr
 		}
 	}
 
-	return trasnsactions, nil
+	return transactions, nil
 }
 
 // Address returns signer public address that is a core cryptographic padlock for the DAG Vertices.
@@ -1169,7 +1169,7 @@ func (ab *AccountingBook) ReadVertex(ctx context.Context, h [32]byte) (Vertex, e
 	v, err := ab.readVertex(h[:])
 	if err != nil {
 		ab.log.Info(fmt.Sprintf("reading vertex hash %v failed, %s", h, err.Error()))
-		return Vertex{}, ErrVertexHashNotfund
+		return Vertex{}, ErrVertexHashNotfound
 	}
 	return v, nil
 }

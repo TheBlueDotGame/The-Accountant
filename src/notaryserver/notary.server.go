@@ -139,14 +139,14 @@ func Run(
 		dataSize:          c.DataSizeBytes,
 	}
 
-	s.tele.CreateUpdateObservableHistogtram(proposeTrxTelemetryHistogram, "Propose trx endpoint request duration in [ ms ].")
-	s.tele.CreateUpdateObservableHistogtram(confirmTrxTelemetryHistogram, "Confirm trx endpoint request duration in [ ms ].")
-	s.tele.CreateUpdateObservableHistogtram(rejectTrxTelemetryHistogram, "Reject trx endpoint request duration in [ ms ].")
-	s.tele.CreateUpdateObservableHistogtram(awaitedTrxTelemetryHistogram, "Read awaited / issued trx endpoint request duration in [ ms ].")
-	s.tele.CreateUpdateObservableHistogtram(approvedTrxTelemetryHistogram, "Read approved trx endpoint request duration in [ ms ].")
-	s.tele.CreateUpdateObservableHistogtram(dataToSignTelemetryHistogram, "Generate data to sign endpoint request duration in [ ms ].")
-	s.tele.CreateUpdateObservableHistogtram(balanceTelemetryHistogram, "Calculate balance duration in [ ms ].")
-	s.tele.CreateUpdateObservableHistogtram(readDagTransactionsByAddress, "Read wallet transactions from DAG in [ ms ].")
+	s.tele.CreateUpdateObservableHistogram(proposeTrxTelemetryHistogram, "Propose trx endpoint request duration in [ ms ].")
+	s.tele.CreateUpdateObservableHistogram(confirmTrxTelemetryHistogram, "Confirm trx endpoint request duration in [ ms ].")
+	s.tele.CreateUpdateObservableHistogram(rejectTrxTelemetryHistogram, "Reject trx endpoint request duration in [ ms ].")
+	s.tele.CreateUpdateObservableHistogram(awaitedTrxTelemetryHistogram, "Read awaited / issued trx endpoint request duration in [ ms ].")
+	s.tele.CreateUpdateObservableHistogram(approvedTrxTelemetryHistogram, "Read approved trx endpoint request duration in [ ms ].")
+	s.tele.CreateUpdateObservableHistogram(dataToSignTelemetryHistogram, "Generate data to sign endpoint request duration in [ ms ].")
+	s.tele.CreateUpdateObservableHistogram(balanceTelemetryHistogram, "Calculate balance duration in [ ms ].")
+	s.tele.CreateUpdateObservableHistogram(readDagTransactionsByAddress, "Read wallet transactions from DAG in [ ms ].")
 
 	lis, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%v", c.Port))
 	if err != nil {
@@ -531,8 +531,8 @@ func (s *server) Balance(ctx context.Context, in *protobufcompiled.SignedHash) (
 
 	if s, err := s.cache.ReadBalance(in.Address); err == nil {
 		return &protobufcompiled.Spice{
-			Currency:             s.Currency,
-			SuplementaryCurrency: s.SupplementaryCurrency,
+			Currency:              s.Currency,
+			SupplementaryCurrency: s.SupplementaryCurrency,
 		}, nil
 	}
 
@@ -549,8 +549,8 @@ func (s *server) Balance(ctx context.Context, in *protobufcompiled.SignedHash) (
 	}()
 
 	return &protobufcompiled.Spice{
-		Currency:             balance.Spice.Currency,
-		SuplementaryCurrency: balance.Spice.SupplementaryCurrency,
+		Currency:              balance.Spice.Currency,
+		SupplementaryCurrency: balance.Spice.SupplementaryCurrency,
 	}, nil
 }
 

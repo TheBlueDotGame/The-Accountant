@@ -2,21 +2,21 @@ package accountant
 
 import "errors"
 
-type strBufer struct {
+type strBuffer struct {
 	pos   int
 	inner []string
 }
 
-func newStrBufer(cap int) strBufer {
-	return strBufer{0, make([]string, 0, cap)}
+func newStrBuffer(cap int) strBuffer {
+	return strBuffer{0, make([]string, 0, cap)}
 }
 
-func (b *strBufer) add(s string) {
+func (b *strBuffer) add(s string) {
 	b.pos = 0
 	b.inner = append(b.inner, s)
 }
 
-func (b *strBufer) next() (string, bool) {
+func (b *strBuffer) next() (string, bool) {
 	if b.pos == len(b.inner) {
 		b.pos = 0
 		return "", false

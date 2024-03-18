@@ -9,12 +9,12 @@ import (
 
 // HistogramProvider provides histogram telemetry capabilietes.
 type HistogramProvider interface {
-	CreateUpdateObservableHistogtram(name, description string)
+	CreateUpdateObservableHistogram(name, description string)
 	RecordHistogramTime(name string, t time.Duration) bool
 	RecordHistogramValue(name string, f float64) bool
 }
 
-// GaugeProvider provides gauge telemetry capabilites.
+// GaugeProvider provides gauge telemetry capabilities.
 type GaugeProvider interface {
 	CreateUpdateObservableGauge(name, description string)
 	AddToGauge(name string, f float64) bool

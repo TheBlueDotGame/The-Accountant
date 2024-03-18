@@ -62,19 +62,19 @@ func (h Helper) Decrypt(key, data []byte) ([]byte, error) {
 	if len(key) != 32 && len(key) != 16 {
 		return nil, ErrInvalidKeyLength
 	}
-	nonce, ciphertext := data[:nonceSize], data[nonceSize:]
+	nonce, cipherText := data[:nonceSize], data[nonceSize:]
 
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, errors.Join(ErrCipherFailure, err)
 	}
 
-	aesgcm, err := cipher.NewGCM(block)
+	aesGcm, err := cipher.NewGCM(block)
 	if err != nil {
 		return nil, errors.Join(ErrGCMFailure, err)
 	}
 
-	plaintext, err := aesgcm.Open(nil, nonce, ciphertext, nil)
+	plaintext, err := aesGcm.Open(nil, nonce, cipherText, nil)
 	if err != nil {
 		return nil, errors.Join(ErrOpenDataFailure, err)
 	}

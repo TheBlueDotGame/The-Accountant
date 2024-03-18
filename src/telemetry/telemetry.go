@@ -22,8 +22,8 @@ type Measurements struct {
 	gauge      map[string]prometheus.Gauge
 }
 
-// CreateUpdateObservableHistogtram creats or updates observable histogram.
-func (m *Measurements) CreateUpdateObservableHistogtram(name, description string) {
+// CreateUpdateObservableHistogram creates or updates observable histogram.
+func (m *Measurements) CreateUpdateObservableHistogram(name, description string) {
 	hist := promauto.NewHistogram(prometheus.HistogramOpts{
 		Name: name,
 		Help: description,
@@ -61,7 +61,7 @@ func (m *Measurements) CreateUpdateObservableGauge(name, description string) {
 	m.gauge[name] = gauge
 }
 
-// AddToGeuge adds to gauge the value if entity with given name exists.
+// AddToGauge adds to gauge the value if entity with given name exists.
 func (m *Measurements) AddToGauge(name string, f float64) bool {
 	if v, ok := m.gauge[name]; ok {
 		v.Add(f)
@@ -70,7 +70,7 @@ func (m *Measurements) AddToGauge(name string, f float64) bool {
 	return false
 }
 
-// SubstractFromGeuge substracts from gauge the value if entity with given name exists.
+// RemoveFromGauge removes from gauge the value if entity with given name exists.
 func (m *Measurements) RemoveFromGauge(name string, f float64) bool {
 	if v, ok := m.gauge[name]; ok {
 		v.Sub(f)
@@ -79,7 +79,7 @@ func (m *Measurements) RemoveFromGauge(name string, f float64) bool {
 	return false
 }
 
-// IncrementGeuge increments gauge the value if entity with given name exists.
+// IncrementGauge increments gauge the value if entity with given name exists.
 func (m *Measurements) IncrementGauge(name string) bool {
 	if v, ok := m.gauge[name]; ok {
 		v.Inc()
@@ -88,7 +88,7 @@ func (m *Measurements) IncrementGauge(name string) bool {
 	return false
 }
 
-// DecrementGeuge decrements gauge the value if entity with given name exists.
+// DecrementGauge decrements gauge the value if entity with given name exists.
 func (m *Measurements) DecrementGauge(name string) bool {
 	if v, ok := m.gauge[name]; ok {
 		v.Dec()
@@ -97,7 +97,7 @@ func (m *Measurements) DecrementGauge(name string) bool {
 	return false
 }
 
-// SetGeuge sets the gauge to the value if entity with given name exists.
+// SetGauge sets the gauge to the value if entity with given name exists.
 func (m *Measurements) SetGauge(name string, f float64) bool {
 	if v, ok := m.gauge[name]; ok {
 		v.Set(f)
@@ -106,7 +106,7 @@ func (m *Measurements) SetGauge(name string, f float64) bool {
 	return false
 }
 
-// SetToCurrentTimeGeuge sets the gauge to the current time if entity with given name exists.
+// SetToCurrentTimeGauge sets the gauge to the current time if entity with given name exists.
 func (m *Measurements) SetToCurrentTimeGauge(name string) bool {
 	if v, ok := m.gauge[name]; ok {
 		v.SetToCurrentTime()

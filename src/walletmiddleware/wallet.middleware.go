@@ -342,7 +342,7 @@ func (c *Client) ReadBalance(ctx context.Context) (spice.Melange, error) {
 		return spice.Melange{}, err
 	}
 
-	return spice.Melange{Currency: balance.Currency, SupplementaryCurrency: balance.SuplementaryCurrency}, nil
+	return spice.Melange{Currency: balance.Currency, SupplementaryCurrency: balance.SupplementaryCurrency}, nil
 }
 
 // SaveWalletToFile saves the wallet to the file in the path.

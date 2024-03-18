@@ -31,9 +31,9 @@ var (
 	ErrNilTransaction                          = errors.New("cannot cache a nil transaction")
 	ErrFailedDecodingTrxKeyWrongNumOfParts     = errors.New("failed decoding transaction key, wrong number of parts")
 	ErrFailedDecodingAddressKeyWrongNumOfParts = errors.New("failed decoding address key, wrong number of parts")
-	ErrTrxAlredyExists                         = errors.New("transaction already exists")
+	ErrTrxAlreadyExists                        = errors.New("transaction already exists")
 	ErrTransactionNotFound                     = errors.New("transaction not found")
-	ErrProccessingFailed                       = errors.New("processing unexpected failure")
+	ErrProcessingFailed                        = errors.New("processing unexpected failure")
 	ErrUnauthorized                            = errors.New("unauthorized")
 )
 
@@ -67,7 +67,7 @@ func (h *Hippocampus) SaveAwaitedTransaction(trx *transaction.Transaction) error
 	_, err := h.mem.Get(trxKey)
 
 	if err == nil {
-		return ErrTrxAlredyExists
+		return ErrTrxAlreadyExists
 	}
 
 	if !errors.Is(err, bigcache.ErrEntryNotFound) {
@@ -121,13 +121,13 @@ func (h *Hippocampus) RemoveAwaitedTransaction(hash [32]byte, address string) (t
 		case true:
 			return transaction.Transaction{}, errors.Join(ErrTransactionNotFound, errors.New("get found no entity"))
 		default:
-			return transaction.Transaction{}, errors.Join(ErrProccessingFailed, errors.New("getting transaction by the key failed"))
+			return transaction.Transaction{}, errors.Join(ErrProcessingFailed, errors.New("getting transaction by the key failed"))
 		}
 	}
 
 	trx, err := transaction.Decode(raw)
 	if err != nil {
-		return transaction.Transaction{}, errors.Join(ErrProccessingFailed, errors.New("decoding failed"))
+		return transaction.Transaction{}, errors.Join(ErrProcessingFailed, errors.New("decoding failed"))
 	}
 
 	if trx.ReceiverAddress != address {
@@ -139,7 +139,7 @@ func (h *Hippocampus) RemoveAwaitedTransaction(hash [32]byte, address string) (t
 		case true:
 			return transaction.Transaction{}, errors.Join(ErrTransactionNotFound, errors.New("delete found no entity"))
 		default:
-			return transaction.Transaction{}, errors.Join(ErrProccessingFailed, errors.New("deleting trx failed"))
+			return transaction.Transaction{}, errors.Join(ErrProcessingFailed, errors.New("deleting trx failed"))
 		}
 	}
 
@@ -172,7 +172,7 @@ func (h *Hippocampus) ReadTransactions(address string) ([]transaction.Transactio
 		if errors.Is(err, bigcache.ErrEntryNotFound) {
 			return nil, ErrTransactionNotFound
 		}
-		return nil, ErrProccessingFailed
+		return nil, ErrProcessingFailed
 	}
 
 	if len(awaited) == 0 {
@@ -184,7 +184,7 @@ func (h *Hippocampus) ReadTransactions(address string) ([]transaction.Transactio
 
 	hashes, err := read(awaited)
 	if err != nil {
-		return nil, ErrProccessingFailed
+		return nil, ErrProcessingFailed
 	}
 
 	var errs error

@@ -13,7 +13,7 @@ const (
 
 var ErrEmptyAddressProvided = errors.New("nats server address is empty")
 
-// Config contains all arguments required to connect to the nats setvice
+// Config contains all arguments required to connect to the nats service
 type Config struct {
 	Address string `yaml:"server_address"`
 	Name    string `yaml:"client_name"`

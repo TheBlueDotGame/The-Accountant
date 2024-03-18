@@ -45,8 +45,8 @@ func (ls *LymphaticSystem) AssignTransactionAntibodiesToSubject(subject string, 
 	return nil
 }
 
-// TransactionsAntibodyAnalize maps transaction by the subject to corresponding antibodies to analyze.
-func (ls *LymphaticSystem) TransactionsAntibodiesAnalize(ctx context.Context, trx *transaction.Transaction) error {
+// TransactionsAntibodyAnalyze maps transaction by the subject to corresponding antibodies to analyze.
+func (ls *LymphaticSystem) TransactionsAntibodiesAnalyze(ctx context.Context, trx *transaction.Transaction) error {
 	antibodies, ok := ls.transactionAntibodiesMapping[trx.Subject]
 	if !ok {
 		return fmt.Errorf("subject: [ %s ] has no antibodies assigned", trx.Subject)

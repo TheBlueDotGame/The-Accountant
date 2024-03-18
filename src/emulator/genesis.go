@@ -89,8 +89,8 @@ func (g genesis) sendSpice(ctx context.Context, spice uint64, receiver string) e
 		ReceiverAddress: receiver,
 		Data:            []byte{},
 		Spice: &protobufcompiled.Spice{
-			Currency:             spice,
-			SuplementaryCurrency: 0,
+			Currency:              spice,
+			SupplementaryCurrency: 0,
 		},
 	})
 	return err
@@ -101,5 +101,5 @@ func (g genesis) checkBalance(ctx context.Context) (spice.Melange, error) {
 	if err != nil {
 		return spice.Melange{}, err
 	}
-	return spice.Melange{Currency: s.Currency, SupplementaryCurrency: s.SuplementaryCurrency}, nil
+	return spice.Melange{Currency: s.Currency, SupplementaryCurrency: s.SupplementaryCurrency}, nil
 }
