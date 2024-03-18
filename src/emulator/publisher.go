@@ -111,8 +111,8 @@ func (p *publisher) emulate(ctx context.Context, receiver string, measurements [
 		ReceiverAddress: receiver,
 		Data:            data,
 		Spice: &protobufcompiled.Spice{
-			Currency:             0,
-			SuplementaryCurrency: 0,
+			Currency:              0,
+			SupplementaryCurrency: 0,
 		},
 	}); err != nil {
 		pterm.Error.Printf("Emulator cannot send data position [ %d ], %s\n", p.position+1, err)
@@ -135,5 +135,5 @@ func (pub *publisher) checkBalance(ctx context.Context) (spice.Melange, error) {
 	if err != nil {
 		return spice.Melange{}, err
 	}
-	return spice.Melange{Currency: s.Currency, SupplementaryCurrency: s.SuplementaryCurrency}, nil
+	return spice.Melange{Currency: s.Currency, SupplementaryCurrency: s.SupplementaryCurrency}, nil
 }

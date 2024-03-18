@@ -12,12 +12,12 @@ import (
 )
 
 const (
-	MaxAmoutnPerSupplementaryCurrency = 1000000000000000000
+	MaxAmountPerSupplementaryCurrency = 1000000000000000000
 )
 
 const (
 	Currency = iota
-	SuplementaryCurrency
+	SupplementaryCurrency
 )
 
 var (
@@ -59,9 +59,9 @@ type Melange struct {
 
 // New creates a new spice Melange from given currency and supplementary currency values.
 func New(currency, supplementaryCurrency uint64) Melange {
-	if supplementaryCurrency >= MaxAmoutnPerSupplementaryCurrency {
+	if supplementaryCurrency >= MaxAmountPerSupplementaryCurrency {
 		currency += 1
-		supplementaryCurrency -= MaxAmoutnPerSupplementaryCurrency
+		supplementaryCurrency -= MaxAmountPerSupplementaryCurrency
 	}
 	return Melange{
 		Currency:              currency,
@@ -82,15 +82,15 @@ func FromFloat(n float64) Melange {
 // Supply supplies spice of the given amount from the source to the entity.
 func (m *Melange) Supply(amount Melange) error {
 	mCp := m.Clone()
-	for _, unit := range []byte{Currency, SuplementaryCurrency} {
+	for _, unit := range []byte{Currency, SupplementaryCurrency} {
 		switch unit {
 		case Currency:
 			if math.MaxUint64-amount.Currency < m.Currency {
 				return ErrValueOverflow
 			}
 			m.Currency += amount.Currency
-		case SuplementaryCurrency:
-			if MaxAmoutnPerSupplementaryCurrency-amount.SupplementaryCurrency < m.SupplementaryCurrency {
+		case SupplementaryCurrency:
+			if MaxAmountPerSupplementaryCurrency-amount.SupplementaryCurrency < m.SupplementaryCurrency {
 				if m.Currency == math.MaxUint64 {
 					m.copyFrom(mCp)
 					return ErrValueOverflow
@@ -98,9 +98,9 @@ func (m *Melange) Supply(amount Melange) error {
 			}
 			m.SupplementaryCurrency += amount.SupplementaryCurrency
 
-			if m.SupplementaryCurrency >= MaxAmoutnPerSupplementaryCurrency {
+			if m.SupplementaryCurrency >= MaxAmountPerSupplementaryCurrency {
 				m.Currency += 1
-				m.SupplementaryCurrency -= MaxAmoutnPerSupplementaryCurrency
+				m.SupplementaryCurrency -= MaxAmountPerSupplementaryCurrency
 			}
 		}
 	}
@@ -121,7 +121,7 @@ func (m *Melange) Empty() bool {
 func Transfer(amount Melange, from, to *Melange) error {
 	toCp := to.Clone()
 	fromCp := from.Clone()
-	for _, unit := range []byte{Currency, SuplementaryCurrency} {
+	for _, unit := range []byte{Currency, SupplementaryCurrency} {
 		switch unit {
 		case Currency:
 			if amount.Currency > from.Currency {
@@ -132,8 +132,8 @@ func Transfer(amount Melange, from, to *Melange) error {
 			}
 			to.Currency += amount.Currency
 			from.Currency -= amount.Currency
-		case SuplementaryCurrency:
-			if MaxAmoutnPerSupplementaryCurrency-amount.SupplementaryCurrency < to.SupplementaryCurrency {
+		case SupplementaryCurrency:
+			if MaxAmountPerSupplementaryCurrency-amount.SupplementaryCurrency < to.SupplementaryCurrency {
 				if to.Currency == math.MaxUint64 {
 					to.copyFrom(toCp)
 					from.copyFrom(fromCp)
@@ -147,21 +147,21 @@ func Transfer(amount Melange, from, to *Melange) error {
 					return ErrNoSufficientFounds
 				}
 				from.Currency -= 1
-				from.SupplementaryCurrency = from.SupplementaryCurrency + MaxAmoutnPerSupplementaryCurrency - amount.SupplementaryCurrency
+				from.SupplementaryCurrency = from.SupplementaryCurrency + MaxAmountPerSupplementaryCurrency - amount.SupplementaryCurrency
 				to.SupplementaryCurrency += amount.SupplementaryCurrency
 
-				if to.SupplementaryCurrency >= MaxAmoutnPerSupplementaryCurrency {
+				if to.SupplementaryCurrency >= MaxAmountPerSupplementaryCurrency {
 					to.Currency += 1
-					to.SupplementaryCurrency -= MaxAmoutnPerSupplementaryCurrency
+					to.SupplementaryCurrency -= MaxAmountPerSupplementaryCurrency
 				}
 				continue
 			}
 			from.SupplementaryCurrency -= amount.SupplementaryCurrency
 			to.SupplementaryCurrency += amount.SupplementaryCurrency
 
-			if to.SupplementaryCurrency >= MaxAmoutnPerSupplementaryCurrency {
+			if to.SupplementaryCurrency >= MaxAmountPerSupplementaryCurrency {
 				to.Currency += 1
-				to.SupplementaryCurrency -= MaxAmoutnPerSupplementaryCurrency
+				to.SupplementaryCurrency -= MaxAmountPerSupplementaryCurrency
 			}
 		}
 	}
@@ -170,20 +170,20 @@ func Transfer(amount Melange, from, to *Melange) error {
 
 // String returns string representation of spice Melange.
 func (m Melange) String() string {
-	suplementary := fmt.Sprintf("%v", m.SupplementaryCurrency)
-	zeros := 18 - len(suplementary)
+	supplementary := fmt.Sprintf("%v", m.SupplementaryCurrency)
+	zeros := 18 - len(supplementary)
 	if zeros < 0 {
-		suplementary = "0"
+		supplementary = "0"
 	}
-	suplementary = strings.Trim(suplementary, "0")
+	supplementary = strings.Trim(supplementary, "0")
 
 	var buf strings.Builder
-	if len(suplementary) != 0 {
+	if len(supplementary) != 0 {
 		for i := 0; i < zeros; i++ {
 			buf.WriteString("0")
 		}
 	}
-	buf.WriteString(suplementary)
+	buf.WriteString(supplementary)
 	supp := buf.String()
 	if len(supp) == 0 {
 		supp = "0"

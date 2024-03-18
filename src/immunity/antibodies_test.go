@@ -10,7 +10,7 @@ import (
 	"github.com/bartossh/Computantis/src/transaction"
 )
 
-func generateTrasactionWithSize(dataSize int) transaction.Transaction {
+func generateTransactionWithSize(dataSize int) transaction.Transaction {
 	return transaction.Transaction{
 		Subject: "",
 		Data:    make([]byte, dataSize),
@@ -48,7 +48,7 @@ func TestTransactionSizeAntibodySuccess(t *testing.T) {
 
 	for i, c := range testCases {
 		t.Run(fmt.Sprintf("test case %v max %v min %v actual %v", i, c.min, c.max, c.actual), func(t *testing.T) {
-			trx := generateTrasactionWithSize(c.actual)
+			trx := generateTransactionWithSize(c.actual)
 			antibody, err := NewTransactionSizeAntibody(c.min, c.max)
 			assert.NilError(t, err, fmt.Sprintf("test case %v", i))
 			err = antibody.AnalyzeTransaction(context.TODO(), &trx)
@@ -70,7 +70,7 @@ func TestTransactionSizeAntibodyFailure(t *testing.T) {
 
 	for i, c := range testCases {
 		t.Run(fmt.Sprintf("test case %v max %v min %v actual %v", i, c.min, c.max, c.actual), func(t *testing.T) {
-			trx := generateTrasactionWithSize(c.actual)
+			trx := generateTransactionWithSize(c.actual)
 			antibody, err := NewTransactionSizeAntibody(c.min, c.max)
 			assert.NilError(t, err)
 			err = antibody.AnalyzeTransaction(context.TODO(), &trx)
@@ -80,7 +80,7 @@ func TestTransactionSizeAntibodyFailure(t *testing.T) {
 }
 
 func BenchmarkTransactionSizeAntibody(b *testing.B) {
-	trx := generateTrasactionWithSize(1000)
+	trx := generateTransactionWithSize(1000)
 	antibody, err := NewTransactionSizeAntibody(0, 10000)
 	assert.NilError(b, err)
 	b.ResetTimer()

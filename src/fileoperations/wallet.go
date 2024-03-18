@@ -11,7 +11,7 @@ import (
 	"github.com/bartossh/Computantis/src/wallet"
 )
 
-// Sealer offers behaviour to seal the bytes returning the signature on the data.
+// Sealer offers behavior to seal the bytes returning the signature on the data.
 type Sealer interface {
 	Encrypt(key, data []byte) ([]byte, error)
 	Decrypt(key, data []byte) ([]byte, error)

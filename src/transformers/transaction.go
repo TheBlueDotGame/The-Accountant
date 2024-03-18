@@ -30,8 +30,8 @@ func TrxToProtoTrx(trx transaction.Transaction) (*protobufcompiled.Transaction, 
 		Data:              trx.Data,
 		Hash:              trx.Hash[:],
 		Spice: &protobufcompiled.Spice{
-			Currency:             trx.Spice.Currency,
-			SuplementaryCurrency: trx.Spice.SupplementaryCurrency,
+			Currency:              trx.Spice.Currency,
+			SupplementaryCurrency: trx.Spice.SupplementaryCurrency,
 		},
 	}, nil
 }
@@ -53,7 +53,7 @@ func ProtoTrxToTrx(prTrx *protobufcompiled.Transaction) (transaction.Transaction
 		Hash:              [32]byte(prTrx.Hash),
 		Spice: spice.Melange{
 			Currency:              prTrx.Spice.Currency,
-			SupplementaryCurrency: prTrx.Spice.SuplementaryCurrency,
+			SupplementaryCurrency: prTrx.Spice.SupplementaryCurrency,
 		},
 	}, nil
 }

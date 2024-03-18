@@ -27,7 +27,7 @@ import (
 )
 
 var (
-	ErrDiscoveryAttmeptSignatureFailed = errors.New("discovery attempt failed, signature or digest is invalid")
+	ErrDiscoveryAttemptSignatureFailed = errors.New("discovery attempt failed, signature or digest is invalid")
 	ErrUnexpectedGossipFailure         = errors.New("unexpected gossip failure")
 	ErrVertexInCache                   = errors.New("vertex in cache")
 	ErrFailedToProcessGossip           = errors.New("failed to process gossip")
@@ -59,15 +59,15 @@ type nodeData struct {
 
 // Config is a configuration for the gossip node.
 type Config struct {
-	URL              string        `yaml:"url"`
-	GenesisURL       string        `yaml:"genesis_url"`
-	LoadDagURL       string        `yaml:"load_dag_url"`
-	GenessisReceiver string        `yaml:"genesis_receiver"`
-	Cert             string        `yaml:"certificate"`
-	Key              string        `yaml:"key"`
-	CA               string        `yaml:"ca_cert"`
-	GenesisSpice     spice.Melange `yaml:"genesis_spice"`
-	Port             int           `yaml:"port"`
+	URL             string        `yaml:"url"`
+	GenesisURL      string        `yaml:"genesis_url"`
+	LoadDagURL      string        `yaml:"load_dag_url"`
+	GenesisReceiver string        `yaml:"genesis_receiver"`
+	Cert            string        `yaml:"certificate"`
+	Key             string        `yaml:"key"`
+	CA              string        `yaml:"ca_cert"`
+	GenesisSpice    spice.Melange `yaml:"genesis_spice"`
+	Port            int           `yaml:"port"`
 }
 
 func (c Config) verify() error {
@@ -151,7 +151,7 @@ func RunGRPC(ctx context.Context, cfg Config, l logger.Logger, t time.Duration, 
 		if _, err := g.accounter.CreateGenesis(
 			"Genesis Vertex",
 			spice.New(cfg.GenesisSpice.Currency, cfg.GenesisSpice.SupplementaryCurrency),
-			[]byte{}, cfg.GenessisReceiver,
+			[]byte{}, cfg.GenesisReceiver,
 		); err != nil {
 			g.log.Error(fmt.Sprintf("failed creating genesis vertex: %s", err))
 			return err
@@ -225,7 +225,7 @@ func (g *gossiper) Announce(_ context.Context, cd *protobufcompiled.ConnectionDa
 	err := g.validateSignature(cd.PublicAddress, cd.PublicAddress, cd.Url, cd.CreatedAt, cd.Signature, [32]byte(cd.Digest))
 	if err != nil {
 		g.log.Info(fmt.Sprintf("discovery attempt failed, public address [ %s ] with URL [ %s ], %s", cd.PublicAddress, cd.Url, err))
-		return nil, ErrDiscoveryAttmeptSignatureFailed
+		return nil, ErrDiscoveryAttemptSignatureFailed
 	}
 	g.mux.Lock()
 	defer g.mux.Unlock()
@@ -248,7 +248,7 @@ func (g *gossiper) Discover(_ context.Context, cd *protobufcompiled.ConnectionDa
 	err := g.validateSignature(cd.PublicAddress, cd.PublicAddress, cd.Url, cd.CreatedAt, cd.Signature, [32]byte(cd.Digest))
 	if err != nil {
 		g.log.Info(fmt.Sprintf("discovery attempt failed, public address [ %s ] with URL [ %s ], %s", cd.PublicAddress, cd.Url, err))
-		return nil, ErrDiscoveryAttmeptSignatureFailed
+		return nil, ErrDiscoveryAttemptSignatureFailed
 	}
 
 	nd, err := g.connectToNode(cd.Url)
@@ -686,11 +686,11 @@ func (g *gossiper) sendToAccountant(ctx context.Context, vg *protobufcompiled.Ve
 	v := mapProtoVertexToAccountantVertex(vg)
 	if err := g.accounter.AddLeaf(ctx, &v); err != nil {
 		if errors.Is(err, accountant.ErrParentDoesNotExists) {
-			parentHases := [][32]byte{v.LeftParentHash}
+			parentHashes := [][32]byte{v.LeftParentHash}
 			if v.LeftParentHash != v.RightParentHash {
-				parentHases = append(parentHases, v.RightParentHash)
+				parentHashes = append(parentHashes, v.RightParentHash)
 			}
-			for _, parentHash := range parentHases {
+			for _, parentHash := range parentHashes {
 				go g.processLackingParent(ctx, parentHash)
 			}
 		}
@@ -752,7 +752,7 @@ func toSlice(m map[string]*protobufcompiled.Gossiper) []*protobufcompiled.Gossip
 func mapProtoVertexToAccountantVertex(vg *protobufcompiled.Vertex) accountant.Vertex {
 	return accountant.Vertex{
 		SignerPublicAddress: vg.SignerPublicAddress,
-		CreatedAt:           time.Unix(0, int64(vg.CreaterdAt)),
+		CreatedAt:           time.Unix(0, int64(vg.CreatedAt)),
 		Signature:           vg.Signature,
 		Transaction: transaction.Transaction{
 			CreatedAt:         time.Unix(0, int64(vg.Transaction.CreatedAt)),
@@ -765,7 +765,7 @@ func mapProtoVertexToAccountantVertex(vg *protobufcompiled.Vertex) accountant.Ve
 			Hash:              [32]byte(vg.Transaction.Hash),
 			Spice: spice.Melange{
 				Currency:              vg.Transaction.Spice.Currency,
-				SupplementaryCurrency: vg.Transaction.Spice.SuplementaryCurrency,
+				SupplementaryCurrency: vg.Transaction.Spice.SupplementaryCurrency,
 			},
 		},
 		Hash:            [32]byte(vg.Hash),
@@ -778,7 +778,7 @@ func mapProtoVertexToAccountantVertex(vg *protobufcompiled.Vertex) accountant.Ve
 func mapAccountantVertexToProtoVertex(vrx *accountant.Vertex) *protobufcompiled.Vertex {
 	return &protobufcompiled.Vertex{
 		SignerPublicAddress: vrx.SignerPublicAddress,
-		CreaterdAt:          uint64(vrx.CreatedAt.UnixNano()),
+		CreatedAt:           uint64(vrx.CreatedAt.UnixNano()),
 		Signature:           vrx.Signature,
 		Transaction: &protobufcompiled.Transaction{
 			Subject:           vrx.Transaction.Subject,
@@ -790,8 +790,8 @@ func mapAccountantVertexToProtoVertex(vrx *accountant.Vertex) *protobufcompiled.
 			ReceiverSignature: vrx.Transaction.ReceiverSignature,
 			IssuerSignature:   vrx.Transaction.IssuerSignature,
 			Spice: &protobufcompiled.Spice{
-				Currency:             vrx.Transaction.Spice.Currency,
-				SuplementaryCurrency: vrx.Transaction.Spice.SupplementaryCurrency,
+				Currency:              vrx.Transaction.Spice.Currency,
+				SupplementaryCurrency: vrx.Transaction.Spice.SupplementaryCurrency,
 			},
 		},
 		Hash:            vrx.Hash[:],

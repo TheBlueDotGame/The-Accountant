@@ -10,18 +10,18 @@ import (
 
 func TestStringifyMelange(t *testing.T) {
 	testcases := []Melange{
-		{Currency: 10, SupplementaryCurrency: MaxAmoutnPerSupplementaryCurrency},
-		{Currency: 100, SupplementaryCurrency: MaxAmoutnPerSupplementaryCurrency - 1},
-		{Currency: 1000, SupplementaryCurrency: MaxAmoutnPerSupplementaryCurrency - 10},
-		{Currency: 10000, SupplementaryCurrency: MaxAmoutnPerSupplementaryCurrency - 100},
-		{Currency: 100000, SupplementaryCurrency: MaxAmoutnPerSupplementaryCurrency - 1000},
-		{Currency: 1000000, SupplementaryCurrency: MaxAmoutnPerSupplementaryCurrency - 10000},
-		{Currency: 1, SupplementaryCurrency: MaxAmoutnPerSupplementaryCurrency - 100000},
+		{Currency: 10, SupplementaryCurrency: MaxAmountPerSupplementaryCurrency},
+		{Currency: 100, SupplementaryCurrency: MaxAmountPerSupplementaryCurrency - 1},
+		{Currency: 1000, SupplementaryCurrency: MaxAmountPerSupplementaryCurrency - 10},
+		{Currency: 10000, SupplementaryCurrency: MaxAmountPerSupplementaryCurrency - 100},
+		{Currency: 100000, SupplementaryCurrency: MaxAmountPerSupplementaryCurrency - 1000},
+		{Currency: 1000000, SupplementaryCurrency: MaxAmountPerSupplementaryCurrency - 10000},
+		{Currency: 1, SupplementaryCurrency: MaxAmountPerSupplementaryCurrency - 100000},
 		{Currency: 0, SupplementaryCurrency: 0},
-		{Currency: 0, SupplementaryCurrency: MaxAmoutnPerSupplementaryCurrency / 10},
-		{Currency: 0, SupplementaryCurrency: MaxAmoutnPerSupplementaryCurrency / 100},
-		{Currency: 0, SupplementaryCurrency: MaxAmoutnPerSupplementaryCurrency / 1000},
-		{Currency: 0, SupplementaryCurrency: MaxAmoutnPerSupplementaryCurrency / 10000},
+		{Currency: 0, SupplementaryCurrency: MaxAmountPerSupplementaryCurrency / 10},
+		{Currency: 0, SupplementaryCurrency: MaxAmountPerSupplementaryCurrency / 100},
+		{Currency: 0, SupplementaryCurrency: MaxAmountPerSupplementaryCurrency / 1000},
+		{Currency: 0, SupplementaryCurrency: MaxAmountPerSupplementaryCurrency / 10000},
 	}
 
 	results := []string{
@@ -54,20 +54,20 @@ func TestMelangeTransferSuccess(t *testing.T) {
 		{from: New(100, 1000), to: New(1, 10), ammount: New(1, 10), fromResult: New(99, 990), toResult: New(2, 20)},
 		{from: New(1000, 1000), to: New(100, 1000), ammount: New(100, 1000), fromResult: New(900, 0), toResult: New(200, 2000)},
 		{
-			from: New(100, MaxAmoutnPerSupplementaryCurrency-1), to: New(100, 1), ammount: New(100, MaxAmoutnPerSupplementaryCurrency-1),
+			from: New(100, MaxAmountPerSupplementaryCurrency-1), to: New(100, 1), ammount: New(100, MaxAmountPerSupplementaryCurrency-1),
 			fromResult: New(0, 0), toResult: New(201, 0),
 		},
 		{
-			from: New(200, 0), to: New(100, MaxAmoutnPerSupplementaryCurrency-1), ammount: New(100, MaxAmoutnPerSupplementaryCurrency-1),
-			fromResult: New(99, 1), toResult: New(201, MaxAmoutnPerSupplementaryCurrency-2),
+			from: New(200, 0), to: New(100, MaxAmountPerSupplementaryCurrency-1), ammount: New(100, MaxAmountPerSupplementaryCurrency-1),
+			fromResult: New(99, 1), toResult: New(201, MaxAmountPerSupplementaryCurrency-2),
 		},
 		{
-			from: New(200, 0), to: New(100, MaxAmoutnPerSupplementaryCurrency-10), ammount: New(100, MaxAmoutnPerSupplementaryCurrency-10),
-			fromResult: New(99, 10), toResult: New(201, MaxAmoutnPerSupplementaryCurrency-20),
+			from: New(200, 0), to: New(100, MaxAmountPerSupplementaryCurrency-10), ammount: New(100, MaxAmountPerSupplementaryCurrency-10),
+			fromResult: New(99, 10), toResult: New(201, MaxAmountPerSupplementaryCurrency-20),
 		},
 		{
-			from: New(1, 0), to: New(100, MaxAmoutnPerSupplementaryCurrency-10), ammount: New(0, MaxAmoutnPerSupplementaryCurrency-10),
-			fromResult: New(0, 10), toResult: New(101, MaxAmoutnPerSupplementaryCurrency-20),
+			from: New(1, 0), to: New(100, MaxAmountPerSupplementaryCurrency-10), ammount: New(0, MaxAmountPerSupplementaryCurrency-10),
+			fromResult: New(0, 10), toResult: New(101, MaxAmountPerSupplementaryCurrency-20),
 		},
 	}
 
@@ -97,8 +97,8 @@ func TestMelangeTransferFailure(t *testing.T) {
 			fromResult: New(math.MaxUint64, 10), toResult: New(math.MaxUint64, 10), err: ErrValueOverflow,
 		},
 		{
-			from: New(math.MaxUint64, 10), to: New(math.MaxUint64, MaxAmoutnPerSupplementaryCurrency-1), ammount: New(0, 10),
-			fromResult: New(math.MaxUint64, 10), toResult: New(math.MaxUint64, MaxAmoutnPerSupplementaryCurrency-1), err: ErrValueOverflow,
+			from: New(math.MaxUint64, 10), to: New(math.MaxUint64, MaxAmountPerSupplementaryCurrency-1), ammount: New(0, 10),
+			fromResult: New(math.MaxUint64, 10), toResult: New(math.MaxUint64, MaxAmountPerSupplementaryCurrency-1), err: ErrValueOverflow,
 		},
 		{
 			from: New(10, 10), to: New(1, 10), ammount: New(11, 10),
@@ -130,7 +130,7 @@ func TestMelangeTransferAccounting(t *testing.T) {
 	testcase := struct {
 		from, to, ammount Melange
 	}{
-		from: New(math.MaxUint64, MaxAmoutnPerSupplementaryCurrency-1), to: New(0, 0), ammount: New(1, 1),
+		from: New(math.MaxUint64, MaxAmountPerSupplementaryCurrency-1), to: New(0, 0), ammount: New(1, 1),
 	}
 	transfersNum := 1000000
 
@@ -151,7 +151,7 @@ func BenchmarkMelangeTransfer(b *testing.B) {
 	testcase := struct {
 		from, to, ammount Melange
 	}{
-		from: New(math.MaxUint64, MaxAmoutnPerSupplementaryCurrency), to: New(0, 0), ammount: New(1, 1),
+		from: New(math.MaxUint64, MaxAmountPerSupplementaryCurrency), to: New(0, 0), ammount: New(1, 1),
 	}
 
 	for n := 0; n < b.N; n++ {

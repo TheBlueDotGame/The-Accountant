@@ -123,7 +123,7 @@ func (ab *AccountingBook) readTrxVertex(trxHash []byte) (Vertex, error) {
 	if err != nil {
 		switch err {
 		case badger.ErrKeyNotFound:
-			return Vertex{}, ErrTrxToVertexNotfund
+			return Vertex{}, ErrTrxToVertexNotfound
 		default:
 			ab.log.Error(fmt.Sprintf("transaction to vertex mapping failed when looking for transaction hash, %s", err))
 			return Vertex{}, ErrUnexpected
@@ -235,7 +235,7 @@ func (ab *AccountingBook) readLastVertexHashFromStorage() ([32]byte, error) {
 	}); err != nil {
 		switch err {
 		case badger.ErrKeyNotFound:
-			return h, ErrVertexHashNotfund
+			return h, ErrVertexHashNotfound
 		default:
 			ab.log.Error(err.Error())
 			return h, ErrUnexpected
@@ -260,7 +260,7 @@ func (ab *AccountingBook) readVertexFromStorage(vrxHash []byte) (Vertex, error) 
 	if err != nil {
 		switch err {
 		case badger.ErrKeyNotFound:
-			return vrx, ErrVertexHashNotfund
+			return vrx, ErrVertexHashNotfound
 		default:
 			ab.log.Error(fmt.Sprintf("transaction to vertex mapping failed when looking for vertex hash, %s", err))
 			return vrx, ErrUnexpected
@@ -314,7 +314,7 @@ func (ab *AccountingBook) readTransactionFromStorage(vertexHash []byte) (transac
 				ab.log.Error(fmt.Sprintf("accountant error with reading vertex from DB, %s", err))
 				return err
 			}
-			return ErrEntityNotfund
+			return ErrEntityNotFound
 		}
 
 		item.Value(func(val []byte) error {

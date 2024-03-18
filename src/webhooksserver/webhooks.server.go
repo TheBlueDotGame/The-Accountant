@@ -22,7 +22,7 @@ const (
 )
 
 var (
-	ErrNotAuthorized     = errors.New("not authoriozed")
+	ErrNotAuthorized     = errors.New("not authorized")
 	ErrProcessingFailure = errors.New("processing failed")
 )
 
@@ -38,8 +38,8 @@ type WebhookCreateRemovePoster interface {
 	PostWebhookNewTransaction(publicAddresses []string, storingNodeURL string)
 }
 
-// NodesComunicationSubscriber provides facade access to communication between nodes publisher endpoint.
-type NodesComunicationSubscriber interface {
+// NodesCommunicationSubscriber provides facade access to communication between nodes publisher endpoint.
+type NodesCommunicationSubscriber interface {
 	SubscribeNewTransactionsForAddresses(call transaction.TrxAddressesSubscriberCallback, log logger.Logger) error
 }
 
@@ -57,7 +57,7 @@ type app struct {
 // Run initializes webhooks server and GRPC API server.
 // It will block until the context is canceled.
 func Run(
-	ctx context.Context, cfg Config, sub NodesComunicationSubscriber, log logger.Logger, ver verifier, wh WebhookCreateRemovePoster,
+	ctx context.Context, cfg Config, sub NodesCommunicationSubscriber, log logger.Logger, ver verifier, wh WebhookCreateRemovePoster,
 ) error {
 	a := &app{
 		log: log,

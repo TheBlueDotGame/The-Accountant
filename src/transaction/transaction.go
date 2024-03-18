@@ -28,7 +28,7 @@ var (
 	ErrNilTransaction                   = errors.New("nil transaction")
 )
 
-// TrxAddressesSubscriberCallback is a method or function performing compoutantion on the transactions addresses.
+// TrxAddressesSubscriberCallback is a method or function performing compotation on the transactions addresses.
 type TrxAddressesSubscriberCallback func(addresses []string, storageNodeURL string)
 
 // Signer provides signing and address methods.
@@ -44,11 +44,6 @@ type Verifier interface {
 
 // Transaction contains transaction information, subject type, subject data, signatures and public keys.
 // Transaction is valid for a week from being issued.
-// Subject represents an information how to read the Data and / or how to decode them.
-// Data is not validated by the computantis server, Ladger ior block.
-// What is stored in Data is not important for the whole Computantis system.
-// It is only important that the data are signed by the issuer and the receiver and
-// both parties agreed on them.
 type Transaction struct {
 	ID                any           `json:"-"                  bson:"_id"                db:"id"                    msgpack:"-"`
 	CreatedAt         time.Time     `json:"created_at"         bson:"created_at"         db:"created_at"            msgpack:"created_at"`

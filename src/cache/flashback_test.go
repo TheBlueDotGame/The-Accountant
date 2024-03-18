@@ -27,7 +27,7 @@ func TestHasHashUnique(t *testing.T) {
 	}
 }
 
-func TestHasHashRepeting(t *testing.T) {
+func TestHasHashRepeating(t *testing.T) {
 	r := rand.New(rand.NewSource(time.Now().Unix()))
 	f, err := NewFlash()
 	assert.NilError(t, err)

@@ -24,7 +24,7 @@ import (
 	"github.com/bartossh/Computantis/src/zincaddapter"
 )
 
-const usage = `runs The Computnantis-Web-Hooks node that is responsible for informing subscribed clients about awiated transactions`
+const usage = `runs The Computantis-Web-Hooks node that is responsible for informing subscribed clients about awiated transactions`
 
 func main() {
 	logo.Display()

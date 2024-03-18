@@ -178,7 +178,7 @@ func TestFailTransactionAddSameHash(t *testing.T) {
 	for _, c := range cases {
 		for i, trx := range c.transactions {
 			err := cache.WriteIssuerSignedTransactionForReceiver(&trx)
-			assert.ErrorIs(t, err, ErrNotAlloweReoccurringHash, fmt.Sprintf("case index: %v", i))
+			assert.ErrorIs(t, err, ErrNotAllowReoccurringHash, fmt.Sprintf("case index: %v", i))
 		}
 	}
 }

@@ -322,7 +322,7 @@ func (sub *subscriber) getAcceptedEnergyTrx(hash [32]byte, notaryNodeURL string)
 		return 0
 	}
 
-	if trx.Spice.Currency != 0 || trx.Spice.SuplementaryCurrency != 0 {
+	if trx.Spice.Currency != 0 || trx.Spice.SupplementaryCurrency != 0 {
 		pterm.Info.Printf(
 			"Transaction with hash [ %x ] is secured in DAG node URL [ %s ] for SPICE TRANSFER: [ %s ].\n",
 			trx.Hash, notaryNodeURL, trx.Spice,
@@ -352,8 +352,8 @@ func (sub *subscriber) sendSpice(ctx context.Context, spice uint64, receiver str
 		ReceiverAddress: receiver,
 		Data:            []byte{},
 		Spice: &protobufcompiled.Spice{
-			Currency:             spice,
-			SuplementaryCurrency: 0,
+			Currency:              spice,
+			SupplementaryCurrency: 0,
 		},
 	})
 	return err

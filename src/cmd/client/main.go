@@ -31,7 +31,7 @@ func main() {
 	logo.Display()
 
 	var file string
-	configurator := func() (configuration.Configuration, error) {
+	config := func() (configuration.Configuration, error) {
 		if file == "" {
 			return configuration.Configuration{}, errors.New("please specify configuration file path with -c <path to file>")
 		}
@@ -56,7 +56,7 @@ func main() {
 			},
 		},
 		Action: func(_ *cli.Context) error {
-			cfg, err := configurator()
+			cfg, err := config()
 			if err != nil {
 				return err
 			}

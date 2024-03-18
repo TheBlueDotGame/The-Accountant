@@ -6,7 +6,7 @@ import (
 	"github.com/bartossh/Computantis/src/spice"
 )
 
-func pourfunds(issuerAddress string, vrx Vertex, spiceIn, spiceOut *spice.Melange) error {
+func pourFunds(issuerAddress string, vrx Vertex, spiceIn, spiceOut *spice.Melange) error {
 	if spiceIn == nil || spiceOut == nil {
 		return ErrUnexpected
 	}
@@ -32,7 +32,7 @@ func checkHasSufficientfunds(in, out *spice.Melange) error {
 	}
 	sink := spice.New(0, 0)
 	if err := in.Drain(*out, &sink); err != nil {
-		return errors.Join(ErrDoubleSpendingOrInsufficinetfunds, err)
+		return errors.Join(ErrDoubleSpending, err)
 	}
 	return nil
 }
