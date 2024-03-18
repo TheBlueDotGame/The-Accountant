@@ -69,32 +69,6 @@ Leaf when added to the graph is retransmitted to all the nodes in the network, s
 The vertex is unique in the DAG and the inner transaction is unique per DAG. Sending the same transaction to many nodes will end up in a collision and only the first one, received by most of the nodes will be accepted and retransmitted, all the rest of the redundant transactions will be rejected.
 Leaf isn't proving transaction validity until it becomes a vertex via an edge created from another leaf or vertex.
 
-### Add-ons
-
-Add-ons are a way to interact with the Computantis immune system. The immune system shall return an error when data do not meet the validity criteria.
-
-Example add-ons are located in `src_py` folder. 
-
-#### List of add-ons
-
-1. Add-on tabular classification example is located in `addon_tabular_classification` folder.
-
-- Project requires Python 3.
-
-- Before running create (venv) environment in the folder:
-```sh
-python -m venv venv
-```
-- Activate venv:
-
-```sh 
-source venv/bin/activate
-```
-- Run python server via shell script:
-```sh
-./start.py
-```
-
 ## Development
 
 ### The core rules 
@@ -136,7 +110,7 @@ docker compose -f docker_deployment/docker-compose.yaml up -d
 ```
 - To restart the notary genesis node after the code change run:
 ```sh
-docker compose up --no-deps -build notary-node-genessis -d
+docker compose up --no-deps -build notary-node-genesis -d
 ```
 
 ### Dependencies with emulation tests
@@ -146,7 +120,7 @@ docker compose -f docker_deployment/docker-compose.yaml --profile demo up-d
 ```
 - To restart the notary node after the code change run:
 ```sh
-docker compose up --no-deps -build notary-node-genessis -d
+docker compose up --no-deps -build notary-node-genesis -d
 ```
 
 ### Building GRPC dependencies and compiling packages

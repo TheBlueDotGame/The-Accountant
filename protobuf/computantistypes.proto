@@ -33,7 +33,7 @@ message SignedHash {
 
 message Spice {
     uint64 currency = 1;
-    uint64 suplementary_currency = 2; 
+    uint64 supplementary_currency = 2; 
 }
 
 message Transaction {
