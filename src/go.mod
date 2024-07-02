@@ -5,7 +5,7 @@ go 1.21
 require (
 	github.com/allegro/bigcache v1.2.1
 	github.com/dgraph-io/badger/v4 v4.2.0
-	github.com/gofiber/fiber/v2 v2.52.1
+	github.com/gofiber/fiber/v2 v2.52.5
 	github.com/heimdalr/dag v1.3.1
 	github.com/mr-tron/base58 v1.2.0
 	github.com/nats-io/nats.go v1.30.2
